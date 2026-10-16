@@ -4,4 +4,5 @@
 //! The same crate runs inside the Android app (foreground and the WorkManager
 //! job), the developer CLI, and later a self-hosted server for the web app.
 
+pub mod garmin;
 pub mod view;
