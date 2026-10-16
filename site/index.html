@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A clearer view of your Garmin readiness, sleep and training. An independent, private, open-source Android app. No analytics, telemetry or ads.">
+  <meta name="description" content="A clearer view of your Garmin readiness, sleep and training. A free, private, open-source Android app. No subscription, analytics, telemetry or ads.">
   <meta name="theme-color" content="#0b0f1a">
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'">
   <meta property="og:title" content="Raring — a clearer view of your day">
-  <meta property="og:description" content="Your Garmin readiness, sleep and training, at a glance. Private, open source and made for Android.">
+  <meta property="og:description" content="Your Garmin readiness, sleep and training, at a glance. Free to use, with no subscription. Private, open source and made for Android.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://raring.app/">
   <meta property="og:image" content="https://raring.app/assets/social.png">
@@ -33,18 +33,37 @@
         <p class="eyebrow">Android · Early release</p>
         <h1 id="headline">A clearer view<br>of your day.</h1>
         <p class="lead">Your Garmin readiness, sleep and training, at a glance. See how you’re doing, what’s behind it, and when to take it easy.</p>
+        <p class="free-note"><strong>Free to use.</strong> No subscription.</p>
         <div class="actions"><a class="button" href="#install">Get Raring for Android <span aria-hidden="true">↗</span></a><a class="text-link" href="#how-it-works">How it works <span aria-hidden="true">↓</span></a></div>
-        <p class="quiet">Free &amp; open source. No ads. No telemetry.</p>
+        <p class="quiet">Open source. No ads. No telemetry.</p>
         <ul class="highlights" aria-label="What you can see">
           <li><span class="dot mint"></span><strong>Readiness</strong><span>Find today’s pace</span></li>
           <li><span class="dot violet"></span><strong>Sleep</strong><span>See your recovery</span></li>
           <li><span class="dot orange"></span><strong>Training</strong><span>Balance your load</span></li>
         </ul>
       </div>
-      <figure class="app-preview">
+      <div class="app-preview">
         <div class="phone-frame"><img src="assets/today.png" width="780" height="1688" alt="Raring’s Today screen with readiness, sleep and training load gauges, a daily focus and a sleep plan. All readings are sample data." fetchpriority="high"></div>
-        <figcaption>The app, with sample data</figcaption>
-      </figure>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="screens-title">
+      <p class="eyebrow">Inside Raring</p>
+      <h2 id="screens-title">Your day, in detail.</h2>
+      <div class="screen-gallery" role="region" aria-label="App screenshots" tabindex="0">
+        <figure>
+          <figcaption><h3 class="sleep-label">Sleep</h3><p>Sleep stages, overnight readings and tonight’s plan.</p></figcaption>
+          <div class="phone-frame"><img src="assets/sleep.png" width="780" height="1688" alt="Sleep screen showing a sleep score, time asleep, sleep stages and overnight readings." loading="lazy" decoding="async"></div>
+        </figure>
+        <figure>
+          <figcaption><h3 class="training-label">Training</h3><p>Load, recovery and the balance of your training.</p></figcaption>
+          <div class="phone-frame"><img src="assets/training.png" width="780" height="1688" alt="Training screen showing acute load, training status, recovery time and load focus." loading="lazy" decoding="async"></div>
+        </figure>
+        <figure>
+          <figcaption><h3 class="health-label">Health</h3><p>Your vitals against your own usual ranges.</p></figcaption>
+          <div class="phone-frame"><img src="assets/health.png" width="780" height="1688" alt="Health screen showing resting heart rate, HRV, respiration, oxygen saturation and skin-temperature change against personal ranges." loading="lazy" decoding="async"></div>
+        </figure>
+      </div>
     </section>
 
     <section id="how-it-works" class="section" aria-labelledby="how-title">
@@ -65,7 +84,7 @@
     </section>
 
     <section id="install" class="section install" aria-labelledby="install-title">
-      <div><p class="eyebrow">Ready when you are</p><h2 id="install-title">Try Raring on Android.</h2><p>This is an early release for Android 7 or later on arm64 phones. You’ll need a Garmin account with synced watch data. Raring isn’t in the app stores.</p><a class="button" href="https://github.com/dcardamo/raring/releases/latest">Open the latest release <span aria-hidden="true">↗</span></a></div>
+      <div><p class="eyebrow">Ready when you are</p><h2 id="install-title">Get Raring. It’s free.</h2><p>This is an early release for Android 7 or later on arm64 phones. You’ll need a Garmin account with synced watch data. Raring isn’t in the app stores.</p><a class="button" href="https://github.com/dcardamo/raring/releases/latest">Open the latest release <span aria-hidden="true">↗</span></a></div>
       <div class="install-options">
         <h3>Install the APK</h3><p>Open the latest release, download the <strong>arm64 .apk</strong> under Assets, and open it on your phone. Android may ask you to allow your browser to install it. Future APKs install over the existing app.</p>
         <h3>Keep it updated with Obtainium</h3><p>In <a href="https://github.com/ImranR98/Obtainium#installation">Obtainium</a>, add this repository as an app:</p><code>https://github.com/dcardamo/raring</code><p>Obtainium can then find and install new GitHub releases.</p>

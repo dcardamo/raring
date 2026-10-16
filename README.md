@@ -44,8 +44,9 @@ still publishes an APK).
 Local check: `nix develop -c bash -c 'cd app && npm run test:site'`.
 Preview: `nix develop -c python3 -m http.server 4174 --bind 0.0.0.0 --directory site`,
 then open `http://neptune:4174` from the tailnet.
-The sample screenshot comes from `cd app && npm run screenshots` inside the
-dev shell (`.data/screens/today.png`); never replace it with personal Garmin data.
+The app screenshots come from `cd app && npm run screenshots` inside the
+dev shell (`.data/screens/`). Copy only those synthetic images into `site/assets/`;
+never replace them with personal Garmin data.
 Fonts and their licenses are copied from `app/src/assets/fonts/`.
 
 The site has no analytics, but GitHub processes ordinary hosting and download

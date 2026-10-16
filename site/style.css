@@ -24,7 +24,9 @@ nav a{color:var(--muted);text-decoration:none;font-size:14px;padding:10px 0}
 .hero{display:grid;grid-template-columns:minmax(0,1fr) 320px;align-items:center;gap:70px;padding:40px 0 72px}
 .eyebrow{font-size:11px;font-weight:650;letter-spacing:.16em;text-transform:uppercase;color:var(--mint);margin-bottom:20px}
 .lead{font-size:19px;line-height:1.7;margin-top:24px;max-width:500px}
-.actions{display:flex;align-items:center;gap:24px;flex-wrap:wrap;margin:32px 0 16px}
+.free-note{margin-top:24px;font-size:17px}
+.free-note strong{color:var(--mint);font-weight:650}
+.actions{display:flex;align-items:center;gap:24px;flex-wrap:wrap;margin:24px 0 16px}
 .button{display:inline-flex;align-items:center;justify-content:center;gap:18px;padding:14px 22px;min-height:52px;background:linear-gradient(125deg,#3ddc97,#52d2cf);color:#09271e;font-weight:700;font-size:15px;border-radius:14px;text-decoration:none;line-height:1.5;text-align:center}
 .button:hover{background:#a0f9d2;color:#09271e}
 .text-link{display:inline-block;font-size:14px;font-weight:600;padding:10px 0}
@@ -37,7 +39,12 @@ nav a{color:var(--muted);text-decoration:none;font-size:14px;padding:10px 0}
 .app-preview{width:100%;max-width:320px;justify-self:center}
 .phone-frame{padding:7px;background:#19212d;border:1px solid #354255;border-radius:32px;box-shadow:0 28px 80px #0006}
 .phone-frame img{border-radius:25px;width:100%}
-figcaption{text-align:center;font-size:11px;color:var(--quiet);margin-top:14px}
+.screen-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:32px;margin-top:32px}
+.screen-gallery:focus-visible{outline:2px solid var(--mint);outline-offset:6px;border-radius:8px}
+.screen-gallery figure{min-width:0;max-width:300px;justify-self:center}
+.screen-gallery figcaption{margin-bottom:24px;min-height:100px}
+.screen-gallery figcaption p{font-size:14px;margin-top:10px}
+.sleep-label{color:var(--violet)}.training-label{color:var(--orange)}.health-label{color:var(--mint)}
 .section{padding:64px 0;border-top:1px solid var(--line);scroll-margin-top:24px}
 .section-intro{max-width:630px;margin-top:20px}
 .steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;list-style:none;padding:0;margin:32px 0 22px}
@@ -70,6 +77,7 @@ code{display:block;overflow-wrap:anywhere;padding:14px 16px;background:var(--car
 @media(max-width:900px){
  .hero{gap:30px;grid-template-columns:minmax(0,1fr) 270px}
  .steps{gap:12px}.steps li{padding:20px}
+ .screen-gallery{gap:20px}
  .privacy-card,.install{gap:32px}
 }
 @media(max-width:680px){
@@ -80,6 +88,9 @@ code{display:block;overflow-wrap:anywhere;padding:14px 16px;background:var(--car
  .hero{grid-template-columns:1fr;gap:40px;padding-top:40px;padding-bottom:48px}
  .lead{font-size:17px}.actions{gap:12px 24px}.highlights{margin-top:28px}
  .app-preview{max-width:290px}
+ .screen-gallery{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:min(82%,290px);overflow-x:auto;gap:20px;padding:6px 4px 20px;scroll-snap-type:x proximity;scrollbar-color:var(--line) var(--bg);scrollbar-width:thin}
+ .screen-gallery figure{scroll-snap-align:start}
+ .screen-gallery .phone-frame{box-shadow:none}
  .section{padding:42px 0}
  .steps{grid-template-columns:1fr;gap:14px;margin-top:26px}
  .steps li{padding:24px}.step-number{margin-bottom:12px}

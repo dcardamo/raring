@@ -41,6 +41,19 @@ try{
    assert.equal(await page.locator('h1').count(),1);
    assert.equal(await page.locator('script,iframe,form').count(),0,'static pages have no scripts, embeds or forms');
    await page.evaluate(()=>document.fonts.ready);
+   if(path==='/'){
+    assert.equal(await page.getByText('The app, with sample data',{exact:true}).count(),0);
+    assert.equal(await page.locator('.free-note').textContent(),'Free to use. No subscription.');
+    const free=await page.locator('.free-note').boundingBox();
+    assert.ok(free && free.y+free.height<=900,`${width}: free-to-use message is above the fold`);
+    assert.deepEqual(await page.locator('.screen-gallery img').evaluateAll(images=>images.map(img=>img.getAttribute('src'))),['assets/sleep.png','assets/training.png','assets/health.png']);
+   }
+   for(const img of await page.locator('img').all()){
+    await img.scrollIntoViewIfNeeded();
+    await img.evaluate(image=>image.decode());
+   }
+   if(path==='/')await page.locator('.screen-gallery').evaluate(gallery=>{gallery.scrollLeft=0});
+   await page.evaluate(()=>scrollTo(0,0));
    const layout=await page.evaluate(()=>({width:innerWidth,body:document.body.scrollWidth,document:document.documentElement.scrollWidth}));
    assert.ok(layout.body<=width && layout.document<=width,`${width}${path}: overflow ${JSON.stringify(layout)}`);
    assert.ok(await page.locator('img').evaluateAll(images=>images.every(img=>img.complete && img.naturalWidth>0)),'images load');
@@ -48,6 +61,14 @@ try{
    if(width===390 || width===1280)await page.screenshot({path:resolve(output,`${width}-${path==='/'?'home':'privacy'}.png`),fullPage:true});
   }
  }
+ await page.setViewportSize({width:390,height:900});
+ await page.goto(origin);
+ const gallery=page.getByRole('region',{name:'App screenshots',exact:true});
+ await gallery.focus();
+ await gallery.press('ArrowRight');
+ await page.waitForFunction(()=>document.querySelector('.screen-gallery').scrollLeft>0);
+ await gallery.locator('figure').last().scrollIntoViewIfNeeded();
+ assert.ok(await gallery.evaluate(el=>el.scrollLeft+el.clientWidth>=el.scrollWidth-2),'last screen is reachable without JavaScript');
  // Follow every local link, including fragments, without fetching third-party sites.
  for(const href of links){
   const target=new URL(href);
@@ -77,7 +98,7 @@ try{
  assert.deepEqual(unexpected,[],'no third-party resource requests');
  assert.deepEqual(failures,[],'no broken resources');
  assert.deepEqual(errors,[],'no browser errors');
- console.log('Static site: 320–1280px layouts, assets, links, install/privacy navigation and no third-party requests passed with JavaScript disabled.');
+ console.log('Static site: 320–1280px layouts, free-to-use copy, screenshot gallery, assets, links, install/privacy navigation and no third-party requests passed with JavaScript disabled.');
 }finally{
  await browser?.close();
  await new Promise(resolve=>server.close(resolve));
