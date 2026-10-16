@@ -1,0 +1,124 @@
+# Builds, signs and publishes the Android APK when a v* tag is pushed
+# (scripts/release.sh pushes one); Obtainium installs from these releases.
+# Run it by hand on main for a dry run: the signed APK is kept as a workflow
+# artifact instead of being published.
+#
+# The build job runs third-party build code (npm, cargo, Gradle) and gets no
+# secrets. Only the sign job, which runs nothing but the Android SDK's signing
+# tools, reads the signing key from the "release" environment, and that
+# environment only serves v* tags and main.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # Keep in step with the flake's rustc, NDK and cargo-tauri.
+      RUST_VERSION: 1.99.0
+      NDK_VERSION: 27.2.12479018
+      TAURI_CLI_VERSION: 2.11.4
+      TAURI_CLI_SHA256: 6864602a34292aa6f2ad40ae019eebe5c1064d6c623fe20696a8a8974067e60b
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check the tag matches the app version
+        if: github.ref_type == 'tag'
+        run: test "v$(jq -r .version app/src-tauri/tauri.conf.json)" = "$GITHUB_REF_NAME"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - name: Install Rust, the NDK and the Tauri CLI
+        run: |
+          rustup toolchain install "$RUST_VERSION" --profile minimal --target aarch64-linux-android
+          rustup default "$RUST_VERSION"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION" >/dev/null
+          echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >>"$GITHUB_ENV"
+          echo "JAVA_HOME=$JAVA_HOME_17_X64" >>"$GITHUB_ENV"
+          cd "$RUNNER_TEMP"
+          curl -sSfL -o cargo-tauri.tgz "https://github.com/tauri-apps/tauri/releases/download/tauri-cli-v${TAURI_CLI_VERSION}/cargo-tauri-x86_64-unknown-linux-gnu.tgz"
+          echo "${TAURI_CLI_SHA256}  cargo-tauri.tgz" | sha256sum -c -
+          tar -xzf cargo-tauri.tgz -C "$HOME/.cargo/bin" cargo-tauri
+      - name: Build the unsigned APK
+        working-directory: app
+        run: |
+          npm ci --no-audit --no-fund
+          cargo tauri android build --apk --split-per-abi --target aarch64
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: unsigned-apk
+          path: app/src-tauri/gen/android/app/build/outputs/apk/arm64/release/app-arm64-release-unsigned.apk
+          if-no-files-found: error
+          retention-days: 3
+
+  sign:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+    env:
+      # Installed copies only accept updates signed with this certificate.
+      RELEASE_CERT_SHA256: 9e42cfde6592819cae77cb25e75d5bb015e617aca03b4470ad7aeb8cf9c7264b
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: unsigned-apk
+          path: ${{ runner.temp }}/unsigned
+      - name: Sign and verify
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          tools=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
+          version=$(jq -r .version app/src-tauri/tauri.conf.json)
+          apk="$RUNNER_TEMP/pepometer-$version-arm64.apk"
+          keystore="$RUNNER_TEMP/release.keystore"
+          base64 -d <<<"$KEYSTORE_BASE64" >"$keystore"
+          "$tools/zipalign" -f -p 4 "$RUNNER_TEMP/unsigned/app-arm64-release-unsigned.apk" "$RUNNER_TEMP/aligned.apk"
+          "$tools/apksigner" sign --ks "$keystore" --ks-key-alias pepometer \
+            --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEYSTORE_PASSWORD \
+            --out "$apk" "$RUNNER_TEMP/aligned.apk"
+          rm -f "$keystore"
+          cert=$("$tools/apksigner" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+          if [ "$cert" != "$RELEASE_CERT_SHA256" ]; then
+            echo "::error::APK is not signed with the release key"
+            exit 1
+          fi
+          badging=$("$tools/aapt2" dump badging "$apk")
+          if [[ $badging != *"package: name='ca.hld.pepometer'"*"versionName='$version'"* ]]; then
+            echo "::error::APK is not ca.hld.pepometer $version"
+            exit 1
+          fi
+          echo "APK=$apk" >>"$GITHUB_ENV"
+          echo "VERSION=$version" >>"$GITHUB_ENV"
+      - name: Publish the release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          previous=$(git describe --tags --abbrev=0 "$GITHUB_REF_NAME^" 2>/dev/null || true)
+          if [ -n "$previous" ]; then
+            notes=$(git log --no-merges --format='- %s' "$previous..$GITHUB_REF_NAME^")
+          else
+            notes="First release."
+          fi
+          gh release create "$GITHUB_REF_NAME" "$APK" --verify-tag \
+            --title "Pepometer $VERSION" --notes "${notes:-Maintenance release.}"
+      - name: Keep the dry-run APK
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: signed-apk-dry-run
+          path: ${{ env.APK }}
+          retention-days: 3

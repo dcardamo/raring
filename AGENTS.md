@@ -43,12 +43,18 @@ Android SDK, NDK and emulator.
 
 ## Releases
 
-`scripts/release.sh [X.Y.Z]` publishes a signed arm64 APK as a GitHub release
-(default: the next patch version); Obtainium installs and updates the app from
-these releases. Run it from the main checkout on `main` after merging changes
-worth shipping. It needs the release keystore in `.data/` and refuses any APK
-not signed with the pinned release certificate. Never generate a new release
-keystore: installed copies would reject every update.
+`scripts/release.sh [X.Y.Z]` (default: the next patch version) commits the
+version, tags it and pushes; `.github/workflows/release.yml` then builds,
+signs and publishes the arm64 APK as a GitHub release, which Obtainium
+installs. Run it on `main` after merging changes worth shipping; it waits for
+the workflow. The workflow signs with the key in the `release` environment's
+secrets and refuses an APK without the pinned release certificate. Never
+generate a new release keystore: installed copies would reject every update.
+GitHub secrets can't be read back, so the local `.data/pepometer.keystore`
+and its backup are the only copies of the key.
+
+To check the build and signing without publishing, run the Release workflow
+by hand on `main` (`gh workflow run release.yml --ref main`).
 
 ## Rules
 
