@@ -16,7 +16,7 @@ try{
  const pageErrors=[];
  page.on('pageerror',e=>pageErrors.push(e));
  for(const [name,route,query] of [
-  ['today','today',''],['sleep','sleep',''],['training','training',''],['workout','workout/9000000000001',''],['health','health',''],['readiness','readiness',''],['checkin','checkin',''],['onboarding','onboarding',''],['settings','settings',''],['today-missing','today','?fixture=missing'],['today-empty','today','?fixture=empty']
+  ['today','today',''],['sleep','sleep',''],['training','training',''],['workout','workout/9000000000001',''],['health','health',''],['readiness','readiness',''],['hrv-history','metric/hrv',''],['checkin','checkin',''],['onboarding','onboarding',''],['settings','settings',''],['today-missing','today','?fixture=missing'],['today-empty','today','?fixture=empty']
  ]){
   await page.goto(`${url}/${query}#${route}`);
   await page.waitForFunction(()=>!document.querySelector('.empty') && !document.querySelector('.scroll > .empty') || document.querySelector('.empty')?.textContent?.includes('Syncing your Garmin data') && location.search.includes('empty'));
@@ -25,9 +25,9 @@ try{
   console.log(`${name}: ${resolve(output,`${name}.png`)}`);
   if(name==='workout' && !(await page.locator('.map > path').first().getAttribute('d')).includes('C'))throw new Error('Sparse route was not smoothed');
   if(name==='settings' && await page.locator('input[type="checkbox"]').count()!==6)throw new Error('Expected six notification switches');
-  if(name==='today-missing' && await page.getByText("Today's call").count())throw new Error('Missing-data variant still shows a call');
+  if(name==='today-missing' && await page.getByText("Today's focus").count())throw new Error('Missing-data variant still shows a call');
   if(name==='readiness'){
-   await page.getByText('Readiness · 30 days').waitFor();
+   await page.getByText('Readiness history').waitFor();
    await page.locator('.scroll').evaluate(el=>{el.scrollTop=el.scrollHeight});
    await page.waitForFunction(()=>document.querySelector('.scroll').scrollTop>0);
    await page.screenshot({path:resolve(output,'readiness-trend.png')});

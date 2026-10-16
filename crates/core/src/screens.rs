@@ -108,14 +108,24 @@ fn sleep(v: &Value) -> &Value {
         v
     }
 }
-fn sleep_need(v: &Value) -> Option<f64> {
-    ["totalSleepNeedInSeconds", "totalSleepNeedSeconds"]
-        .iter()
-        .find_map(|key| {
-            num(sleep(v), &[&["sleepNeed", key]])
-                .filter(|n| n.is_finite() && *n > 0.)
-                .map(|seconds| seconds / 60.)
+fn sleep_need_minutes(need: &Value) -> Option<f64> {
+    // Connect's adjusted "actual" need is in minutes; the older explicit
+    // seconds fields need conversion. "baseline" is not the adjusted need.
+    // See garth/data/daily_sleep_data.py's sleep_need_minutes projection.
+    num(need, &[&["actual"]])
+        .filter(|n| n.is_finite() && *n > 0.)
+        .or_else(|| {
+            ["totalSleepNeedInSeconds", "totalSleepNeedSeconds"]
+                .iter()
+                .find_map(|key| {
+                    num(need, &[&[key]])
+                        .filter(|n| n.is_finite() && *n > 0.)
+                        .map(|seconds| seconds / 60.)
+                })
         })
+}
+fn sleep_need(v: &Value) -> Option<f64> {
+    sleep_need_minutes(&sleep(v)["sleepNeed"])
 }
 fn sleep_plan(store: &Store, date: &str) -> Option<SleepPlan> {
     let nights: Vec<Value> = (0..14)
@@ -127,14 +137,17 @@ fn sleep_plan(store: &Store, date: &str) -> Option<SleepPlan> {
         .filter_map(|time| hour(&time))
         .filter(|hour| hour.is_finite() && (0.0..24.0).contains(hour))
         .collect();
-    let current_need = store.get("sleep", date).and_then(|v| sleep_need(&v));
+    let current = store.get("sleep", date).unwrap_or(Value::Null);
+    let upcoming_need = sleep_need_minutes(&sleep(&current)["nextSleepNeed"]);
     let historical: Vec<f64> = nights.iter().filter_map(sleep_need).collect();
-    let (need_min, uses_average) = if let Some(need) = current_need {
-        (need, false)
+    let (need_min, source) = if let Some(need) = upcoming_need {
+        (need, SleepNeedSource::Tonight)
+    } else if let Some(need) = sleep_need(&current) {
+        (need, SleepNeedSource::Latest)
     } else if !historical.is_empty() {
         (
             historical.iter().sum::<f64>() / historical.len() as f64,
-            true,
+            SleepNeedSource::Average,
         )
     } else {
         return None;
@@ -146,7 +159,8 @@ fn sleep_plan(store: &Store, date: &str) -> Option<SleepPlan> {
         bedtime: rules::bedtime(&wakes, need_min)?,
         wake_time: rules::bedtime(&wakes, 0.)?,
         need_min,
-        uses_average,
+        source,
+        wake_nights: wakes.len() as u32,
     })
 }
 fn first(v: &Value) -> &Value {

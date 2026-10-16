@@ -50,6 +50,38 @@ try {
  await waitRoute('today');
  console.log('Hierarchical browser, header and native Back: passed');
 
+ await page.getByRole('button',{name:/^Today's focus/}).click();await waitRoute('readiness');
+ await page.getByText('Readiness history',{exact:true}).waitFor();
+ await page.getByRole('button',{name:'30 days',exact:true}).click();
+ assert.equal(await page.locator('.history-bar').count(),30);
+ await back('today');
+ await page.getByRole('button',{name:/^Tonight's sleep/}).click();await waitRoute('sleep');
+ assert.ok((await page.locator('.sleep-plan').textContent()).includes('23:06'));
+ assert.ok((await page.locator('.sleep-plan').textContent()).includes('Usual wake'));
+ await tab('Health');
+ assert.equal(await page.locator('.dashboard>.card').first().locator('h3>span').first().textContent(),'Vitals');
+ assert.equal(await page.locator('.signal-tile').count(),5);
+ await page.getByRole('button',{name:'View HRV',exact:true}).click();await waitRoute('metric/hrv');
+ const history=page.locator('.history'),slider=history.getByRole('slider');
+ assert.equal(await slider.getAttribute('aria-valuetext'),'Thu 16 Oct: 58 ms');
+ await slider.focus();await slider.press('ArrowLeft');
+ assert.ok((await slider.getAttribute('aria-valuetext')).startsWith('Wed 15 Oct:'));
+ await history.getByRole('button',{name:'30 nights',exact:true}).click();
+ await slider.focus();await slider.press('Home');
+ assert.ok((await slider.getAttribute('aria-valuetext')).startsWith('Wed 17 Sept:'));
+ assert.equal(await history.locator('.history-gap').count(),2,'missing nights remain gaps');
+ for(let i=0;i<9;i++)await slider.press('ArrowRight');
+ assert.equal(await slider.getAttribute('aria-valuetext'),'Fri 26 Sept: Not recorded');
+ assert.equal(await history.locator('.history-reading b').textContent(),'—','missing is never zero');
+ await slider.press('End');
+ await history.getByRole('button',{name:'Previous reading'}).click();
+ assert.ok((await slider.getAttribute('aria-valuetext')).startsWith('Wed 15 Oct:'));
+ await history.getByRole('button',{name:'Next reading'}).click();
+ const chart=await history.locator('.chart-surface').boundingBox();
+ await history.locator('.chart-surface').click({position:{x:chart.width*.55,y:chart.height*.5}});
+ assert.notEqual(await slider.inputValue(),'29','chart taps select a reading');
+ console.log('Daily focus, sleep plan and keyboard/touch history: passed');
+
  for(const width of [360,390,720,840,1024]) {
   await page.setViewportSize({width,height:900});
   for(const route of ['today','sleep','training','health','readiness','workout/9000000000001','metric/hrv','metric/bodyBattery','settings','checkin']) {
@@ -137,6 +169,45 @@ try {
  assert.equal(await live.locator('h1').textContent(),'Sleep');
  await live.locator('.sleep-hero').waitFor();
  console.log('Live cache polling, throttled sync, failures and route races: passed');
+
+ // A partially calibrated monitor must not turn missing readings into an all-clear.
+ await live.evaluate(()=>{
+  const s=window.testBackend;s.failSync=false;
+  for(const v of s.samples.health.vitals.readings){v.value=null;v.normal=null;v.trend=Array(30).fill(null);v.tone='neutral'}
+  Object.assign(s.samples.health.vitals.readings[0],{value:48,normal:[44,52],scale:[30,90],tone:'good'});
+  Object.assign(s.samples.health.vitals.readings[1],{value:58});
+  s.samples.health.vitals.baselineReady=true;
+ });
+ await live.setViewportSize({width:390,height:844});
+ await live.getByRole('navigation').getByRole('button',{name:'Health',exact:true}).click();
+ await live.getByText('1 reading in range',{exact:true}).waitFor();
+ assert.equal(await live.getByText('Within your usual ranges',{exact:true}).count(),0);
+ assert.equal(await live.getByText('Not recorded',{exact:true}).count(),3);
+ await live.screenshot({path:resolve(output,'health-partial.png')});
+ await live.evaluate(()=>{
+  const v=window.testBackend.samples.health.vitals.readings;
+  Object.assign(v[0],{value:74,tone:'poor'});
+  Object.assign(v[1],{value:28,normal:[48,62],scale:[14,76],tone:'poor'});
+  v[1].trend[29]=28;
+  window.dispatchEvent(new Event('pepometer:resume'));
+ });
+ await live.getByText('2 outside your usual range',{exact:true}).waitFor();
+ await live.getByText('Above usual',{exact:true}).waitFor();
+ await live.getByText('Below baseline',{exact:true}).waitFor();
+ await live.screenshot({path:resolve(output,'health-outliers.png')});
+ await live.getByRole('button',{name:'View SpO₂',exact:true}).click();
+ await live.getByText('No readings in this period. Missing data is never shown as zero.',{exact:true}).waitFor();
+ assert.equal(await live.locator('.history .history-bar').count(),0);
+ assert.equal(await live.locator('.history input').getAttribute('aria-valuetext'),'Thu 16 Oct: Not recorded','history is anchored to stored data, not the system clock');
+ await live.screenshot({path:resolve(output,'history-missing.png')});
+ await live.evaluate(()=>{window.testBackend.samples.today.sleepPlan=null;window.testBackend.samples.sleep.sleepPlan=null});
+ await live.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();
+ await live.locator('.dials').waitFor();
+ assert.equal(await live.locator('.sleep-plan').count(),0,'no inferred sleep plan without Garmin need');
+ await live.getByRole('navigation').getByRole('button',{name:'Sleep',exact:true}).click();
+ await live.locator('.sleep-hero').waitFor();
+ assert.equal(await live.locator('.sleep-plan').count(),0);
+ console.log('Partial baselines, outliers, missing history and unavailable sleep plans: passed');
  assert.deepEqual(errors,[],'no browser errors');
 } finally {
  await browser?.close();

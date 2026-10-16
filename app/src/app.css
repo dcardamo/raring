@@ -7,6 +7,9 @@
 .page-hero>.headline{margin-bottom:20px}
 .sleep-hero{max-width:540px;margin:16px auto 24px}
 .card{min-width:0}
+.card h3{color:var(--text2)}
+.sleep-plan{background:linear-gradient(120deg,rgba(155,140,255,.09),rgba(155,140,255,.025));border-color:rgba(155,140,255,.17)}
+.daily-focus{background:linear-gradient(120deg,rgba(61,220,151,.055),var(--card))}
 .card-actions{display:inline-flex;align-items:center;gap:8px}
 .tap:focus-visible{outline:2px solid var(--mint);outline-offset:3px}
 .tap:active,.metric-link:active,.vital:active,.vital-row:active{background:rgba(255,255,255,.08)}
@@ -37,6 +40,7 @@ button:disabled{cursor:default;opacity:.6}
  .page-hero{margin-bottom:24px}
  .page-hero>.dials{margin-top:24px}
  .workout-overview{grid-column:1 / -1}
+ .health-dashboard>.vitals-monitor{grid-row:span 3}
  .workout-hero{max-width:640px;margin:auto}
  .tabs{padding-left:max(28px,calc((100% - 900px)/2));padding-right:max(28px,calc((100% - 900px)/2))}
  .tab{width:120px}

@@ -298,6 +298,11 @@
     6.5,
     7
   ],
-  "tonightBedtime": "22:50",
-  "tonightNeedMin": 455
+  "sleepPlan": {
+    "bedtime": "23:06",
+    "wakeTime": "06:36",
+    "needMin": 450,
+    "source": "tonight",
+    "wakeNights": 14
+  }
 }

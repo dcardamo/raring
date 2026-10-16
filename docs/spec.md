@@ -48,12 +48,17 @@ opens its detail.
   against Garmin's optimal range) on the right.
 - A few-word headline ("Ready to push", "Take it easy") and three reason
   chips: sleep time, HRV and load.
-- **What's driving it**: Garmin's six readiness factors as colored bars.
-- **Today's call**: Rest, Easy, Steady or Push, with the suggestion lit up.
+- **Today's focus**: Rest, Easy, Steady or Push, with the suggestion lit up,
+  followed by the lowest recorded Garmin readiness factor. Tap to see all six
+  factors and their feedback.
+- **Tonight's sleep**: suggested asleep-by time, Garmin sleep need and usual
+  wake time. The same plan appears on Sleep; a historical-average need is
+  explicitly labeled, along with the number of recorded wake times. Hide the plan if need or wake history is unavailable.
 - Body Battery as a battery with its overnight charge; HRV with a 7-day line
   over Garmin's baseline band.
-- Vitals as five rings that turn amber or red when a value is outside your
-  normal range.
+- Vitals as five compact readings with units, a range-status indicator and
+  a count of recorded and comparable readings. Missing or uncalibrated data
+  is neutral, never an all-clear.
 - Today's workouts with a heart-rate zone strip, and Fitness Age with its
   trend line. The weekly check-in card appears here on Mondays.
 
@@ -62,7 +67,10 @@ opens its detail.
 - Large gauge with Garmin's level (Prime/High green, Moderate amber, Low/Poor
   red) and a few-word headline from Garmin's own feedback.
 - Factor bars worst first; tapping one explains it in a sentence.
-- 30-day trend chart and today's call.
+- Interactive 7-/30-day trend chart and today's call. Tap the chart or use
+  the date slider to inspect a reading. Dates are anchored to the stored
+  Garmin day, missing days remain gaps, and readiness uses Garmin's level
+  boundaries (50 for Moderate, 75 for High).
 
 ### Sleep
 
@@ -72,7 +80,8 @@ opens its detail.
   change against your usual.
 - Overnight tiles with lines: HRV, heart rate, respiration, SpO2.
 - 14-night consistency chart with your bed and wake windows shaded.
-- Tonight's suggested bedtime.
+- Tonight's sleep plan, shared with Today: asleep-by time, sleep need and
+  usual wake time. It is a suggestion, not an alarm.
 
 ### Training
 
@@ -95,6 +104,13 @@ opens its detail.
 
 ### Health
 
+- **Vitals first**: resting heart rate, HRV, respiration, SpO2 and
+  skin-temperature change as tappable tiles. Show units, the personal range
+  and explicit within/above/below-range or missing/baseline-building labels.
+  Each detail has interactive 7-/30-night history with the current range
+  shaded, actual dates and missing nights left blank. Nightly HRV against the
+  baseline is distinct from Garmin's seven-day HRV status. Explain the comparison
+  method behind a tap; personal ranges are not medical targets.
 - **Fitness Age**: large number, trend line, and a bar placing it against your
   real age.
 - **Biggest lever**: a progress ring toward Garmin's target for the driver
@@ -102,10 +118,10 @@ opens its detail.
   reach.
 - **Drivers**: VO2max, resting heart rate, BMI or body fat, and vigorous
   minutes as tiles with range bars.
-- **Vitals**: resting heart rate, HRV, respiration, SpO2 and skin-temperature
-  change, each with a normal-range bar and a 30-day line. When two or more are
-  outside range, a banner turns amber: "Possible illness or strain. Take it
-  easy."
+- When two or more vitals are outside their personal ranges, an amber
+  message suggests taking it easy and checking how you feel, without
+  diagnosing an illness. A partially calibrated monitor reports only the
+  readings it can compare.
 
 ### Weekly check-in
 
@@ -134,7 +150,8 @@ Sent by the phone itself.
   push, steady or easy; a high load ratio caps it at steady.
 - **Biggest drag**: the readiness factor Garmin rates worst.
 - **Bedtime**: usual wake time (14-day median) minus tonight's sleep need
-  (Garmin's latest, otherwise the 14-day average).
+  (Garmin's next-night adjusted need when present, otherwise its latest
+  adjusted need or the 14-day average). Label the source and wake-history count.
 - **Normal range**: the middle 80% of the last 30 nights, once there are at
   least 14. HRV uses Garmin's own baseline instead.
 - **Weekly focus**: the biggest gap among sleep against need, load-focus

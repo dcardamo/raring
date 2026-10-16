@@ -1,5 +1,5 @@
 use chrono::{Duration, NaiveDate};
-use pepometer_core::{notifications, screens, store::Store, view::VitalKind};
+use pepometer_core::{notifications, screens, store::Store, view::{SleepNeedSource, VitalKind}};
 use serde_json::json;
 
 const DATE: &str = "2025-01-16";
@@ -36,7 +36,8 @@ fn today_and_sleep_share_current_garmin_plan_across_midnight() {
     assert_eq!(plan.bedtime, "23:15");
     assert_eq!(plan.wake_time, "07:15");
     assert_eq!(plan.need_min, 480.);
-    assert!(!plan.uses_average);
+    assert_eq!(plan.source, SleepNeedSource::Latest);
+    assert_eq!(plan.wake_nights, 2);
 
     // Today's alternate alias is preferred even when the primary alias is invalid.
     put_sleep(
@@ -48,7 +49,40 @@ fn today_and_sleep_share_current_garmin_plan_across_midnight() {
     let plan = screens::sleep_view(&store, DATE).sleep_plan.unwrap();
     assert_eq!(plan.need_min, 450.);
     assert_eq!(plan.bedtime, "23:45");
-    assert!(!plan.uses_average);
+    assert_eq!(plan.source, SleepNeedSource::Latest);
+}
+
+#[test]
+fn adjusted_minute_needs_distinguish_last_night_from_tonight() {
+    let store = Store::open(":memory:").unwrap();
+    put_sleep(&store, DATE, Some("07:15"), json!({"actual": 480, "baseline": 450}));
+    let mut raw = store.get("sleep", DATE).unwrap();
+    raw["dailySleepDTO"]["nextSleepNeed"] = json!({"actual": 525, "baseline": 450});
+    store.put("sleep", DATE, "now", &raw).unwrap();
+    let sleep = screens::sleep_view(&store, DATE);
+    assert_eq!(sleep.need_min, Some(480.));
+    let plan = sleep.sleep_plan.unwrap();
+    assert_eq!(plan.need_min, 525.);
+    assert_eq!(plan.bedtime, "22:30");
+    assert_eq!(plan.source, SleepNeedSource::Tonight);
+    assert_eq!(plan.wake_nights, 1);
+    assert_eq!(screens::today(&store, DATE).sleep_plan, Some(plan));
+
+    raw["dailySleepDTO"]["nextSleepNeed"]["actual"] = json!(0);
+    store.put("sleep", DATE, "now", &raw).unwrap();
+    assert_eq!(screens::today(&store, DATE).sleep_plan.unwrap().source, SleepNeedSource::Latest);
+}
+
+#[test]
+fn unadjusted_baseline_is_not_a_sleep_need() {
+    let store = Store::open(":memory:").unwrap();
+    put_sleep(&store, DATE, Some("07:00"), json!({"baseline": 450}));
+    assert!(screens::today(&store, DATE).sleep_plan.is_none());
+    put_sleep(&store, "2025-01-15", Some("07:00"), json!({"actual": 420}));
+    put_sleep(&store, "2025-01-14", Some("07:00"), json!({"actual": 480}));
+    let plan = screens::today(&store, DATE).sleep_plan.unwrap();
+    assert_eq!(plan.need_min, 450.);
+    assert_eq!(plan.source, SleepNeedSource::Average);
 }
 
 #[test]
@@ -115,7 +149,7 @@ fn historical_fallback_averages_both_aliases_and_ignores_invalid_needs() {
     assert_eq!(plan.need_min, 480.);
     assert_eq!(plan.bedtime, "23:30");
     assert_eq!(plan.wake_time, "07:30");
-    assert!(plan.uses_average);
+    assert_eq!(plan.source, SleepNeedSource::Average);
 }
 
 #[test]

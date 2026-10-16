@@ -279,7 +279,16 @@ pub struct OvernightTile {
     pub series: Vec<f64>,
 }
 
-/// Garmin sleep need and a usual wake time derived from the last 14 nights.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum SleepNeedSource {
+    Tonight,
+    Latest,
+    Average,
+}
+
+/// Garmin sleep need and a wake reference derived from the last 14 nights.
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -289,8 +298,9 @@ pub struct SleepPlan {
     /// Median local wake time, HH:MM.
     pub wake_time: String,
     pub need_min: f64,
-    /// True when today's Garmin need is missing and historical needs were averaged.
-    pub uses_average: bool,
+    pub source: SleepNeedSource,
+    /// Recorded wake times in the 14-day window; sparse history stays explicit.
+    pub wake_nights: u32,
 }
 
 /// One night's bed and wake time, as hours on a 24h clock (23.5 = 23:30).

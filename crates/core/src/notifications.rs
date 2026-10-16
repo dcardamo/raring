@@ -57,7 +57,7 @@ pub fn notifications(store: &Store, now: DateTime<Local>) -> Vec<Notification> {
         add(
             "vitals",
             "Vitals outside range",
-            "Possible illness or strain. Take it easy.".into(),
+            "Several readings are outside your usual range. Take it easy and check how you feel.".into(),
             day.clone(),
         );
     }
