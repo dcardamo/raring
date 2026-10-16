@@ -50,8 +50,8 @@ installs. Run it on `main` after merging changes worth shipping; it waits for
 the workflow. The workflow signs with the key in the `release` environment's
 secrets and refuses an APK without the pinned release certificate. Never
 generate a new release keystore: installed copies would reject every update.
-GitHub secrets can't be read back, so the local `.data/pepometer.keystore`
-and its backup are the only copies of the key.
+GitHub secrets can't be read back, so the maintainer's local
+`.data/pepometer.keystore` is the only readable copy of the key.
 
 To check the build and signing without publishing, run the Release workflow
 by hand on `main` (`gh workflow run release.yml --ref main`).
