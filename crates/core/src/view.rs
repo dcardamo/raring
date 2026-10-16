@@ -206,6 +206,9 @@ pub struct TodayView {
     /// Local date, YYYY-MM-DD.
     pub date: String,
     pub readiness: Option<Gauge>,
+    /// Readiness scores for the last 30 days, oldest first (the Readiness
+    /// detail chart).
+    pub readiness_trend: Vec<Option<f64>>,
     pub sleep: Option<Gauge>,
     pub load: Option<Gauge>,
     /// A few words: "Ready to push", "Take it easy".
@@ -486,6 +489,34 @@ pub struct CheckinView {
     pub fitness_age_change: Option<f64>,
     pub win: Option<String>,
     pub focus: Option<String>,
+}
+
+/// Notification switches (Settings screen). Defaults follow the spec:
+/// training-status and bedtime notifications start off.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct Settings {
+    pub notify_morning_readiness: bool,
+    pub notify_weekly_checkin: bool,
+    /// VO2max and Fitness Age changes.
+    pub notify_metric_changes: bool,
+    pub notify_vitals: bool,
+    pub notify_training_status: bool,
+    pub notify_bedtime: bool,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            notify_morning_readiness: true,
+            notify_weekly_checkin: true,
+            notify_metric_changes: true,
+            notify_vitals: true,
+            notify_training_status: false,
+            notify_bedtime: false,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
