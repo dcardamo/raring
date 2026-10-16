@@ -10,9 +10,10 @@
  function navigate(to:string){if(tabs.includes(to))previousTab=to;location.hash=to;syncRoute()}
  function back(){if(history.length>1)history.back();else navigate(previousTab)}
  function syncRoute(){route=decodeURIComponent(location.hash.slice(1)||'today');if(tabs.includes(route))previousTab=route;void refresh()}
- async function refresh(){
+ async function refresh(silent=false){
   const current=route;
-  loading=true;error='';
+  if(!silent)loading=true;
+  error='';
   try {
    status=await api.app_status();
    if(status.signedIn && localStorage.getItem('notifications-step-done')!=='1' && !new URLSearchParams(location.search).has('fixture')){route='onboarding';onboardStep=1;data=null}
@@ -42,7 +43,7 @@
   }catch(e){if(current===route){data=null;error=String(e)}}
   finally{if(current===route)loading=false}
  }
- onMount(()=>{if(!location.hash)history.replaceState(null,'','#today');syncRoute();window.addEventListener('hashchange',syncRoute);window.addEventListener('popstate',syncRoute);let unlisten=()=>{};void api.onStatusChanged(()=>{void refresh()}).then(fn=>{unlisten=fn});return()=>{window.removeEventListener('hashchange',syncRoute);window.removeEventListener('popstate',syncRoute);unlisten()}});
+ onMount(()=>{if(!location.hash)history.replaceState(null,'','#today');syncRoute();window.addEventListener('hashchange',syncRoute);window.addEventListener('popstate',syncRoute);let unlisten=()=>{};void api.onStatusChanged(()=>{void refresh()}).then(fn=>{unlisten=fn});const poll=window.setInterval(()=>{if(document.visibilityState==='visible' && status?.signedIn && route==='today')void refresh(true)},30_000);return()=>{window.clearInterval(poll);window.removeEventListener('hashchange',syncRoute);window.removeEventListener('popstate',syncRoute);unlisten()}});
  async function pullEnd(e:TouchEvent){if(route==='today' && startedAtTop && e.changedTouches[0].clientY-startY>75){try{await api.sync_now();await refresh()}catch(err){error=String(err)}}}
  async function saveSettings(){try{await api.set_settings(settings)}catch(e){error=String(e)}}
  const vitalNames:Record<string,string>={restingHr:'Resting HR',hrv:'HRV',respiration:'Respiration',spo2:'SpO₂',skinTemp:'Skin temp'};
