@@ -39,6 +39,26 @@ fn seed(store: &Store) {
     }
 }
 #[test]
+fn demo_seeds_current_day_and_screen_details() {
+    let store = Store::open(":memory:").unwrap();
+    let date = Local::now().date_naive();
+    pepometer_core::demo::seed(&store, date).unwrap();
+    assert_eq!(store.days(), 30);
+    let today = pepometer_core::screens::today(&store, &date.to_string());
+    assert_eq!(today.readiness.unwrap().value, 82.);
+    assert_eq!(today.body_battery.now, Some(78.));
+    assert_eq!(
+        pepometer_core::screens::training(&store, &date.to_string())
+            .load_focus
+            .len(),
+        3
+    );
+    let workout =
+        pepometer_core::screens::workout(&store, pepometer_core::demo::WORKOUT_ID).unwrap();
+    assert_eq!(workout.splits.len(), 10);
+    assert_eq!(workout.heart_rate.len(), 80);
+}
+#[test]
 fn views_match_synthetic_mockup() {
     let s = Store::open(":memory:").unwrap();
     seed(&s);
@@ -371,6 +391,21 @@ async fn sync_persists_rate_limit_backoff() {
     let next = pepometer_core::sync::sync(&store, &c, Local::now(), 1).await;
     assert!(next.rate_limited);
     assert_eq!(next.requests, 0);
+    thread.join().unwrap();
+}
+#[tokio::test]
+async fn sync_reports_auth_failure_structurally() {
+    let store = Store::open(":memory:").unwrap();
+    let (url, _, thread) = mock(vec![(401, "{}".into()), (401, "{}".into())]);
+    let tokens = Tokens {
+        access_token: token(1900000000),
+        refresh_token: "refresh".into(),
+        client_id: "TEST_DI".into(),
+        expires_at: Utc::now() + Duration::days(30),
+    };
+    let client = Client::with_urls(tokens, &url, &url, std::time::Duration::ZERO).unwrap();
+    let report = pepometer_core::sync::sync(&store, &client, Local::now(), 1).await;
+    assert!(report.auth_failed);
     thread.join().unwrap();
 }
 #[tokio::test]

@@ -1,4 +1,5 @@
 //! Shared, offline-first Garmin core. Callers own and persist credentials.
+pub mod demo;
 pub mod garmin;
 pub mod notifications;
 pub mod rules;

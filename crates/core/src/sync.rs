@@ -13,6 +13,7 @@ pub struct SyncReport {
     pub sleep_present: bool,
     pub readiness_present: bool,
     pub rate_limited: bool,
+    pub auth_failed: bool,
     pub error: Option<String>,
     pub tokens: Option<Tokens>,
 }
@@ -293,6 +294,7 @@ async fn fetch(
     }
 }
 fn failure(store: &Store, report: &mut SyncReport, error: garmin::Error, now: DateTime<Utc>) {
+    report.auth_failed = matches!(error, garmin::Error::NeedsSignIn);
     if let garmin::Error::RateLimited { retry_after } = error {
         report.rate_limited = true;
         let _ = store.set_cursor(
