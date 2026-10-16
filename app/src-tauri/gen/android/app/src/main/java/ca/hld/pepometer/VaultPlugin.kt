@@ -5,6 +5,8 @@ import android.app.Activity
 import android.os.Build
 import android.content.Intent
 import android.webkit.WebView
+import android.webkit.CookieManager
+import android.webkit.WebStorage
 import app.tauri.PermissionState
 import app.tauri.annotation.Command
 import app.tauri.annotation.Permission
@@ -19,7 +21,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.withLock
 
 @TauriPlugin(permissions = [Permission(strings = [Manifest.permission.POST_NOTIFICATIONS], alias = "notifications")])
@@ -31,41 +33,51 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
     }
     override fun onNewIntent(intent: Intent) { openTarget(intent) }
     private fun openTarget(intent: Intent?) {
-        val target = intent?.getStringExtra("target")?.takeIf { it == "today" || it == "checkin" } ?: return
+        val target = intent?.getStringExtra("target")?.takeIf { it in setOf("today", "checkin", "sleep", "training", "health") } ?: return
         webview?.post { webview?.loadUrl("http://tauri.localhost/#$target") }
         intent.removeExtra("target")
     }
     @Command fun loadTokens(invoke: Invoke) {
-        try { invoke.resolve(JSObject().apply { put("value", TokenVault.load(activity)) }) }
-        catch (e: Exception) { invoke.reject("token vault unavailable", e) }
+        CoroutineScope(Dispatchers.IO).launch {
+            invoke.resolve(JSObject().apply { put("value", TokenVault.loadOrClear(activity)) })
+        }
     }
     @Command fun saveTokens(invoke: Invoke) {
-        try {
-            runBlocking { SyncGate.mutex.withLock { TokenVault.save(activity, invoke.getArgs().getString("value")) } }
-            SyncScheduler.start(activity)
-            invoke.resolve(JSObject())
-        } catch (e: Exception) { invoke.reject("token vault unavailable", e) }
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                SyncGate.mutex.withLock { TokenVault.save(activity, invoke.getArgs().getString("value")) }
+                SyncScheduler.start(activity)
+                invoke.resolve(JSObject())
+            } catch (e: Exception) { invoke.reject("token vault unavailable", e) }
+        }
     }
     @Command fun clearTokens(invoke: Invoke) {
-        try {
-            SyncScheduler.cancel(activity)
-            runBlocking { SyncGate.mutex.withLock { TokenVault.clear(activity) } }
-            invoke.resolve(JSObject())
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                SyncScheduler.cancel(activity)
+                SyncGate.mutex.withLock { TokenVault.clear(activity) }
+                CookieManager.getInstance().removeAllCookies(null)
+                WebStorage.getInstance().deleteAllData()
+                invoke.resolve(JSObject())
+            } catch (e: Exception) { invoke.reject("token vault unavailable", e) }
         }
-        catch (e: Exception) { invoke.reject("token vault unavailable", e) }
     }
     @Command fun schedule(invoke: Invoke) {
-        if (TokenVault.load(activity) != null) SyncScheduler.start(activity)
-        invoke.resolve(JSObject())
+        CoroutineScope(Dispatchers.IO).launch {
+            if (TokenVault.loadOrClear(activity) != null) SyncScheduler.start(activity)
+            invoke.resolve(JSObject())
+        }
     }
     @Command fun syncNow(invoke: Invoke) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                SyncScheduler.immediate(activity).result.get()
-                val completed = WorkManager.getInstance(activity).getWorkInfosForUniqueWorkFlow("garmin-immediate")
-                    .first { infos -> infos.any { it.state.isFinished } }
-                if (completed.any { it.state == WorkInfo.State.SUCCEEDED }) invoke.resolve(JSObject())
-                else invoke.reject("sync failed — try again")
+                val id = SyncScheduler.immediate(activity)
+                val completed = withTimeoutOrNull(60_000) {
+                    WorkManager.getInstance(activity).getWorkInfoByIdFlow(id)
+                        .first { info -> info != null && (info.state.isFinished || info.runAttemptCount > 0) }
+                }
+                if (completed?.state == WorkInfo.State.SUCCEEDED) invoke.resolve(JSObject())
+                else invoke.reject("sync pending — try again later")
             } catch (e: Exception) { invoke.reject("sync failed — try again", e) }
         }
     }

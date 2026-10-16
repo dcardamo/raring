@@ -1,4 +1,4 @@
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Duration, Local, Utc};
 use jni::{
     objects::{JClass, JString},
     JNIEnv,
@@ -22,6 +22,8 @@ struct Notification {
     title: String,
     body: String,
     target: &'static str,
+    kind: String,
+    tag: String,
 }
 
 fn notification_target(kind: &str) -> &'static str {
@@ -80,16 +82,17 @@ fn run_background_sync(db_path: &str, tokens_json: &str, now_iso: &str) -> SyncR
             return result;
         }
     };
-    match runtime.block_on(core.sync(tokens, now, 60)) {
+    let budget = if core.status().last_sync.is_none() {
+        1400
+    } else {
+        60
+    };
+    match runtime.block_on(core.sync(tokens, now, budget)) {
         Ok(outcome) => {
             result.tokens_json = serde_json::to_string(&outcome.tokens).unwrap_or_default();
             result.readiness_missing = !outcome.report.readiness_present;
             result.auth_failed = outcome.report.auth_failed;
             if !result.auth_failed {
-                if let Err(e) = core.mark_notifications_sent(&outcome.notifications, now) {
-                    result.error = Some(e.to_string());
-                    return result;
-                }
                 result.notifications = outcome
                     .notifications
                     .into_iter()
@@ -98,6 +101,8 @@ fn run_background_sync(db_path: &str, tokens_json: &str, now_iso: &str) -> SyncR
                         title: item.title,
                         body: item.body,
                         target: notification_target(&item.kind),
+                        kind: item.kind,
+                        tag: item.tag,
                     })
                     .collect();
             }
@@ -122,6 +127,54 @@ fn run_background_sync(db_path: &str, tokens_json: &str, now_iso: &str) -> SyncR
 
 #[no_mangle]
 #[allow(non_snake_case)]
+pub extern "system" fn Java_ca_hld_pepometer_NativeBridge_prepareTokens(
+    mut env: JNIEnv<'_>,
+    _class: JClass<'_>,
+    tokens_json: JString<'_>,
+) -> jni::sys::jstring {
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(
+        || -> Result<String, String> {
+            let json = env
+                .get_string(&tokens_json)
+                .map_err(|e| e.to_string())?
+                .to_string_lossy()
+                .into_owned();
+            let tokens: Tokens = match serde_json::from_str(&json) {
+                Ok(t) => t,
+                Err(_) => return Ok("{\"authFailed\":true}".into()),
+            };
+            if !tokens.is_expiring(Utc::now(), Duration::minutes(5)) {
+                return Ok(serde_json::json!({"tokensJson":json}).to_string());
+            }
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .map_err(|e| e.to_string())?;
+            let refreshed = rt.block_on(Pepometer::refresh_tokens(&tokens));
+            match refreshed {
+                Ok(value) => {
+                    let json = serde_json::to_string(&value).map_err(|e| e.to_string())?;
+                    Ok(serde_json::json!({"tokensJson": json}).to_string())
+                }
+                Err(pepometer_core::Error::Garmin(pepometer_core::garmin::Error::NeedsSignIn)) => {
+                    Ok("{\"authFailed\":true}".into())
+                }
+                Err(e) => Ok(serde_json::json!({"error": e.to_string()}).to_string()),
+            }
+        },
+    ));
+    let json = result
+        .ok()
+        .and_then(Result::ok)
+        .unwrap_or_else(|| "{\"error\":\"native refresh failed\"}".into());
+    match env.new_string(json) {
+        Ok(v) => v.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
 pub extern "system" fn Java_ca_hld_pepometer_NativeBridge_sync(
     mut env: JNIEnv<'_>,
     _class: JClass<'_>,
@@ -129,14 +182,67 @@ pub extern "system" fn Java_ca_hld_pepometer_NativeBridge_sync(
     tokens_json: JString<'_>,
     now_iso: JString<'_>,
 ) -> jni::sys::jstring {
-    let result = (|| -> jni::errors::Result<String> {
-        let db = env.get_string(&db_path)?.to_string_lossy().into_owned();
-        let tokens = env.get_string(&tokens_json)?.to_string_lossy().into_owned();
-        let now = env.get_string(&now_iso)?.to_string_lossy().into_owned();
-        Ok(serde_json::to_string(&run_background_sync(&db, &tokens, &now)).unwrap_or_default())
-    })();
-    match env.new_string(result.unwrap_or_default()) {
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(
+        || -> jni::errors::Result<String> {
+            let db = env.get_string(&db_path)?.to_string_lossy().into_owned();
+            let tokens = env.get_string(&tokens_json)?.to_string_lossy().into_owned();
+            let now = env.get_string(&now_iso)?.to_string_lossy().into_owned();
+            Ok(serde_json::to_string(&run_background_sync(&db, &tokens, &now)).unwrap_or_default())
+        },
+    ));
+    let json = result
+        .ok()
+        .and_then(Result::ok)
+        .unwrap_or_else(|| "{\"error\":\"native sync failed\"}".into());
+    match env.new_string(json) {
         Ok(value) => value.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_ca_hld_pepometer_NativeBridge_markSent(
+    mut env: JNIEnv<'_>,
+    _class: JClass<'_>,
+    db_path: JString<'_>,
+    tags_json: JString<'_>,
+    now_iso: JString<'_>,
+) -> jni::sys::jstring {
+    let result =
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| -> Result<(), String> {
+            let db = env
+                .get_string(&db_path)
+                .map_err(|e| e.to_string())?
+                .to_string_lossy()
+                .into_owned();
+            let tags = env
+                .get_string(&tags_json)
+                .map_err(|e| e.to_string())?
+                .to_string_lossy()
+                .into_owned();
+            let now = env
+                .get_string(&now_iso)
+                .map_err(|e| e.to_string())?
+                .to_string_lossy()
+                .into_owned();
+            let items: Vec<pepometer_core::notifications::Notification> =
+                serde_json::from_str(&tags).map_err(|e| e.to_string())?;
+            let now = DateTime::parse_from_rfc3339(&now)
+                .map_err(|e| e.to_string())?
+                .with_timezone(&Local);
+            Pepometer::open(db)
+                .map_err(|e| e.to_string())?
+                .mark_notifications_sent(&items, now)
+                .map_err(|e| e.to_string())
+        }));
+    let json = match result {
+        Ok(Ok(())) => "{}".into(),
+        Ok(Err(e)) => serde_json::json!({"error": e}).to_string(),
+        Err(_) => "{\"error\":\"native mark failed\"}".into(),
+    };
+    match env.new_string(json) {
+        Ok(v) => v.into_raw(),
         Err(_) => std::ptr::null_mut(),
     }
 }

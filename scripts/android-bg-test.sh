@@ -10,8 +10,9 @@ adb logcat -c
 adb shell am broadcast -n "$pkg/ca.hld.pepometer.DebugSyncReceiver" -a ca.hld.pepometer.DEBUG_SYNC
 for attempt in $(seq 1 40); do
   if adb logcat -d -s PepometerSync:I '*:S' | grep -q 'notification posted: auth-required' &&
+     adb logcat -d -s PepometerSync:I '*:S' | grep -q 'scheduled work cancelled' &&
      adb shell dumpsys notification --noredact | grep -q 'Sign in to Garmin again'; then
-    echo 'PASS: no tokens after force-stop posts sign-in notification'
+    echo 'PASS: no tokens after force-stop posts one sign-in notification and cancels work'
     break
   fi
   if [[ $attempt == 40 ]]; then

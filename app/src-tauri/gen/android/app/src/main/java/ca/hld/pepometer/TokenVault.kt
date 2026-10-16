@@ -44,5 +44,7 @@ object TokenVault {
         cipher.updateAAD(aad)
         return String(cipher.doFinal(bytes.copyOfRange(13, bytes.size)), Charsets.UTF_8)
     }
+    @Synchronized fun loadOrClear(context: Context): String? = try { load(context) }
+    catch (_: Exception) { clear(context); null }
     @Synchronized fun clear(context: Context) { file(context).delete() }
 }

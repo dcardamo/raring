@@ -28,12 +28,15 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.time.OffsetDateTime
 import java.util.concurrent.TimeUnit
 
 object NativeBridge {
     init { System.loadLibrary("pepometer_app_lib") }
+    @JvmStatic external fun prepareTokens(tokensJson: String): String
     @JvmStatic external fun sync(dbPath: String, tokensJson: String, nowIso: String): String
+    @JvmStatic external fun markSent(dbPath: String, tagsJson: String, nowIso: String): String
 }
 
 // The vault read, JNI refresh and vault write must share one lock across every work request.
@@ -49,14 +52,16 @@ object SyncScheduler {
     fun followUp(context: Context) {
         val request = OneTimeWorkRequestBuilder<SyncWorker>().setInitialDelay(15, TimeUnit.MINUTES)
             .setConstraints(network).build()
-        WorkManager.getInstance(context).enqueueUniqueWork("readiness-followup", ExistingWorkPolicy.APPEND_OR_REPLACE, request)
+        WorkManager.getInstance(context).enqueueUniqueWork("readiness-followup", ExistingWorkPolicy.REPLACE, request)
     }
-    fun immediate(context: Context) = WorkManager.getInstance(context).enqueueUniqueWork(
-        "garmin-immediate", ExistingWorkPolicy.KEEP,
-        OneTimeWorkRequestBuilder<SyncWorker>().setConstraints(network)
+    fun immediate(context: Context): java.util.UUID {
+        val request = OneTimeWorkRequestBuilder<SyncWorker>().setConstraints(network)
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST).build()
-    )
+        WorkManager.getInstance(context).enqueueUniqueWork("garmin-immediate", ExistingWorkPolicy.REPLACE, request)
+        return request.id
+    }
     fun cancel(context: Context) {
+        Log.i("PepometerSync", "scheduled work cancelled")
         val manager = WorkManager.getInstance(context)
         manager.cancelUniqueWork("garmin-hourly")
         manager.cancelUniqueWork("readiness-followup")
@@ -75,48 +80,67 @@ class SyncWorker(context: Context, params: WorkerParameters): CoroutineWorker(co
             (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
                 .createNotificationChannel(NotificationChannel(CHANNEL, "Pepometer", NotificationManager.IMPORTANCE_DEFAULT))
         }
-        fun notify(context: Context, id: String, title: String, body: String, target: String) {
+        fun notify(context: Context, id: String, title: String, body: String, target: String): Boolean {
             channel(context)
             if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 Log.i(TAG, "notification permission missing")
-                return
+                return false
             }
             val intent = Intent(context, MainActivity::class.java).putExtra("target", target)
                 .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             val pending = PendingIntent.getActivity(context, id.hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             val notification = NotificationCompat.Builder(context, CHANNEL)
-                .setSmallIcon(R.mipmap.ic_launcher).setContentTitle(title).setContentText(body)
+                .setSmallIcon(R.drawable.ic_notification).setContentTitle(title).setContentText(body)
                 .setAutoCancel(true).setContentIntent(pending).build()
             (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(id.hashCode(), notification)
-            Log.i(TAG, "notification posted: $id")
+            Log.i(TAG, "notification posted: ${id.substringBefore(':')}")
+            return true
         }
     }
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         try {
             SyncGate.mutex.withLock {
-                val tokens = TokenVault.load(applicationContext)
+                val tokens = TokenVault.loadOrClear(applicationContext)
                 if (tokens == null) {
+                    SyncScheduler.cancel(applicationContext)
                     notify(applicationContext, "auth-required", "Sign in to Garmin again", "Open Pepometer to reconnect", "today")
                     return@withLock Result.success()
                 }
-                val now = OffsetDateTime.now().toString()
-                val response = JSONObject(NativeBridge.sync(File(applicationContext.filesDir, "pepometer.db").absolutePath, tokens, now))
+                val prepared = JSONObject(NativeBridge.prepareTokens(tokens))
+                if (prepared.optBoolean("authFailed")) {
+                    TokenVault.clear(applicationContext)
+                    SyncScheduler.cancel(applicationContext)
+                    notify(applicationContext, "auth-required", "Sign in to Garmin again", "Open Pepometer to reconnect", "today")
+                    return@withLock Result.success()
+                }
+                if (prepared.has("error")) return@withLock Result.retry()
+                val readyTokens = prepared.getString("tokensJson")
+                if (readyTokens != tokens) TokenVault.save(applicationContext, readyTokens)
+                val now = OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+                val db = File(applicationContext.filesDir, "pepometer.db").absolutePath
+                val response = JSONObject(NativeBridge.sync(db, readyTokens, now))
                 if (response.optBoolean("authFailed")) {
                     TokenVault.clear(applicationContext)
+                    SyncScheduler.cancel(applicationContext)
                     notify(applicationContext, "auth-required", "Sign in to Garmin again", "Open Pepometer to reconnect", "today")
                     return@withLock Result.success()
                 }
                 // A refresh may have succeeded even when a later endpoint fails. Always persist it first.
                 TokenVault.save(applicationContext, response.getString("tokensJson"))
+                Log.i(TAG, "background JNI sync completed")
+                val alerts = response.optJSONArray("notifications") ?: org.json.JSONArray()
+                for (i in 0 until alerts.length()) {
+                    val alert = alerts.getJSONObject(i)
+                    if (notify(applicationContext, alert.getString("id"), alert.getString("title"), alert.getString("body"), alert.optString("target", "today"))) {
+                        val tags = org.json.JSONArray().put(JSONObject().put("kind", alert.getString("kind"))
+                            .put("tag", alert.getString("tag")).put("title", "").put("body", ""))
+                        val marked = JSONObject(NativeBridge.markSent(db, tags.toString(), now))
+                        if (marked.has("error")) Log.w(TAG, "could not record notification delivery")
+                    }
+                }
                 if (!response.isNull("error")) {
                     Log.w(TAG, "background sync incomplete: ${response.getString("error")}")
                     return@withLock Result.retry()
-                }
-                Log.i(TAG, "background JNI sync completed")
-                val alerts = response.getJSONArray("notifications")
-                for (i in 0 until alerts.length()) {
-                    val alert = alerts.getJSONObject(i)
-                    notify(applicationContext, alert.getString("id"), alert.getString("title"), alert.getString("body"), alert.optString("target", "today"))
                 }
                 val hour = LocalDateTime.now().hour
                 if (response.optBoolean("readinessMissing") && hour in 4..10) SyncScheduler.followUp(applicationContext)

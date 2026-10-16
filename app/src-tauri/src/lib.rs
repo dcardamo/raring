@@ -9,6 +9,8 @@ use tauri::{Emitter, Manager};
 
 #[derive(Default)]
 struct SignInState(Mutex<Option<String>>);
+#[derive(Default)]
+struct SignInPending(Mutex<bool>);
 
 fn core(app: &tauri::AppHandle) -> Result<Pepometer, String> {
     Pepometer::open(database_path(app)?).map_err(|e| e.to_string())
@@ -168,6 +170,10 @@ fn checkin(app: tauri::AppHandle, week_start: Option<String>) -> Result<CheckinV
 
 #[tauri::command]
 fn begin_sign_in(app: tauri::AppHandle) -> Result<(), String> {
+    *app.state::<SignInPending>()
+        .0
+        .lock()
+        .map_err(|e| e.to_string())? = true;
     app.get_webview_window("main")
         .ok_or("main window missing")?
         .navigate(tauri::Url::parse(&sso::sign_in_url()).map_err(|e| e.to_string())?)
@@ -193,7 +199,9 @@ fn exchange_ticket_and_store(app: &tauri::AppHandle, ticket: String) {
     if outcome.is_ok() {
         let app = app.clone();
         std::thread::spawn(move || {
-            let _ = sync_now(app);
+            if let Ok(rt) = runtime() {
+                let _ = rt.block_on(sync_now(app));
+            }
         });
     }
 }
@@ -210,17 +218,19 @@ fn sign_out(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn sync_now(app: tauri::AppHandle) -> Result<AppStatus, String> {
+async fn sync_now(app: tauri::AppHandle) -> Result<AppStatus, String> {
     #[cfg(target_os = "android")]
     vault(&app)
         .0
-        .run_mobile_plugin::<serde_json::Value>("syncNow", serde_json::json!({}))
+        .run_mobile_plugin_async::<serde_json::Value>("syncNow", serde_json::json!({}))
+        .await
         .map_err(|e| e.to_string())?;
     #[cfg(not(target_os = "android"))]
     if let Some(json) = load_tokens(&app)? {
         let tokens: Tokens = serde_json::from_str(&json).map_err(|e| e.to_string())?;
-        let outcome = runtime()?
-            .block_on(core(&app)?.sync(tokens, Local::now(), 60))
+        let outcome = core(&app)?
+            .sync(tokens, Local::now(), 60)
+            .await
             .map_err(|e| e.to_string())?;
         save_tokens(
             &app,
@@ -295,6 +305,7 @@ mod background;
 pub fn run() {
     tauri::Builder::default()
         .manage(SignInState::default())
+        .manage(SignInPending::default())
         .plugin(
             tauri::plugin::Builder::<tauri::Wry>::new("vault")
                 .setup(|app, api| {
@@ -316,7 +327,12 @@ pub fn run() {
                     if webview.label() != "main" {
                         return true;
                     }
-                    if let Some(ticket) = sso::extract_ticket(url.as_str()) {
+                    let app = webview.app_handle().clone();
+                    let pending = app.state::<SignInPending>().0.lock().is_ok_and(|s| *s);
+                    if let Some(ticket) = sso::extract_ticket(url.as_str()).filter(|_| pending) {
+                        if let Ok(mut state) = app.state::<SignInPending>().0.lock() {
+                            *state = false;
+                        }
                         let window = webview.clone();
                         let app = webview.app_handle().clone();
                         std::thread::spawn(move || {
@@ -324,6 +340,11 @@ pub fn run() {
                             exchange_ticket_and_store(&app, ticket);
                         });
                         return false;
+                    }
+                    if url.as_str().starts_with(home_url().as_str()) {
+                        if let Ok(mut state) = app.state::<SignInPending>().0.lock() {
+                            *state = false;
+                        }
                     }
                     true
                 })
@@ -384,9 +405,12 @@ pub fn run() {
                     Local::now().to_rfc3339(),
                     Local::now().offset()
                 );
-                vault(app.handle())
-                    .0
-                    .run_mobile_plugin::<serde_json::Value>("schedule", serde_json::json!({}))?;
+                let handle = app.handle().clone();
+                std::thread::spawn(move || {
+                    let _ = vault(&handle)
+                        .0
+                        .run_mobile_plugin::<serde_json::Value>("schedule", serde_json::json!({}));
+                });
             }
             Ok(())
         })
