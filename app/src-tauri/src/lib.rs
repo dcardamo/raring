@@ -261,6 +261,7 @@ fn database_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
     // Tauri Android's app_data_dir is Context.dataDir, NOT Context.filesDir.
     #[cfg(target_os = "android")]
     let root = root.join("files");
+    std::fs::create_dir_all(&root).map_err(|e| e.to_string())?;
     Ok(root.join("pepometer.db"))
 }
 
