@@ -210,6 +210,7 @@ pub struct TodayView {
     /// detail chart).
     pub readiness_trend: Vec<Option<f64>>,
     pub sleep: Option<Gauge>,
+    pub sleep_plan: Option<SleepPlan>,
     pub load: Option<Gauge>,
     /// A few words: "Ready to push", "Take it easy".
     pub headline: String,
@@ -278,6 +279,20 @@ pub struct OvernightTile {
     pub series: Vec<f64>,
 }
 
+/// Garmin sleep need and a usual wake time derived from the last 14 nights.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SleepPlan {
+    /// Suggested time to be asleep tonight, HH:MM.
+    pub bedtime: String,
+    /// Median local wake time, HH:MM.
+    pub wake_time: String,
+    pub need_min: f64,
+    /// True when today's Garmin need is missing and historical needs were averaged.
+    pub uses_average: bool,
+}
+
 /// One night's bed and wake time, as hours on a 24h clock (23.5 = 23:30).
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -310,9 +325,7 @@ pub struct SleepView {
     pub consistency_spread_min: Option<f64>,
     pub bed_window: Option<[f64; 2]>,
     pub wake_window: Option<[f64; 2]>,
-    /// Suggested time to be asleep tonight, HH:MM.
-    pub tonight_bedtime: Option<String>,
-    pub tonight_need_min: Option<f64>,
+    pub sleep_plan: Option<SleepPlan>,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
@@ -447,6 +460,8 @@ pub struct Lever {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct HealthView {
+    /// Local date, YYYY-MM-DD.
+    pub date: String,
     pub fitness_age: FitnessAgeCard,
     pub lever: Option<Lever>,
     pub drivers: Vec<Driver>,

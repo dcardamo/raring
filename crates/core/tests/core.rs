@@ -165,7 +165,10 @@ fn views_match_synthetic_mockup() {
     assert_eq!(t.activities[0].benefit.as_deref(), Some("Tempo"));
     let sleep = pepometer_core::screens::sleep_view(&s, "2025-01-02");
     assert_eq!(sleep.score.unwrap().value, 84.);
-    assert_eq!(sleep.tonight_bedtime.as_deref(), Some("23:53"));
+    assert_eq!(
+        sleep.sleep_plan.as_ref().map(|p| p.bedtime.as_str()),
+        Some("23:53")
+    );
     assert!(pepometer_core::screens::workout(&s, "123456").is_some());
 }
 #[test]

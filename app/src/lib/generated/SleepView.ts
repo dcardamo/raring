@@ -2,6 +2,7 @@
 import type { Gauge } from "./Gauge";
 import type { NightWindow } from "./NightWindow";
 import type { OvernightTile } from "./OvernightTile";
+import type { SleepPlan } from "./SleepPlan";
 import type { StageSegment } from "./StageSegment";
 import type { StageTotal } from "./StageTotal";
 
@@ -21,8 +22,4 @@ consistency: Array<NightWindow>,
 /**
  * Typical spread of bedtimes, minutes (the "±18 min" pill).
  */
-consistencySpreadMin: number | null, bedWindow: [number, number] | null, wakeWindow: [number, number] | null, 
-/**
- * Suggested time to be asleep tonight, HH:MM.
- */
-tonightBedtime: string | null, tonightNeedMin: number | null, };
+consistencySpreadMin: number | null, bedWindow: [number, number] | null, wakeWindow: [number, number] | null, sleepPlan: SleepPlan | null, };

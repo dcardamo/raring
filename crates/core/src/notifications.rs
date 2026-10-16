@@ -109,7 +109,7 @@ pub fn notifications(store: &Store, now: DateTime<Local>) -> Vec<Notification> {
             );
         }
     }
-    if let Some(bed) = screens::sleep_view(store, &day).tonight_bedtime {
+    if let Some(bed) = view.sleep_plan.as_ref().map(|plan| &plan.bedtime) {
         if let Some((h, m)) = bed
             .split_once(':')
             .and_then(|(h, m)| Some((h.parse::<i64>().ok()?, m.parse::<i64>().ok()?)))

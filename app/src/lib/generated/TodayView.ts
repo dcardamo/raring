@@ -7,6 +7,7 @@ import type { Factor } from "./Factor";
 import type { FitnessAgeCard } from "./FitnessAgeCard";
 import type { Gauge } from "./Gauge";
 import type { HrvCard } from "./HrvCard";
+import type { SleepPlan } from "./SleepPlan";
 import type { VitalsCard } from "./VitalsCard";
 
 export type TodayView = { 
@@ -18,7 +19,7 @@ date: string, readiness: Gauge | null,
  * Readiness scores for the last 30 days, oldest first (the Readiness
  * detail chart).
  */
-readinessTrend: Array<number | null>, sleep: Gauge | null, load: Gauge | null, 
+readinessTrend: Array<number | null>, sleep: Gauge | null, sleepPlan: SleepPlan | null, load: Gauge | null, 
 /**
  * A few words: "Ready to push", "Take it easy".
  */

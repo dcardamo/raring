@@ -4,4 +4,8 @@ import type { FitnessAgeCard } from "./FitnessAgeCard";
 import type { Lever } from "./Lever";
 import type { VitalsCard } from "./VitalsCard";
 
-export type HealthView = { fitnessAge: FitnessAgeCard, lever: Lever | null, drivers: Array<Driver>, vitals: VitalsCard, };
+export type HealthView = { 
+/**
+ * Local date, YYYY-MM-DD.
+ */
+date: string, fitnessAge: FitnessAgeCard, lever: Lever | null, drivers: Array<Driver>, vitals: VitalsCard, };

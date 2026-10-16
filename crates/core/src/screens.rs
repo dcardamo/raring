@@ -108,6 +108,47 @@ fn sleep(v: &Value) -> &Value {
         v
     }
 }
+fn sleep_need(v: &Value) -> Option<f64> {
+    ["totalSleepNeedInSeconds", "totalSleepNeedSeconds"]
+        .iter()
+        .find_map(|key| {
+            num(sleep(v), &[&["sleepNeed", key]])
+                .filter(|n| n.is_finite() && *n > 0.)
+                .map(|seconds| seconds / 60.)
+        })
+}
+fn sleep_plan(store: &Store, date: &str) -> Option<SleepPlan> {
+    let nights: Vec<Value> = (0..14)
+        .filter_map(|i| store.get("sleep", &date_sub(date, i)))
+        .collect();
+    let wakes: Vec<f64> = nights
+        .iter()
+        .filter_map(|night| local_time(sleep(night), &["sleepEndTimestampLocal"]))
+        .filter_map(|time| hour(&time))
+        .filter(|hour| hour.is_finite() && (0.0..24.0).contains(hour))
+        .collect();
+    let current_need = store.get("sleep", date).and_then(|v| sleep_need(&v));
+    let historical: Vec<f64> = nights.iter().filter_map(sleep_need).collect();
+    let (need_min, uses_average) = if let Some(need) = current_need {
+        (need, false)
+    } else if !historical.is_empty() {
+        (
+            historical.iter().sum::<f64>() / historical.len() as f64,
+            true,
+        )
+    } else {
+        return None;
+    };
+    if !need_min.is_finite() || need_min <= 0. {
+        return None;
+    }
+    Some(SleepPlan {
+        bedtime: rules::bedtime(&wakes, need_min)?,
+        wake_time: rules::bedtime(&wakes, 0.)?,
+        need_min,
+        uses_average,
+    })
+}
 fn first(v: &Value) -> &Value {
     v.as_array().and_then(|a| a.first()).unwrap_or(v)
 }
@@ -437,8 +478,16 @@ pub fn vitals(store: &Store, date: &str) -> VitalsCard {
             (Some(_), Some(_)) => Tone::Good,
             _ => Tone::Neutral,
         };
-        let lo = normal.map(|r| r[0]).or(value).unwrap_or(0.);
-        let hi = normal.map(|r| r[1]).or(value).unwrap_or(1.);
+        let lo = normal
+            .map(|r| r[0])
+            .or(value)
+            .unwrap_or(0.)
+            .min(value.unwrap_or(f64::INFINITY));
+        let hi = normal
+            .map(|r| r[1])
+            .or(value)
+            .unwrap_or(1.)
+            .max(value.unwrap_or(f64::NEG_INFINITY));
         let span = (hi - lo).abs().max(1.);
         readings.push(VitalReading {
             kind,
@@ -573,6 +622,7 @@ pub fn today(store: &Store, date: &str) -> TodayView {
     let hstatus = string(hs, &[&["status"]]);
     TodayView {
         date: date.into(),
+        sleep_plan: sleep_plan(store, date),
         readiness_trend: (0..30)
             .rev()
             .map(|i| {
@@ -691,14 +741,7 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
     let v = sleep(&raw);
     let score = sscore(&raw);
     let asleep = num(v, &[&["sleepTimeSeconds"]]).map(|s| s / 60.);
-    let need = num(
-        v,
-        &[
-            &["sleepNeed", "totalSleepNeedInSeconds"],
-            &["sleepNeed", "totalSleepNeedSeconds"],
-        ],
-    )
-    .map(|s| s / 60.);
+    let need = sleep_need(&raw);
     let stage_history: Vec<Value> = (0..30)
         .filter_map(|i| store.get("sleep", &date_sub(date, i)))
         .collect();
@@ -721,15 +764,6 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
         })
         .collect();
     let wakes: Vec<f64> = windows.iter().map(|w| w.wake_hour).collect();
-    let tonight_need = need.or_else(|| {
-        let ns: Vec<f64> = nights
-            .iter()
-            .filter_map(|(_, v)| {
-                num(sleep(v), &[&["sleepNeed", "totalSleepNeedInSeconds"]]).map(|v| v / 60.)
-            })
-            .collect();
-        (!ns.is_empty()).then(|| ns.iter().sum::<f64>() / ns.len() as f64)
-    });
     let headline = match (asleep, need) {
         (Some(a), Some(n)) if a >= n => format!("{:.0} min over your need", a - n),
         (Some(a), Some(n)) => format!("{:.0} min short of your need", n - a),
@@ -870,8 +904,7 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
         .map(|r| [r[0] % 24., r[1] % 24.]),
         wake_window: rules::normal(&wakes),
         consistency: windows,
-        tonight_bedtime: tonight_need.and_then(|n| rules::bedtime(&wakes, n)),
-        tonight_need_min: tonight_need,
+        sleep_plan: sleep_plan(store, date),
     }
 }
 fn hour(s: &str) -> Option<f64> {
@@ -1193,6 +1226,7 @@ pub fn health(store: &Store, date: &str) -> HealthView {
         .max_by(|a, b| a.0.total_cmp(&b.0))
         .map(|(_, lever)| lever);
     HealthView {
+        date: date.into(),
         fitness_age: age(store, date),
         lever,
         drivers,
