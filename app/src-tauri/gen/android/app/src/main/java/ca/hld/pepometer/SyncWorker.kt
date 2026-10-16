@@ -119,14 +119,8 @@ class SyncWorker(context: Context, params: WorkerParameters): CoroutineWorker(co
                 val now = OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
                 val db = File(applicationContext.filesDir, "pepometer.db").absolutePath
                 val response = JSONObject(NativeBridge.sync(db, readyTokens, now))
-                if (response.optBoolean("authFailed")) {
-                    TokenVault.clear(applicationContext)
-                    SyncScheduler.cancel(applicationContext)
-                    notify(applicationContext, "auth-required", "Sign in to Garmin again", "Open Pepometer to reconnect", "today")
-                    return@withLock Result.success()
-                }
-                // A refresh may have succeeded even when a later endpoint fails. Always persist it first.
-                TokenVault.save(applicationContext, response.getString("tokensJson"))
+                // Persist a rotated token before handling partial endpoint failures.
+                if (!response.optBoolean("authFailed")) TokenVault.save(applicationContext, response.getString("tokensJson"))
                 Log.i(TAG, "background JNI sync completed")
                 val alerts = response.optJSONArray("notifications") ?: org.json.JSONArray()
                 for (i in 0 until alerts.length()) {
@@ -137,6 +131,12 @@ class SyncWorker(context: Context, params: WorkerParameters): CoroutineWorker(co
                         val marked = JSONObject(NativeBridge.markSent(db, tags.toString(), now))
                         if (marked.has("error")) Log.w(TAG, "could not record notification delivery")
                     }
+                }
+                if (response.optBoolean("authFailed")) {
+                    TokenVault.clear(applicationContext)
+                    SyncScheduler.cancel(applicationContext)
+                    notify(applicationContext, "auth-required", "Sign in to Garmin again", "Open Pepometer to reconnect", "today")
+                    return@withLock Result.success()
                 }
                 if (!response.isNull("error")) {
                     Log.w(TAG, "background sync incomplete: ${response.getString("error")}")

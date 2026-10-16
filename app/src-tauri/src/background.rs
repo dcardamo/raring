@@ -92,20 +92,18 @@ fn run_background_sync(db_path: &str, tokens_json: &str, now_iso: &str) -> SyncR
             result.tokens_json = serde_json::to_string(&outcome.tokens).unwrap_or_default();
             result.readiness_missing = !outcome.report.readiness_present;
             result.auth_failed = outcome.report.auth_failed;
-            if !result.auth_failed {
-                result.notifications = outcome
-                    .notifications
-                    .into_iter()
-                    .map(|item| Notification {
-                        id: format!("{}:{}", item.kind, item.tag),
-                        title: item.title,
-                        body: item.body,
-                        target: notification_target(&item.kind),
-                        kind: item.kind,
-                        tag: item.tag,
-                    })
-                    .collect();
-            }
+            result.notifications = outcome
+                .notifications
+                .into_iter()
+                .map(|item| Notification {
+                    id: format!("{}:{}", item.kind, item.tag),
+                    title: item.title,
+                    body: item.body,
+                    target: notification_target(&item.kind),
+                    kind: item.kind,
+                    tag: item.tag,
+                })
+                .collect();
             log::info!(
                 "background JNI sync completed (requests: {}, auth failed: {})",
                 outcome.report.requests,
