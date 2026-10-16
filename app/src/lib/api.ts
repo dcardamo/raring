@@ -15,10 +15,11 @@ import type { TrainingView } from './generated/TrainingView';
 import type { WorkoutView } from './generated/WorkoutView';
 import type { HealthView } from './generated/HealthView';
 import type { CheckinView } from './generated/CheckinView';
+import type { Settings } from './generated/Settings';
 
-// Settings are shell-owned, not part of the Rust view contract yet.
-export type Settings = { morningReadiness: boolean; weeklyCheckin: boolean; metricsChanged: boolean; vitalsOff: boolean; trainingStatus: boolean; bedtime: boolean };
-export const defaultSettings: Settings = { morningReadiness:true, weeklyCheckin:true, metricsChanged:true, vitalsOff:true, trainingStatus:false, bedtime:false };
+export type { Settings } from './generated/Settings';
+export const defaultSettings = {notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false} satisfies Settings;
+let previewSettings:Settings = {...defaultSettings};
 const copy = <T>(value:T):T => structuredClone(value);
 const call = <T>(name:string,args:Record<string,unknown>|undefined,fallback:T):Promise<T> => isTauri()?invoke<T>(name,args):Promise.resolve(copy(fallback));
 export const app_status = ():Promise<AppStatus> => call('app_status',undefined,sampleStatus as AppStatus);
@@ -32,6 +33,6 @@ export const sync_now = ():Promise<void> => call('sync_now',undefined,undefined)
 export const begin_sign_in = ():Promise<void> => call('begin_sign_in',undefined,undefined);
 export const sign_out = ():Promise<void> => call('sign_out',undefined,undefined);
 export const request_notification_permission = ():Promise<boolean> => call('request_notification_permission',undefined,true);
-export const get_settings = ():Promise<Settings> => call('get_settings',undefined,defaultSettings);
-export const set_settings = (settings:Settings):Promise<void> => call('set_settings',{settings},undefined);
+export const get_settings = ():Promise<Settings> => call('get_settings',undefined,previewSettings);
+export const set_settings = (settings:Settings):Promise<void> => {if(!isTauri()){previewSettings=copy(settings);return Promise.resolve()}return invoke<void>('set_settings',{settings})};
 export const onStatusChanged = (callback:()=>void):Promise<()=>void> => isTauri()?listen('status-changed',callback):Promise.resolve(()=>{});
