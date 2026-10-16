@@ -1,5 +1,5 @@
-# Builds, signs and publishes the Android APK when a v* tag is pushed
-# (scripts/release.sh pushes one); Obtainium installs from these releases.
+# Builds, signs and publishes the Android APK on main pushes.
+# Obtainium installs from these releases; CI allocates a new patch version.
 # Run it by hand on main for a dry run: the signed APK is kept as a workflow
 # artifact instead of being published.
 #
@@ -11,8 +11,12 @@ name: Release
 
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
   workflow_dispatch:
+
+concurrency:
+  group: android-release
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -20,6 +24,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     env:
       # Keep in step with the flake's rustc, NDK and cargo-tauri.
       RUST_VERSION: 1.99.0
@@ -29,9 +35,15 @@ jobs:
       PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Check the tag matches the app version
-        if: github.ref_type == 'tag'
-        run: test "v$(jq -r .version app/src-tauri/tauri.conf.json)" = "$GITHUB_REF_NAME"
+        with:
+          fetch-depth: 0
+      - name: Allocate the app version
+        id: version
+        run: |
+          version=$(scripts/next-release-version.sh)
+          jq --arg v "$version" '.version = $v' app/src-tauri/tauri.conf.json >"$RUNNER_TEMP/tauri.conf.json"
+          mv "$RUNNER_TEMP/tauri.conf.json" app/src-tauri/tauri.conf.json
+          echo "version=$version" >>"$GITHUB_OUTPUT"
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
@@ -81,7 +93,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
           tools=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
-          version=$(jq -r .version app/src-tauri/tauri.conf.json)
+          version='${{ needs.build.outputs.version }}'
           apk="$RUNNER_TEMP/pepometer-$version-arm64.apk"
           keystore="$RUNNER_TEMP/release.keystore"
           base64 -d <<<"$KEYSTORE_BASE64" >"$keystore"
@@ -106,20 +118,20 @@ jobs:
           echo "APK=$apk" >>"$GITHUB_ENV"
           echo "VERSION=$version" >>"$GITHUB_ENV"
       - name: Publish the release
-        if: github.ref_type == 'tag'
+        if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          previous=$(git describe --tags --abbrev=0 "$GITHUB_REF_NAME^" 2>/dev/null || true)
+          previous=$(git tag --list 'v*' --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
           if [ -n "$previous" ]; then
-            notes=$(git log --no-merges --format='- %s' "$previous..$GITHUB_REF_NAME^")
+            notes=$(git log --no-merges --format='- %s' "$previous..$GITHUB_SHA")
           else
             notes="First release."
           fi
-          gh release create "$GITHUB_REF_NAME" "$APK" --verify-tag \
+          gh release create "v$VERSION" "$APK" --target "$GITHUB_SHA" --latest \
             --title "Pepometer $VERSION" --notes "${notes:-Maintenance release.}"
       - name: Keep the dry-run APK
-        if: github.ref_type != 'tag'
+        if: github.event_name != 'push'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: signed-apk-dry-run

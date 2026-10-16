@@ -43,11 +43,12 @@ Android SDK, NDK and emulator.
 
 ## Releases
 
-`scripts/release.sh [X.Y.Z]` (default: the next patch version) commits the
-version, tags it and pushes; `.github/workflows/release.yml` then builds,
-signs and publishes the arm64 APK as a GitHub release, which Obtainium
-installs. Run it on `main` after merging changes worth shipping; it waits for
-the workflow. The workflow signs with the key in the `release` environment's
+Every push to `main` runs `.github/workflows/release.yml`, which builds,
+signs and publishes the arm64 APK as a GitHub release for Obtainium.
+CI chooses the next patch version from release tags (or a higher version in
+`tauri.conf.json`), tags the pushed commit, and does not commit version bumps.
+`scripts/release.sh [X.Y.Z]` optionally commits an explicit version bump,
+pushes main and waits for the workflow; ordinary main pushes need no helper. The workflow signs with the key in the `release` environment's
 secrets and refuses an APK without the pinned release certificate. Never
 generate a new release keystore: installed copies would reject every update.
 GitHub secrets can't be read back, so the maintainer's local
