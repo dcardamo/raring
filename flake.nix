@@ -51,6 +51,49 @@
     };
     sdk = "${android.androidsdk}/libexec/android-sdk";
 
+    # Developer sign-in helper. python-garminconnect's multi-strategy login is
+    # the most reliable way to sign in from a computer; the CLI imports the
+    # token file it writes. nixpkgs' garminconnect is too old (pre-0.3).
+    py = pkgs.python312Packages;
+    uaGenerator = py.buildPythonPackage rec {
+      pname = "ua-generator";
+      version = "2.0.26";
+      pyproject = true;
+      src = pkgs.fetchPypi {
+        pname = "ua_generator";
+        inherit version;
+        sha256 = "0blxn67y01yg8l29rzj0ajnxwfvv77cvl4g7f6xy3kr90pc3ksci";
+      };
+      build-system = [py.setuptools];
+      doCheck = false;
+    };
+    garminconnect = py.buildPythonPackage rec {
+      pname = "garminconnect";
+      version = "0.3.18";
+      pyproject = true;
+      src = pkgs.fetchFromGitHub {
+        owner = "cyberjunky";
+        repo = "python-garminconnect";
+        rev = version;
+        hash = "sha256-YT6keE60qlsP3Z58UqBhjgBSUCld5KEDNtK/4MS/qY4=";
+      };
+      build-system = [py.pdm-backend];
+      dependencies = [py.curl-cffi py.requests uaGenerator];
+      pythonRelaxDeps = true;
+      doCheck = false;
+      pythonImportsCheck = ["garminconnect"];
+    };
+    garminLogin = pkgs.writeShellApplication {
+      name = "pepometer-garmin-login";
+      runtimeInputs = [(pkgs.python312.withPackages (_: [garminconnect]))];
+      text = ''
+        out="''${PEPOMETER_HOME:-$PWD/.data}"
+        mkdir -p "$out"
+        chmod 700 "$out"
+        exec python3 ${./scripts/garmin-login.py} "$out"
+      '';
+    };
+
     # Tauri's desktop runtime links WebKitGTK; needed to build and test the
     # app crate on the host.
     linuxDeps = with pkgs; [
@@ -69,6 +112,12 @@
       libayatana-appindicator
     ];
   in {
+    packages.${system}.garmin-login = garminLogin;
+    apps.${system}.garmin-login = {
+      type = "app";
+      program = "${garminLogin}/bin/pepometer-garmin-login";
+    };
+
     devShells.${system}.default = pkgs.mkShell {
       nativeBuildInputs = with pkgs; [
         rust
