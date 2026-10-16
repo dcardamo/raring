@@ -11,5 +11,9 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0.104"
+chrono = "0.4"
+serde_json = "1"
+serde = "1"
+rpassword = "7"
 pepometer-core = { path = "../core" }
 tokio = { version = "1.53.3", features = ["rt-multi-thread", "macros"] }
