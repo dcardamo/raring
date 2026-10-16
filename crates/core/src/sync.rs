@@ -135,8 +135,10 @@ pub async fn sync(
         }
     }
     if !report.rate_limited && report.error.is_none() && report.requests < budget {
-        let newest = store.newest_activity();
-        for page in 0..5 {
+        // Scan newest-first on every run. A previous run may have exhausted its budget
+        // after indexing a list but before retrieving its activity details.
+        let cutoff = date(today - Duration::days(89));
+        for page in 0..20 {
             let key = (page * 20).to_string();
             if !fetch(
                 store,
@@ -158,11 +160,10 @@ pub async fn sync(
             let Some(items) = list.as_array() else { break };
             let mut reached_old = false;
             for item in items {
-                if newest.as_ref().is_some_and(|n| {
-                    item["startTimeLocal"]
-                        .as_str()
-                        .is_some_and(|d| d <= n.as_str())
-                }) {
+                if item["startTimeLocal"]
+                    .as_str()
+                    .is_some_and(|d| d < cutoff.as_str())
+                {
                     reached_old = true;
                     break;
                 }
@@ -173,6 +174,7 @@ pub async fn sync(
                 else {
                     continue;
                 };
+                let is_new = store.get("activity", &id).is_none();
                 for kind in ["activity", "splits", "zones", "details"] {
                     if store.get(kind, &id).is_none()
                         && !fetch(
@@ -190,7 +192,9 @@ pub async fn sync(
                         break;
                     }
                 }
-                report.activities += 1;
+                if is_new && store.get("activity", &id).is_some() {
+                    report.activities += 1;
+                }
                 if report.rate_limited || report.error.is_some() || report.requests >= budget {
                     break;
                 }

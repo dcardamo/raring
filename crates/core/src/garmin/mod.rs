@@ -296,7 +296,9 @@ impl Client {
     pub async fn endpoint(&self, kind: &str, key: &str, display: Option<&str>) -> Result<Value> {
         let d = display.unwrap_or("");
         // display names are URL path segments; never allow them to alter the route.
-        let d = url::form_urlencoded::byte_serialize(d.as_bytes()).collect::<String>();
+        let d = url::form_urlencoded::byte_serialize(d.as_bytes())
+            .collect::<String>()
+            .replace('+', "%20");
         let (path, params): (String, Vec<(&str, &str)>) = match kind {
             "profile" => ("/userprofile-service/socialProfile".into(), vec![]),
             "summary" => (
@@ -341,7 +343,7 @@ impl Client {
                 vec![],
             ),
             "max_metrics" => (
-                format!("/metrics-service/metrics/maxmet/daily/{key}"),
+                format!("/metrics-service/metrics/maxmet/daily/{key}/{key}"),
                 vec![],
             ),
             "fitness_age" => (format!("/fitnessage-service/fitnessage/{key}"), vec![]),
@@ -365,7 +367,10 @@ impl Client {
                     ("aggregation", "daily"),
                 ],
             ),
-            "records" => ("/personalrecord-service/personalrecord/prs".into(), vec![]),
+            "records" => (
+                format!("/personalrecord-service/personalrecord/prs/{d}"),
+                vec![],
+            ),
             "activities" => (
                 "/activitylist-service/activities/search/activities".into(),
                 vec![("start", key), ("limit", "20")],
