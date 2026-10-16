@@ -6,7 +6,7 @@ import {createRequire} from 'node:module';
 import {mkdir} from 'node:fs/promises';
 const {chromium}=createRequire(new URL('../app/package.json',import.meta.url))('playwright');
 const adb=(...args)=>execFileSync('adb',args,{encoding:'utf8'}).trim();
-const app=process.env.APP_ID??'ca.hld.pepometer.debug';
+const app=process.env.APP_ID??'app.raring.debug';
 const pid=adb('shell','pidof',app);
 const port=adb('forward','tcp:0',`localabstract:webview_devtools_remote_${pid}`);
 const size=adb('shell','wm','size').match(/Override size: (\d+x\d+)/)?.[1]??'reset';
@@ -56,7 +56,7 @@ try {
  await page.evaluate(()=>{
   window.__foldSentinel=true;
   window.__resumeCount=0;
-  window.addEventListener('pepometer:resume',()=>window.__resumeCount++);
+  window.addEventListener('raring:resume',()=>window.__resumeCount++);
  });
  adb('shell','wm','size',`${Math.round(840*density/160)}x${Math.round(900*density/160)}`);
  await page.waitForFunction(()=>innerWidth>=720 && document.querySelector('.dashboard') && getComputedStyle(document.querySelector('.dashboard')).gridTemplateColumns.split(' ').length===2).catch(async error=>{
@@ -78,7 +78,7 @@ try {
   await new Promise(resolve=>setTimeout(resolve,100));
  }
  assert.ok(!adb('shell','dumpsys','activity','activities').split('\n').filter(line=>line.includes('topResumedActivity')).some(line=>line.includes(app)),'Today backgrounds the task');
- adb('shell','am','start','-n',`${app}/ca.hld.pepometer.MainActivity`);
+ adb('shell','am','start','-n',`${app}/app.raring.MainActivity`);
  await page.waitForFunction(()=>document.visibilityState==='visible' && window.__resumeCount>0);
  await waitRoute('today');
  console.log('Android unfolded layout, root exit and resume event: passed');

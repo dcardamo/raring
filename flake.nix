@@ -1,5 +1,5 @@
 {
-  description = "Pepometer: Tauri 2 + Rust + Svelte dev shell with the Android toolchain";
+  description = "Raring: Tauri 2 + Rust + Svelte dev shell with the Android toolchain";
 
   inputs = {
     # Pinned so the Android SDK, NDK and emulator image come from one known
@@ -84,10 +84,10 @@
       pythonImportsCheck = ["garminconnect"];
     };
     garminLogin = pkgs.writeShellApplication {
-      name = "pepometer-garmin-login";
+      name = "raring-garmin-login";
       runtimeInputs = [(pkgs.python312.withPackages (_: [garminconnect]))];
       text = ''
-        out="''${PEPOMETER_HOME:-$PWD/.data}"
+        out="''${RARING_HOME:-$PWD/.data}"
         mkdir -p "$out"
         chmod 700 "$out"
         exec python3 ${./scripts/garmin-login.py} "$out"
@@ -119,7 +119,7 @@
     };
     apps.${system}.garmin-login = {
       type = "app";
-      program = "${garminLogin}/bin/pepometer-garmin-login";
+      program = "${garminLogin}/bin/raring-garmin-login";
     };
 
     devShells.${system}.default = pkgs.mkShell {
@@ -151,7 +151,7 @@
         export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath linuxDeps}:$LD_LIBRARY_PATH
         export ANDROID_AVD_HOME=$PWD/.android-avd
         export ANDROID_USER_HOME=$PWD/.android-user
-        # Pepometer's emulator runs on its own port; other emulators may be up.
+        # Raring's emulator runs on its own port; other emulators may be up.
         export ANDROID_SERIAL=''${ANDROID_SERIAL:-emulator-5560}
         # Secret scan before every commit (.githooks/pre-commit).
         [ "$(git config --get core.hooksPath)" = .githooks ] || git config core.hooksPath .githooks

@@ -1,6 +1,6 @@
 # Android integration
 
-The Kotlin `SyncWorker` owns every Android sync, including foreground `sync_now`, hourly work and morning follow-ups. `SyncGate` holds the process-wide mutex from vault read through native sync and refreshed-token save. Native JNI uses the same `filesDir/pepometer.db` as Tauri commands and marks notification decisions sent before returning them for Kotlin to post. Desktop sync uses the file vault instead.
+The Kotlin `SyncWorker` owns every Android sync, including foreground `sync_now`, hourly work and morning follow-ups. `SyncGate` holds the process-wide mutex from vault read through native sync and refreshed-token save. Native JNI uses the same `filesDir/raring.db` as Tauri commands and marks notification decisions sent before returning them for Kotlin to post. Desktop sync uses the file vault instead.
 
 For emulator QA, install the debug APK, open the app, and invoke `window.__TAURI_INTERNALS__.invoke('load_demo_data')` from its Chrome WebView DevTools. This seeds 30 days of **synthetic** core raw data in the debug app's database, without signing in or creating tokens; navigate to `http://tauri.localhost/?fixture=demo#today` to bypass onboarding for screenshots. The dataset and its test fixture are compiled into the core for convenience, but the `load_demo_data` command exists **only in debug builds**. Do not use it on a debug installation with real Garmin data: seeding overwrites matching days.
 

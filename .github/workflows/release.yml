@@ -94,10 +94,11 @@ jobs:
         run: |
           tools=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
           version='${{ needs.build.outputs.version }}'
-          apk="$RUNNER_TEMP/pepometer-$version-arm64.apk"
+          apk="$RUNNER_TEMP/raring-$version-arm64.apk"
           keystore="$RUNNER_TEMP/release.keystore"
           base64 -d <<<"$KEYSTORE_BASE64" >"$keystore"
           "$tools/zipalign" -f -p 4 "$RUNNER_TEMP/unsigned/app-arm64-release-unsigned.apk" "$RUNNER_TEMP/aligned.apk"
+          # The alias belongs to the existing signing key, not the application ID.
           "$tools/apksigner" sign --ks "$keystore" --ks-key-alias pepometer \
             --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEYSTORE_PASSWORD \
             --out "$apk" "$RUNNER_TEMP/aligned.apk"
@@ -111,8 +112,8 @@ jobs:
             exit 1
           fi
           badging=$("$tools/aapt2" dump badging "$apk")
-          if [[ $badging != *"package: name='ca.hld.pepometer'"*"versionName='$version'"* ]]; then
-            echo "::error::APK is not ca.hld.pepometer $version"
+          if [[ $badging != *"package: name='app.raring'"*"versionName='$version'"* ]]; then
+            echo "::error::APK is not app.raring $version"
             exit 1
           fi
           echo "APK=$apk" >>"$GITHUB_ENV"
@@ -129,7 +130,7 @@ jobs:
             notes="First release."
           fi
           gh release create "v$VERSION" "$APK" --target "$GITHUB_SHA" --latest \
-            --title "Pepometer $VERSION" --notes "${notes:-Maintenance release.}"
+            --title "Raring $VERSION" --notes "${notes:-Maintenance release.}"
       - name: Keep the dry-run APK
         if: github.event_name != 'push'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

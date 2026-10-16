@@ -2366,51 +2366,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pepometer-app"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "jni",
- "log",
- "pepometer-core",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-log",
- "tokio",
-]
-
-[[package]]
-name = "pepometer-cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "pepometer-core",
- "rpassword",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
-name = "pepometer-core"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.1",
- "chrono",
- "reqwest 0.12.28",
- "rusqlite",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
- "tokio",
- "ts-rs",
- "url",
-]
-
-[[package]]
 name = "percent-encoding"
 version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2744,6 +2699,51 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "caa0f4137e1c0a72f4c651489402276c8e8e1cf081f3b0ba156d2cbeef09e86a"
 dependencies = [
  "rand_core",
+]
+
+[[package]]
+name = "raring-app"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "jni",
+ "log",
+ "raring-core",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-log",
+ "tokio",
+]
+
+[[package]]
+name = "raring-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "raring-core",
+ "rpassword",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "raring-core"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "chrono",
+ "reqwest 0.12.28",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "ts-rs",
+ "url",
 ]
 
 [[package]]

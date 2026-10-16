@@ -18,7 +18,7 @@ export const metricDescriptions: Record<string, string> = {
   vo2max: 'Garmin’s estimate of the oxygen your body can use during exercise. The trend shows how your estimate has changed over time.',
   endurance: 'Garmin’s endurance score describes your ability to sustain prolonged effort across activities.',
   hill: 'Garmin’s hill score describes your ability to run uphill, based on your training and fitness.',
-  runningTolerance: 'Garmin’s running tolerance is the running distance your body is currently prepared to handle. It is not a Pepometer training target.',
+  runningTolerance: 'Garmin’s running tolerance is the running distance your body is currently prepared to handle. It is not a Raring training target.',
 };
 
 export function metricSource(key: string): 'today' | 'health' | 'training' {

@@ -1,9 +1,10 @@
 [package]
-name = "pepometer-core"
-description = "Garmin client, storage, sync and rules for Pepometer"
+name = "raring-core"
+description = "Garmin client, storage, sync and rules for Raring"
 version.workspace = true
 edition.workspace = true
 repository.workspace = true
+homepage.workspace = true
 license.workspace = true
 
 [dependencies]

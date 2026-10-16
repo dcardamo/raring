@@ -1,7 +1,7 @@
 use chrono::{Datelike, Local};
 #[cfg(not(target_os = "android"))]
-use pepometer_core::Tokens;
-use pepometer_core::{garmin::sso, view::*, Pepometer};
+use raring_core::Tokens;
+use raring_core::{garmin::sso, view::*, Raring};
 #[cfg(target_os = "android")]
 use serde::Deserialize;
 use std::sync::Mutex;
@@ -12,8 +12,8 @@ struct SignInState(Mutex<Option<String>>);
 #[derive(Default)]
 struct SignInPending(Mutex<bool>);
 
-fn core(app: &tauri::AppHandle) -> Result<Pepometer, String> {
-    Pepometer::open(database_path(app)?).map_err(|e| e.to_string())
+fn core(app: &tauri::AppHandle) -> Result<Raring, String> {
+    Raring::open(database_path(app)?).map_err(|e| e.to_string())
 }
 
 fn today_date() -> String {
@@ -183,7 +183,7 @@ fn begin_sign_in(app: tauri::AppHandle) -> Result<(), String> {
 fn exchange_ticket_and_store(app: &tauri::AppHandle, ticket: String) {
     let outcome = runtime()
         .and_then(|rt| {
-            rt.block_on(Pepometer::sign_in_with_ticket(&ticket))
+            rt.block_on(Raring::sign_in_with_ticket(&ticket))
                 .map_err(|_| "Garmin sign-in failed — try again".to_owned())
         })
         .and_then(|tokens| {
@@ -272,7 +272,7 @@ fn database_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
     #[cfg(target_os = "android")]
     let root = root.join("files");
     std::fs::create_dir_all(&root).map_err(|e| e.to_string())?;
-    Ok(root.join("pepometer.db"))
+    Ok(root.join("raring.db"))
 }
 
 #[tauri::command]
@@ -292,10 +292,10 @@ fn set_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String>
 fn load_demo_data(app: tauri::AppHandle) -> Result<String, String> {
     let date = today_date();
     let store =
-        pepometer_core::store::Store::open(database_path(&app)?).map_err(|e| e.to_string())?;
-    pepometer_core::demo::seed(&store, Local::now().date_naive()).map_err(|e| e.to_string())?;
+        raring_core::store::Store::open(database_path(&app)?).map_err(|e| e.to_string())?;
+    raring_core::demo::seed(&store, Local::now().date_naive()).map_err(|e| e.to_string())?;
     let _ = app.emit("status-changed", app_status(app.clone())?);
-    Ok(format!("{}:{}", date, pepometer_core::demo::WORKOUT_ID))
+    Ok(format!("{}:{}", date, raring_core::demo::WORKOUT_ID))
 }
 
 #[cfg(target_os = "android")]
@@ -311,7 +311,7 @@ pub fn run() {
                 .setup(|app, api| {
                     #[cfg(target_os = "android")]
                     app.manage(AndroidVault(
-                        api.register_android_plugin("ca.hld.pepometer", "VaultPlugin")?,
+                        api.register_android_plugin("app.raring", "VaultPlugin")?,
                     ));
                     #[cfg(not(target_os = "android"))]
                     {

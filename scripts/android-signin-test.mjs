@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 const adb = (...args) => execFileSync('adb', args, { encoding: 'utf8' });
-const pids = [adb('shell', 'pidof', 'ca.hld.pepometer.debug').trim()];
+const pids = [adb('shell', 'pidof', 'app.raring.debug').trim()];
 let page;
 for (const pid of pids) {
   try {
@@ -11,7 +11,7 @@ for (const pid of pids) {
     if (page) break;
   } catch { /* another WebView */ }
 }
-if (!page) throw new Error('Pepometer WebView not found');
+if (!page) throw new Error('Raring WebView not found');
 if (!page.url.startsWith('http://tauri.localhost/')) throw new Error(`Expected app index, got ${page.url}`);
 const socket = new WebSocket(page.webSocketDebuggerUrl);
 await new Promise((resolve, reject) => { socket.onopen = resolve; socket.onerror = reject; });

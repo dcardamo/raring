@@ -24,7 +24,7 @@ pub enum Error {
     InvalidSetting,
 }
 pub type Result<T> = std::result::Result<T, Error>;
-pub struct Pepometer {
+pub struct Raring {
     store: Arc<store::Store>,
 }
 pub struct SyncOutcome {
@@ -32,7 +32,7 @@ pub struct SyncOutcome {
     pub report: SyncReport,
     pub notifications: Vec<Notification>,
 }
-impl Pepometer {
+impl Raring {
     pub fn open(db_path: impl AsRef<Path>) -> Result<Self> {
         Ok(Self {
             store: Arc::new(store::Store::open(db_path)?),

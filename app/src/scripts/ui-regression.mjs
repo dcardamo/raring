@@ -24,6 +24,7 @@ try {
  const back=async(route)=>{await page.goBack();await waitRoute(route)};
  await page.goto(`${url}/#today`);
  await waitRoute('today');
+ assert.equal(await page.title(),'Raring','browser uses the app name');
  await tab('Sleep');await tab('Training');await tab('Health');
  await back('today');
  await tab('Training');
@@ -44,9 +45,9 @@ try {
  await page.reload();await waitRoute('workout/9000000000001');
  await back('training');await back('today');
  await tab('Sleep');await tab('Sleep');await back('today');
- assert.equal(await page.evaluate(()=>window.__pepometerBack()),false,'Today lets Android leave the app');
+ assert.equal(await page.evaluate(()=>window.__raringBack()),false,'Today lets Android leave the app');
  await tab('Training');
- assert.equal(await page.evaluate(()=>window.__pepometerBack()),true);
+ assert.equal(await page.evaluate(()=>window.__raringBack()),true);
  await waitRoute('today');
  console.log('Hierarchical browser, header and native Back: passed');
 
@@ -148,7 +149,7 @@ try {
  await live.waitForFunction(()=>document.querySelector('.detail-gauge .gauge-center b')?.textContent==='59');
  await live.clock.fastForward(15*60_000);
  await live.waitForFunction(()=>window.testBackend.syncs===2);
- await live.evaluate(()=>{window.dispatchEvent(new Event('pepometer:resume'));window.dispatchEvent(new Event('pepometer:resume'))});
+ await live.evaluate(()=>{window.dispatchEvent(new Event('raring:resume'));window.dispatchEvent(new Event('raring:resume'))});
  await live.clock.fastForward(30_000);
  assert.equal(await live.evaluate(()=>window.testBackend.syncs),2,'resume events are throttled');
  await live.evaluate(()=>{window.testBackend.failRead=true});
@@ -160,7 +161,7 @@ try {
  await live.clock.fastForward(30_000);
  assert.equal(await live.evaluate(()=>window.testBackend.syncs),3,'failed syncs do not retry every poll');
  // A late Today response must not overwrite the newly opened Sleep page.
- await live.evaluate(()=>{window.testBackend.holdToday=true;window.dispatchEvent(new Event('pepometer:resume'))});
+ await live.evaluate(()=>{window.testBackend.holdToday=true;window.dispatchEvent(new Event('raring:resume'))});
  await live.waitForFunction(()=>window.testBackend.pendingToday!==null);
  await live.getByRole('navigation').getByRole('button',{name:'Sleep',exact:true}).click();
  await live.waitForURL('**/#sleep');await live.locator('.sleep-hero').waitFor();
@@ -189,7 +190,7 @@ try {
   Object.assign(v[0],{value:74,tone:'poor'});
   Object.assign(v[1],{value:28,normal:[48,62],scale:[14,76],tone:'poor'});
   v[1].trend[29]=28;
-  window.dispatchEvent(new Event('pepometer:resume'));
+  window.dispatchEvent(new Event('raring:resume'));
  });
  await live.getByText('2 outside your usual range',{exact:true}).waitFor();
  await live.getByText('Above usual',{exact:true}).waitFor();

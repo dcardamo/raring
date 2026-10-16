@@ -1,5 +1,5 @@
 use chrono::{Duration, NaiveDate};
-use pepometer_core::{notifications, screens, store::Store, view::{SleepNeedSource, VitalKind}};
+use raring_core::{notifications, screens, store::Store, view::{SleepNeedSource, VitalKind}};
 use serde_json::json;
 
 const DATE: &str = "2025-01-16";

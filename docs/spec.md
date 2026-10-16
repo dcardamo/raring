@@ -1,6 +1,6 @@
-# Pepometer v1 spec
+# Raring v1 spec
 
-Pepometer turns Garmin data into a clear daily answer: how am I doing,
+Raring turns Garmin data into a clear daily answer: how am I doing,
 why, and what should I do today, readable at a glance from dials, charts and
 color. It shows Garmin's own metrics and nudges you to improve. No data dumps,
 no invented scores.
@@ -16,7 +16,7 @@ The visual reference is [design/mockup](../design/mockup/): open
 - **Visual first.** Graphics carry the meaning: dials, gauges, bars, charts
   and color. Text is a headline of a few words, labels and numbers. Anything
   longer sits behind a tap.
-- **Garmin's numbers.** Every metric is Garmin's. Pepometer's own math is
+- **Garmin's numbers.** Every metric is Garmin's. Raring's own math is
   limited to your normal ranges, week-over-week changes, and the advice rules
   below.
 - **Fast.** Opens instantly from local data and syncs in the background.
@@ -160,8 +160,8 @@ Sent by the phone itself.
 
 ## Garmin access
 
-- Pepometer uses Garmin Connect's unofficial API, the one Garmin's own apps
-  use. Garmin has not sanctioned it and can change it, so Pepometer stays out
+- Raring uses Garmin Connect's unofficial API, the one Garmin's own apps
+  use. Garmin has not sanctioned it and can change it, so Raring stays out
   of the app stores. Releases are APKs on GitHub, installable with Obtainium.
 - **Sign-in** uses Garmin's own sign-in page inside the app, MFA included.
   The app catches the one-time service ticket Garmin redirects back with and

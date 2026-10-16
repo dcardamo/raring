@@ -1,4 +1,4 @@
-package ca.hld.pepometer
+package app.raring
 
 import android.graphics.Color
 import android.os.Bundle
@@ -39,7 +39,7 @@ class MainActivity : TauriActivity() {
         if (webView.url?.startsWith("http://tauri.localhost/") == false) {
           webView.loadUrl("http://tauri.localhost/")
         } else {
-          webView.evaluateJavascript("window.__pepometerBack?.() === true") { handled ->
+          webView.evaluateJavascript("window.__raringBack?.() === true") { handled ->
             if (handled != "true") moveTaskToBack(true)
           }
         }
@@ -52,7 +52,7 @@ class MainActivity : TauriActivity() {
     // The first resume may precede WebView creation; the app loads its initial data itself.
     val webview = findWebView(findViewById(android.R.id.content))
     if (webview?.url?.startsWith("http://tauri.localhost/") == true) {
-      webview.evaluateJavascript("window.dispatchEvent(new Event('pepometer:resume'))", null)
+      webview.evaluateJavascript("window.dispatchEvent(new Event('raring:resume'))", null)
     }
   }
 

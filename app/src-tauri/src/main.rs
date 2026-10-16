@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    pepometer_app_lib::run();
+    raring_app_lib::run();
 }

@@ -3,7 +3,7 @@ use jni::{
     objects::{JClass, JString},
     JNIEnv,
 };
-use pepometer_core::{Pepometer, Tokens};
+use raring_core::{Raring, Tokens};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -65,7 +65,7 @@ fn run_background_sync(db_path: &str, tokens_json: &str, now_iso: &str) -> SyncR
         now.offset(),
         now_iso
     );
-    let core = match Pepometer::open(db_path) {
+    let core = match Raring::open(db_path) {
         Ok(c) => c,
         Err(e) => {
             result.error = Some(e.to_string());
@@ -115,7 +115,7 @@ fn run_background_sync(db_path: &str, tokens_json: &str, now_iso: &str) -> SyncR
                 }
             }
         }
-        Err(pepometer_core::Error::Garmin(pepometer_core::garmin::Error::NeedsSignIn)) => {
+        Err(raring_core::Error::Garmin(raring_core::garmin::Error::NeedsSignIn)) => {
             result.auth_failed = true;
         }
         Err(e) => result.error = Some(e.to_string()),
@@ -125,7 +125,7 @@ fn run_background_sync(db_path: &str, tokens_json: &str, now_iso: &str) -> SyncR
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_ca_hld_pepometer_NativeBridge_prepareTokens(
+pub extern "system" fn Java_app_raring_NativeBridge_prepareTokens(
     mut env: JNIEnv<'_>,
     _class: JClass<'_>,
     tokens_json: JString<'_>,
@@ -148,13 +148,13 @@ pub extern "system" fn Java_ca_hld_pepometer_NativeBridge_prepareTokens(
                 .enable_all()
                 .build()
                 .map_err(|e| e.to_string())?;
-            let refreshed = rt.block_on(Pepometer::refresh_tokens(&tokens));
+            let refreshed = rt.block_on(Raring::refresh_tokens(&tokens));
             match refreshed {
                 Ok(value) => {
                     let json = serde_json::to_string(&value).map_err(|e| e.to_string())?;
                     Ok(serde_json::json!({"tokensJson": json}).to_string())
                 }
-                Err(pepometer_core::Error::Garmin(pepometer_core::garmin::Error::NeedsSignIn)) => {
+                Err(raring_core::Error::Garmin(raring_core::garmin::Error::NeedsSignIn)) => {
                     Ok("{\"authFailed\":true}".into())
                 }
                 Err(e) => Ok(serde_json::json!({"error": e.to_string()}).to_string()),
@@ -173,7 +173,7 @@ pub extern "system" fn Java_ca_hld_pepometer_NativeBridge_prepareTokens(
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_ca_hld_pepometer_NativeBridge_sync(
+pub extern "system" fn Java_app_raring_NativeBridge_sync(
     mut env: JNIEnv<'_>,
     _class: JClass<'_>,
     db_path: JString<'_>,
@@ -200,7 +200,7 @@ pub extern "system" fn Java_ca_hld_pepometer_NativeBridge_sync(
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_ca_hld_pepometer_NativeBridge_markSent(
+pub extern "system" fn Java_app_raring_NativeBridge_markSent(
     mut env: JNIEnv<'_>,
     _class: JClass<'_>,
     db_path: JString<'_>,
@@ -224,12 +224,12 @@ pub extern "system" fn Java_ca_hld_pepometer_NativeBridge_markSent(
                 .map_err(|e| e.to_string())?
                 .to_string_lossy()
                 .into_owned();
-            let items: Vec<pepometer_core::notifications::Notification> =
+            let items: Vec<raring_core::notifications::Notification> =
                 serde_json::from_str(&tags).map_err(|e| e.to_string())?;
             let now = DateTime::parse_from_rfc3339(&now)
                 .map_err(|e| e.to_string())?
                 .with_timezone(&Local);
-            Pepometer::open(db)
+            Raring::open(db)
                 .map_err(|e| e.to_string())?
                 .mark_notifications_sent(&items, now)
                 .map_err(|e| e.to_string())

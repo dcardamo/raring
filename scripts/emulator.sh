@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Boots Pepometer's emulator headless on port 5560 (serial emulator-5560) and
+# Boots Raring's emulator headless on port 5560 (serial emulator-5560) and
 # waits for boot. Run inside `nix develop`. Stop it with `adb emu kill`.
 set -euo pipefail
 cd "$(dirname "$0")/.."

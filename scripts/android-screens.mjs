@@ -5,7 +5,7 @@
 import {execFileSync} from 'node:child_process';
 import {mkdirSync, writeFileSync} from 'node:fs';
 const adb=(...args)=>execFileSync('adb',args,{encoding:'utf8'});
-const pid=adb('shell','pidof','ca.hld.pepometer.debug').trim();
+const pid=adb('shell','pidof','app.raring.debug').trim();
 adb('forward','tcp:9229',`localabstract:webview_devtools_remote_${pid}`);
 const pages=await (await fetch('http://127.0.0.1:9229/json')).json();
 const page=pages.find(x=>x.type==='page'&&x.url.startsWith('http://tauri.localhost/'));

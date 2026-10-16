@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Creates Pepometer's emulator (Pixel 7 sized, Android 15, Google Play image).
+# Creates Raring's emulator (Pixel 7 sized, Android 15, Google Play image).
 # avdmanager fails on the Nix SDK's read-only device list, so the files are
 # written directly. Run inside `nix develop`.
 set -euo pipefail

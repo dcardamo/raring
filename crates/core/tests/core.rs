@@ -1,9 +1,9 @@
 use chrono::{Datelike, Duration, Local, Utc};
-use pepometer_core::{
+use raring_core::{
     garmin::{self, Client, Tokens},
     notifications,
     store::Store,
-    Pepometer,
+    Raring,
 };
 use serde_json::{json, Value};
 use std::{
@@ -42,9 +42,9 @@ fn seed(store: &Store) {
 fn demo_seeds_current_day_and_screen_details() {
     let store = Store::open(":memory:").unwrap();
     let date = chrono::NaiveDate::from_ymd_opt(2026, 10, 16).unwrap();
-    pepometer_core::demo::seed(&store, date).unwrap();
+    raring_core::demo::seed(&store, date).unwrap();
     assert!(store.days() >= 42);
-    let today = pepometer_core::screens::today(&store, &date.to_string());
+    let today = raring_core::screens::today(&store, &date.to_string());
     assert_eq!(today.readiness.as_ref().unwrap().value, 82.);
     assert_eq!(today.sleep.as_ref().unwrap().value, 84.);
     assert_eq!(today.load.as_ref().unwrap().value, 612.);
@@ -62,18 +62,18 @@ fn demo_seeds_current_day_and_screen_details() {
     assert_eq!(today.fitness_age.chronological_age, Some(46.));
     assert_eq!(today.vitals.readings.len(), 5);
     assert_eq!(today.vitals.off_count, 0);
-    let sleep = pepometer_core::screens::sleep_view(&store, &date.to_string());
+    let sleep = raring_core::screens::sleep_view(&store, &date.to_string());
     assert_eq!(sleep.stages.len(), 23);
     assert_eq!(sleep.overnight.len(), 4);
     assert!(sleep.overnight.iter().all(|o| o.series.len() >= 8));
     assert_eq!(sleep.consistency.len(), 14);
     assert!(sleep.consistency_spread_min.unwrap() > 0.);
-    let health = pepometer_core::screens::health(&store, &date.to_string());
+    let health = raring_core::screens::health(&store, &date.to_string());
     assert_eq!(health.lever.as_ref().unwrap().key, "vigorousMinutes");
     assert_eq!(health.fitness_age.trend.len(), 12);
     assert!(health.fitness_age.trend.iter().all(Option::is_some));
     let monday = date - Duration::days(date.weekday().num_days_from_monday() as i64);
-    let checkin = pepometer_core::screens::checkin(&store, &monday.to_string());
+    let checkin = raring_core::screens::checkin(&store, &monday.to_string());
     assert!(checkin
         .cards
         .iter()
@@ -81,19 +81,19 @@ fn demo_seeds_current_day_and_screen_details() {
     assert!(checkin.fitness_age_change.is_some_and(|delta| delta <= -1.));
     assert!(checkin.vo2max_change.is_some_and(|delta| delta >= 1.));
     assert_eq!(
-        pepometer_core::screens::training(&store, &date.to_string())
+        raring_core::screens::training(&store, &date.to_string())
             .load_focus
             .len(),
         3
     );
     let workout =
-        pepometer_core::screens::workout(&store, pepometer_core::demo::WORKOUT_ID).unwrap();
+        raring_core::screens::workout(&store, raring_core::demo::WORKOUT_ID).unwrap();
     assert_eq!(workout.splits.len(), 10);
     assert_eq!(workout.heart_rate.len(), 210);
     assert_eq!(workout.route.len(), 210);
     assert_eq!(workout.zone_floors.len(), 4);
     assert_eq!(
-        pepometer_core::screens::training(&store, &date.to_string())
+        raring_core::screens::training(&store, &date.to_string())
             .workouts
             .len(),
         3
@@ -101,7 +101,7 @@ fn demo_seeds_current_day_and_screen_details() {
 }
 #[test]
 fn readiness_feedback_overrides_percent_and_missing_feedback_falls_back() {
-    use pepometer_core::view::Tone;
+    use raring_core::view::Tone;
     let store = Store::open(":memory:").unwrap();
     store
         .put(
@@ -118,7 +118,7 @@ fn readiness_feedback_overrides_percent_and_missing_feedback_falls_back() {
             }]),
         )
         .unwrap();
-    let view = pepometer_core::screens::today(&store, "2025-01-02");
+    let view = raring_core::screens::today(&store, "2025-01-02");
     assert_eq!(view.factors.len(), 6);
     let factor = |key| view.factors.iter().find(|f| f.key == key).unwrap().tone;
     assert_eq!(factor("sleep"), Tone::Poor);
@@ -143,7 +143,7 @@ fn load_chip_uses_garmin_optimal_range() {
                 &json!({"acuteTrainingLoad":amount,"optimalRangeMin":420,"optimalRangeMax":760}),
             )
             .unwrap();
-        let view = pepometer_core::screens::today(&store, "2025-01-02");
+        let view = raring_core::screens::today(&store, "2025-01-02");
         assert_eq!(view.chips[0].text.as_deref(), Some(expected));
     }
 }
@@ -151,7 +151,7 @@ fn load_chip_uses_garmin_optimal_range() {
 fn views_match_synthetic_mockup() {
     let s = Store::open(":memory:").unwrap();
     seed(&s);
-    let t = pepometer_core::screens::today(&s, "2025-01-02");
+    let t = raring_core::screens::today(&s, "2025-01-02");
     assert_eq!(t.readiness.as_ref().unwrap().value, 82.);
     assert_eq!(t.readiness_trend.len(), 30);
     assert_eq!(t.readiness_trend[29], Some(82.));
@@ -163,19 +163,19 @@ fn views_match_synthetic_mockup() {
     assert_eq!(t.activities[0].duration_s, 3134.);
     assert_eq!(t.activities[0].aerobic_te, Some(3.8));
     assert_eq!(t.activities[0].benefit.as_deref(), Some("Tempo"));
-    let sleep = pepometer_core::screens::sleep_view(&s, "2025-01-02");
+    let sleep = raring_core::screens::sleep_view(&s, "2025-01-02");
     assert_eq!(sleep.score.unwrap().value, 84.);
     assert_eq!(
         sleep.sleep_plan.as_ref().map(|p| p.bedtime.as_str()),
         Some("23:53")
     );
-    assert!(pepometer_core::screens::workout(&s, "123456").is_some());
+    assert!(raring_core::screens::workout(&s, "123456").is_some());
 }
 #[test]
 fn health_lever_follows_unmet_garmin_targets() {
     let store = Store::open(":memory:").unwrap();
     store.put("fitness_age","2025-01-02","now",&json!({"fitnessAge":39,"fitnessAgeData":{"vigorousMinutes":{"value":10,"target":30,"ageIfMet":38},"restingHr":{"value":60,"target":55}}})).unwrap();
-    let view = pepometer_core::screens::health(&store, "2025-01-02");
+    let view = raring_core::screens::health(&store, "2025-01-02");
     assert_eq!(view.lever.unwrap().key, "vigorousMinutes");
     assert!(
         !view
@@ -190,17 +190,17 @@ fn health_lever_follows_unmet_garmin_targets() {
 fn sleep_accepts_numeric_garmin_timestamps() {
     let s = Store::open(":memory:").unwrap();
     s.put("sleep","2025-01-02","now",&json!({"dailySleepDTO":{"sleepStartTimestampLocal":1735772400000_i64,"sleepEndTimestampLocal":1735801200000_i64,"sleepTimeSeconds":28000}})).unwrap();
-    let view = pepometer_core::screens::sleep_view(&s, "2025-01-02");
+    let view = raring_core::screens::sleep_view(&s, "2025-01-02");
     assert!(view.start_local.unwrap().contains('T'));
     assert_eq!(view.consistency.len(), 1);
 }
 #[test]
 fn unknown_data_degrades() {
     let s = Store::open(":memory:").unwrap();
-    assert!(pepometer_core::screens::today(&s, "2025-01-02")
+    assert!(raring_core::screens::today(&s, "2025-01-02")
         .readiness
         .is_none());
-    assert!(pepometer_core::screens::workout(&s, "123456").is_none());
+    assert!(raring_core::screens::workout(&s, "123456").is_none());
 }
 #[test]
 fn notification_log_and_defaults() {
@@ -387,14 +387,14 @@ fn settings_are_a_single_json_kv_record() {
     store.set_settings(&value).unwrap();
     let json = store.setting("settings").unwrap();
     assert_eq!(
-        serde_json::from_str::<pepometer_core::view::Settings>(&json).unwrap(),
+        serde_json::from_str::<raring_core::view::Settings>(&json).unwrap(),
         value
     );
     assert_eq!(store.settings(), value);
 }
 #[test]
 fn facade_settings_and_forget() {
-    let core = Pepometer::open(":memory:").unwrap();
+    let core = Raring::open(":memory:").unwrap();
     assert!(!core.setting("bedtime"));
     assert!(core.setting("morning"));
     core.set_setting("morning", false).unwrap();
@@ -481,7 +481,7 @@ async fn no_content_is_cached_and_bad_item_does_not_stop_readiness() {
         std::time::Duration::ZERO,
     )
     .unwrap();
-    let report = pepometer_core::sync::sync(&store, &c, Local::now(), 4).await;
+    let report = raring_core::sync::sync(&store, &c, Local::now(), 4).await;
     thread.join().unwrap();
     assert_eq!(report.requests, 4);
     assert_eq!(report.data_failures, 1);
@@ -554,7 +554,7 @@ async fn backfill_scans_existing_days_to_fill_older_gaps() {
         std::time::Duration::ZERO,
     )
     .unwrap();
-    let report = pepometer_core::sync::sync(&s, &c, now, 14).await;
+    let report = raring_core::sync::sync(&s, &c, now, 14).await;
     thread.join().unwrap();
     assert_eq!(report.requests, 14);
     assert!(s.get("summary", "2025-01-07").is_some());
@@ -587,12 +587,12 @@ fn nested_training_and_midnight_spread() {
     let s = Store::open(":memory:").unwrap();
     s.put("training", "2025-01-02", "now", &json!({"mostRecentTrainingStatus":{"latestTrainingStatusData":{"deviceA":{"trainingStatus":"PRODUCTIVE","acuteChronicWorkloadRatio":1.4,"acuteTrainingLoadDTO":{"dailyTrainingLoadAcute":630,"minOptimalLoad":400,"maxOptimalLoad":700}}}}})).unwrap();
     s.put("load_focus", "2025-01-02", "now", &json!({"mostRecentTrainingLoadBalance":{"metricsTrainingLoadBalanceDTOMap":{"deviceA":{"lowAerobic":{"value":300,"optimalMin":250,"optimalMax":400}}}}})).unwrap();
-    let training = pepometer_core::screens::training(&s, "2025-01-02");
+    let training = raring_core::screens::training(&s, "2025-01-02");
     assert_eq!(training.acute.unwrap().value, 630.);
     assert_eq!(training.status.as_deref(), Some("Productive"));
     assert_eq!(training.load_focus.len(), 1);
     assert_eq!(
-        pepometer_core::screens::today(&s, "2025-01-02")
+        raring_core::screens::today(&s, "2025-01-02")
             .load
             .unwrap()
             .band,
@@ -605,7 +605,7 @@ fn nested_training_and_midnight_spread() {
         s.put("sleep", &day, "now", &json!({"dailySleepDTO":{"sleepStartTimestampLocal":start,"sleepEndTimestampLocal":format!("{day}T08:00:00")}})).unwrap();
     }
     assert!(
-        pepometer_core::screens::sleep_view(&s, "2025-01-02")
+        raring_core::screens::sleep_view(&s, "2025-01-02")
             .consistency_spread_min
             .unwrap()
             < 60.
@@ -700,10 +700,10 @@ async fn sync_persists_rate_limit_backoff() {
         expires_at: Utc::now() + Duration::days(30),
     };
     let c = Client::with_urls(tokens, &url, &url, std::time::Duration::ZERO).unwrap();
-    let first = pepometer_core::sync::sync(&store, &c, Local::now(), 1).await;
+    let first = raring_core::sync::sync(&store, &c, Local::now(), 1).await;
     assert!(first.rate_limited);
     assert_eq!(first.requests, 1);
-    let next = pepometer_core::sync::sync(&store, &c, Local::now(), 1).await;
+    let next = raring_core::sync::sync(&store, &c, Local::now(), 1).await;
     assert!(next.rate_limited);
     assert_eq!(next.requests, 0);
     thread.join().unwrap();
@@ -719,7 +719,7 @@ async fn sync_reports_auth_failure_structurally() {
         expires_at: Utc::now() + Duration::days(30),
     };
     let client = Client::with_urls(tokens, &url, &url, std::time::Duration::ZERO).unwrap();
-    let report = pepometer_core::sync::sync(&store, &client, Local::now(), 1).await;
+    let report = raring_core::sync::sync(&store, &client, Local::now(), 1).await;
     assert!(report.auth_failed);
     thread.join().unwrap();
 }

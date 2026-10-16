@@ -1,4 +1,4 @@
-package ca.hld.pepometer
+package app.raring
 
 import android.content.BroadcastReceiver
 import android.content.Context

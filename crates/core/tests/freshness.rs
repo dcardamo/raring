@@ -1,7 +1,7 @@
-use pepometer_core::{screens, store::Store};
+use raring_core::{screens, store::Store};
 use serde_json::{json, Value};
 
-fn today(readiness: Value) -> pepometer_core::view::TodayView {
+fn today(readiness: Value) -> raring_core::view::TodayView {
     let store = Store::open(":memory:").unwrap();
     store
         .put("readiness", "2025-01-02", "now", &readiness)

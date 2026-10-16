@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Pepometer",
+  "productName": "Raring",
   "version": "0.1.2",
-  "identifier": "ca.hld.pepometer",
+  "identifier": "app.raring",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Pepometer",
+        "title": "Raring",
         "width": 400,
         "height": 860,
         "resizable": true

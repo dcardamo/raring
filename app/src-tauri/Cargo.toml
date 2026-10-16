@@ -1,20 +1,21 @@
 [package]
-name = "pepometer-app"
-description = "Pepometer: readiness, sleep and training from Garmin data"
+name = "raring-app"
+description = "Raring: readiness, sleep and training from Garmin data"
 version.workspace = true
 edition.workspace = true
 repository.workspace = true
+homepage.workspace = true
 license.workspace = true
 
 [lib]
-name = "pepometer_app_lib"
+name = "raring_app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
-pepometer-core = { path = "../../crates/core" }
+raring-core = { path = "../../crates/core" }
 chrono = "0.4"
 tokio = { version = "1", features = ["rt"] }
 serde_json = "1.0"

@@ -1,4 +1,4 @@
-package ca.hld.pepometer
+package app.raring
 
 import android.Manifest
 import android.app.Activity

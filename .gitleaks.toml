@@ -1,7 +1,7 @@
 # Secret scanning rules for scripts/check-secrets.sh: gitleaks' defaults plus
 # OAuth token values in JSON (Garmin's token file shape). Files that must
 # never be committed at all are checked by name in that script.
-title = "Pepometer secret scan"
+title = "Raring secret scan"
 
 [extend]
 useDefault = true

@@ -1,6 +1,6 @@
 use anyhow::{bail, Context, Result};
 use chrono::Local;
-use pepometer_core::{garmin, Pepometer, Tokens};
+use raring_core::{garmin, Raring, Tokens};
 use serde_json::Value;
 use std::{
     fs,
@@ -8,7 +8,7 @@ use std::{
     path::{Path, PathBuf},
 };
 fn home() -> PathBuf {
-    std::env::var_os("PEPOMETER_HOME")
+    std::env::var_os("RARING_HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| {
             PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -162,11 +162,11 @@ async fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let now = Local::now();
     let today = now.date_naive().to_string();
-    let db = home().join("pepometer.sqlite");
+    let db = home().join("raring.sqlite");
     if let Some(parent) = db.parent() {
         fs::create_dir_all(parent)?;
     }
-    let core = Pepometer::open(db)?;
+    let core = Raring::open(db)?;
     match args.first().map(String::as_str){
         Some("login")=>{
             let tokens=if args.get(1).is_some_and(|s|s=="--import") {Tokens::import_python(&fs::read_to_string(args.get(2).context("login --import FILE")?)?)?}
@@ -201,7 +201,7 @@ async fn main() -> Result<()> {
             }
             println!("Scrubbed capture at {}. Review it manually before sharing.",out.display());
         },
-        _=>bail!("usage: pepometer login [--import FILE] | sync [--budget N] | status | show SCREEN [--date YYYY-MM-DD] | notifications | capture --out DIR")
+        _=>bail!("usage: raring login [--import FILE] | sync [--budget N] | status | show SCREEN [--date YYYY-MM-DD] | notifications | capture --out DIR")
     }
     Ok(())
 }

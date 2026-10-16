@@ -42,7 +42,7 @@ export function routeTrail(target: string, fromTrail: string[] = []): string[] {
   return parent === 'today' ? ['today', route] : ['today', parent, route];
 }
 
-const stateKey = '__pepometerNavigation';
+const stateKey = '__raringNavigation';
 
 function ownedTrail(state: unknown, hash: string): string[] | null {
   if (!state || typeof state !== 'object') return null;

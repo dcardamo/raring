@@ -1,11 +1,11 @@
-"""Sign in to Garmin Connect once and save tokens for the Pepometer CLI.
+"""Sign in to Garmin Connect once and save tokens for the Raring CLI.
 
 Uses python-garminconnect, whose multi-strategy login is the most reliable
 way to sign in from a computer. This creates a new Garmin session with its
 own tokens; it does not touch tokens used by any other tool.
 
 Usage: nix run .#garmin-login  (writes .data/garmin_tokens.json)
-Then:  nix develop -c cargo run -p pepometer-cli -- login --import .data/garmin_tokens.json
+Then:  nix develop -c cargo run -p raring-cli -- login --import .data/garmin_tokens.json
 """
 
 import getpass

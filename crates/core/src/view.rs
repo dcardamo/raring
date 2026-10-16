@@ -1,7 +1,7 @@
 //! View models: exactly what each screen renders.
 //!
 //! These types are the contract between the Rust core and the Svelte UI.
-//! `cargo test -p pepometer-core` regenerates their TypeScript twins in
+//! `cargo test -p raring-core` regenerates their TypeScript twins in
 //! `app/src/lib/generated/`. Values are raw (numbers, seconds, local ISO
 //! timestamps) and the UI formats them; labels that come from Garmin enums
 //! (levels, statuses) and every headline are produced here so they can be

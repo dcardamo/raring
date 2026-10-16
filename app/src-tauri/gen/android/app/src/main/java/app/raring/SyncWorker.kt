@@ -1,4 +1,4 @@
-package ca.hld.pepometer
+package app.raring
 
 import android.Manifest
 import android.app.NotificationChannel
@@ -33,7 +33,7 @@ import java.time.OffsetDateTime
 import java.util.concurrent.TimeUnit
 
 object NativeBridge {
-    init { System.loadLibrary("pepometer_app_lib") }
+    init { System.loadLibrary("raring_app_lib") }
     @JvmStatic external fun prepareTokens(tokensJson: String): String
     @JvmStatic external fun sync(dbPath: String, tokensJson: String, nowIso: String): String
     @JvmStatic external fun markSent(dbPath: String, tagsJson: String, nowIso: String): String
@@ -61,7 +61,7 @@ object SyncScheduler {
         return request.id
     }
     fun cancel(context: Context) {
-        Log.i("PepometerSync", "scheduled work cancelled")
+        Log.i("RaringSync", "scheduled work cancelled")
         val manager = WorkManager.getInstance(context)
         manager.cancelUniqueWork("garmin-hourly")
         manager.cancelUniqueWork("readiness-followup")
@@ -74,11 +74,11 @@ object SyncScheduler {
 
 class SyncWorker(context: Context, params: WorkerParameters): CoroutineWorker(context, params) {
     companion object {
-        private const val TAG = "PepometerSync"
-        private const val CHANNEL = "pepometer"
+        private const val TAG = "RaringSync"
+        private const val CHANNEL = "raring"
         fun channel(context: Context) {
             (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
-                .createNotificationChannel(NotificationChannel(CHANNEL, "Pepometer", NotificationManager.IMPORTANCE_DEFAULT))
+                .createNotificationChannel(NotificationChannel(CHANNEL, "Raring", NotificationManager.IMPORTANCE_DEFAULT))
         }
         fun notify(context: Context, id: String, title: String, body: String, target: String): Boolean {
             channel(context)
@@ -103,21 +103,21 @@ class SyncWorker(context: Context, params: WorkerParameters): CoroutineWorker(co
                 val tokens = TokenVault.loadOrClear(applicationContext)
                 if (tokens == null) {
                     SyncScheduler.cancel(applicationContext)
-                    notify(applicationContext, "auth-required", "Sign in to Garmin again", "Open Pepometer to reconnect", "today")
+                    notify(applicationContext, "auth-required", "Sign in to Garmin again", "Open Raring to reconnect", "today")
                     return@withLock Result.success()
                 }
                 val prepared = JSONObject(NativeBridge.prepareTokens(tokens))
                 if (prepared.optBoolean("authFailed")) {
                     TokenVault.clear(applicationContext)
                     SyncScheduler.cancel(applicationContext)
-                    notify(applicationContext, "auth-required", "Sign in to Garmin again", "Open Pepometer to reconnect", "today")
+                    notify(applicationContext, "auth-required", "Sign in to Garmin again", "Open Raring to reconnect", "today")
                     return@withLock Result.success()
                 }
                 if (prepared.has("error")) return@withLock Result.retry()
                 val readyTokens = prepared.getString("tokensJson")
                 if (readyTokens != tokens) TokenVault.save(applicationContext, readyTokens)
                 val now = OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
-                val db = File(applicationContext.filesDir, "pepometer.db").absolutePath
+                val db = File(applicationContext.filesDir, "raring.db").absolutePath
                 val response = JSONObject(NativeBridge.sync(db, readyTokens, now))
                 // Persist a rotated token before handling partial endpoint failures.
                 if (!response.optBoolean("authFailed")) TokenVault.save(applicationContext, response.getString("tokensJson"))
@@ -135,7 +135,7 @@ class SyncWorker(context: Context, params: WorkerParameters): CoroutineWorker(co
                 if (response.optBoolean("authFailed")) {
                     TokenVault.clear(applicationContext)
                     SyncScheduler.cancel(applicationContext)
-                    notify(applicationContext, "auth-required", "Sign in to Garmin again", "Open Pepometer to reconnect", "today")
+                    notify(applicationContext, "auth-required", "Sign in to Garmin again", "Open Raring to reconnect", "today")
                     return@withLock Result.success()
                 }
                 if (!response.isNull("error")) {

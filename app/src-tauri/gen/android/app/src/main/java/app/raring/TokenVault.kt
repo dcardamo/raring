@@ -1,4 +1,4 @@
-package ca.hld.pepometer
+package app.raring
 
 import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
@@ -12,7 +12,7 @@ import javax.crypto.spec.GCMParameterSpec
 
 /** The key never leaves AndroidKeyStore. The ciphertext is never backed up. */
 object TokenVault {
-    private const val ALIAS = "ca.hld.pepometer.tokens.v1"
+    private const val ALIAS = "app.raring.tokens.v1"
     private val aad = ALIAS.toByteArray(Charsets.UTF_8)
     private fun file(context: Context) = File(context.noBackupFilesDir, "tokens.enc")
     private fun key(): SecretKey {
