@@ -39,7 +39,12 @@ impl Store {
                     .as_u64()
                     .map(|v| v.to_string())
                     .or_else(|| item["activityId"].as_str().map(str::to_owned));
-                if let (Some(id), Some(start)) = (id, item["startTimeLocal"].as_str()) {
+                if let (Some(id), Some(start)) = (
+                    id,
+                    item["summaryDTO"]["startTimeLocal"]
+                        .as_str()
+                        .or_else(|| item["startTimeLocal"].as_str()),
+                ) {
                     db.execute("INSERT INTO activities VALUES (?1,?2) ON CONFLICT(id) DO UPDATE SET start_local=excluded.start_local",params![id,start])?;
                 }
             }
@@ -78,7 +83,7 @@ impl Store {
     pub fn activity_ids(&self, since: Option<&str>, limit: usize) -> Vec<String> {
         let db = self.db.lock().unwrap();
         let Ok(mut stmt) = db.prepare(
-            "SELECT id FROM activities WHERE start_local>=?1 ORDER BY start_local DESC LIMIT ?2",
+            "SELECT id FROM activities WHERE start_local>=?1 ORDER BY replace(start_local, ' ', 'T') DESC LIMIT ?2",
         ) else {
             return vec![];
         };
@@ -91,7 +96,7 @@ impl Store {
             .lock()
             .unwrap()
             .query_row(
-                "SELECT start_local FROM activities ORDER BY start_local DESC LIMIT 1",
+                "SELECT start_local FROM activities ORDER BY replace(start_local, ' ', 'T') DESC LIMIT 1",
                 [],
                 |r| r.get(0),
             )

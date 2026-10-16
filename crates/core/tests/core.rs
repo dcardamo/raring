@@ -148,6 +148,28 @@ fn load_chip_uses_garmin_optimal_range() {
     }
 }
 #[test]
+fn training_load_label_requires_garmin_range() {
+    use raring_core::view::Tone;
+    let store = Store::open(":memory:").unwrap();
+    for (amount, range, expected, tone) in [
+        (350, true, "Low", Tone::Fair),
+        (612, true, "Optimal", Tone::Good),
+        (810, true, "High", Tone::Poor),
+        (612, false, "", Tone::Neutral),
+    ] {
+        let mut data = json!({"acuteTrainingLoad": amount});
+        if range {
+            data["optimalRangeMin"] = json!(420);
+            data["optimalRangeMax"] = json!(760);
+        }
+        store.put("training", "2025-01-02", "now", &data).unwrap();
+        let acute = raring_core::screens::training(&store, "2025-01-02").acute.unwrap();
+        assert_eq!(acute.label, expected);
+        assert_eq!(acute.tone, tone);
+        assert_eq!(acute.band.is_some(), range);
+    }
+}
+#[test]
 fn views_match_synthetic_mockup() {
     let s = Store::open(":memory:").unwrap();
     seed(&s);
@@ -499,66 +521,71 @@ async fn no_content_is_cached_and_bad_item_does_not_stop_readiness() {
         .any(|r| r.contains("trainingreadiness")));
 }
 #[tokio::test]
-async fn backfill_scans_existing_days_to_fill_older_gaps() {
-    let s = Store::open(":memory:").unwrap();
-    let now = chrono::NaiveDate::from_ymd_opt(2025, 1, 10)
-        .unwrap()
-        .and_hms_opt(12, 0, 0)
-        .unwrap()
-        .and_local_timezone(Local)
-        .single()
+async fn backfill_includes_yesterday_and_scans_existing_days_to_fill_older_gaps() {
+    for (days, expected) in [
+        (vec!["2025-01-10", "2025-01-08"], "2025-01-09"),
+        (vec!["2025-01-10", "2025-01-09", "2025-01-08"], "2025-01-07"),
+    ] {
+        let s = Store::open(":memory:").unwrap();
+        let now = chrono::NaiveDate::from_ymd_opt(2025, 1, 10)
+            .unwrap()
+            .and_hms_opt(12, 0, 0)
+            .unwrap()
+            .and_local_timezone(Local)
+            .single()
+            .unwrap();
+        s.put(
+            "profile",
+            "me",
+            "now",
+            &json!({"displayName":"Sample User"}),
+        )
         .unwrap();
-    s.put(
-        "profile",
-        "me",
-        "now",
-        &json!({"displayName":"Sample User"}),
-    )
-    .unwrap();
-    for day in ["2025-01-10", "2025-01-08"] {
-        for kind in [
-            "summary",
-            "sleep",
-            "hrv",
-            "readiness",
-            "training",
-            "training_daily",
-            "load_focus",
-            "battery",
-            "spo2",
-            "respiration",
-            "stress",
-            "max_metrics",
-        ] {
-            s.put(kind, day, "now", &Value::Null).unwrap();
+        for day in days {
+            for kind in [
+                "summary",
+                "sleep",
+                "hrv",
+                "readiness",
+                "training",
+                "training_daily",
+                "load_focus",
+                "battery",
+                "spo2",
+                "respiration",
+                "stress",
+                "max_metrics",
+            ] {
+                s.put(kind, day, "now", &Value::Null).unwrap();
+            }
         }
-    }
-    for kind in ["fitness_age", "races", "endurance", "hill", "tolerance"] {
-        s.put(kind, "2025-01-10", "now", &Value::Null).unwrap();
-    }
-    s.put("records", "all", "now", &Value::Null).unwrap();
-    s.set_cursor("records_checked", &Utc::now().timestamp().to_string())
+        for kind in ["fitness_age", "races", "endurance", "hill", "tolerance"] {
+            s.put(kind, "2025-01-10", "now", &Value::Null).unwrap();
+        }
+        s.put("records", "all", "now", &Value::Null).unwrap();
+        s.set_cursor("records_checked", &Utc::now().timestamp().to_string())
+            .unwrap();
+        let mut replies = vec![(200, "{}".into()); 12];
+        replies.extend([(200, "[]".into()), (200, "{}".into())]);
+        let (url, seen, thread) = mock(replies);
+        let c = Client::with_urls(
+            Tokens {
+                access_token: token(1900000000),
+                refresh_token: "refresh".into(),
+                client_id: "TEST_DI".into(),
+                expires_at: Utc::now() + Duration::days(30),
+            },
+            &url,
+            &url,
+            std::time::Duration::ZERO,
+        )
         .unwrap();
-    let mut replies = vec![(200, "{}".into()); 12];
-    replies.extend([(200, "[]".into()), (200, "{}".into())]);
-    let (url, seen, thread) = mock(replies);
-    let c = Client::with_urls(
-        Tokens {
-            access_token: token(1900000000),
-            refresh_token: "refresh".into(),
-            client_id: "TEST_DI".into(),
-            expires_at: Utc::now() + Duration::days(30),
-        },
-        &url,
-        &url,
-        std::time::Duration::ZERO,
-    )
-    .unwrap();
-    let report = raring_core::sync::sync(&s, &c, now, 14).await;
-    thread.join().unwrap();
-    assert_eq!(report.requests, 14);
-    assert!(s.get("summary", "2025-01-07").is_some());
-    assert!(seen.lock().unwrap()[13].contains("2025-01-07"));
+        let report = raring_core::sync::sync(&s, &c, now, 14).await;
+        thread.join().unwrap();
+        assert_eq!(report.requests, 14);
+        assert!(s.get("summary", expected).is_some());
+        assert!(seen.lock().unwrap()[13].contains(expected));
+    }
 }
 #[tokio::test]
 async fn forbidden_is_not_signout_and_rejected_refresh_is() {

@@ -275,8 +275,8 @@ pub struct OvernightTile {
     pub kind: OvernightKind,
     pub value: Option<f64>,
     pub unit: String,
-    /// Samples across the night, evenly spaced.
-    pub series: Vec<f64>,
+    /// Samples across the night, evenly spaced; invalid or missing readings remain gaps.
+    pub series: Vec<Option<f64>>,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]

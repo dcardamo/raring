@@ -24,6 +24,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.withLock
 
+// WorkManager increments the count on RUNNING; only ENQUEUED again means a retry.
+internal fun WorkInfo.isSyncAttemptComplete(): Boolean =
+    state.isFinished || (state == WorkInfo.State.ENQUEUED && runAttemptCount > 0)
+
 @TauriPlugin(permissions = [Permission(strings = [Manifest.permission.POST_NOTIFICATIONS], alias = "notifications")])
 class VaultPlugin(private val activity: Activity): Plugin(activity) {
     private var webview: WebView? = null
@@ -74,7 +78,7 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
                 val id = SyncScheduler.immediate(activity)
                 val completed = withTimeoutOrNull(60_000) {
                     WorkManager.getInstance(activity).getWorkInfoByIdFlow(id)
-                        .first { info -> info != null && (info.state.isFinished || info.runAttemptCount > 0) }
+                        .first { info -> info?.isSyncAttemptComplete() == true }
                 }
                 if (completed?.state == WorkInfo.State.SUCCEEDED) invoke.resolve(JSObject())
                 else invoke.reject("sync pending — try again later")

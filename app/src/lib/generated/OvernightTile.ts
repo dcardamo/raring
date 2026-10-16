@@ -3,6 +3,6 @@ import type { OvernightKind } from "./OvernightKind";
 
 export type OvernightTile = { kind: OvernightKind, value: number | null, unit: string, 
 /**
- * Samples across the night, evenly spaced.
+ * Samples across the night, evenly spaced; invalid or missing readings remain gaps.
  */
-series: Array<number>, };
+series: Array<number | null>, };

@@ -16,6 +16,8 @@ pub struct SyncReport {
     pub rate_limited: bool,
     pub auth_failed: bool,
     pub error: Option<String>,
+    // Refreshed credentials are persisted separately, never included in diagnostic JSON.
+    #[serde(skip)]
     pub tokens: Option<Tokens>,
 }
 const DAILY: &[&str] = &[
@@ -224,7 +226,8 @@ pub async fn sync(
         }
     }
     if !report.rate_limited && report.error.is_none() && report.requests < budget {
-        let mut day = today - Duration::days(2);
+        // Outside the morning refresh window, yesterday still needs its first backfill.
+        let mut day = today - Duration::days(1);
         while day >= today - Duration::days(89) && report.requests < budget {
             let key = date(day);
             for kind in DAILY {

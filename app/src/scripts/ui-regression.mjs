@@ -106,7 +106,7 @@ try {
  console.log('Phone, unfolded and live resize layouts: passed');
 
  const samples={};
- for(const name of ['today','sleep','training','health','status'])samples[name]=JSON.parse(await readFile(resolve(`src/lib/sample/${name}.json`),'utf8'));
+ for(const name of ['today','sleep','training','health','status','workout'])samples[name]=JSON.parse(await readFile(resolve(`src/lib/sample/${name}.json`),'utf8'));
  const onboarding=await browser.newPage({viewport:{width:390,height:844}});
  onboarding.on('pageerror',e=>errors.push(e.message));
  await onboarding.addInitScript(samples=>{
@@ -169,12 +169,12 @@ try {
  await onboarding.close();
  console.log('Welcome, offline privacy, sign-in errors, notification choices and sign-out: passed');
 
- const live=await browser.newPage({viewport:{width:840,height:900}});
+ const live=await browser.newPage({viewport:{width:840,height:900},timezoneId:'America/New_York'});
  live.on('pageerror',e=>errors.push(e.message));
  await live.clock.install({time:new Date('2026-10-16T14:00:00Z')});
  await live.addInitScript(samples=>{
   localStorage.setItem('notifications-step-done','1');
-  const state=window.testBackend={samples,syncs:0,reads:0,failSync:false,failRead:false,holdToday:false,pendingToday:null};
+  const state=window.testBackend={samples,syncs:0,reads:0,lastAttempt:null,failSync:false,failRead:false,holdToday:false,pendingToday:null};
   samples.status.lastSync=new Date(Date.now()-3600_000).toISOString();
   window.isTauri=true;
   window.__TAURI_INTERNALS__={
@@ -182,7 +182,7 @@ try {
    invoke:async(command)=>{
     if(command==='app_status')return structuredClone(samples.status);
     if(command==='sync_now'){
-     state.syncs++;
+     state.syncs++;state.lastAttempt=Date.now();
      if(state.failSync)throw Error('Synthetic offline error');
      samples.status.lastSync=new Date().toISOString();
      return samples.status;
@@ -222,6 +222,31 @@ try {
  await live.waitForFunction(()=>window.testBackend.syncs===3);
  await live.clock.fastForward(30_000);
  assert.equal(await live.evaluate(()=>window.testBackend.syncs),3,'failed syncs do not retry every poll');
+ await live.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();
+ await live.locator('.sync-indicator').getByText('Sync delayed · Error: Synthetic offline error',{exact:true}).waitFor();
+ await live.clock.fastForward(30_000);
+ assert.ok((await live.locator('.sync-indicator').textContent()).includes('Sync delayed'),'an unchanged cached success must not clear a newer failure');
+ await live.evaluate(()=>{
+  const s=window.testBackend;
+  s.samples.status.lastSync=new Date(s.lastAttempt-1000).toISOString();
+  window.dispatchEvent(new Event('raring:resume'));
+ });
+ await live.clock.fastForward(30_000);
+ assert.ok((await live.locator('.sync-indicator').textContent()).includes('Sync delayed'),'a previously unseen success before the failed attempt must not clear its warning');
+ await live.evaluate(()=>{
+  const s=window.testBackend.samples.status;
+  s.lastSync=new Date().toISOString();s.lastError='Synthetic partial sync error';
+  window.dispatchEvent(new Event('raring:resume'));
+ });
+ await live.clock.fastForward(30_000);
+ assert.ok((await live.locator('.sync-indicator').textContent()).includes('Sync delayed'),'partial syncs still show an error');
+ await live.evaluate(()=>{
+  const s=window.testBackend.samples.status;
+  s.lastSync=new Date().toISOString();s.lastError=null;
+  window.dispatchEvent(new Event('raring:resume'));
+ });
+ await live.locator('.sync-indicator').getByText(/^Last synced/).waitFor({timeout:5_000});
+ assert.equal(await live.evaluate(()=>window.testBackend.syncs),3,'background recovery clears the warning without another foreground sync');
  // A late Today response must not overwrite the newly opened Sleep page.
  await live.evaluate(()=>{window.testBackend.holdToday=true;window.dispatchEvent(new Event('raring:resume'))});
  await live.waitForFunction(()=>window.testBackend.pendingToday!==null);
@@ -271,6 +296,62 @@ try {
  await live.locator('.sleep-hero').waitFor();
  assert.equal(await live.locator('.sleep-plan').count(),0);
  console.log('Partial baselines, outliers, missing history and unavailable sleep plans: passed');
+ await live.evaluate(()=>{Object.assign(window.testBackend.samples.training.acute,{label:'',tone:'neutral',band:null})});
+ await live.getByRole('navigation').getByRole('button',{name:'Training',exact:true}).click();
+ await live.locator('.semi .gauge-center').waitFor();
+ assert.equal(await live.locator('.semi .gauge-center b').textContent(),'612');
+ assert.equal(await live.locator('.semi .gauge-center').getByText('Acute load',{exact:true}).count(),1,'missing ranges do not repeat the metric name as a status');
+ assert.equal(await live.locator('.semi .gauge-center em').count(),0,'missing ranges do not imply a load assessment');
+ await live.screenshot({path:resolve(output,'training-no-range.png')});
+ console.log('Training load without an optimal range: passed');
+ // Real Garmin shapes are covered in Rust; exercise their partial/mixed-sport UI states here.
+ await live.evaluate(()=>{
+  const s=window.testBackend.samples;
+  Object.assign(s.workout.summary,{startLocal:'2026-10-14T07:23:00',durationS:2100,distanceKm:null});
+  s.training.workouts=[structuredClone(s.workout.summary)];
+  s.workout.zoneFloors=[];
+  s.workout.heartRate=[{tS:0,bpm:98},{tS:60,bpm:140},{tS:2100,bpm:110}];
+  s.workout.splits=[{index:1,distanceKm:0,seconds:2100,avgHr:120}];
+  window.dispatchEvent(new Event('raring:resume'));
+ });
+ await live.getByRole('navigation').getByRole('button',{name:'Training',exact:true}).click();
+ await live.getByText('Wed 14 Oct · 07:23',{exact:true}).waitFor();
+ await live.locator('.activity').first().click();
+ await live.locator('.hr-trace').waitFor();
+ assert.notEqual(await live.locator('.hr-trace').getAttribute('stroke'),'url(#hr-zones)','HR remains visible without zone boundaries');
+ assert.equal(await live.locator('svg[aria-label="Heart rate during workout"] text').last().textContent(),'35:00','HR axis reflects recorded duration, not fixed 45 minutes');
+ await live.getByText('Lap duration',{exact:true}).waitFor();
+ assert.equal(await live.getByText(/Fastest (km|split)/).count(),0,'a stationary workout is not a fastest kilometre');
+ assert.ok(!(await live.locator('main').innerText()).includes('Invalid Date'));
+ await live.evaluate(()=>{
+  const w=window.testBackend.samples.workout;w.zoneFloors=[100,120,140,160];
+  w.splits=[{index:1,distanceKm:.5,seconds:180,avgHr:120},{index:2,distanceKm:1,seconds:300,avgHr:140}];
+  window.dispatchEvent(new Event('raring:resume'));
+ });
+ await live.getByText('Fastest split 2',{exact:true}).waitFor();
+ assert.equal(await live.locator('.hr-trace').getAttribute('stroke'),'url(#hr-zones)');
+ assert.deepEqual(await live.locator('.split-value b').allTextContents(),['6:00','5:00'],'unequal splits use pace rather than raw lap duration');
+ await live.evaluate(()=>{
+  const s=window.testBackend.samples.sleep;s.date='2026-10-16';s.startLocal='2026-10-16T01:35:00';
+  s.consistency=[{date:'2026-10-14',bedHour:23,wakeHour:7},{date:'2026-10-16',bedHour:1.5,wakeHour:7}];
+ });
+ await live.getByRole('navigation').getByRole('button',{name:'Sleep',exact:true}).click();
+ await live.locator('.time-label').first().waitFor();
+ assert.equal(await live.locator('.time-label').first().textContent(),'01:35','sleep chart starts at Garmin bedtime, not fixed 23:00');
+ const nights=await live.locator('rect.night').evaluateAll(nodes=>nodes.map(n=>Number(n.getAttribute('x'))));
+ assert.equal(nights.length,2);assert.ok(nights[1]>300 && nights[1]-nights[0]>40,'consistency preserves calendar gaps and anchors the latest night on the right');
+ await live.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();
+ await live.locator('.sync-indicator').waitFor();
+ await live.getByRole('button',{name:'Refresh',exact:true}).click();
+ await live.locator('.sync-indicator').getByText(/^Last synced/).waitFor();
+ const synced=await live.evaluate(()=>new Date(window.testBackend.samples.status.lastSync).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
+ assert.ok((await live.locator('.sync-indicator').textContent()).includes('Last synced '+synced),'UTC sync instants render in the device timezone');
+ await live.evaluate(()=>{window.testBackend.samples.health.lever.ageIfMet=36.23456789});
+ await live.getByRole('navigation').getByRole('button',{name:'Health',exact:true}).click();
+ await live.locator('.lever').waitFor();
+ assert.ok((await live.locator('.lever').textContent()).includes('age 36.2'),'Garmin fractional target ages are formatted for display');
+ assert.ok(!(await live.locator('.lever').textContent()).includes('36.23456789'));
+ console.log('Workout dates, partial zones, real chart axes, mixed-sport splits, sleep gaps and target formatting: passed');
  assert.deepEqual(errors,[],'no browser errors');
 } finally {
  await browser?.close();

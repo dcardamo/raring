@@ -1,6 +1,6 @@
 //! Tolerant projections of raw Garmin responses. Unknown and absent fields stay absent.
 use crate::{rules, store::Store, view::*};
-use chrono::{Datelike, Duration, NaiveDate};
+use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime};
 use serde_json::Value;
 
 fn at<'a>(v: &'a Value, keys: &[&str]) -> &'a Value {
@@ -176,6 +176,69 @@ pub(crate) fn vo2(v: &Value) -> Option<f64> {
         ],
     )
 }
+fn historical_vo2(store: &Store, date: &str) -> Option<f64> {
+    store
+        .history("max_metrics", date, 1)
+        .pop()
+        .and_then(|(_, v)| vo2(&v))
+        .or_else(|| {
+            store
+                .history("training", date, 1)
+                .pop()
+                .and_then(|(_, v)| vo2(&v["mostRecentVO2Max"]))
+        })
+}
+fn sleep_stage_time(v: &Value, gmt: &str, timestamp: &str) -> Option<f64> {
+    let raw = &v[gmt];
+    if let Some(s) = raw.as_str() {
+        if let Ok(t) = NaiveDateTime::parse_from_str(s, "%Y-%m-%dT%H:%M:%S%.f") {
+            return Some(t.and_utc().timestamp_millis() as f64);
+        }
+    }
+    num(v, &[&[gmt], &[timestamp]]).map(|n| {
+        if n.abs() < 100_000_000_000. {
+            n * 1000.
+        } else {
+            n
+        }
+    })
+}
+fn overnight_samples(raw: &Value, kind: OvernightKind) -> Vec<Option<f64>> {
+    let (root, field, fallback) = match kind {
+        OvernightKind::Hrv => ("hrvData", "value", "hrv"),
+        OvernightKind::HeartRate => ("sleepHeartRate", "value", "heartRate"),
+        OvernightKind::Respiration => (
+            "wellnessEpochRespirationDataDTOList",
+            "respirationValue",
+            "respiration",
+        ),
+        OvernightKind::Spo2 => ("wellnessEpochSPO2DataDTOList", "spo2Reading", "spo2"),
+    };
+    let valid = |n: f64| {
+        n.is_finite()
+            && match kind {
+                OvernightKind::Hrv => n > 0.,
+                OvernightKind::HeartRate => n > 0. && n < 300.,
+                OvernightKind::Respiration => n > 0. && n < 100.,
+                OvernightKind::Spo2 => n > 0. && n <= 100.,
+            }
+    };
+    if let Some(samples) = raw[root].as_array() {
+        samples
+            .iter()
+            .map(|sample| num(sample, &[&[field]]).filter(|n| valid(*n)))
+            .collect()
+    } else {
+        raw["overnightSeries"][fallback]
+            .as_array()
+            .map(|a| {
+                a.iter()
+                    .map(|sample| num(sample, &[&[]]).filter(|n| valid(*n)))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+}
 fn sscore(v: &Value) -> Option<f64> {
     let s = sleep(v);
     num(
@@ -221,8 +284,17 @@ fn gauge(value: f64, max: f64, label: &str, tone: Tone, band: Option<[f64; 2]>) 
     }
 }
 fn label(v: Option<String>) -> String {
-    v.unwrap_or_default()
-        .replace('_', " ")
+    let code = v.unwrap_or_default();
+    let code = code
+        .rsplit_once('_')
+        .filter(|(prefix, suffix)| {
+            !prefix.is_empty() && prefix.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_')
+                && !suffix.is_empty()
+                && suffix.chars().all(|c| c.is_ascii_digit())
+        })
+        .map(|(prefix, _)| prefix)
+        .unwrap_or(&code);
+    code.replace('_', " ")
         .to_ascii_lowercase()
         .split_whitespace()
         .map(|s| {
@@ -238,22 +310,28 @@ fn label(v: Option<String>) -> String {
 }
 fn device(v: &Value) -> &Value {
     v.as_object()
-        .and_then(|map| map.values().find(|value| value.is_object()))
+        .and_then(|map| {
+            map.values().find(|value| value["primaryTrainingDevice"].as_bool() == Some(true))
+                .or_else(|| map.values().find(|value| value.is_object()))
+        })
         .unwrap_or(&Value::Null)
 }
 fn training_device(v: &Value) -> &Value {
-    device(&v["mostRecentTrainingStatus"]["latestTrainingStatusData"])
+    let nested = &v["mostRecentTrainingStatus"]["latestTrainingStatusData"];
+    device(if nested.is_object() { nested } else { &v["latestTrainingStatusData"] })
 }
 fn load_device(v: &Value) -> &Value {
-    device(&v["mostRecentTrainingLoadBalance"]["metricsTrainingLoadBalanceDTOMap"])
+    let nested = &v["mostRecentTrainingLoadBalance"]["metricsTrainingLoadBalanceDTOMap"];
+    device(if nested.is_object() { nested } else { &v["metricsTrainingLoadBalanceDTOMap"] })
 }
 fn ratio(v: &Value) -> Option<f64> {
-    num(v, &[&["acuteChronicWorkloadRatio"], &["acwrPercent"]]).or_else(|| {
+    num(v, &[&["acuteChronicWorkloadRatio"]]).or_else(|| {
         num(
             training_device(v),
             &[
                 &["acuteChronicWorkloadRatio"],
                 &["acuteTrainingLoadDTO", "acuteChronicWorkloadRatio"],
+                &["acuteTrainingLoadDTO", "dailyAcuteChronicWorkloadRatio"],
             ],
         )
     })
@@ -261,7 +339,11 @@ fn ratio(v: &Value) -> Option<f64> {
 pub(crate) fn status(v: &Value) -> Option<String> {
     string(
         training_device(v),
-        &[&["trainingStatus"], &["trainingStatusFeedbackPhrase"]],
+        &[
+            &["trainingStatus"],
+            &["trainingStatusFeedbackPhrase"],
+            &["feedbackPhrase"],
+        ],
     )
     .or_else(|| {
         string(
@@ -346,17 +428,58 @@ fn factor_tone(feedback: Option<&str>, percent: Option<f64>) -> Tone {
         percent.map(rules::score).unwrap_or(Tone::Neutral)
     }
 }
-fn activity(store: &Store, id: &str) -> Option<ActivityCard> {
-    let v = store.get("activity", id).or_else(|| {
-        store
-            .history("activities", "999999", 100)
-            .into_iter()
-            .flat_map(|(_, v)| v.as_array().cloned().unwrap_or_default())
-            .find(|a| a["activityId"].to_string().trim_matches('"') == id)
-    })?;
-    let kind = string(&v, &[&["activityType", "typeKey"]])
+// Detail fields live in summaryDTO; the list record can fill gaps in a partial detail.
+struct ActivityPayload {
+    detail: Value,
+    listed: Value,
+}
+impl ActivityPayload {
+    fn get(&self, key: &str) -> &Value {
+        [
+            &self.detail["summaryDTO"][key],
+            &self.detail[key],
+            &self.listed[key],
+        ]
+        .into_iter()
+        .find(|value| !value.is_null())
+        .unwrap_or(&Value::Null)
+    }
+    fn number(&self, keys: &[&str]) -> Option<f64> {
+        keys.iter().find_map(|key| {
+            let value = self.get(key);
+            value.as_f64().or_else(|| value.as_str()?.parse().ok())
+        })
+    }
+    fn text(&self, keys: &[&str]) -> Option<String> {
+        keys.iter()
+            .find_map(|key| self.get(key).as_str().map(str::to_owned))
+    }
+    fn kind(&self) -> String {
+        string(
+            &self.detail,
+            &[
+                &["activityTypeDTO", "typeKey"],
+                &["activityType", "typeKey"],
+            ],
+        )
+        .or_else(|| string(&self.listed, &[&["activityType", "typeKey"]]))
         .unwrap_or_default()
-        .to_ascii_lowercase();
+        .to_ascii_lowercase()
+    }
+}
+fn activity_payload(store: &Store, id: &str) -> Option<ActivityPayload> {
+    let detail = store.get("activity", id).unwrap_or(Value::Null);
+    let listed = store
+        .history("activities", "999999", 100)
+        .into_iter()
+        .flat_map(|(_, v)| v.as_array().cloned().unwrap_or_default())
+        .find(|a| a["activityId"].to_string().trim_matches('"') == id)
+        .unwrap_or(Value::Null);
+    (!detail.is_null() || !listed.is_null()).then_some(ActivityPayload { detail, listed })
+}
+fn activity(store: &Store, id: &str) -> Option<ActivityCard> {
+    let v = activity_payload(store, id)?;
+    let kind = v.kind();
     let icon = if kind.contains("run") {
         Icon::Run
     } else if kind.contains("cycl") || kind.contains("bike") {
@@ -376,26 +499,45 @@ fn activity(store: &Store, id: &str) -> Option<ActivityCard> {
     Some(ActivityCard {
         id: id.into(),
         icon,
-        name: string(&v, &[&["activityName"]]).unwrap_or_else(|| "Workout".into()),
-        start_local: string(&v, &[&["startTimeLocal"]]).unwrap_or_default(),
-        duration_s: num(&v, &[&["duration"]]).unwrap_or(0.),
-        distance_km: num(&v, &[&["distance"]])
+        name: v
+            .text(&["activityName"])
+            .unwrap_or_else(|| "Workout".into()),
+        start_local: v.text(&["startTimeLocal"]).unwrap_or_default(),
+        duration_s: v.number(&["duration"]).unwrap_or(0.),
+        distance_km: v
+            .number(&["distance"])
             .filter(|m| *m > 0.)
             .map(|m| m / 1000.),
-        load: num(&v, &[&["activityTrainingLoad"], &["trainingLoad"]]),
+        load: v.number(&["activityTrainingLoad", "trainingLoad"]),
         zone_seconds: zones
             .as_array()
             .map(|a| {
-                a.iter()
-                    .map(|z| num(z, &[&["secsInZone"], &["timeInZone"]]).unwrap_or(0.))
-                    .collect()
+                if a.iter().any(|z| z["zoneNumber"].as_u64().is_some()) {
+                    let mut seconds = vec![0.; 5];
+                    for z in a {
+                        if let Some(n @ 1..=5) = z["zoneNumber"].as_u64() {
+                            seconds[n as usize - 1] =
+                                num(z, &[&["secsInZone"], &["timeInZone"]]).unwrap_or(0.);
+                        }
+                    }
+                    seconds
+                } else {
+                    a.iter()
+                        .map(|z| num(z, &[&["secsInZone"], &["timeInZone"]]).unwrap_or(0.))
+                        .collect()
+                }
             })
             .unwrap_or_default(),
-        aerobic_te: num(&v, &[&["aerobicTrainingEffect"]]),
-        aerobic_label: string(&v, &[&["aerobicTrainingEffectMessage"]]).map(|s| label(Some(s))),
-        anaerobic_te: num(&v, &[&["anaerobicTrainingEffect"]]),
-        anaerobic_label: string(&v, &[&["anaerobicTrainingEffectMessage"]]).map(|s| label(Some(s))),
-        benefit: string(&v, &[&["trainingEffectLabel"], &["primaryBenefit"]])
+        aerobic_te: v.number(&["trainingEffect", "aerobicTrainingEffect"]),
+        aerobic_label: v
+            .text(&["aerobicTrainingEffectMessage"])
+            .map(|s| label(Some(s))),
+        anaerobic_te: v.number(&["anaerobicTrainingEffect"]),
+        anaerobic_label: v
+            .text(&["anaerobicTrainingEffectMessage"])
+            .map(|s| label(Some(s))),
+        benefit: v
+            .text(&["trainingEffectLabel", "primaryBenefit"])
             .map(|s| label(Some(s))),
     })
 }
@@ -444,7 +586,13 @@ fn vital_value(store: &Store, kind: VitalKind, date: &str) -> Option<f64> {
             &[&["sleepingRespirationValue"], &["avgSleepRespirationValue"]],
         ),
         VitalKind::Spo2 => ("spo2", &[&["averageSpO2"], &["sleepSpO2"]]),
-        VitalKind::SkinTemp => ("sleep", &[&["dailySleepDTO", "skinTempDeviation"]]),
+        VitalKind::SkinTemp => (
+            "sleep",
+            &[
+                &["avgSkinTempDeviationC"],
+                &["dailySleepDTO", "skinTempDeviation"],
+            ],
+        ),
     };
     store.get(source, date).and_then(|v| num(&v, paths))
 }
@@ -818,10 +966,11 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
                             3 => Stage::Awake,
                             _ => return None,
                         };
-                        let start = num(item, &[&["startGMT"], &["startTimestamp"]])?;
-                        let end = num(item, &[&["endGMT"], &["endTimestamp"]])?;
-                        let first = num(levels.first()?, &[&["startGMT"], &["startTimestamp"]])?;
-                        let divisor = if end - start > 100_000. { 60_000. } else { 60. };
+                        let start = sleep_stage_time(item, "startGMT", "startTimestamp")?;
+                        let end = sleep_stage_time(item, "endGMT", "endTimestamp")?;
+                        let first =
+                            sleep_stage_time(levels.first()?, "startGMT", "startTimestamp")?;
+                        let divisor = 60_000.;
                         Some(StageSegment {
                             stage,
                             start_min: (start - first) / divisor,
@@ -868,15 +1017,21 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
                 OvernightKind::HeartRate,
                 "heart rate",
                 "bpm",
-                num(v, &[&["averageHeartRate"]]),
+                num(v, &[&["avgHeartRate"], &["averageHeartRate"]])
+                    .filter(|n| *n > 0. && *n < 300.),
             ),
             (
                 OvernightKind::Respiration,
                 "respiration",
                 "br/min",
-                num(v, &[&["averageRespirationValue"]]),
+                num(v, &[&["averageRespirationValue"]]).filter(|n| *n > 0. && *n < 100.),
             ),
-            (OvernightKind::Spo2, "SpO2", "%", num(v, &[&["avgSpO2"]])),
+            (
+                OvernightKind::Spo2,
+                "SpO2",
+                "%",
+                num(v, &[&["averageSpO2Value"], &["avgSpO2"]]).filter(|n| *n > 0. && *n <= 100.),
+            ),
         ]
         .iter()
         .filter_map(|(kind, _, unit, value)| {
@@ -884,15 +1039,7 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
                 kind: *kind,
                 value: Some(n),
                 unit: (*unit).into(),
-                series: raw["overnightSeries"][match kind {
-                    OvernightKind::Hrv => "hrv",
-                    OvernightKind::HeartRate => "heartRate",
-                    OvernightKind::Respiration => "respiration",
-                    OvernightKind::Spo2 => "spo2",
-                }]
-                .as_array()
-                .map(|a| a.iter().filter_map(Value::as_f64).collect())
-                .unwrap_or_default(),
+                series: overnight_samples(&raw, *kind),
             })
         })
         .collect(),
@@ -935,51 +1082,74 @@ pub fn training(store: &Store, date: &str) -> TrainingView {
         .rev()
         .filter_map(|i| {
             let date = date_sub(date, i);
-            let v = store.get("training", &date)?;
-            num(&v, &[&["dailyTrainingLoad"]])
-                .or_else(|| acute(&v))
+            store
+                .get("training_daily", &date)
+                .and_then(|v| num(&v, &[&["dailyTrainingLoad"]]))
+                .or_else(|| {
+                    store
+                        .get("training", &date)
+                        .and_then(|v| num(&v, &[&["dailyTrainingLoad"]]))
+                })
                 .map(|load| DayLoad { date, load })
         })
         .collect();
     let m = store.get("max_metrics", date).unwrap_or(Value::Null);
     let focus = store.get("load_focus", date).unwrap_or(Value::Null);
     let load_focus = [
-        ("lowAerobic", "Low aerobic"),
-        ("highAerobic", "High aerobic"),
-        ("anaerobic", "Anaerobic"),
+        (
+            "lowAerobic",
+            "Low aerobic",
+            "monthlyLoadAerobicLow",
+            "monthlyLoadAerobicLowTargetMin",
+            "monthlyLoadAerobicLowTargetMax",
+        ),
+        (
+            "highAerobic",
+            "High aerobic",
+            "monthlyLoadAerobicHigh",
+            "monthlyLoadAerobicHighTargetMin",
+            "monthlyLoadAerobicHighTargetMax",
+        ),
+        (
+            "anaerobic",
+            "Anaerobic",
+            "monthlyLoadAnaerobic",
+            "monthlyLoadAnaerobicTargetMin",
+            "monthlyLoadAnaerobicTargetMax",
+        ),
     ]
     .iter()
-    .filter_map(|(key, name)| {
+    .filter_map(|(key, name, value_key, min_key, max_key)| {
         let nested = load_device(&focus);
         let data = if nested[*key].is_object() {
             &nested[*key]
         } else {
             &focus[*key]
         };
-        num(data, &[&["value"], &["load"]]).map(|value| {
-            let target = match (num(data, &[&["optimalMin"]]), num(data, &[&["optimalMax"]])) {
-                (Some(a), Some(b)) => Some([a, b]),
-                _ => None,
-            };
-            LoadFocusBar {
-                key: (*key).into(),
-                name: (*name).into(),
-                value,
-                target,
-                shortage: target.is_some_and(|t| value < t[0]),
-            }
-        })
+        num(nested, &[&[*value_key]])
+            .or_else(|| num(data, &[&["value"], &["load"]]))
+            .map(|value| {
+                let target = match (
+                    num(nested, &[&[*min_key]]).or_else(|| num(data, &[&["optimalMin"]])),
+                    num(nested, &[&[*max_key]]).or_else(|| num(data, &[&["optimalMax"]])),
+                ) {
+                    (Some(a), Some(b)) => Some([a, b]),
+                    _ => None,
+                };
+                LoadFocusBar {
+                    key: (*key).into(),
+                    name: (*name).into(),
+                    value,
+                    target,
+                    shortage: target.is_some_and(|t| value < t[0]),
+                }
+            })
     })
     .collect();
-    let vo2max = vo2(&m);
+    let vo2max = vo2(&m).or_else(|| vo2(&v["mostRecentVO2Max"]));
     let vo2max_trend: Vec<Option<f64>> = (0..5)
         .rev()
-        .map(|week| {
-            store
-                .history("max_metrics", &date_sub(date, week * 7), 1)
-                .pop()
-                .and_then(|(_, v)| vo2(&v))
-        })
+        .map(|week| historical_vo2(store, &date_sub(date, week * 7)))
         .collect();
     let vo2max_change_30d = vo2max.zip(vo2max_trend[0]).map(|(a, b)| a - b);
     let races_raw = store.get("races", date).unwrap_or(Value::Null);
@@ -1006,7 +1176,7 @@ pub fn training(store: &Store, date: &str) -> TrainingView {
                     Some([lo, _]) if amount < lo => "Low",
                     Some([_, hi]) if amount > hi => "High",
                     Some(_) => "Optimal",
-                    None => "Acute load",
+                    None => "",
                 },
                 match band(&v) {
                     Some([lo, hi]) if amount >= lo && amount <= hi => Tone::Good,
@@ -1018,7 +1188,7 @@ pub fn training(store: &Store, date: &str) -> TrainingView {
             )
         }),
         status: status.clone().map(|s| label(Some(s))),
-        status_tone: status.as_deref().map(rules::level).unwrap_or(Tone::Neutral),
+        status_tone: status.as_ref().map(|s| rules::level(&label(Some(s.clone())))).unwrap_or(Tone::Neutral),
         headline: match (load, band(&v)) {
             (Some(amount), Some([lo, _])) if amount < lo => "Room to build".into(),
             (Some(amount), Some([_, hi])) if amount > hi => "Load high".into(),
@@ -1062,17 +1232,33 @@ pub fn training(store: &Store, date: &str) -> TrainingView {
             .and_then(|v| num(&v, &[&["overallScore"], &["score"]])),
         running_tolerance_km: store
             .get("tolerance", date)
-            .and_then(|v| num(&v, &[&["runningTolerance"], &["tolerance"]])),
+            .and_then(|v| {
+                // The daily endpoint returns an array and reports acuteTolerance in metres.
+                num(first(&v), &[&["acuteTolerance"]]).map(|metres| metres / 1000.)
+                    .or_else(|| num(&v, &[&["runningTolerance"], &["tolerance"]]))
+            }),
         workouts,
     }
 }
 pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
     let summary = activity(store, id)?;
-    let v = store.get("activity", id).unwrap_or(Value::Null);
+    let v = activity_payload(store, id)?;
     let details = store.get("details", id).unwrap_or(Value::Null);
     let metrics = details["metricDescriptors"].as_array();
     let samples = details["activityDetailMetrics"].as_array();
-    let index = |key: &str| metrics.and_then(|m| m.iter().position(|x| x["key"] == key));
+    let index = |key: &str| {
+        metrics.and_then(|m| {
+            m.iter()
+                .enumerate()
+                .find(|(_, x)| x["key"] == key)
+                .map(|(position, descriptor)| {
+                    descriptor["metricsIndex"]
+                        .as_u64()
+                        .map(|n| n as usize)
+                        .unwrap_or(position)
+                })
+        })
+    };
     let hr = index("directHeartRate");
     let ts = index("directTimestamp");
     let lat = index("directLatitude");
@@ -1081,24 +1267,38 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
     let mut heart_rate = vec![];
     let mut route = vec![];
     let start_ts = points
-        .first()
-        .and_then(|p| ts.and_then(|i| p["metrics"][i].as_f64()));
+        .iter()
+        .filter_map(|p| ts.and_then(|i| p["metrics"][i].as_f64()))
+        .find(|t| t.is_finite());
+    // Epoch milliseconds and epoch seconds must be distinguished by their absolute
+    // origin, not by elapsed time (which can be under 100 seconds).
+    let timestamp_scale = if start_ts.is_some_and(|t| t.abs() >= 100_000_000_000.) {
+        1000.
+    } else {
+        1.
+    };
     let stride = points.len().div_ceil(300).max(1);
-    for p in points.iter().step_by(stride) {
+    let last = points.last().filter(|_| !(points.len() - 1).is_multiple_of(stride));
+    for p in points.iter().step_by(stride).chain(last) {
         let a = &p["metrics"];
-        if let (Some(h), Some(t)) = (
+        if let (Some(h), Some(t), Some(origin)) = (
             hr.and_then(|i| a[i].as_f64()),
             ts.and_then(|i| a[i].as_f64()),
+            start_ts,
         ) {
-            let elapsed = t - start_ts.unwrap_or(t);
-            heart_rate.push(HrSample {
-                t_s: if elapsed.abs() > 100_000. {
-                    elapsed / 1000.
-                } else {
-                    elapsed
-                },
-                bpm: h,
-            });
+            let elapsed = (t - origin) / timestamp_scale;
+            if elapsed.is_finite()
+                && elapsed >= 0.
+                && h.is_finite()
+                && heart_rate
+                    .last()
+                    .is_none_or(|prev: &HrSample| elapsed >= prev.t_s)
+            {
+                heart_rate.push(HrSample {
+                    t_s: elapsed,
+                    bpm: h,
+                });
+            }
         }
         if let (Some(y), Some(x)) = (
             lat.and_then(|i| a[i].as_f64()),
@@ -1115,10 +1315,13 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
         ("maxHR", "Max HR", "bpm", 1.),
         ("calories", "Calories", "kcal", 1.),
         ("elevationGain", "Ascent", "m", 1.),
+        ("averagePower", "Avg power", "W", 1.),
+        ("averageBikeCadence", "Cadence", "rpm", 1.),
+        ("averageRunCadence", "Cadence", "spm", 1.),
     ]
     .iter()
     .filter_map(|(key, label, unit, div)| {
-        num(&v, &[&[*key]]).map(|v| Stat {
+        v.number(&[*key]).filter(|v| *key != "distance" || *v > 0.).map(|v| Stat {
             key: (*key).into(),
             label: (*label).into(),
             value: v / div,
@@ -1126,10 +1329,17 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
         })
     })
     .collect();
-    if let Some(distance) = summary.distance_km.filter(|d| *d > 0.) {
+    if summary.icon == Icon::Bike {
+        if let Some(speed) = v.number(&["averageSpeed"]) {
+            stats.insert(2.min(stats.len()), Stat {
+                key: "speed".into(), label: "Avg speed".into(),
+                value: speed * 3.6, unit: "km/h".into(),
+            });
+        }
+    } else if let Some(distance) = summary.distance_km.filter(|d| *d > 0.) {
         if summary.duration_s > 0. {
             stats.insert(
-                2,
+                2.min(stats.len()),
                 Stat {
                     key: "pace".into(),
                     label: "Pace".into(),
@@ -1141,7 +1351,7 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
     }
     Some(WorkoutView {
         summary,
-        recovery_hours: num(&v, &[&["recoveryTime"]]).map(|s| s / 3600.),
+        recovery_hours: v.number(&["recoveryTime"]).map(|s| s / 3600.),
         stats,
         route,
         heart_rate,
@@ -1149,11 +1359,20 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
             .get("zones", id)
             .and_then(|v| v.as_array().cloned())
             .map(|zones| {
-                zones
+                let mut floors: Vec<_> = zones
                     .iter()
-                    .filter(|z| z["zoneNumber"].as_u64().is_some_and(|n| n >= 2))
-                    .filter_map(|z| num(z, &[&["minHeartRate"], &["lowerBound"]]))
-                    .collect()
+                    .filter_map(|z| {
+                        Some((
+                            z["zoneNumber"].as_u64().filter(|n| (2..=5).contains(n))?,
+                            num(
+                                z,
+                                &[&["zoneLowBoundary"], &["minHeartRate"], &["lowerBound"]],
+                            )?,
+                        ))
+                    })
+                    .collect();
+                floors.sort_by_key(|(number, _)| *number);
+                floors.into_iter().map(|(_, floor)| floor).collect()
             })
             .unwrap_or_default(),
         splits: splits["lapDTOs"]
@@ -1183,13 +1402,25 @@ pub fn health(store: &Store, date: &str) -> HealthView {
         ("bmi", "BMI", ""),
         ("bodyFat", "Body fat", "%"),
         ("vigorousMinutes", "Vigorous minutes", "min"),
+        ("vigorousDays", "Vigorous days", "days/week"),
     ]
     .iter()
     .filter_map(|(key, name, unit)| {
-        let data = &v["fitnessAgeData"][*key];
-        let value = num(data, &[&["value"]]);
+        let component = match *key {
+            "restingHr" => "rhr",
+            "vigorousMinutes" => "vigorousMinutesAvg",
+            "vigorousDays" => "vigorousDaysAvg",
+            _ => key,
+        };
+        let data = if v["components"][component].is_object() {
+            &v["components"][component]
+        } else {
+            &v["fitnessAgeData"][*key]
+        };
+        let value = num(data, &[&["value"]]).filter(|n| n.is_finite());
         value.map(|value| {
-            let target = num(data, &[&["target"]]);
+            let target =
+                num(data, &[&["targetValue"], &["target"]]).filter(|n| n.is_finite() && *n > 0.);
             let met = target.is_some_and(|t| {
                 if matches!(*key, "restingHr" | "bmi" | "bodyFat") {
                     value <= t
@@ -1224,7 +1455,20 @@ pub fn health(store: &Store, date: &str) -> HealthView {
             if target <= 0. || d.met {
                 return None;
             }
-            let gap = ((target - current) / target).abs();
+            let gap = if matches!(d.key.as_str(), "restingHr" | "bmi" | "bodyFat") {
+                (current - target) / target
+            } else {
+                (target - current) / target
+            };
+            if !gap.is_finite() || gap <= 0. {
+                return None;
+            }
+            let component = match d.key.as_str() {
+                "restingHr" => "rhr",
+                "vigorousMinutes" => "vigorousMinutesAvg",
+                "vigorousDays" => "vigorousDaysAvg",
+                key => key,
+            };
             Some((
                 gap,
                 Lever {
@@ -1233,7 +1477,8 @@ pub fn health(store: &Store, date: &str) -> HealthView {
                     current,
                     target,
                     unit: d.unit.clone(),
-                    age_if_met: num(&v["fitnessAgeData"][&d.key], &[&["ageIfMet"]]),
+                    age_if_met: num(&v["components"][component], &[&["potentialAge"]])
+                        .or_else(|| num(&v["fitnessAgeData"][&d.key], &[&["ageIfMet"]])),
                 },
             ))
         })
@@ -1346,16 +1591,8 @@ pub fn checkin(store: &Store, monday: &str) -> CheckinView {
         .map(|(v, t)| ((t - v) / t).max(0.));
     let focus =
         rules::weekly_focus(sleep_gap, load_gap, readiness_drop, vigorous_gap).map(str::to_owned);
-    let vo2max_change = store
-        .history("max_metrics", &last, 1)
-        .pop()
-        .and_then(|(_, v)| vo2(&v))
-        .zip(
-            store
-                .history("max_metrics", &date_sub(monday, 8), 1)
-                .pop()
-                .and_then(|(_, v)| vo2(&v)),
-        )
+    let vo2max_change = historical_vo2(store, &last)
+        .zip(historical_vo2(store, &date_sub(monday, 8)))
         .map(|(a, b)| a - b);
     let fitness_age_change = cards[3].value.zip(cards[3].previous).map(|(a, b)| a - b);
     CheckinView {

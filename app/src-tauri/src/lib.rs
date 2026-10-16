@@ -90,7 +90,7 @@ fn save_tokens(app: &tauri::AppHandle, value: &str) -> Result<(), String> {
     }
     #[cfg(not(target_os = "android"))]
     {
-        use std::os::unix::fs::OpenOptionsExt;
+        use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
         let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
         std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
         let mut file = std::fs::OpenOptions::new()
@@ -99,6 +99,9 @@ fn save_tokens(app: &tauri::AppHandle, value: &str) -> Result<(), String> {
             .truncate(true)
             .mode(0o600)
             .open(dir.join("tokens.json"))
+            .map_err(|e| e.to_string())?;
+        // OpenOptions::mode only restricts newly created files, not existing ones.
+        file.set_permissions(std::fs::Permissions::from_mode(0o600))
             .map_err(|e| e.to_string())?;
         use std::io::Write;
         file.write_all(value.as_bytes())
