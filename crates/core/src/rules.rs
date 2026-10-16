@@ -41,11 +41,13 @@ pub fn normal(values: &[f64]) -> Option<[f64; 2]> {
         return None;
     }
     v.sort_by(f64::total_cmp);
-    let n = v.len();
-    Some([
-        v[((n - 1) as f64 * 0.1).floor() as usize],
-        v[((n - 1) as f64 * 0.9).ceil() as usize],
-    ])
+    let quantile = |p: f64| {
+        let index = (v.len() - 1) as f64 * p;
+        let lo = index.floor() as usize;
+        let hi = index.ceil() as usize;
+        v[lo] + (v[hi] - v[lo]) * (index - lo as f64)
+    };
+    Some([quantile(0.1), quantile(0.9)])
 }
 pub fn bedtime(wakes: &[f64], need: f64) -> Option<String> {
     if wakes.is_empty() || !need.is_finite() {
@@ -104,7 +106,7 @@ mod tests {
         assert_eq!(normal(&[2.; 13]), None);
         assert_eq!(
             normal(&(0..30).map(f64::from).collect::<Vec<_>>()),
-            Some([2., 27.])
+            Some([2.9000000000000004, 26.1])
         );
         assert_eq!(bedtime(&[7., 8., 9.], 480.), Some("00:00".into()));
     }

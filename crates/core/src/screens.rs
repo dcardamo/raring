@@ -775,14 +775,25 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
     let points = samples.map(|v| v.as_slice()).unwrap_or(&[]);
     let mut heart_rate = vec![];
     let mut route = vec![];
-    let stride = (points.len() / 300).max(1);
+    let start_ts = points
+        .first()
+        .and_then(|p| ts.and_then(|i| p["metrics"][i].as_f64()));
+    let stride = points.len().div_ceil(300).max(1);
     for p in points.iter().step_by(stride) {
         let a = &p["metrics"];
         if let (Some(h), Some(t)) = (
             hr.and_then(|i| a[i].as_f64()),
             ts.and_then(|i| a[i].as_f64()),
         ) {
-            heart_rate.push(HrSample { t_s: t, bpm: h });
+            let elapsed = t - start_ts.unwrap_or(t);
+            heart_rate.push(HrSample {
+                t_s: if elapsed.abs() > 100_000. {
+                    elapsed / 1000.
+                } else {
+                    elapsed
+                },
+                bpm: h,
+            });
         }
         if let (Some(y), Some(x)) = (
             lat.and_then(|i| a[i].as_f64()),
@@ -814,7 +825,17 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
         .collect(),
         route,
         heart_rate,
-        zone_floors: vec![],
+        zone_floors: store
+            .get("zones", id)
+            .and_then(|v| v.as_array().cloned())
+            .map(|zones| {
+                zones
+                    .iter()
+                    .filter(|z| z["zoneNumber"].as_u64().is_some_and(|n| n >= 2))
+                    .filter_map(|z| num(z, &[&["minHeartRate"], &["lowerBound"]]))
+                    .collect()
+            })
+            .unwrap_or_default(),
         splits: splits["lapDTOs"]
             .as_array()
             .or_else(|| splits.as_array())
