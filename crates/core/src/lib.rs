@@ -19,8 +19,8 @@ pub enum Error {
     Store(#[from] rusqlite::Error),
     #[error(transparent)]
     Garmin(#[from] garmin::Error),
-    #[error("background task failed")]
-    Task,
+    #[error("unknown notification setting")]
+    InvalidSetting,
 }
 pub type Result<T> = std::result::Result<T, Error>;
 pub struct Pepometer {
@@ -89,18 +89,37 @@ impl Pepometer {
             last_error: self.store.cursor("last_error").filter(|s| !s.is_empty()),
         }
     }
+    pub fn settings(&self) -> view::Settings {
+        self.store.settings()
+    }
+    pub fn set_settings(&self, settings: view::Settings) -> Result<()> {
+        self.store.set_settings(&settings)?;
+        Ok(())
+    }
     pub fn setting(&self, key: &str) -> bool {
-        self.store
-            .setting(&format!("notify.{key}"))
-            .map(|s| s == "true")
-            .unwrap_or(!matches!(key, "training-status" | "bedtime"))
+        let s = self.settings();
+        match key {
+            "morning" => s.notify_morning_readiness,
+            "weekly" => s.notify_weekly_checkin,
+            "metric-changes" | "vo2max" | "fitness-age" => s.notify_metric_changes,
+            "vitals" => s.notify_vitals,
+            "training-status" => s.notify_training_status,
+            "bedtime" => s.notify_bedtime,
+            _ => false,
+        }
     }
     pub fn set_setting(&self, key: &str, value: bool) -> Result<()> {
-        self.store.set_setting(
-            &format!("notify.{key}"),
-            if value { "true" } else { "false" },
-        )?;
-        Ok(())
+        let mut s = self.settings();
+        match key {
+            "morning" => s.notify_morning_readiness = value,
+            "weekly" => s.notify_weekly_checkin = value,
+            "metric-changes" | "vo2max" | "fitness-age" => s.notify_metric_changes = value,
+            "vitals" => s.notify_vitals = value,
+            "training-status" => s.notify_training_status = value,
+            "bedtime" => s.notify_bedtime = value,
+            _ => return Err(Error::InvalidSetting),
+        }
+        self.set_settings(s)
     }
     pub fn notifications(&self, now: DateTime<Local>) -> Vec<Notification> {
         notifications::notifications(&self.store, now)

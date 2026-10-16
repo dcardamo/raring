@@ -1,4 +1,4 @@
-use crate::{screens, store::Store};
+use crate::{screens, store::Store, view::Settings};
 use chrono::{DateTime, Datelike, Local, Timelike};
 use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -8,17 +8,23 @@ pub struct Notification {
     pub body: String,
     pub tag: String,
 }
-fn enabled(store: &Store, kind: &str) -> bool {
-    store
-        .setting(&format!("notify.{kind}"))
-        .map(|v| v == "true")
-        .unwrap_or(!matches!(kind, "training-status" | "bedtime"))
+fn enabled(s: &Settings, kind: &str) -> bool {
+    match kind {
+        "morning" => s.notify_morning_readiness,
+        "weekly" => s.notify_weekly_checkin,
+        "vo2max" | "fitness-age" => s.notify_metric_changes,
+        "vitals" => s.notify_vitals,
+        "training-status" => s.notify_training_status,
+        "bedtime" => s.notify_bedtime,
+        _ => false,
+    }
 }
 pub fn notifications(store: &Store, now: DateTime<Local>) -> Vec<Notification> {
     let day = now.date_naive().to_string();
     let mut result = vec![];
+    let settings = store.settings();
     let mut add = |kind: &str, title: &str, body: String, tag: String| {
-        if enabled(store, kind) && !store.notified(kind, &tag) {
+        if enabled(&settings, kind) && !store.notified(kind, &tag) {
             result.push(Notification {
                 kind: kind.into(),
                 title: title.into(),

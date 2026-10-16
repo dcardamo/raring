@@ -43,7 +43,9 @@ fn views_match_synthetic_mockup() {
     let s = Store::open(":memory:").unwrap();
     seed(&s);
     let t = pepometer_core::screens::today(&s, "2025-01-02");
-    assert_eq!(t.readiness.unwrap().value, 82.);
+    assert_eq!(t.readiness.as_ref().unwrap().value, 82.);
+    assert_eq!(t.readiness_trend.len(), 30);
+    assert_eq!(t.readiness_trend[29], Some(82.));
     assert_eq!(t.sleep.unwrap().value, 84.);
     assert_eq!(t.load.unwrap().value, 612.);
     assert_eq!(t.hrv.last_night, Some(58.));
@@ -77,8 +79,6 @@ fn unknown_data_degrades() {
 fn notification_log_and_defaults() {
     let s = Store::open(":memory:").unwrap();
     seed(&s);
-    let now = Local::now();
-    let now = now.with_timezone(&Local); // use a fixed local calendar day below
     let when = chrono::NaiveDate::from_ymd_opt(2025, 1, 2)
         .unwrap()
         .and_hms_opt(9, 0, 0)
@@ -93,7 +93,6 @@ fn notification_log_and_defaults() {
     assert!(!notifications::notifications(&s, when)
         .iter()
         .any(|v| v.kind == "morning"));
-    assert!(now.timestamp() > 0);
 }
 #[test]
 fn privacy_guards() {
@@ -146,12 +145,32 @@ fn privacy_guards() {
     }
 }
 #[test]
+fn settings_are_a_single_json_kv_record() {
+    let store = Store::open(":memory:").unwrap();
+    let mut value = store.settings();
+    assert!(value.notify_weekly_checkin);
+    assert!(!value.notify_bedtime);
+    value.notify_metric_changes = false;
+    store.set_settings(&value).unwrap();
+    let json = store.setting("settings").unwrap();
+    assert_eq!(
+        serde_json::from_str::<pepometer_core::view::Settings>(&json).unwrap(),
+        value
+    );
+    assert_eq!(store.settings(), value);
+}
+#[test]
 fn facade_settings_and_forget() {
     let core = Pepometer::open(":memory:").unwrap();
     assert!(!core.setting("bedtime"));
     assert!(core.setting("morning"));
     core.set_setting("morning", false).unwrap();
     assert!(!core.setting("morning"));
+    assert!(!core.settings().notify_morning_readiness);
+    let mut settings = core.settings();
+    settings.notify_training_status = true;
+    core.set_settings(settings).unwrap();
+    assert!(core.settings().notify_training_status);
     core.forget_account().unwrap();
     assert!(core.setting("morning"));
 }

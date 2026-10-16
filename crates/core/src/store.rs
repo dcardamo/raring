@@ -1,4 +1,5 @@
 //! SQLite raw response cache. Nothing parsed is discarded: changing parsers never needs a refetch.
+use crate::view::Settings;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde_json::Value;
 use std::{path::Path, sync::Mutex};
@@ -112,6 +113,16 @@ impl Store {
     pub fn set_setting(&self, key: &str, value: &str) -> rusqlite::Result<()> {
         self.db.lock().unwrap().execute("INSERT INTO settings VALUES (?1,?2) ON CONFLICT(key) DO UPDATE SET value=excluded.value", params![key,value])?;
         Ok(())
+    }
+    pub fn settings(&self) -> Settings {
+        self.setting("settings")
+            .and_then(|s| serde_json::from_str(&s).ok())
+            .unwrap_or_default()
+    }
+    pub fn set_settings(&self, settings: &Settings) -> rusqlite::Result<()> {
+        let json = serde_json::to_string(settings)
+            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+        self.set_setting("settings", &json)
     }
     pub fn cursor(&self, key: &str) -> Option<String> {
         self.db

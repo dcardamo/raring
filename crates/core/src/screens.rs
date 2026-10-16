@@ -411,6 +411,14 @@ pub fn today(store: &Store, date: &str) -> TodayView {
     let hstatus = string(hs, &[&["status"]]);
     TodayView {
         date: date.into(),
+        readiness_trend: (0..30)
+            .rev()
+            .map(|i| {
+                store
+                    .get("readiness", &date_sub(date, i))
+                    .and_then(|v| rscore(&v))
+            })
+            .collect(),
         readiness: rscore(&r).map(|v| {
             gauge(
                 v,
