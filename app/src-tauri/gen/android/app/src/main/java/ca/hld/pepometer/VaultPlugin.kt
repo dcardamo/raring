@@ -13,6 +13,14 @@ import app.tauri.annotation.TauriPlugin
 import app.tauri.plugin.Invoke
 import app.tauri.plugin.JSObject
 import app.tauri.plugin.Plugin
+import androidx.work.WorkManager
+import androidx.work.WorkInfo
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.withLock
 
 @TauriPlugin(permissions = [Permission(strings = [Manifest.permission.POST_NOTIFICATIONS], alias = "notifications")])
 class VaultPlugin(private val activity: Activity): Plugin(activity) {
@@ -33,18 +41,33 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
     }
     @Command fun saveTokens(invoke: Invoke) {
         try {
-            TokenVault.save(activity, invoke.getArgs().getString("value"))
+            runBlocking { SyncGate.mutex.withLock { TokenVault.save(activity, invoke.getArgs().getString("value")) } }
             SyncScheduler.start(activity)
             invoke.resolve(JSObject())
         } catch (e: Exception) { invoke.reject("token vault unavailable", e) }
     }
     @Command fun clearTokens(invoke: Invoke) {
-        try { TokenVault.clear(activity); invoke.resolve(JSObject()) }
+        try {
+            SyncScheduler.cancel(activity)
+            runBlocking { SyncGate.mutex.withLock { TokenVault.clear(activity) } }
+            invoke.resolve(JSObject())
+        }
         catch (e: Exception) { invoke.reject("token vault unavailable", e) }
     }
     @Command fun schedule(invoke: Invoke) {
-        SyncScheduler.start(activity)
+        if (TokenVault.load(activity) != null) SyncScheduler.start(activity)
         invoke.resolve(JSObject())
+    }
+    @Command fun syncNow(invoke: Invoke) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                SyncScheduler.immediate(activity).result.get()
+                val completed = WorkManager.getInstance(activity).getWorkInfosForUniqueWorkFlow("garmin-immediate")
+                    .first { infos -> infos.any { it.state.isFinished } }
+                if (completed.any { it.state == WorkInfo.State.SUCCEEDED }) invoke.resolve(JSObject())
+                else invoke.reject("sync failed — try again")
+            } catch (e: Exception) { invoke.reject("sync failed — try again", e) }
+        }
     }
     @Command fun requestNotificationPermission(invoke: Invoke) {
         if (Build.VERSION.SDK_INT < 33 || getPermissionState("notifications") == PermissionState.GRANTED) {

@@ -1,4 +1,7 @@
-use pepometer_core::{garmin::sso, view::*};
+use chrono::{Datelike, Local};
+#[cfg(not(target_os = "android"))]
+use pepometer_core::Tokens;
+use pepometer_core::{garmin::sso, view::*, Pepometer};
 #[cfg(target_os = "android")]
 use serde::Deserialize;
 use std::sync::Mutex;
@@ -6,6 +9,26 @@ use tauri::{Emitter, Manager};
 
 #[derive(Default)]
 struct SignInState(Mutex<Option<String>>);
+
+fn core(app: &tauri::AppHandle) -> Result<Pepometer, String> {
+    Pepometer::open(database_path(app)?).map_err(|e| e.to_string())
+}
+
+fn today_date() -> String {
+    Local::now().date_naive().to_string()
+}
+
+fn monday() -> String {
+    let date = Local::now().date_naive();
+    (date - chrono::Duration::days(date.weekday().num_days_from_monday() as i64)).to_string()
+}
+
+fn runtime() -> Result<tokio::runtime::Runtime, String> {
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(|e| e.to_string())
+}
 
 fn home_url() -> tauri::Url {
     #[cfg(target_os = "android")]
@@ -108,30 +131,40 @@ fn clear_tokens(app: &tauri::AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 fn app_status(app: tauri::AppHandle) -> Result<AppStatus, String> {
-    Ok(AppStatus {
-        signed_in: load_tokens(&app)?.is_some(),
-        syncing: false,
-        last_sync: None,
-        history_days: 0,
-        last_error: None,
-    })
+    let mut status = core(&app)?.status();
+    status.signed_in = load_tokens(&app)?.is_some();
+    if let Ok(error) = app.state::<SignInState>().0.lock() {
+        if error.is_some() {
+            status.last_error = error.clone();
+        }
+    }
+    Ok(status)
 }
 
-macro_rules! not_ready {
-    ($name:ident, $ty:ty, $($arg:ident : $arg_ty:ty),*) => {
-        #[tauri::command]
-        fn $name($($arg: $arg_ty),*) -> Result<$ty, String> {
-            $(let _ = $arg;)*
-            Err("not_ready".into())
-        }
-    };
+#[tauri::command]
+fn today(app: tauri::AppHandle, date: Option<String>) -> Result<TodayView, String> {
+    Ok(core(&app)?.today(&date.unwrap_or_else(today_date)))
 }
-not_ready!(today, TodayView, date: Option<String>);
-not_ready!(sleep, SleepView, date: Option<String>);
-not_ready!(training, TrainingView, date: Option<String>);
-not_ready!(workout, WorkoutView, id: String);
-not_ready!(health, HealthView, date: Option<String>);
-not_ready!(checkin, Option<CheckinView>, week_start: Option<String>);
+#[tauri::command]
+fn sleep(app: tauri::AppHandle, date: Option<String>) -> Result<SleepView, String> {
+    Ok(core(&app)?.sleep(&date.unwrap_or_else(today_date)))
+}
+#[tauri::command]
+fn training(app: tauri::AppHandle, date: Option<String>) -> Result<TrainingView, String> {
+    Ok(core(&app)?.training(&date.unwrap_or_else(today_date)))
+}
+#[tauri::command]
+fn workout(app: tauri::AppHandle, id: String) -> Result<WorkoutView, String> {
+    core(&app)?.workout(&id).ok_or_else(|| "not_found".into())
+}
+#[tauri::command]
+fn health(app: tauri::AppHandle, date: Option<String>) -> Result<HealthView, String> {
+    Ok(core(&app)?.health(&date.unwrap_or_else(today_date)))
+}
+#[tauri::command]
+fn checkin(app: tauri::AppHandle, week_start: Option<String>) -> Result<CheckinView, String> {
+    Ok(core(&app)?.checkin(&week_start.unwrap_or_else(monday)))
+}
 
 #[tauri::command]
 fn begin_sign_in(app: tauri::AppHandle) -> Result<(), String> {
@@ -141,28 +174,62 @@ fn begin_sign_in(app: tauri::AppHandle) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
-// Integration point: exchange the CAS ticket with the core, save the resulting
-// token JSON with save_tokens, schedule work, then emit status-changed.
 fn exchange_ticket_and_store(app: &tauri::AppHandle, ticket: String) {
-    let state = app.state::<SignInState>();
-    if let Ok(mut pending) = state.0.lock() {
-        *pending = Some(ticket);
+    let outcome = runtime()
+        .and_then(|rt| {
+            rt.block_on(Pepometer::sign_in_with_ticket(&ticket))
+                .map_err(|_| "Garmin sign-in failed — try again".to_owned())
+        })
+        .and_then(|tokens| {
+            let json = serde_json::to_string(&tokens).map_err(|e| e.to_string())?;
+            save_tokens(app, &json)
+        });
+    if let Ok(mut error) = app.state::<SignInState>().0.lock() {
+        *error = outcome.as_ref().err().cloned();
     }
-    log::info!("garmin ticket received");
     if let Ok(status) = app_status(app.clone()) {
         let _ = app.emit("status-changed", status);
+    }
+    if outcome.is_ok() {
+        let app = app.clone();
+        std::thread::spawn(move || {
+            let _ = sync_now(app);
+        });
     }
 }
 
 #[tauri::command]
 fn sign_out(app: tauri::AppHandle) -> Result<(), String> {
     clear_tokens(&app)?;
+    core(&app)?.forget_account().map_err(|e| e.to_string())?;
+    if let Ok(mut error) = app.state::<SignInState>().0.lock() {
+        *error = None;
+    }
     let _ = app.emit("status-changed", app_status(app.clone())?);
     Ok(())
 }
 
 #[tauri::command]
 fn sync_now(app: tauri::AppHandle) -> Result<AppStatus, String> {
+    #[cfg(target_os = "android")]
+    vault(&app)
+        .0
+        .run_mobile_plugin::<serde_json::Value>("syncNow", serde_json::json!({}))
+        .map_err(|e| e.to_string())?;
+    #[cfg(not(target_os = "android"))]
+    if let Some(json) = load_tokens(&app)? {
+        let tokens: Tokens = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+        let outcome = runtime()?
+            .block_on(core(&app)?.sync(tokens, Local::now(), 60))
+            .map_err(|e| e.to_string())?;
+        save_tokens(
+            &app,
+            &serde_json::to_string(&outcome.tokens).map_err(|e| e.to_string())?,
+        )?;
+        core(&app)?
+            .mark_notifications_sent(&outcome.notifications, Local::now())
+            .map_err(|e| e.to_string())?;
+    }
     let status = app_status(app.clone())?;
     let _ = app.emit("status-changed", &status);
     Ok(status)
@@ -189,8 +256,6 @@ fn request_notification_permission(app: tauri::AppHandle) -> Result<bool, String
     }
 }
 
-// Integration point: replace local JSON with core facade settings access.
-#[allow(dead_code)]
 fn database_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
     let root = app.path().app_data_dir().map_err(|e| e.to_string())?;
     // Tauri Android's app_data_dir is Context.dataDir, NOT Context.filesDir.
@@ -199,33 +264,27 @@ fn database_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
     Ok(root.join("pepometer.db"))
 }
 
-fn settings_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
-    Ok(app
-        .path()
-        .app_data_dir()
-        .map_err(|e| e.to_string())?
-        .join("settings.json"))
-}
-
 #[tauri::command]
 fn get_settings(app: tauri::AppHandle) -> Result<Settings, String> {
-    let path = settings_path(&app)?;
-    match std::fs::read(path) {
-        Ok(bytes) => serde_json::from_slice(&bytes).map_err(|e| e.to_string()),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Settings::default()),
-        Err(e) => Err(e.to_string()),
-    }
+    Ok(core(&app)?.settings())
 }
 
 #[tauri::command]
 fn set_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String> {
-    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
-    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    std::fs::write(
-        settings_path(&app)?,
-        serde_json::to_vec(&settings).map_err(|e| e.to_string())?,
-    )
-    .map_err(|e| e.to_string())
+    core(&app)?
+        .set_settings(settings)
+        .map_err(|e| e.to_string())
+}
+
+#[cfg(debug_assertions)]
+#[tauri::command]
+fn load_demo_data(app: tauri::AppHandle) -> Result<String, String> {
+    let date = today_date();
+    let store =
+        pepometer_core::store::Store::open(database_path(&app)?).map_err(|e| e.to_string())?;
+    pepometer_core::demo::seed(&store, Local::now().date_naive()).map_err(|e| e.to_string())?;
+    let _ = app.emit("status-changed", app_status(app.clone())?);
+    Ok(format!("{}:{}", date, pepometer_core::demo::WORKOUT_ID))
 }
 
 #[cfg(target_os = "android")]
@@ -260,8 +319,8 @@ pub fn run() {
                         let window = webview.clone();
                         let app = webview.app_handle().clone();
                         std::thread::spawn(move || {
-                            exchange_ticket_and_store(&app, ticket);
                             let _ = window.navigate(home_url());
+                            exchange_ticket_and_store(&app, ticket);
                         });
                         return false;
                     }
@@ -269,21 +328,45 @@ pub fn run() {
                 })
                 .build(),
         )
-        .invoke_handler(tauri::generate_handler![
-            app_status,
-            today,
-            sleep,
-            training,
-            workout,
-            health,
-            checkin,
-            sync_now,
-            begin_sign_in,
-            sign_out,
-            request_notification_permission,
-            get_settings,
-            set_settings
-        ])
+        .invoke_handler({
+            #[cfg(debug_assertions)]
+            {
+                tauri::generate_handler![
+                    app_status,
+                    today,
+                    sleep,
+                    training,
+                    workout,
+                    health,
+                    checkin,
+                    sync_now,
+                    begin_sign_in,
+                    sign_out,
+                    request_notification_permission,
+                    get_settings,
+                    set_settings,
+                    load_demo_data
+                ]
+            }
+            #[cfg(not(debug_assertions))]
+            {
+                tauri::generate_handler![
+                    app_status,
+                    today,
+                    sleep,
+                    training,
+                    workout,
+                    health,
+                    checkin,
+                    sync_now,
+                    begin_sign_in,
+                    sign_out,
+                    request_notification_permission,
+                    get_settings,
+                    set_settings
+                ]
+            }
+        })
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -294,6 +377,12 @@ pub fn run() {
             }
             #[cfg(target_os = "android")]
             {
+                #[cfg(debug_assertions)]
+                println!(
+                    "Android chrono Local: {} ({})",
+                    Local::now().to_rfc3339(),
+                    Local::now().offset()
+                );
                 vault(app.handle())
                     .0
                     .run_mobile_plugin::<serde_json::Value>("schedule", serde_json::json!({}))?;

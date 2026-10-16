@@ -2369,6 +2369,7 @@ dependencies = [
 name = "pepometer-app"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "jni",
  "log",
  "pepometer-core",
@@ -2377,6 +2378,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-plugin-log",
+ "tokio",
 ]
 
 [[package]]

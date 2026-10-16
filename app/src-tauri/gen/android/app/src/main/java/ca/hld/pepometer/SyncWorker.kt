@@ -16,11 +16,14 @@ import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OutOfQuotaPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkerParameters
 import androidx.work.WorkManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
@@ -33,6 +36,9 @@ object NativeBridge {
     @JvmStatic external fun sync(dbPath: String, tokensJson: String, nowIso: String): String
 }
 
+// The vault read, JNI refresh and vault write must share one lock across every work request.
+object SyncGate { val mutex = Mutex() }
+
 object SyncScheduler {
     private val network = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
     fun start(context: Context) {
@@ -43,7 +49,18 @@ object SyncScheduler {
     fun followUp(context: Context) {
         val request = OneTimeWorkRequestBuilder<SyncWorker>().setInitialDelay(15, TimeUnit.MINUTES)
             .setConstraints(network).build()
-        WorkManager.getInstance(context).enqueueUniqueWork("readiness-followup", ExistingWorkPolicy.KEEP, request)
+        WorkManager.getInstance(context).enqueueUniqueWork("readiness-followup", ExistingWorkPolicy.APPEND_OR_REPLACE, request)
+    }
+    fun immediate(context: Context) = WorkManager.getInstance(context).enqueueUniqueWork(
+        "garmin-immediate", ExistingWorkPolicy.KEEP,
+        OneTimeWorkRequestBuilder<SyncWorker>().setConstraints(network)
+            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST).build()
+    )
+    fun cancel(context: Context) {
+        val manager = WorkManager.getInstance(context)
+        manager.cancelUniqueWork("garmin-hourly")
+        manager.cancelUniqueWork("readiness-followup")
+        manager.cancelUniqueWork("garmin-immediate")
     }
     fun testRun(context: Context) {
         WorkManager.getInstance(context).enqueue(OneTimeWorkRequestBuilder<SyncWorker>().build())
@@ -76,28 +93,35 @@ class SyncWorker(context: Context, params: WorkerParameters): CoroutineWorker(co
     }
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         try {
-            val tokens = TokenVault.load(applicationContext)
-            if (tokens == null) {
-                notify(applicationContext, "auth-required", "Sign in to Garmin again", "Open Pepometer to reconnect", "today")
-                return@withContext Result.success()
+            SyncGate.mutex.withLock {
+                val tokens = TokenVault.load(applicationContext)
+                if (tokens == null) {
+                    notify(applicationContext, "auth-required", "Sign in to Garmin again", "Open Pepometer to reconnect", "today")
+                    return@withLock Result.success()
+                }
+                val now = OffsetDateTime.now().toString()
+                val response = JSONObject(NativeBridge.sync(File(applicationContext.filesDir, "pepometer.db").absolutePath, tokens, now))
+                if (response.optBoolean("authFailed")) {
+                    TokenVault.clear(applicationContext)
+                    notify(applicationContext, "auth-required", "Sign in to Garmin again", "Open Pepometer to reconnect", "today")
+                    return@withLock Result.success()
+                }
+                // A refresh may have succeeded even when a later endpoint fails. Always persist it first.
+                TokenVault.save(applicationContext, response.getString("tokensJson"))
+                if (!response.isNull("error")) {
+                    Log.w(TAG, "background sync incomplete: ${response.getString("error")}")
+                    return@withLock Result.retry()
+                }
+                Log.i(TAG, "background JNI sync completed")
+                val alerts = response.getJSONArray("notifications")
+                for (i in 0 until alerts.length()) {
+                    val alert = alerts.getJSONObject(i)
+                    notify(applicationContext, alert.getString("id"), alert.getString("title"), alert.getString("body"), alert.optString("target", "today"))
+                }
+                val hour = LocalDateTime.now().hour
+                if (response.optBoolean("readinessMissing") && hour in 4..10) SyncScheduler.followUp(applicationContext)
+                Result.success()
             }
-            val now = OffsetDateTime.now().toString()
-            val response = JSONObject(NativeBridge.sync(File(applicationContext.filesDir, "pepometer.db").absolutePath, tokens, now))
-            Log.i(TAG, "background JNI sync completed")
-            if (response.optBoolean("authFailed")) {
-                TokenVault.clear(applicationContext)
-                notify(applicationContext, "auth-required", "Sign in to Garmin again", "Open Pepometer to reconnect", "today")
-                return@withContext Result.success()
-            }
-            TokenVault.save(applicationContext, response.getString("tokensJson"))
-            val alerts = response.getJSONArray("notifications")
-            for (i in 0 until alerts.length()) {
-                val alert = alerts.getJSONObject(i)
-                notify(applicationContext, alert.getString("id"), alert.getString("title"), alert.getString("body"), alert.optString("target", "today"))
-            }
-            val hour = LocalDateTime.now().hour
-            if (response.optBoolean("readinessMissing") && hour in 4..10) SyncScheduler.followUp(applicationContext)
-            Result.success()
         } catch (error: Exception) {
             Log.e(TAG, "background sync failed", error)
             Result.retry()
