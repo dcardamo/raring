@@ -67,9 +67,12 @@ pub async fn sync(
         report.requests += 1;
         match client.endpoint("profile", "me", None).await {
             Ok(v) => {
-                if store.put("profile", "me", &now.to_rfc3339(), &v).is_ok() {
-                    report.stored += 1;
+                if store.put("profile", "me", &now.to_rfc3339(), &v).is_err() {
+                    report.error = Some("local storage failed".into());
+                    report.tokens = Some(client.tokens().await);
+                    return report;
                 }
+                report.stored += 1;
                 v
             }
             Err(e) => {
@@ -271,9 +274,11 @@ async fn fetch(
     report.requests += 1;
     match client.endpoint(kind, key, name).await {
         Ok(v) => {
-            if store.put(kind, key, &now.to_rfc3339(), &v).is_ok() {
-                report.stored += 1;
+            if store.put(kind, key, &now.to_rfc3339(), &v).is_err() {
+                report.error = Some("local storage failed".into());
+                return false;
             }
+            report.stored += 1;
             true
         }
         Err(garmin::Error::NotFound) => {
