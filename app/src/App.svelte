@@ -6,6 +6,7 @@
  import {metricSource,metricNames} from './lib/metrics';
  import MetricDetail from './lib/components/MetricDetail.svelte';
  import DailyFocus from './lib/components/DailyFocus.svelte';
+ import AboutRaring from './lib/components/AboutRaring.svelte';
  import SleepPlanCard from './lib/components/SleepPlanCard.svelte';
  import VitalsMonitor from './lib/components/VitalsMonitor.svelte';
  import * as api from './lib/api';
@@ -108,9 +109,21 @@
 <div class="phone"><div class="glow" style:--glow={glow}></div><main class="scroll" bind:this={scroll} ontouchstart={(e)=>{startY=e.touches[0].clientY;startedAtTop=e.currentTarget.scrollTop===0}} ontouchend={pullEnd}><div class="page" class:reading={route==='checkin'||route==='onboarding'}>
 {#if error && data}<p class="warning" role="status">{error}</p>{/if}
 {#if route==='onboarding'}
- <section class="welcome"><BrandMark/><div class="eyebrow">YOUR GARMIN, AT A GLANCE</div><h1>Raring</h1><p>Know how you're doing. See what matters. Make today count.</p>{#if onboardStep===0}<button class="primary" onclick={async()=>{try{await api.begin_sign_in()}catch(e){error=String(e)}}}>Sign in with Garmin <Icon name="arrow-right" size={18}/></button>{:else}<h2>Stay in the loop</h2><p>Get a heads-up when your readiness and weekly check-in are ready.</p><button class="primary" onclick={async()=>{try{await api.request_notification_permission()}catch(e){error=String(e);return}localStorage.setItem('notifications-step-done','1');navigate('today')}}>Enable notifications</button><button class="secondary" onclick={()=>{localStorage.setItem('notifications-step-done','1');navigate('today')}}>Not now</button>{/if}{#if error || status?.lastError}<p class="small">{error || status?.lastError}</p>{/if}</section>
+ <section class="welcome" class:intro={onboardStep===0}>
+  <div class="welcome-brand"><BrandMark/><h1>Raring</h1></div>
+  {#if onboardStep===0}
+   <p class="welcome-tagline">A clearer view of your readiness, sleep and training.</p>
+   <AboutRaring/>
+   <button class="primary" onclick={async()=>{try{await api.begin_sign_in()}catch(e){error=String(e)}}}>Sign in with Garmin <Icon name="arrow-right" size={18}/></button>
+  {:else}
+   <h2>Stay in the loop</h2><p>Get a heads-up when your readiness and weekly check-in are ready.</p>
+   <button class="primary" onclick={async()=>{try{await api.request_notification_permission()}catch(e){error=String(e);return}localStorage.setItem('notifications-step-done','1');navigate('today')}}>Enable notifications</button>
+   <button class="secondary" onclick={()=>{localStorage.setItem('notifications-step-done','1');navigate('today')}}>Not now</button>
+  {/if}
+  {#if error || status?.lastError}<p class="small" role="alert">{error || status?.lastError}</p>{/if}
+ </section>
 {:else if route==='settings'}
- <Header title="Settings" eyebrow="RARING" back={back} backLabel={parentLabel}/><div class="dashboard"><Card title="Notifications">{#each Object.keys(settings) as key}<label class="setting"><span>{({notifyMorningReadiness:'Morning readiness',notifyWeeklyCheckin:'Weekly check-in',notifyMetricChanges:'VO₂ max or Fitness Age changed',notifyVitals:'Vitals off',notifyTrainingStatus:'Training status changed',notifyBedtime:'Bedtime'} as Record<string,string>)[key]}</span><input type="checkbox" checked={settings[key as keyof api.Settings]} onchange={(e)=>{settings={...settings,[key]:e.currentTarget.checked};void saveSettings()}}/></label>{/each}</Card><Card title="Permission"><button class="secondary" onclick={async()=>{try{await api.request_notification_permission()}catch(e){error=String(e)}}}>Enable notifications</button></Card><Card title="Account"><button class="signout" onclick={async()=>{if(confirm('Sign out and erase all local Garmin history?')){await api.sign_out();localStorage.removeItem('notifications-step-done');onboardStep=0;navigate('onboarding')}}}>Sign out</button></Card></div>
+ <Header title="Settings" eyebrow="RARING" back={back} backLabel={parentLabel}/><div class="dashboard"><Card title="Notifications">{#each Object.keys(settings) as key}<label class="setting"><span>{({notifyMorningReadiness:'Morning readiness',notifyWeeklyCheckin:'Weekly check-in',notifyMetricChanges:'VO₂ max or Fitness Age changed',notifyVitals:'Vitals off',notifyTrainingStatus:'Training status changed',notifyBedtime:'Bedtime'} as Record<string,string>)[key]}</span><input type="checkbox" checked={settings[key as keyof api.Settings]} onchange={(e)=>{settings={...settings,[key]:e.currentTarget.checked};void saveSettings()}}/></label>{/each}</Card><Card title="Permission"><button class="secondary" onclick={async()=>{try{await api.request_notification_permission()}catch(e){error=String(e)}}}>Enable notifications</button></Card><Card title="Account"><button class="signout" onclick={async()=>{if(confirm('Sign out and erase all local Garmin history?')){await api.sign_out();localStorage.removeItem('notifications-step-done');onboardStep=0;navigate('onboarding')}}}>Sign out</button></Card><Card title="How Raring works"><AboutRaring/></Card></div>
 {:else if loading}<div class="empty"><BrandMark/><h2>{status?.lastSync?'Loading your day…':'Syncing your Garmin data…'}</h2></div>
 {:else if !data}<div class="empty"><BrandMark/><h2>Syncing your Garmin data…</h2><p>{error && !error.includes('not_ready')?error:'Your day will appear here soon.'}</p><button class="secondary" disabled={syncBusy} onclick={syncNow}>{syncBusy?'Syncing…':'Sync now'}</button>{#if syncError}<p>{syncError}</p>{/if}</div>
 {:else if todayData && route==='today'}

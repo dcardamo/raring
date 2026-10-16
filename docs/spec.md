@@ -41,6 +41,16 @@ The visual reference is [design/mockup](../design/mockup/): open
 Bottom tabs: **Today · Sleep · Training · Health**. Tapping a dial or card
 opens its detail.
 
+### Welcome & privacy
+
+Before sign-in, explain that Raring reads a Garmin account, not a watch, and
+that Garmin Connect must keep syncing the watch's data. State that the app
+sends no data to Raring, has no analytics or telemetry, and keeps downloaded
+history on the phone. Explain the unofficial connection and watch-dependent
+metrics before the sign-in button. Keep the same information and expandable
+privacy details available offline in Settings. Notification permission remains
+optional after sign-in.
+
 ### Today
 
 - Three gauges: **Readiness** (Training Readiness, 0–100) large in the
@@ -173,9 +183,9 @@ Sent by the phone itself.
   training readiness, Body Battery, SpO2, respiration, training status, max
   metrics, Fitness Age, endurance and hill scores, race predictions, running
   tolerance, personal records, and activities (summary, splits, heart-rate
-  zones, FIT file).
-- The first sync pulls 90 days; older history fills in slowly in the
-  background.
+  zones, charts and GPS routes).
+- The first sync requests up to 90 days of daily history. Saved history grows
+  as new days sync; older history beyond the initial window is not backfilled.
 - Garmin Connect stays installed on the phone because it uploads the watch's
   data.
 - python-garminconnect is the reference when Garmin changes sign-in or
@@ -192,6 +202,9 @@ Sent by the phone itself.
   hourly, and every 15 minutes in the morning until readiness arrives. A job
   calls the Rust core directly over JNI, without starting the UI, then posts
   any notifications.
+- **Public website**: `site/` is a static introduction, installation guide and
+  privacy page, hosted at raring.app with GitHub Pages. It has no tracking,
+  sign-in or access to Garmin data; it is not the future web version of the app.
 - **Later**: `crates/server` (axum) runs the same core and serves the same UI
   as a web app on a home server. It would sign in once from a CLI.
 

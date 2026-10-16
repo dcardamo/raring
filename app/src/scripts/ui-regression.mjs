@@ -85,7 +85,7 @@ try {
 
  for(const width of [360,390,720,840,1024]) {
   await page.setViewportSize({width,height:900});
-  for(const route of ['today','sleep','training','health','readiness','workout/9000000000001','metric/hrv','metric/bodyBattery','settings','checkin']) {
+  for(const route of ['today','sleep','training','health','readiness','workout/9000000000001','metric/hrv','metric/bodyBattery','settings','checkin','onboarding']) {
    await page.goto(`${url}/#${route}`);await waitRoute(route);
    const layout=await page.evaluate(()=>{
     const main=document.querySelector('main'),grid=document.querySelector('.dashboard'),phone=document.querySelector('.phone');
@@ -95,7 +95,7 @@ try {
    assert.equal(layout.height,900,`${width}/${route}: shell uses available height`);
    assert.ok(layout.body<=width && layout.content<=layout.main+1,`${width}/${route}: horizontal overflow ${JSON.stringify(layout)}`);
    if(width>=720 && layout.columns)assert.equal(layout.columns,2,`${width}/${route}: two columns`);
-   if(width===840 || (width===390 && route==='today'))await page.screenshot({path:resolve(output,`${width}-${route.replace('/','-')}.png`)});
+   if(width===840 || (width===390 && ['today','onboarding','settings'].includes(route)))await page.screenshot({path:resolve(output,`${width}-${route.replace('/','-')}.png`)});
   }
  }
  // Folding/unfolding should reflow in place, without losing the open detail.
@@ -107,6 +107,68 @@ try {
 
  const samples={};
  for(const name of ['today','sleep','training','health','status'])samples[name]=JSON.parse(await readFile(resolve(`src/lib/sample/${name}.json`),'utf8'));
+ const onboarding=await browser.newPage({viewport:{width:390,height:844}});
+ onboarding.on('pageerror',e=>errors.push(e.message));
+ await onboarding.addInitScript(samples=>{
+  const state=window.testOnboarding={signedIn:false,signIns:0,permissions:0,failSignIn:true};
+  window.isTauri=true;
+  window.__TAURI_INTERNALS__={
+   transformCallback:()=>1,
+   invoke:async(command)=>{
+    if(command==='app_status')return {...samples.status,signedIn:state.signedIn,lastSync:new Date().toISOString()};
+    if(command==='begin_sign_in'){
+     state.signIns++;
+     if(state.failSignIn)throw Error('Synthetic sign-in failure');
+     state.signedIn=true;
+     queueMicrotask(()=>window.dispatchEvent(new Event('raring:resume')));
+     return;
+    }
+    if(command==='request_notification_permission'){state.permissions++;return true}
+    if(command==='sign_out'){state.signedIn=false;return}
+    if(command==='sync_now')return;
+    if(command==='get_settings')return {notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false};
+    if(command.startsWith('plugin:event|'))return 1;
+    if(command in samples)return structuredClone(samples[command]);
+    throw Error('Unexpected onboarding command '+command);
+   },
+  };
+ },samples);
+ await onboarding.goto(`${url}/#today`);
+ await onboarding.waitForURL('**/#onboarding');
+ await onboarding.getByText('Your Garmin account, not your watch',{exact:true}).waitFor();
+ await onboarding.getByText('Keep Garmin Connect syncing',{exact:true}).waitFor();
+ assert.ok((await onboarding.locator('.about-raring').textContent()).includes('No analytics, telemetry, ads'));
+ assert.equal(await onboarding.getByRole('navigation').count(),0,'welcome does not expose signed-in navigation');
+ const privacy=onboarding.locator('summary');
+ await privacy.focus();await privacy.press('Enter');
+ assert.ok(await onboarding.locator('details').getAttribute('open')!==null,'privacy is keyboard accessible');
+ await onboarding.getByText(/Sign-in tokens are encrypted/).waitFor();
+ await privacy.press('Enter');
+ await onboarding.getByRole('button',{name:'Sign in with Garmin'}).click();
+ await onboarding.getByRole('alert').getByText('Error: Synthetic sign-in failure',{exact:true}).waitFor();
+ await onboarding.evaluate(()=>{window.testOnboarding.failSignIn=false});
+ await onboarding.getByRole('button',{name:'Sign in with Garmin'}).click();
+ await onboarding.getByRole('heading',{name:'Stay in the loop'}).waitFor();
+ await onboarding.getByRole('button',{name:'Not now',exact:true}).click();
+ await onboarding.waitForURL('**/#today');await onboarding.locator('.dials').waitFor();
+ assert.equal(await onboarding.evaluate(()=>window.testOnboarding.signIns),2,'sign-in button invokes the native command');
+ assert.equal(await onboarding.evaluate(()=>window.testOnboarding.permissions),0,'notification permission is optional');
+ await onboarding.getByRole('button',{name:'Settings',exact:true}).click();
+ await onboarding.getByText('How Raring works',{exact:true}).waitFor();
+ await onboarding.locator('summary').click();
+ await onboarding.getByText(/This does not delete anything from your Garmin account/).waitFor();
+ onboarding.once('dialog',dialog=>dialog.accept());
+ await onboarding.getByRole('button',{name:'Sign out',exact:true}).click();
+ await onboarding.waitForURL('**/#onboarding');
+ assert.equal(await onboarding.evaluate(()=>localStorage.getItem('notifications-step-done')),null);
+ await onboarding.getByRole('button',{name:'Sign in with Garmin'}).click();
+ await onboarding.getByRole('button',{name:'Enable notifications',exact:true}).click();
+ await onboarding.waitForURL('**/#today');
+ assert.equal(await onboarding.evaluate(()=>window.testOnboarding.permissions),1);
+ assert.equal(await onboarding.evaluate(()=>localStorage.getItem('notifications-step-done')),'1');
+ await onboarding.close();
+ console.log('Welcome, offline privacy, sign-in errors, notification choices and sign-out: passed');
+
  const live=await browser.newPage({viewport:{width:840,height:900}});
  live.on('pageerror',e=>errors.push(e.message));
  await live.clock.install({time:new Date('2026-10-16T14:00:00Z')});

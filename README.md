@@ -20,6 +20,37 @@ a signed arm64 APK, and Obtainium updates the app when a new release appears.
 Raring is not affiliated with Garmin. It uses Garmin Connect's
 unofficial API, which Garmin can change at any time.
 
+## How it works & privacy
+
+Raring reads your Garmin account, not your watch. Keep Garmin Connect installed
+and syncing so your watch data reaches Garmin first. Available metrics depend
+on your watch.
+
+The Android app talks directly to Garmin and keeps its downloaded data on your
+phone. Nothing is sent to us: no analytics, telemetry, ads or remote crash
+reporting. Sign-in uses Garmin's page; tokens are encrypted with Android
+Keystore. Sign out in Settings to remove local history and your saved sign-in.
+See the [privacy details](https://raring.app/privacy.html) for storage, notifications and
+GitHub hosting caveats.
+
+## Website
+
+`site/` is the static raring.app site: no JavaScript, build step or third-party
+resources. `.github/workflows/pages.yml` checks it in Chromium and deploys only
+this directory to GitHub Pages on relevant main pushes. Pull requests only run
+the checks. The Android release workflow remains separate (every main push
+still publishes an APK).
+
+Local check: `nix develop -c bash -c 'cd app && npm run test:site'`.
+Preview: `nix develop -c python3 -m http.server 4174 --bind 0.0.0.0 --directory site`,
+then open `http://neptune:4174` from the tailnet.
+The sample screenshot comes from `cd app && npm run screenshots` inside the
+dev shell (`.data/screens/today.png`); never replace it with personal Garmin data.
+Fonts and their licenses are copied from `app/src/assets/fonts/`.
+
+The site has no analytics, but GitHub processes ordinary hosting and download
+requests; the privacy page distinguishes that from the app's local data.
+
 ## License
 
 Licensed under either of the [Apache License, Version 2.0](LICENSE-APACHE)
