@@ -39,6 +39,15 @@ Android SDK, NDK and emulator.
 - `cargo clippy --workspace --all-targets -- -D warnings`
 - `cd app && npm run check && npm run build`
 
+## Releases
+
+`scripts/release.sh [X.Y.Z]` publishes a signed arm64 APK as a GitHub release
+(default: the next patch version); Obtainium installs and updates the app from
+these releases. Run it from the main checkout on `main` after merging changes
+worth shipping. It needs the release keystore in `.data/` and refuses any APK
+not signed with the pinned release certificate. Never generate a new release
+keystore: installed copies would reject every update.
+
 ## Rules
 
 - Never commit Garmin data, tokens or signing keys. Local data lives in
