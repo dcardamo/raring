@@ -26,6 +26,7 @@ git fetch -q origin main
 [[ $(git rev-parse HEAD) == $(git rev-parse origin/main) ]] || die "main must match origin/main"
 [[ -f .data/pepometer.keystore && -f .data/pepometer.keystore.pass ]] ||
   die "release keystore missing from .data/"
+scripts/check-secrets.sh || die "secret scan failed; see above"
 
 current=$(jq -r .version "$conf")
 if [[ $# -gt 0 ]]; then

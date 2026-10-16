@@ -2,8 +2,8 @@
   description = "Pepometer: Tauri 2 + Rust + Svelte dev shell with the Android toolchain";
 
   inputs = {
-    # Pinned with BaseHero's Tauri Android spike so neptune's store already has
-    # the Android SDK, NDK and emulator image.
+    # Pinned so the Android SDK, NDK and emulator image come from one known
+    # nixpkgs revision.
     nixpkgs.url = "github:nixos/nixpkgs/c59305bab2065cfecc4944690d9eedbb56f3a9fa";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
@@ -112,7 +112,11 @@
       libayatana-appindicator
     ];
   in {
-    packages.${system}.garmin-login = garminLogin;
+    packages.${system} = {
+      garmin-login = garminLogin;
+      # scripts/check-secrets.sh uses this when gitleaks isn't on PATH.
+      inherit (pkgs) gitleaks;
+    };
     apps.${system}.garmin-login = {
       type = "app";
       program = "${garminLogin}/bin/pepometer-garmin-login";
@@ -130,6 +134,7 @@
         imagemagick
         jq
         gnumake
+        gitleaks
       ];
       buildInputs = linuxDeps;
 
@@ -148,6 +153,8 @@
         export ANDROID_USER_HOME=$PWD/.android-user
         # Pepometer's emulator runs on its own port; other emulators may be up.
         export ANDROID_SERIAL=''${ANDROID_SERIAL:-emulator-5560}
+        # Secret scan before every commit (.githooks/pre-commit).
+        [ "$(git config --get core.hooksPath)" = .githooks ] || git config core.hooksPath .githooks
       '';
     };
   };

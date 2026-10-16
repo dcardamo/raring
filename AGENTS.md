@@ -38,6 +38,8 @@ Android SDK, NDK and emulator.
   commit them).
 - `cargo clippy --workspace --all-targets -- -D warnings`
 - `cd app && npm run check && npm run build`
+- `scripts/check-secrets.sh` scans the whole history; after changing it or
+  `.gitleaks.toml`, run `scripts/test-secret-scan.sh`.
 
 ## Releases
 
@@ -52,6 +54,8 @@ keystore: installed copies would reject every update.
 
 - Never commit Garmin data, tokens or signing keys. Local data lives in
   `.data/` (gitignored). Test fixtures are synthetic or scrubbed.
+- The pre-commit hook (`.githooks/pre-commit`, enabled by the dev shell)
+  blocks secrets; never bypass it with `--no-verify`. CI scans every push.
 - Show Garmin's metrics. Pepometer's own math is limited to what the spec's
   Rules section lists.
 - No WHOOP names, assets or copy.

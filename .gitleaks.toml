@@ -1,0 +1,15 @@
+# Secret scanning rules for scripts/check-secrets.sh: gitleaks' defaults plus
+# OAuth token values in JSON (Garmin's token file shape). Files that must
+# never be committed at all are checked by name in that script.
+title = "Pepometer secret scan"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "oauth-token-value"
+description = "OAuth access or refresh token value in JSON"
+regex = '''"(?:di_token|di_refresh_token|access_token|refresh_token)"\s*:\s*"([^"]{24,})"'''
+secretGroup = 1
+entropy = 3.5
+keywords = ["token"]
