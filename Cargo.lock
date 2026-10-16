@@ -2189,6 +2189,7 @@ dependencies = [
 name = "pepometer-app"
 version = "0.1.0"
 dependencies = [
+ "jni",
  "log",
  "pepometer-core",
  "serde",
