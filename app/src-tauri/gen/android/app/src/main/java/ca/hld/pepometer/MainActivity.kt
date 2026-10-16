@@ -19,20 +19,6 @@ class MainActivity : TauriActivity() {
     )
     super.onCreate(savedInstanceState)
     window.decorView.setBackgroundColor(Color.parseColor("#0B0F1A"))
-    onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-      override fun handleOnBackPressed() {
-        val webview = findWebView(findViewById(android.R.id.content))
-        if (webview?.url?.startsWith("http://tauri.localhost/") == false) {
-          webview.loadUrl("http://tauri.localhost/")
-        } else if (webview != null) {
-          webview.evaluateJavascript("window.__pepometerBack?.() === true") { handled ->
-            if (handled != "true") moveTaskToBack(true)
-          }
-        } else {
-          moveTaskToBack(true)
-        }
-      }
-    })
     // Edge-to-edge (forced from targetSdk 35) gives the WebView no safe-area
     // insets, so pad the content view by the system bars and the keyboard.
     val content = findViewById<View>(android.R.id.content)
@@ -42,6 +28,23 @@ class MainActivity : TauriActivity() {
       v.setPadding(bars.left, bars.top, bars.right, maxOf(bars.bottom, ime.bottom))
       WindowInsetsCompat.CONSUMED
     }
+  }
+
+  override fun onWebViewCreate(webView: WebView) {
+    super.onWebViewCreate(webView)
+    // Tauri installs its history callback during plugin setup. Register after
+    // that, when the WebView exists, so it cannot override our page hierarchy.
+    onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+      override fun handleOnBackPressed() {
+        if (webView.url?.startsWith("http://tauri.localhost/") == false) {
+          webView.loadUrl("http://tauri.localhost/")
+        } else {
+          webView.evaluateJavascript("window.__pepometerBack?.() === true") { handled ->
+            if (handled != "true") moveTaskToBack(true)
+          }
+        }
+      }
+    })
   }
 
   override fun onResume() {

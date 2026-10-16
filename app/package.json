@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "screenshots": "node src/scripts/screenshots.mjs",
     "test": "vitest run",
+    "test:ui": "node src/scripts/ui-regression.mjs",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
     "tauri": "tauri"
   },

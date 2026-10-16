@@ -1,0 +1,89 @@
+// Run inside nix develop with a debug build open. APP_ID may select a separate test install.
+// Seeds synthetic data only; refuses to overwrite a signed-in app.
+import assert from 'node:assert/strict';
+import {execFileSync} from 'node:child_process';
+import {createRequire} from 'node:module';
+import {mkdir} from 'node:fs/promises';
+const {chromium}=createRequire(new URL('../app/package.json',import.meta.url))('playwright');
+const adb=(...args)=>execFileSync('adb',args,{encoding:'utf8'}).trim();
+const app=process.env.APP_ID??'ca.hld.pepometer.debug';
+const pid=adb('shell','pidof',app);
+const port=adb('forward','tcp:0',`localabstract:webview_devtools_remote_${pid}`);
+const size=adb('shell','wm','size').match(/Override size: (\d+x\d+)/)?.[1]??'reset';
+const densityInfo=adb('shell','wm','density');
+const densityOverride=densityInfo.match(/Override density: (\d+)/)?.[1]??'reset';
+const density=Number(densityInfo.match(/Override density: (\d+)/)?.[1]??densityInfo.match(/Physical density: (\d+)/)?.[1]);
+let browser;
+try {
+ const readyBy=Date.now()+10_000;
+ while(true){
+  try{if((await (await fetch(`http://127.0.0.1:${port}/json`)).json()).some(t=>JSON.parse(t.description||'{}').attached))break}catch{}
+  assert.ok(Date.now()<readyBy,'WebView DevTools becomes ready');
+  await new Promise(resolve=>setTimeout(resolve,100));
+ }
+ browser=await chromium.connectOverCDP(`http://127.0.0.1:${port}`,{noDefaults:true});
+ const targets=await (await fetch(`http://127.0.0.1:${port}/json`)).json();
+ const target=targets.find(t=>t.url.startsWith('http://tauri.localhost/') && JSON.parse(t.description||'{}').attached);
+ let page;
+ for(const candidate of browser.contexts().flatMap(c=>c.pages())){
+  const session=await candidate.context().newCDPSession(candidate);
+  const {targetInfo}=await session.send('Target.getTargetInfo');
+  await session.detach();
+  if(targetInfo.targetId===target?.id){page=candidate;break}
+ }
+ assert.ok(page,'attached app WebView is open');
+ const status=await page.evaluate(()=>window.__TAURI_INTERNALS__.invoke('app_status'));
+ assert.equal(status.signedIn,false,'use a signed-out test install, never a personal account');
+ const demo=await page.evaluate(()=>window.__TAURI_INTERNALS__.invoke('load_demo_data'));
+ const workout=demo.split(':')[1];
+ await page.goto('http://tauri.localhost/?fixture=demo#today');
+ const waitRoute=async(route)=>{
+  await page.waitForFunction(route=>location.hash===`#${route}` && !document.querySelector('.empty') && document.querySelector('h1'),route);
+ };
+ const tab=async(name)=>{await page.getByRole('navigation').getByRole('button',{name,exact:true}).click();await waitRoute(name.toLowerCase())};
+ const back=async(route)=>{adb('shell','input','keyevent','4');await waitRoute(route)};
+ await waitRoute('today');
+ await tab('Sleep');await tab('Training');await tab('Health');await back('today');
+ await page.locator('.activity').first().click();await waitRoute(`workout/${workout}`);await back('today');
+ await tab('Training');
+ await page.locator('.activity').first().click();await waitRoute(`workout/${workout}`);await back('training');
+ await page.getByRole('button',{name:'Settings',exact:true}).click();await waitRoute('settings');await back('training');await back('today');
+ await page.getByRole('button',{name:/^Body Battery/}).click();await waitRoute('metric/bodyBattery');await back('today');
+ await tab('Health');
+ await page.getByRole('button',{name:'View HRV',exact:true}).click();await waitRoute('metric/hrv');await back('health');await back('today');
+ console.log('Android hardware Back: tab siblings, workouts, settings and metrics passed');
+
+ await page.evaluate(()=>{
+  window.__foldSentinel=true;
+  window.__resumeCount=0;
+  window.addEventListener('pepometer:resume',()=>window.__resumeCount++);
+ });
+ adb('shell','wm','size',`${Math.round(840*density/160)}x${Math.round(900*density/160)}`);
+ await page.waitForFunction(()=>innerWidth>=720 && document.querySelector('.dashboard') && getComputedStyle(document.querySelector('.dashboard')).gridTemplateColumns.split(' ').length===2).catch(async error=>{
+  console.error('Unfold state',await page.evaluate(()=>({width:innerWidth,scale:devicePixelRatio,hash:location.hash,columns:document.querySelector('.dashboard')&&getComputedStyle(document.querySelector('.dashboard')).gridTemplateColumns,text:document.querySelector('main')?.innerText.slice(0,160)})));
+  throw error;
+ });
+ assert.equal(await page.evaluate(()=>window.__foldSentinel),true,'unfold reflows without reloading');
+ assert.equal(await page.evaluate(()=>document.querySelector('main').scrollWidth<=document.querySelector('main').clientWidth),true);
+ await mkdir('.data/emulator-screens',{recursive:true});
+ await page.screenshot({path:'.data/emulator-screens/fold-today.png'});
+ adb('shell','wm','density',String(density-20));
+ await page.waitForFunction(expected=>Math.abs(devicePixelRatio-expected)<.01,(density-20)/160);
+ assert.equal(await page.evaluate(()=>window.__foldSentinel),true,'density changes preserve the WebView too');
+ adb('shell','input','keyevent','4');
+ // WebView animation frames stop in the background; poll from Node instead.
+ const deadline=Date.now()+10_000;
+ while(await page.evaluate(()=>document.visibilityState!=='hidden')){
+  assert.ok(Date.now()<deadline,'Today backgrounds the WebView');
+  await new Promise(resolve=>setTimeout(resolve,100));
+ }
+ assert.ok(!adb('shell','dumpsys','activity','activities').split('\n').filter(line=>line.includes('topResumedActivity')).some(line=>line.includes(app)),'Today backgrounds the task');
+ adb('shell','am','start','-n',`${app}/ca.hld.pepometer.MainActivity`);
+ await page.waitForFunction(()=>document.visibilityState==='visible' && window.__resumeCount>0);
+ await waitRoute('today');
+ console.log('Android unfolded layout, root exit and resume event: passed');
+} finally {
+ adb('shell','wm','size',size);adb('shell','wm','density',densityOverride);
+ await browser?.close();
+ adb('forward','--remove',`tcp:${port}`);
+}

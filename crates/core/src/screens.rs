@@ -54,15 +54,52 @@ fn date_sub(date: &str, n: i64) -> String {
         .map(|d| (d - Duration::days(n)).to_string())
         .unwrap_or_else(|_| date.to_owned())
 }
+fn snapshot_time(v: &Value, field: &str) -> Option<i64> {
+    let time = local_time(v, &[field])?;
+    chrono::DateTime::parse_from_rfc3339(&time)
+        .map(|d| d.timestamp_millis())
+        .ok()
+        .or_else(|| {
+            chrono::NaiveDateTime::parse_from_str(&time, "%Y-%m-%dT%H:%M:%S%.f")
+                .ok()
+                .map(|d| d.and_utc().timestamp_millis())
+        })
+}
 fn readiness(v: &Value) -> &Value {
-    if let Some(a) = v.as_array() {
-        a.iter()
-            .find(|x| x["inputContext"] == "AFTER_WAKEUP_RESET")
-            .or_else(|| a.first())
-            .unwrap_or(&Value::Null)
-    } else {
-        v
-    }
+    let Some(snapshots) = v.as_array() else {
+        return v;
+    };
+    let valid = || {
+        snapshots
+            .iter()
+            .filter(|s| num(s, &[&["score"], &["trainingReadinessScore"]]).is_some())
+    };
+    // The wake-up snapshot is only the morning reading. Garmin also sends
+    // post-exercise and realtime updates; array order is not a freshness rule.
+    // Compare one clock at a time, never UTC timestamps against local wall time.
+    ["timestamp", "timestampLocal"]
+        .iter()
+        .find_map(|field| {
+            valid()
+                .filter_map(|s| snapshot_time(s, field).map(|time| (time, s)))
+                .max_by_key(|(time, _)| *time)
+                .map(|(_, s)| s)
+        })
+        .or_else(|| valid().find(|s| s["inputContext"] == "AFTER_WAKEUP_RESET"))
+        .or_else(|| valid().next())
+        .unwrap_or(&Value::Null)
+}
+fn battery_latest(v: &Value) -> Option<f64> {
+    v["bodyBatteryValuesArray"]
+        .as_array()?
+        .iter()
+        .filter_map(|sample| {
+            let time = sample.get(0)?.as_i64()?;
+            let level = sample.get(1)?.as_f64()?;
+            (0.0..=100.0).contains(&level).then_some((time, level))
+        })
+        .max_by_key(|(time, _)| *time)
+        .map(|(_, level)| level)
 }
 fn sleep(v: &Value) -> &Value {
     if !v["dailySleepDTO"].is_null() {
@@ -96,8 +133,21 @@ fn sscore(v: &Value) -> Option<f64> {
         ],
     )
 }
-fn rscore(v: &Value) -> Option<f64> {
+fn current_rscore(v: &Value) -> Option<f64> {
     num(readiness(v), &[&["score"], &["trainingReadinessScore"]])
+}
+fn rscore(v: &Value) -> Option<f64> {
+    // Historical days and weekly comparisons need a consistent morning baseline,
+    // not a post-workout dip that depends on when that day's last sync happened.
+    let morning = v
+        .as_array()
+        .and_then(|a| {
+            a.iter()
+                .find(|s| s["inputContext"] == "AFTER_WAKEUP_RESET")
+                .or_else(|| a.first())
+        })
+        .unwrap_or(v);
+    num(morning, &[&["score"], &["trainingReadinessScore"]])
 }
 fn hrv(v: &Value) -> &Value {
     if v["hrvSummary"].is_object() {
@@ -528,10 +578,10 @@ pub fn today(store: &Store, date: &str) -> TodayView {
             .map(|i| {
                 store
                     .get("readiness", &date_sub(date, i))
-                    .and_then(|v| rscore(&v))
+                    .and_then(|v| if i == 0 { current_rscore(&v) } else { rscore(&v) })
             })
             .collect(),
-        readiness: rscore(&r).map(|v| {
+        readiness: current_rscore(&r).map(|v| {
             gauge(
                 v,
                 100.,
@@ -602,8 +652,10 @@ pub fn today(store: &Store, date: &str) -> TodayView {
             })
             .or_else(|| biggest_drag.map(|d| format!("{d} is your biggest drag today."))),
         body_battery: BodyBatteryCard {
-            now: num(b, &[&["bodyBatteryValue"], &["currentValue"]])
-                .or_else(|| num(&summary, &[&["bodyBatteryHighestValue"]])),
+            // Daily stats can be more recent than the sparsely sampled report.
+            now: num(&summary, &[&["bodyBatteryMostRecentValue"]])
+                .or_else(|| num(b, &[&["bodyBatteryValue"], &["currentValue"]]))
+                .or_else(|| battery_latest(b)),
             charged: num(b, &[&["charged"], &["chargedValue"]])
                 .or_else(|| num(&summary, &[&["bodyBatteryChargedValue"]])),
             drained: num(b, &[&["drained"], &["drainedValue"]])

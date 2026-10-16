@@ -37,7 +37,7 @@ export function routeTrail(target: string, fromTrail: string[] = []): string[] {
     return parent === 'today' ? ['today', route] : ['today', 'training', route];
   }
   const metric = route.slice(7);
-  const parent = section(fromTrail) ?? (metric === 'bodyBattery' ? 'today' :
+  const parent = section(fromTrail) ?? (fromTrail[0] === 'today' || metric === 'bodyBattery' ? 'today' :
     trainingMetrics.has(metric) ? 'training' : 'health');
   return parent === 'today' ? ['today', route] : ['today', parent, route];
 }
@@ -103,9 +103,8 @@ export function createNavigation(onChange: (trail: string[]) => void): {
         }
         if (trail[0] !== next[0]) {
           trail = [next[0]];
-          // Push truncates a stale forward branch; the old login root cannot be
-          // removed from browser history, but native Back exits at either root.
-          window.history.pushState(state(trail), '', url(trail[0]));
+          // Login changes the root, not its depth: Back must not reopen onboarding.
+          window.history.replaceState(state(trail), '', url(trail[0]));
         }
         for (const page of next.slice(common)) {
           const prefix = [...trail, page];

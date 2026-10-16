@@ -47,7 +47,7 @@ try{
  await page.waitForURL('**/#readiness');
  await page.goBack();
  await page.waitForURL('**/#today');
- await page.goto(`${url}/#workout/9000000000001`);
+ await page.goto(`${url}/?fixture=demo#workout/9000000000001`);
  await page.locator('.tab.on').getByText('Training').waitFor();
  await page.goto(`${url}/#readiness`);
  await page.locator('.tab.on').getByText('Today').waitFor();

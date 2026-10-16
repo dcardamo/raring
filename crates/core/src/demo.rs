@@ -115,7 +115,7 @@ pub fn seed(store: &Store, day: NaiveDate) -> rusqlite::Result<()> {
         } else {
             46 + ((days_ago as f64 * 0.54).sin() * 1.5).round() as i64
         });
-        values["summary"]["bodyBatteryHighestValue"] = json!(if days_ago == 0 {
+        values["summary"]["bodyBatteryMostRecentValue"] = json!(if days_ago == 0 {
             78
         } else {
             62 + days_ago % 27

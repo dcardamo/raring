@@ -26,6 +26,7 @@ describe('routes', () => {
     expect(routeTrail('settings', ['today', 'settings'])).toEqual(['today', 'settings']);
     expect(routeTrail('settings')).toEqual(['today', 'settings']);
     expect(routeTrail('metric/hrv')).toEqual(['today', 'health', 'metric/hrv']);
+    expect(routeTrail('metric/hrv', ['today'])).toEqual(['today', 'metric/hrv']);
     expect(routeTrail('metric/bodyBattery')).toEqual(['today', 'metric/bodyBattery']);
     expect(routeTrail('metric/vo2max')).toEqual(['today', 'training', 'metric/vo2max']);
     expect(routeTrail('metric/hrv', ['today', 'sleep'])).toEqual(['today', 'sleep', 'metric/hrv']);
@@ -184,11 +185,12 @@ describe('browser navigation', () => {
     expect(nav.back()).toBe(false);
     nav.navigate('today');
     await tick();
-    expect(browser.hashes()).toEqual(['#onboarding', '#today']);
+    expect(browser.hashes()).toEqual(['#today']);
     nav.navigate('sleep');
     nav.navigate('onboarding');
     await tick();
-    expect(browser.hashes()).toEqual(['#onboarding', '#today', '#onboarding']);
+    expect(browser.location.hash).toBe('#onboarding');
+    expect(browser.index).toBe(0);
     expect(nav.back()).toBe(false);
     nav.destroy();
   });
