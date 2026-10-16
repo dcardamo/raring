@@ -15,9 +15,15 @@ Android only for now. Install and update with
 `https://github.com/dcardamo/pepometer` as an app. Each GitHub release carries
 a signed arm64 APK, and Obtainium updates the app when a new release appears.
 
-While this repository is private, Obtainium needs a GitHub fine-grained token
-with read-only access to its contents (Obtainium → Settings → GitHub personal
-access token).
-
 Pepometer is not affiliated with Garmin. It uses Garmin Connect's
 unofficial API, which Garmin can change at any time.
+
+## License
+
+Licensed under either of the [Apache License, Version 2.0](LICENSE-APACHE)
+or the [MIT license](LICENSE-MIT), at your option.
+
+Unless you explicitly state otherwise, any contribution intentionally
+submitted for inclusion in Pepometer by you, as defined in the Apache-2.0
+license, shall be dual licensed as above, without any additional terms or
+conditions.

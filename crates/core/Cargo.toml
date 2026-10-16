@@ -4,6 +4,7 @@ description = "Garmin client, storage, sync and rules for Pepometer"
 version.workspace = true
 edition.workspace = true
 repository.workspace = true
+license.workspace = true
 
 [dependencies]
 chrono = { version = "0.4.45", features = ["serde"] }

@@ -4,6 +4,7 @@ description = "Pepometer: readiness, sleep and training from Garmin data"
 version.workspace = true
 edition.workspace = true
 repository.workspace = true
+license.workspace = true
 
 [lib]
 name = "pepometer_app_lib"

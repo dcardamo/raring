@@ -6,6 +6,7 @@ members = ["crates/core", "crates/cli", "app/src-tauri"]
 version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/dcardamo/pepometer"
+license = "MIT OR Apache-2.0"
 
 [profile.release]
 lto = true
