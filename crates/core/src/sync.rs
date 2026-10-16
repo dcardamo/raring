@@ -276,7 +276,11 @@ async fn fetch(
             }
             true
         }
-        Err(garmin::Error::NotFound) => true,
+        Err(garmin::Error::NotFound) => {
+            // Cache absence so optional device metrics do not consume backfill budget forever.
+            let _ = store.put(kind, key, &now.to_rfc3339(), &serde_json::Value::Null);
+            true
+        }
         Err(e) => {
             failure(store, report, e, now);
             false

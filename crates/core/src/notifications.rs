@@ -79,12 +79,12 @@ pub fn notifications(store: &Store, now: DateTime<Local>) -> Vec<Notification> {
     }
     if let Some(v) = store
         .get("max_metrics", &day)
-        .and_then(|v| v["generic"]["vo2MaxValue"].as_f64())
+        .and_then(|v| screens::vo2(&v))
     {
         if let Some(previous) = store
             .history("max_metrics", &day, 2)
             .get(1)
-            .and_then(|(_, v)| v["generic"]["vo2MaxValue"].as_f64())
+            .and_then(|(_, v)| screens::vo2(v))
         {
             if (v - previous).abs() > 0.001 {
                 add(

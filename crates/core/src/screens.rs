@@ -58,7 +58,7 @@ fn sleep(v: &Value) -> &Value {
 fn first(v: &Value) -> &Value {
     v.as_array().and_then(|a| a.first()).unwrap_or(v)
 }
-fn vo2(v: &Value) -> Option<f64> {
+pub(crate) fn vo2(v: &Value) -> Option<f64> {
     num(
         first(v),
         &[
@@ -408,6 +408,7 @@ pub fn today(store: &Store, date: &str) -> TodayView {
     }
     let b = store.get("battery", date).unwrap_or(Value::Null);
     let b = b.as_array().and_then(|a| a.first()).unwrap_or(&b);
+    let summary = store.get("summary", date).unwrap_or(Value::Null);
     let hstatus = string(hs, &[&["status"]]);
     TodayView {
         date: date.into(),
@@ -448,7 +449,12 @@ pub fn today(store: &Store, date: &str) -> TodayView {
                 v,
                 (v * 1.3).max(band(&t).map(|b| b[1] * 1.2).unwrap_or(1000.)),
                 "Acute load",
-                Tone::Fair,
+                match band(&t) {
+                    Some([lo, hi]) if v >= lo && v <= hi => Tone::Good,
+                    Some([_, hi]) if v > hi => Tone::Poor,
+                    Some(_) => Tone::Fair,
+                    None => Tone::Neutral,
+                },
                 band(&t),
             )
         }),
@@ -464,9 +470,12 @@ pub fn today(store: &Store, date: &str) -> TodayView {
         call,
         call_note: None,
         body_battery: BodyBatteryCard {
-            now: num(b, &[&["bodyBatteryValue"], &["currentValue"]]),
-            charged: num(b, &[&["charged"], &["chargedValue"]]),
-            drained: num(b, &[&["drained"], &["drainedValue"]]),
+            now: num(b, &[&["bodyBatteryValue"], &["currentValue"]])
+                .or_else(|| num(&summary, &[&["bodyBatteryHighestValue"]])),
+            charged: num(b, &[&["charged"], &["chargedValue"]])
+                .or_else(|| num(&summary, &[&["bodyBatteryChargedValue"]])),
+            drained: num(b, &[&["drained"], &["drainedValue"]])
+                .or_else(|| num(&summary, &[&["bodyBatteryDrainedValue"]])),
         },
         hrv: HrvCard {
             last_night: num(hs, &[&["lastNightAvg"]]),
@@ -741,7 +750,12 @@ pub fn training(store: &Store, date: &str) -> TrainingView {
                 amount,
                 (amount * 1.3).max(band(&v).map(|b| b[1] * 1.2).unwrap_or(1000.)),
                 "Acute load",
-                Tone::Fair,
+                match band(&v) {
+                    Some([lo, hi]) if amount >= lo && amount <= hi => Tone::Good,
+                    Some([_, hi]) if amount > hi => Tone::Poor,
+                    Some(_) => Tone::Fair,
+                    None => Tone::Neutral,
+                },
                 band(&v),
             )
         }),
@@ -959,12 +973,17 @@ pub fn checkin(store: &Store, monday: &str) -> CheckinView {
         })
         .map(|c| format!("{} improved", c.headline));
     let last = date_sub(monday, 1);
-    let sleep = sleep_view(store, &last);
-    let sleep_gap = sleep
-        .asleep_min
-        .zip(sleep.need_min)
-        .filter(|(_, need)| *need > 0.)
-        .map(|(a, n)| ((n - a) / n).max(0.));
+    let sleep_gaps: Vec<f64> = (1..=7)
+        .filter_map(|i| {
+            let s = sleep_view(store, &date_sub(monday, i));
+            s.asleep_min
+                .zip(s.need_min)
+                .filter(|(_, n)| *n > 0.)
+                .map(|(a, n)| ((n - a) / n).max(0.))
+        })
+        .collect();
+    let sleep_gap =
+        (!sleep_gaps.is_empty()).then(|| sleep_gaps.iter().sum::<f64>() / sleep_gaps.len() as f64);
     let training = training(store, &last);
     let load_gap = training
         .load_focus
@@ -988,7 +1007,17 @@ pub fn checkin(store: &Store, monday: &str) -> CheckinView {
         .map(|(v, t)| ((t - v) / t).max(0.));
     let focus =
         rules::weekly_focus(sleep_gap, load_gap, readiness_drop, vigorous_gap).map(str::to_owned);
-    let vo2max_change = training.vo2max_change_30d;
+    let vo2max_change = store
+        .history("max_metrics", &last, 1)
+        .pop()
+        .and_then(|(_, v)| vo2(&v))
+        .zip(
+            store
+                .history("max_metrics", &date_sub(monday, 8), 1)
+                .pop()
+                .and_then(|(_, v)| vo2(&v)),
+        )
+        .map(|(a, b)| a - b);
     let fitness_age_change = cards[3].value.zip(cards[3].previous).map(|(a, b)| a - b);
     CheckinView {
         week_start: previous,

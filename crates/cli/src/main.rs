@@ -122,8 +122,28 @@ fn scrub_inner(v: &mut Value, lat: &mut Option<f64>, lon: &mut Option<f64>) {
                     *val = Value::from("REDACTED")
                 } else if k.ends_with("id") || k.contains("profilepk") || k.contains("userid") {
                     *val = Value::from("123456")
-                } else if k.contains("polyline") && val.is_string() {
-                    *val = Value::from("REDACTED")
+                } else if k.contains("polyline")
+                    || k.contains("coordinates")
+                    || k.contains("routepoints")
+                {
+                    if let Some(points) = val.as_array_mut() {
+                        for point in points {
+                            if let Some(pair) = point.as_array_mut() {
+                                if pair.len() >= 2 {
+                                    shift(&mut pair[0], lat);
+                                    shift(&mut pair[1], lon)
+                                } else {
+                                    *point = Value::Null;
+                                }
+                            } else {
+                                scrub_inner(point, lat, lon)
+                            }
+                        }
+                    } else if val.is_object() {
+                        scrub_inner(val, lat, lon)
+                    } else {
+                        *val = Value::from("REDACTED")
+                    }
                 } else {
                     scrub_inner(val, lat, lon)
                 }
@@ -208,5 +228,11 @@ mod tests {
         assert!(!text.contains("Private Person"));
         assert!(!text.contains("real@unsafe.invalid"));
         assert!(!text.contains("42.5"));
+        let mut geometry =
+            json!({"polyline":[[37.77,-122.42],[37.771,-122.419]],"encodedPolyline":"realroute"});
+        scrub(&mut geometry);
+        assert_eq!(geometry["polyline"][0], json!([0.0, 0.0]));
+        assert_eq!(geometry["polyline"][1], json!([0.001, 0.001]));
+        assert_eq!(geometry["encodedPolyline"], "REDACTED");
     }
 }
