@@ -24,10 +24,12 @@ class MainActivity : TauriActivity() {
         val webview = findWebView(findViewById(android.R.id.content))
         if (webview?.url?.startsWith("http://tauri.localhost/") == false) {
           webview.loadUrl("http://tauri.localhost/")
+        } else if (webview != null) {
+          webview.evaluateJavascript("window.__pepometerBack?.() === true") { handled ->
+            if (handled != "true") moveTaskToBack(true)
+          }
         } else {
-          isEnabled = false
-          onBackPressedDispatcher.onBackPressed()
-          isEnabled = true
+          moveTaskToBack(true)
         }
       }
     })
@@ -39,6 +41,15 @@ class MainActivity : TauriActivity() {
       val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
       v.setPadding(bars.left, bars.top, bars.right, maxOf(bars.bottom, ime.bottom))
       WindowInsetsCompat.CONSUMED
+    }
+  }
+
+  override fun onResume() {
+    super.onResume()
+    // The first resume may precede WebView creation; the app loads its initial data itself.
+    val webview = findWebView(findViewById(android.R.id.content))
+    if (webview?.url?.startsWith("http://tauri.localhost/") == true) {
+      webview.evaluateJavascript("window.dispatchEvent(new Event('pepometer:resume'))", null)
     }
   }
 
