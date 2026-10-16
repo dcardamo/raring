@@ -1,89 +1,100 @@
-<script>
-  import svelteLogo from './assets/svelte.svg'
-  import viteLogo from './assets/vite.svg'
-  import heroImg from './assets/hero.png'
-  import Counter from './lib/Counter.svelte'
+<script lang="ts">
+ import {onMount} from 'svelte';
+ import * as api from './lib/api';
+ import type {TodayView} from './lib/generated/TodayView';import type {SleepView} from './lib/generated/SleepView';import type {TrainingView} from './lib/generated/TrainingView';import type {WorkoutView} from './lib/generated/WorkoutView';import type {HealthView} from './lib/generated/HealthView';import type {CheckinView} from './lib/generated/CheckinView';import type {AppStatus} from './lib/generated/AppStatus';
+ import Icon from './lib/components/Icon.svelte';import BrandMark from './lib/components/BrandMark.svelte';import ReadinessTrend from './lib/components/ReadinessTrend.svelte';
+ import Gauge from './lib/components/Gauge.svelte';import Sparkline from './lib/components/Sparkline.svelte';import RangeBar from './lib/components/RangeBar.svelte';import ZoneStrip from './lib/components/ZoneStrip.svelte';import Hypnogram from './lib/components/Hypnogram.svelte';import ConsistencyChart from './lib/components/ConsistencyChart.svelte';import WeekBars from './lib/components/WeekBars.svelte';import LoadFocus from './lib/components/LoadFocus.svelte';import RouteMap from './lib/components/RouteMap.svelte';import HrChart from './lib/components/HrChart.svelte';import Card from './lib/components/Card.svelte';import Chip from './lib/components/Chip.svelte';import Header from './lib/components/Header.svelte';import TabBar from './lib/components/TabBar.svelte';import ActivityRow from './lib/components/ActivityRow.svelte';
+ import {colors,toneColor} from './lib/charts';import {duration,elapsed,pace,clock,dateLabel,signed,num} from './lib/format';
+ let route=$state('today'),data=$state<TodayView|SleepView|TrainingView|WorkoutView|HealthView|CheckinView|null>(null),status=$state<AppStatus|null>(null),settings=$state<api.Settings>({...api.defaultSettings}),loading=$state(true),error=$state(''),selectedFactor=$state(''),checkinIndex=$state(0),onboardStep=$state(0),startY=0,swipeX=0;
+ const tabs=['today','sleep','training','health'];let previousTab=$state('today');
+ function navigate(to:string){if(tabs.includes(to))previousTab=to;location.hash=to;syncRoute()}
+ function back(){if(history.length>1)history.back();else navigate(previousTab)}
+ function syncRoute(){route=decodeURIComponent(location.hash.slice(1)||'today');if(tabs.includes(route))previousTab=route;void refresh()}
+ async function refresh(){
+  const current=route;
+  loading=true;error='';
+  try {
+   status=await api.app_status();
+   if(current==='settings'){settings=await api.get_settings();data=null}
+   else if(current==='onboarding'){data=null}
+   else if(!status.signedIn && !new URLSearchParams(location.search).has('fixture')){route='onboarding';data=null}
+   else {
+    const key=current.split('/')[0];
+    switch(key){
+     case 'today':case 'readiness':data=await api.today();break;
+     case 'sleep':data=await api.sleep();break;
+     case 'training':data=await api.training();break;
+     case 'health':data=await api.health();break;
+     case 'workout':data=await api.workout(current.split('/')[1]||'');break;
+     case 'checkin':data=await api.checkin();break;
+     default:data=await api.today();
+    }
+   }
+   if(current===route){
+    const fixture=new URLSearchParams(location.search).get('fixture');
+    if(fixture==='empty' && current==='today')data=null;
+    if(fixture==='missing' && current==='today' && data){
+     data={...(data as TodayView),readiness:null,readinessTrend:[],sleep:null,load:null,chips:[],factors:[],call:null,callNote:null,bodyBattery:{now:null,charged:null,drained:null},hrv:{lastNight:null,status:null,tone:'neutral',baseline:null,week:[]},vitals:{readings:[],offCount:0,baselineReady:false},activities:[],fitnessAge:{fitnessAge:null,chronologicalAge:null,trend:[],change12m:null},headline:''};
+    }
+   }
+  }catch(e){if(current===route){data=null;error=String(e)}}
+  finally{if(current===route)loading=false}
+ }
+ onMount(()=>{if(!location.hash)history.replaceState(null,'','#today');syncRoute();window.addEventListener('hashchange',syncRoute);window.addEventListener('popstate',syncRoute);let unlisten=()=>{};void api.onStatusChanged(()=>{void refresh()}).then(fn=>{unlisten=fn});return()=>{window.removeEventListener('hashchange',syncRoute);window.removeEventListener('popstate',syncRoute);unlisten()}});
+ async function pullEnd(e:TouchEvent){if(route==='today' && e.changedTouches[0].clientY-startY>75){try{await api.sync_now();await refresh()}catch(err){error=String(err)}}}
+ async function saveSettings(){try{await api.set_settings(settings)}catch(e){error=String(e)}}
+ const vitalNames:Record<string,string>={restingHr:'Resting HR',hrv:'HRV',respiration:'Respiration',spo2:'SpO₂',skinTemp:'Skin temp'};
+ let todayData=$derived(route==='today'||route==='readiness'?data as TodayView|null:null),sleepData=$derived(route==='sleep'?data as SleepView|null:null),trainingData=$derived(route==='training'?data as TrainingView|null:null),workoutData=$derived(route.startsWith('workout/')?data as WorkoutView|null:null),healthData=$derived(route==='health'?data as HealthView|null:null),checkinData=$derived(route==='checkin'?data as CheckinView|null:null);
+ let glow=$derived(route==='sleep'?'rgba(155,140,255,.24)':route==='training'||route.startsWith('workout/')?'rgba(255,138,61,.20)':'rgba(61,220,151,.24)');
 </script>
-
-<section id="center">
-  <div class="hero">
-    <img src={heroImg} class="base" width="170" height="179" alt="" />
-    <img src={svelteLogo} class="framework" alt="Svelte logo" />
-    <img src={viteLogo} class="vite" alt="Vite logo" />
-  </div>
-  <div>
-    <h1>Get started</h1>
-    <p>Edit <code>src/App.svelte</code> and save to test <code>HMR</code></p>
-  </div>
-  <Counter />
-</section>
-
-<div class="ticks"></div>
-
-<section id="next-steps">
-  <div id="docs">
-    <svg class="icon" role="presentation" aria-hidden="true">
-      <use href="/icons.svg#documentation-icon"></use>
-    </svg>
-    <h2>Documentation</h2>
-    <p>Your questions, answered</p>
-    <ul>
-      <li>
-        <a href="https://vite.dev/" target="_blank" rel="noreferrer">
-          <img class="logo" src={viteLogo} alt="" />
-          Explore Vite
-        </a>
-      </li>
-      <li>
-        <a href="https://svelte.dev/" target="_blank" rel="noreferrer">
-          <img class="button-icon" src={svelteLogo} alt="" />
-          Learn more
-        </a>
-      </li>
-    </ul>
-  </div>
-  <div id="social">
-    <svg class="icon" role="presentation" aria-hidden="true">
-      <use href="/icons.svg#social-icon"></use>
-    </svg>
-    <h2>Connect with us</h2>
-    <p>Join the Vite community</p>
-    <ul>
-      <li>
-        <a href="https://github.com/vitejs/vite" target="_blank" rel="noreferrer">
-          <svg class="button-icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#github-icon"></use>
-          </svg>
-          GitHub
-        </a>
-      </li>
-      <li>
-        <a href="https://chat.vite.dev/" target="_blank" rel="noreferrer">
-          <svg class="button-icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#discord-icon"></use>
-          </svg>
-          Discord
-        </a>
-      </li>
-      <li>
-        <a href="https://x.com/vite_js" target="_blank" rel="noreferrer">
-          <svg class="button-icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#x-icon"></use>
-          </svg>
-          X.com
-        </a>
-      </li>
-      <li>
-        <a href="https://bsky.app/profile/vite.dev" target="_blank" rel="noreferrer">
-          <svg class="button-icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#bluesky-icon"></use>
-          </svg>
-          Bluesky
-        </a>
-      </li>
-    </ul>
-  </div>
-</section>
-
-<div class="ticks"></div>
-<section id="spacer"></section>
+<div class="phone"><div class="glow" style:--glow={glow}></div><main class="scroll" ontouchstart={(e)=>{startY=e.touches[0].clientY}} ontouchend={pullEnd}>
+{#if route==='onboarding'}
+ <section class="welcome"><BrandMark/><div class="eyebrow">YOUR GARMIN, AT A GLANCE</div><h1>Pepometer</h1><p>Know how you're doing. See what matters. Make today count.</p>{#if onboardStep===0}<button class="primary" onclick={async()=>{try{await api.begin_sign_in();onboardStep=1;await refresh()}catch(e){error=String(e)}}}>Sign in with Garmin <Icon name="arrow-right" size={18}/></button>{:else}<h2>Stay in the loop</h2><p>Get a heads-up when your readiness and weekly check-in are ready.</p><button class="primary" onclick={async()=>{try{await api.request_notification_permission()}finally{navigate('today')}}}>Enable notifications</button><button class="secondary" onclick={()=>navigate('today')}>Not now</button>{/if}{#if error}<p class="small">{error}</p>{/if}</section>
+{:else if route==='settings'}
+ <Header title="Settings" eyebrow="PEPOMETER" back={back}/><Card title="Notifications">{#each Object.keys(settings) as key}<label class="setting"><span>{({notifyMorningReadiness:'Morning readiness',notifyWeeklyCheckin:'Weekly check-in',notifyMetricChanges:'VO₂ max or Fitness Age changed',notifyVitals:'Vitals off',notifyTrainingStatus:'Training status changed',notifyBedtime:'Bedtime'} as Record<string,string>)[key]}</span><input type="checkbox" checked={settings[key as keyof api.Settings]} onchange={(e)=>{settings={...settings,[key]:e.currentTarget.checked};void saveSettings()}}/></label>{/each}</Card><Card title="Account"><button class="signout" onclick={async()=>{await api.sign_out();navigate('onboarding')}}>Sign out</button></Card>
+{:else if loading}<div class="empty"><BrandMark/><h2>Syncing your Garmin data…</h2></div>
+{:else if !data}<div class="empty"><BrandMark/><h2>Syncing your Garmin data…</h2><p>{error && !error.includes('not_ready')?'Your data will appear after the next sync.':'Your day will appear here soon.'}</p><button class="secondary" onclick={async()=>{await api.sync_now();await refresh()}}>Sync now</button></div>
+{:else if todayData && route==='today'}
+ <Header title="Today" eyebrow={dateLabel(todayData.date)} onSettings={()=>navigate('settings')}/>
+ <section class="dials"><button class="dial-button" onclick={()=>navigate('sleep')}>{#if todayData.sleep}<Gauge size={100} value={todayData.sleep.value} max={todayData.sleep.max} color={colors.violet} second="#6E5BFF" caption="Sleep"/>{:else}<Gauge size={100} value={null} caption="Sleep"/>{/if}</button><button class="dial-button large" onclick={()=>navigate('readiness')}>{#if todayData.readiness}<Gauge size={156} stroke={13} value={todayData.readiness.value} max={todayData.readiness.max} color={toneColor(todayData.readiness.tone)} second="#2BB6D9" caption="Readiness" label={todayData.readiness.label}/>{:else}<Gauge size={156} stroke={13} value={null} caption="Readiness"/>{/if}</button><button class="dial-button" onclick={()=>navigate('training')}>{#if todayData.load}<Gauge size={100} value={todayData.load.value} max={todayData.load.max} color={colors.flame} second="#FF5E3A" caption="Load" band={todayData.load.band} marker/>{:else}<Gauge size={100} value={null} caption="Load"/>{/if}</button></section>
+ <div class="headline"><h2>{todayData.headline||'Your day is taking shape'}</h2><div class="chips">{#each todayData.chips as chip}<Chip {chip}/>{/each}</div></div>
+ {#if todayData.factors.length}<Card title="What's driving it" onclick={()=>navigate('readiness')}>{#snippet aside()}<span class="pill ok">{todayData.factors.filter(f=>f.tone==='good').length} of {todayData.factors.length} good</span>{/snippet}<div class="factors">{#each todayData.factors as factor}<div class="factor"><span>{factor.name}<b class="n">{factor.percent==null?'—':Math.round(factor.percent)}</b></span><div class="bar"><i style:width={(factor.percent??0)+'%'} style:background={toneColor(factor.tone)}></i></div></div>{/each}</div></Card>{/if}
+ {#if todayData.call}<Card title="Today's call"><div class="segments">{#each ['rest','easy','steady','push'] as effort}<span class:on={todayData.call===effort}>{effort}</span>{/each}</div>{#if todayData.callNote}<div class="sub"><Icon name="check" size={15}/>{todayData.callNote}</div>{/if}</Card>{/if}
+ {#if todayData.bodyBattery.now!=null || todayData.hrv.lastNight!=null}<div class="row">{#if todayData.bodyBattery.now!=null}<Card title="Body Battery"><div class="bb"><div class="battery"><i style:height={Math.max(0,Math.min(100,todayData.bodyBattery.now))+'%'}></i></div><div><div class="big n">{num(todayData.bodyBattery.now)}</div>{#if todayData.bodyBattery.charged!=null}<div class="small"><b>+{num(todayData.bodyBattery.charged)}</b> overnight</div>{/if}</div></div></Card>{/if}{#if todayData.hrv.lastNight!=null}<Card title="HRV">{#snippet aside()}{#if todayData.hrv.status}<span class="pill ok">{todayData.hrv.status}</span>{/if}{/snippet}<div class="big n">{num(todayData.hrv.lastNight)}<span class="unit">ms</span></div><div class="spark-space"><Sparkline values={todayData.hrv.week} band={todayData.hrv.baseline} w={138} h={34}/></div></Card>{/if}</div>{/if}
+ {#if todayData.vitals.readings.length}<Card title="Vitals">{#snippet aside()}<span class="pill" class:ok={todayData.vitals.baselineReady && todayData.vitals.offCount===0}>{#if todayData.vitals.baselineReady && todayData.vitals.offCount===0}<Icon name="check" size={13}/>{/if}{todayData.vitals.baselineReady?(todayData.vitals.offCount?'Check vitals':'All normal'):'Building baseline'}</span>{/snippet}<div class="vitals">{#each todayData.vitals.readings as v}<div class="vital"><div class="ring" style:color={toneColor(v.tone)}><Icon name={v.kind==='restingHr'?'heart':v.kind==='hrv'?'hrv':v.kind==='respiration'?'lungs':v.kind==='spo2'?'drop':'temp'} size={20}/></div><b class="n">{num(v.value,v.kind==='skinTemp'||v.kind==='respiration'?1:0)}</b><span>{({restingHr:'RHR',hrv:'HRV',respiration:'Resp',spo2:'SpO₂',skinTemp:'Skin'} as Record<string,string>)[v.kind]}</span></div>{/each}</div></Card>{/if}
+ {#if todayData.activities.length}<Card title="Activities">{#each todayData.activities as a}<ActivityRow activity={a} open={()=>navigate('workout/'+a.id)}/>{#if a.aerobicTe!=null || a.benefit}<div class="tags">{#if a.aerobicTe!=null}<span class="pill ok">Aerobic {a.aerobicTe} · {a.aerobicLabel}</span>{/if}{#if a.benefit}<span class="pill flame">{a.benefit}</span>{/if}</div>{/if}{/each}</Card>{/if}
+ {#if todayData.fitnessAge.fitnessAge!=null}<Card title="Fitness Age" onclick={()=>navigate('health')}><div class="age-small"><div><div class="big n">{num(todayData.fitnessAge.fitnessAge)}</div>{#if todayData.fitnessAge.chronologicalAge!=null}<span class="pill ok">{num(todayData.fitnessAge.chronologicalAge-todayData.fitnessAge.fitnessAge)} yrs younger</span>{/if}</div><Sparkline values={todayData.fitnessAge.trend} w={160} h={64}/></div></Card>{/if}
+ {#if todayData.checkinReady}<Card title="Weekly check-in" onclick={()=>navigate('checkin')}><div class="checkin-tease"><span>See your week at a glance</span><b><Icon name="arrow-right" size={18}/></b></div></Card>{/if}
+{:else if route==='readiness' && todayData}
+ <Header title="Readiness" eyebrow={dateLabel(todayData.date)} back={back} backLabel="Today"/><div class="detail-gauge">{#if todayData.readiness}<Gauge size={240} stroke={17} value={todayData.readiness.value} max={todayData.readiness.max} label={todayData.readiness.label} caption="Readiness" color={toneColor(todayData.readiness.tone)} second="#2BB6D9"/>{:else}<p>Waiting for readiness</p>{/if}<h2>{todayData.headline}</h2></div>
+ {#if todayData.factors.length}<Card title="What's driving it"><div class="factor-list">{#each [...todayData.factors].sort((a,b)=>(a.percent??101)-(b.percent??101)) as factor}<button class="factor-row" onclick={()=>selectedFactor=selectedFactor===factor.key?'':factor.key}><span>{factor.name}</span><b class="n">{num(factor.percent)}</b><div class="bar"><i style:width={(factor.percent??0)+'%'} style:background={toneColor(factor.tone)}></i></div>{#if selectedFactor===factor.key}<p>{factor.detail}</p>{/if}</button>{/each}</div></Card>{/if}
+ {#if todayData.readinessTrend.length}<Card title="Readiness · 30 days"><ReadinessTrend values={todayData.readinessTrend}/></Card>{/if}
+ {#if todayData.call}<Card title="Today's call"><div class="segments">{#each ['rest','easy','steady','push'] as effort}<span class:on={todayData.call===effort}>{effort}</span>{/each}</div>{#if todayData.callNote}<div class="sub">{todayData.callNote}</div>{/if}</Card>{/if}
+{:else if sleepData}
+ <Header title="Sleep" eyebrow={sleepData.startLocal?`${clock(sleepData.startLocal)} – ${clock(sleepData.endLocal)}`:dateLabel(sleepData.date)} onSettings={()=>navigate('settings')}/><section class="sleep-hero">{#if sleepData.score}<Gauge size={150} stroke={12} value={sleepData.score.value} max={sleepData.score.max} caption="Score" label={sleepData.score.label} color={colors.violet} second="#6E5BFF"/>{/if}<div class="need"><div class="eyebrow">Asleep</div><div class="big n">{duration(sleepData.asleepMin)}</div><div class="needbar"><i style:width={Math.min(100,(sleepData.asleepMin??0)/Math.max(540,sleepData.needMin??0)*100)+'%'}></i>{#if sleepData.needMin!=null}<u style:left={sleepData.needMin/Math.max(540,sleepData.needMin)*100+'%'}></u>{/if}</div><div class="need-sub">{#if sleepData.needMin!=null}Need <b>{duration(sleepData.needMin)}</b> · <strong>{signed((sleepData.asleepMin??0)-sleepData.needMin)} min</strong>{:else}Sleep need unavailable{/if}</div></div></section>
+ {#if sleepData.stages.length}<Card title="Stages"><Hypnogram segments={sleepData.stages}/></Card>{/if}{#if sleepData.totals.length}<Card><div class="stage-stack">{#each sleepData.totals as s}<i style:width={s.minutes/sleepData.totals.reduce((a,b)=>a+b.minutes,0)*100+'%'} style:background={({deep:colors.deep,light:colors.light,rem:colors.rem,awake:colors.awake} as Record<string,string>)[s.stage]}></i>{/each}</div><div class="stage-legend">{#each sleepData.totals as s}<div><i style:background={({deep:colors.deep,light:colors.light,rem:colors.rem,awake:colors.awake} as Record<string,string>)[s.stage]}></i><span>{s.stage==='rem'?'REM':s.stage}</span><b class="n">{duration(s.minutes)}</b><em>{signed(s.usualDeltaMin,'m')}</em></div>{/each}</div></Card>{/if}
+ {#if sleepData.overnight.length}<Card title="Overnight"><div class="tiles">{#each sleepData.overnight as tile}<div class="tile"><span>{({heartRate:'Heart rate',hrv:'HRV',respiration:'Respiration',spo2:'SpO₂'} as Record<string,string>)[tile.kind]}</span><b class="n">{num(tile.value,tile.kind==='respiration'?1:0)}<small>{tile.unit}</small></b><Sparkline values={tile.series} w={128} h={30} color={tile.kind==='heartRate'?colors.coral:tile.kind==='spo2'?colors.violet:tile.kind==='respiration'?colors.sky:colors.mint} fill={false}/></div>{/each}</div></Card>{/if}
+ {#if sleepData.consistency.length}<Card title="Consistency">{#snippet aside()}{#if sleepData.consistencySpreadMin!=null}<span class="pill violet">±{sleepData.consistencySpreadMin} min</span>{/if}{/snippet}<ConsistencyChart nights={sleepData.consistency} bedWindow={sleepData.bedWindow} wakeWindow={sleepData.wakeWindow}/></Card>{/if}
+ {#if sleepData.tonightBedtime}<Card><div class="tonight"><span class="moon"><Icon name="moon" size={24}/></span><div><span>Tonight</span><b>Bed by {sleepData.tonightBedtime}</b></div>{#if sleepData.tonightNeedMin!=null}<div class="need-tonight"><span>Need</span><b class="n">{duration(sleepData.tonightNeedMin)}</b></div>{/if}</div></Card>{/if}
+{:else if trainingData}
+ <Header title="Training" eyebrow="Last 7 days" onSettings={()=>navigate('settings')}/>{#if trainingData.status}<span class="status-pill pill ok"><Icon name="trend-up" size={14}/>{trainingData.status}</span>{/if}
+ {#if trainingData.acute}<section class="semi"><Gauge size={300} stroke={16} sweep={180} value={trainingData.acute.value} max={trainingData.acute.max} caption="Acute load" label={trainingData.acute.label} color={colors.flame} second="#FF5E3A" band={trainingData.acute.band} marker/><span class="semi-low">Low</span><span class="semi-high">High</span></section>{/if}<div class="headline training-head"><h2>{trainingData.headline}</h2><div class="chips">{#each trainingData.chips as chip}<Chip {chip}/>{/each}</div></div>
+ {#if trainingData.week.length}<Card title="This week"><WeekBars days={trainingData.week}/></Card>{/if}{#if trainingData.loadFocus.length}<Card title="Load focus · 4 weeks"><LoadFocus bars={trainingData.loadFocus}/></Card>{/if}
+ {#if trainingData.vo2max!=null || trainingData.races.length}<div class="row">{#if trainingData.vo2max!=null}<Card title="VO₂ max"><div class="big n">{num(trainingData.vo2max)}</div>{#if trainingData.vo2maxChange30d!=null}<div class="small"><b>{signed(trainingData.vo2maxChange30d)}</b> in 30 days</div>{/if}<Sparkline values={trainingData.vo2maxTrend} w={138} h={30}/></Card>{/if}{#if trainingData.races.length}<Card title="Race times"><div class="race">{#each trainingData.races as race}<div><span>{race.label}</span><b class="n">{elapsed(race.seconds)}</b></div>{/each}</div></Card>{/if}</div>{/if}
+ {#if trainingData.enduranceScore!=null || trainingData.hillScore!=null || trainingData.runningToleranceKm!=null}<Card title="More metrics"><div class="metrics">{#if trainingData.enduranceScore!=null}<div><b>{num(trainingData.enduranceScore)}</b><span>Endurance</span></div>{/if}{#if trainingData.hillScore!=null}<div><b>{num(trainingData.hillScore)}</b><span>Hill score</span></div>{/if}{#if trainingData.runningToleranceKm!=null}<div><b>{num(trainingData.runningToleranceKm)} km</b><span>Run tolerance</span></div>{/if}</div></Card>{/if}
+ {#if trainingData.workouts.length}<Card title="Workouts">{#each trainingData.workouts as a}<div class="workout-item"><ActivityRow activity={a} open={()=>navigate('workout/'+a.id)}/></div>{/each}</Card>{/if}
+{:else if workoutData}
+ <Header title={workoutData.summary.name} eyebrow={dateLabel(workoutData.summary.startLocal.slice(0,10))+' · '+clock(workoutData.summary.startLocal)} back={back} backLabel="Training"/><Card><div class="workout-hero"><div><div class="eyebrow">Training load</div><div class="load-number n">{num(workoutData.summary.load)}</div><div class="tags">{#if workoutData.summary.benefit}<span class="pill flame">{workoutData.summary.benefit}</span>{/if}{#if workoutData.recoveryHours!=null}<span class="pill"><Icon name="clock" size={13}/>{workoutData.recoveryHours}h recovery</span>{/if}</div></div><div class="effects">{#if workoutData.summary.aerobicTe!=null}<div><Gauge size={82} stroke={7} value={workoutData.summary.aerobicTe} max={5} caption="Aerobic" color={colors.mint}/><small>{workoutData.summary.aerobicLabel}</small></div>{/if}{#if workoutData.summary.anaerobicTe!=null}<div><Gauge size={82} stroke={7} value={workoutData.summary.anaerobicTe} max={5} caption="Anaer." color={colors.violet}/><small>{workoutData.summary.anaerobicLabel}</small></div>{/if}</div></div></Card>
+ {#if workoutData.stats.length}<Card><div class="stats">{#each workoutData.stats as s}<div><b class="n">{s.key==='pace'?pace(s.value).replace('/km',''):s.key==='time'?elapsed(s.value):num(s.value,s.key==='distance'?1:0)}{#if s.key==='pace'}<small>/km</small>{:else if s.unit!=='s' && s.unit!=='bpm' && s.unit!=='kcal'}<small>{s.unit}</small>{/if}</b><span>{s.label}</span></div>{/each}</div></Card>{/if}
+ {#if workoutData.route.length}<Card extra="map-card"><RouteMap route={workoutData.route}/></Card>{/if}{#if workoutData.heartRate.length}<Card title="Heart rate"><HrChart samples={workoutData.heartRate} floors={workoutData.zoneFloors}/></Card>{/if}
+ {#if workoutData.summary.zoneSeconds.length}<Card title="Time in zones">{@const maxZone=Math.max(...workoutData.summary.zoneSeconds,1)}{@const total=workoutData.summary.zoneSeconds.reduce((a,b)=>a+b,0)}{#each [...workoutData.summary.zoneSeconds].reverse() as seconds,i}<div class="zone-row"><b>Z{5-i}</b><div class="bar"><i style:width={seconds/maxZone*100+'%'} style:background={colors.z[4-i]}></i></div><span class="n">{elapsed(seconds)}</span><small>{Math.round(seconds/Math.max(total,1)*100)}%</small></div>{/each}</Card>{/if}
+ {#if workoutData.splits.length}<Card title="Splits">{#snippet aside()}<span class="pill ok">Fastest km {workoutData.splits.reduce((a,b)=>a.seconds<b.seconds?a:b).index}</span>{/snippet}{@const slow=Math.max(...workoutData.splits.map(s=>s.seconds))}{@const fast=Math.min(...workoutData.splits.map(s=>s.seconds))}{#each workoutData.splits as s}<div class="split-row"><span>{s.index}</span><div class="bar"><i style:width={(slow-s.seconds+15)/(slow-fast+15)*92+'%'} style:background={s.seconds===fast?colors.mint:'rgba(255,138,61,.6)'}></i></div><b class="n">{pace(s.seconds).replace('/km','')}</b></div>{/each}</Card>{/if}
+{:else if healthData}
+ <Header title="Health" eyebrow={status?.lastSync?'Updated '+clock(status.lastSync):'Your trends'} onSettings={()=>navigate('settings')}/><Card title="Fitness Age">{#snippet aside()}{#if healthData.fitnessAge.change12m!=null}<span class="pill ok"><Icon name={healthData.fitnessAge.change12m<0?'trend-down':'trend-up'} size={13}/>{Math.abs(healthData.fitnessAge.change12m)} this year</span>{/if}{/snippet}<div class="age-hero"><div><div class="age-number n">{num(healthData.fitnessAge.fitnessAge)}</div>{#if healthData.fitnessAge.fitnessAge!=null && healthData.fitnessAge.chronologicalAge!=null}<div class="age-caption"><b>{num(healthData.fitnessAge.chronologicalAge-healthData.fitnessAge.fitnessAge)} years younger</b> than your age</div>{/if}</div><Sparkline values={healthData.fitnessAge.trend} w={120} h={70}/></div>{#if healthData.fitnessAge.fitnessAge!=null && healthData.fitnessAge.chronologicalAge!=null}<div class="agebar"><div class="age-mark fit" style:left={Math.max(0,Math.min(100,(healthData.fitnessAge.fitnessAge-20)/50*100))+'%'}><span>YOU {num(healthData.fitnessAge.fitnessAge)}</span></div><div class="age-mark real" style:left={Math.max(0,Math.min(100,(healthData.fitnessAge.chronologicalAge-20)/50*100))+'%'}><span>AGE {num(healthData.fitnessAge.chronologicalAge)}</span></div></div>{/if}</Card>
+ {#if healthData.lever}<Card title="Biggest lever"><div class="lever"><Gauge size={76} stroke={8} value={healthData.lever.current} max={healthData.lever.target} display={Math.round(healthData.lever.current/healthData.lever.target*100)+'%'} color={colors.amber} second={colors.flame}/><div><b>{healthData.lever.name}</b><span>{num(healthData.lever.current)} / {num(healthData.lever.target)} {healthData.lever.unit}</span>{#if healthData.lever.ageIfMet!=null}<span class="pill ok">Hit {healthData.lever.target} <Icon name="arrow-right" size={13}/> age {healthData.lever.ageIfMet}</span>{/if}</div></div></Card>{/if}
+ {#if healthData.drivers.length}<Card title="What sets it"><div class="drivers">{#each healthData.drivers as d}<div class="driver"><span>{d.name} <i style:color={toneColor(d.tone)}><Icon name={d.met?'check':'trend-up'} size={16}/></i></span><b class="n">{num(d.value,d.key==='bmi'?1:0)}<small>{d.unit}</small></b><RangeBar value={d.value} scale={[0,Math.max(d.target??0,(d.value??0)*1.5,1)]} range={d.target!=null?[d.target,Math.max(d.target,(d.value??0)*1.5)]:null} color={toneColor(d.tone)}/></div>{/each}</div></Card>{/if}
+ {#if healthData.vitals.readings.length}<Card title="Vitals · last night">{#snippet aside()}<span class="pill" class:ok={healthData.vitals.offCount===0}>{#if healthData.vitals.baselineReady && healthData.vitals.offCount===0}<Icon name="check" size={13}/>{/if}{healthData.vitals.baselineReady?(healthData.vitals.offCount?'Check vitals':'All normal'):'Building baseline'}</span>{/snippet}{#if healthData.vitals.offCount>=2}<p class="warning">Possible illness or strain. Take it easy.</p>{/if}{#each healthData.vitals.readings as v}<div class="vital-row"><span class="vital-icon" style:color={toneColor(v.tone)}><Icon name={v.kind==='restingHr'?'heart':v.kind==='hrv'?'hrv':v.kind==='respiration'?'lungs':v.kind==='spo2'?'drop':'temp'} size={16}/></span><div><div class="vital-label"><span>{vitalNames[v.kind]}</span><b class="n">{num(v.value,v.kind==='respiration'||v.kind==='skinTemp'?1:0)}<small>{v.unit}</small></b></div><RangeBar value={v.value} scale={v.scale} range={v.normal} color={toneColor(v.tone)}/></div><Sparkline values={v.trend} w={70} h={28} color={toneColor(v.tone)} band={v.normal} min={v.scale[0]} max={v.scale[1]} fill={false}/></div>{/each}</Card>{/if}
+{:else if checkinData}
+ <Header title="Weekly check-in" eyebrow={'Week of '+dateLabel(checkinData.weekStart)} back={back} backLabel="Today"/><div class="checkin-progress">{#each [...checkinData.cards, null] as _,i}<span class:on={i===checkinIndex}></span>{/each}</div><div class="checkin-swiper" role="group" aria-label="Weekly check-in cards" ontouchstart={(e)=>swipeX=e.touches[0].clientX} ontouchend={(e)=>{let dx=e.changedTouches[0].clientX-swipeX;if(Math.abs(dx)>50)checkinIndex=Math.max(0,Math.min(checkinData.cards.length,checkinIndex+(dx<0?1:-1)))}}>{#if checkinIndex<checkinData.cards.length}{@const c=checkinData.cards[checkinIndex]}<Card title={c.area}><div class="checkin-content"><div class="eyebrow">YOUR WEEK IN {c.area.toUpperCase()}</div>{#if c.value!=null}<Gauge size={210} stroke={15} value={c.value} max={c.area==='training'?1000:c.area==='health'?50:100} color={c.area==='sleep'?colors.violet:c.area==='training'?colors.flame:colors.mint} caption={c.unit}/>{/if}<h2>{c.headline}</h2><span class="pill" class:ok={c.previous!=null && c.value!=null && (c.area==='health'?c.value<=c.previous:c.value>=c.previous)}>{#if c.previous!=null && c.value!=null}<Icon name={c.value<c.previous?'trend-down':'trend-up'} size={14}/>{signed(c.value-c.previous)} vs last week{:else}First week{/if}</span><Sparkline values={c.series} w={240} h={60} color={c.area==='sleep'?colors.violet:c.area==='training'?colors.flame:colors.mint}/></div></Card>{:else}<Card title="Your week ahead"><div class="checkin-summary"><div class="brand-mark"><Icon name="sparkle" size={70}/></div><h2>Keep the momentum</h2>{#if checkinData.vo2maxChange!=null}<span class="pill ok">VO₂ max {signed(checkinData.vo2maxChange)}</span>{/if}{#if checkinData.fitnessAgeChange!=null}<span class="pill ok">Fitness Age {signed(checkinData.fitnessAgeChange)}</span>{/if}{#if checkinData.win}<h3>THE WIN</h3><p>{checkinData.win}</p>{/if}{#if checkinData.focus}<h3>THE FOCUS</h3><p>{checkinData.focus}</p>{/if}</div></Card>{/if}</div><div class="checkin-controls"><button disabled={checkinIndex===0} onclick={()=>checkinIndex--}><Icon name="arrow-left" size={16}/> Previous</button><span>{checkinIndex+1} / {checkinData.cards.length+1}</span><button disabled={checkinIndex===checkinData.cards.length} onclick={()=>checkinIndex++}>Next <Icon name="arrow-right" size={16}/></button></div>
+{/if}
+</main>{#if tabs.includes(route)||route.startsWith('workout/')||route==='readiness'||route==='checkin'||route==='settings'}<TabBar active={route.startsWith('workout/')?'training':route==='readiness'||route==='checkin'?'today':tabs.includes(route)?route:previousTab} {navigate}/>{/if}</div>

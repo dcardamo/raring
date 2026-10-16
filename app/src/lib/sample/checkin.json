@@ -1,0 +1,77 @@
+{
+  "weekStart": "2025-10-13",
+  "cards": [
+    {
+      "area": "readiness",
+      "headline": "More ready to move",
+      "value": 82,
+      "unit": "pts",
+      "previous": 76,
+      "tone": "good",
+      "series": [
+        70,
+        74,
+        82,
+        78,
+        80,
+        84,
+        82
+      ]
+    },
+    {
+      "area": "sleep",
+      "headline": "Sleep is settling",
+      "value": 84,
+      "unit": "pts",
+      "previous": 79,
+      "tone": "good",
+      "series": [
+        76,
+        81,
+        82,
+        79,
+        84,
+        83,
+        84
+      ]
+    },
+    {
+      "area": "training",
+      "headline": "A strong week",
+      "value": 612,
+      "unit": "load",
+      "previous": 520,
+      "tone": "good",
+      "series": [
+        0,
+        142,
+        210,
+        0,
+        95,
+        320,
+        186
+      ]
+    },
+    {
+      "area": "health",
+      "headline": "Younger every year",
+      "value": 39,
+      "unit": "years",
+      "previous": 40,
+      "tone": "good",
+      "series": [
+        40,
+        40,
+        40,
+        40,
+        39,
+        39,
+        39
+      ]
+    }
+  ],
+  "vo2maxChange": 1,
+  "fitnessAgeChange": -1,
+  "win": "You made room for recovery and still built your load.",
+  "focus": "Add one hard interval session to fill your anaerobic gap."
+}

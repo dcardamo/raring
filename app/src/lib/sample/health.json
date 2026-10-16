@@ -1,0 +1,193 @@
+{
+  "fitnessAge": {
+    "fitnessAge": 39,
+    "chronologicalAge": 46,
+    "trend": [
+      42,
+      41.6,
+      41.4,
+      41,
+      40.6,
+      40.4,
+      40,
+      39.8,
+      39.5,
+      39.3,
+      39.1,
+      39
+    ],
+    "change12m": -3
+  },
+  "lever": {
+    "key": "vigorousMinutes",
+    "name": "Vigorous minutes",
+    "current": 112,
+    "target": 150,
+    "unit": "min/wk",
+    "ageIfMet": 38
+  },
+  "drivers": [
+    {
+      "key": "vo2max",
+      "name": "VO₂ max",
+      "value": 52,
+      "unit": "",
+      "target": 55,
+      "met": true,
+      "tone": "good"
+    },
+    {
+      "key": "restingHr",
+      "name": "Resting HR",
+      "value": 46,
+      "unit": "bpm",
+      "target": 54,
+      "met": true,
+      "tone": "good"
+    },
+    {
+      "key": "bmi",
+      "name": "BMI",
+      "value": 23.8,
+      "unit": "",
+      "target": 25,
+      "met": true,
+      "tone": "good"
+    },
+    {
+      "key": "vigorousMinutes",
+      "name": "Vigorous",
+      "value": 112,
+      "unit": "min/wk",
+      "target": 150,
+      "met": false,
+      "tone": "fair"
+    }
+  ],
+  "vitals": {
+    "readings": [
+      {
+        "kind": "restingHr",
+        "value": 46,
+        "unit": "bpm",
+        "scale": [
+          40,
+          54
+        ],
+        "normal": [
+          44,
+          49
+        ],
+        "trend": [
+          47,
+          46,
+          47,
+          45,
+          46,
+          46,
+          47,
+          46
+        ],
+        "tone": "good"
+      },
+      {
+        "kind": "hrv",
+        "value": 58,
+        "unit": "ms",
+        "scale": [
+          38,
+          72
+        ],
+        "normal": [
+          48,
+          62
+        ],
+        "trend": [
+          52,
+          55,
+          54,
+          57,
+          56,
+          55,
+          57,
+          58
+        ],
+        "tone": "good"
+      },
+      {
+        "kind": "respiration",
+        "value": 14.1,
+        "unit": "brpm",
+        "scale": [
+          12,
+          16.5
+        ],
+        "normal": [
+          13.2,
+          15
+        ],
+        "trend": [
+          14.2,
+          14,
+          14.3,
+          14.1,
+          14,
+          14.2,
+          14.1,
+          14.1
+        ],
+        "tone": "good"
+      },
+      {
+        "kind": "spo2",
+        "value": 96,
+        "unit": "%",
+        "scale": [
+          90,
+          100
+        ],
+        "normal": [
+          94,
+          98
+        ],
+        "trend": [
+          96,
+          95,
+          96,
+          97,
+          96,
+          96,
+          95,
+          96
+        ],
+        "tone": "good"
+      },
+      {
+        "kind": "skinTemp",
+        "value": 0.1,
+        "unit": "°C",
+        "scale": [
+          -1,
+          1
+        ],
+        "normal": [
+          -0.4,
+          0.4
+        ],
+        "trend": [
+          0,
+          -0.1,
+          0.1,
+          0.2,
+          0,
+          -0.1,
+          0,
+          0.1
+        ],
+        "tone": "good"
+      }
+    ],
+    "offCount": 0,
+    "baselineReady": true
+  }
+}
