@@ -90,8 +90,11 @@ jobs:
             --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEYSTORE_PASSWORD \
             --out "$apk" "$RUNNER_TEMP/aligned.apk"
           rm -f "$keystore"
-          cert=$("$tools/apksigner" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
-          if [ "$cert" != "$RELEASE_CERT_SHA256" ]; then
+          "$tools/apksigner" --version
+          certs=$("$tools/apksigner" verify --print-certs "$apk" |
+            grep -oE 'certificate SHA-256 digest: [0-9a-f]+' | awk '{print $4}' | sort -u)
+          echo "Signing certificate: $certs"
+          if [ "$certs" != "$RELEASE_CERT_SHA256" ]; then
             echo "::error::APK is not signed with the release key"
             exit 1
           fi
