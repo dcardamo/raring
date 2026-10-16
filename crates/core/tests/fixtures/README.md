@@ -1,0 +1,1 @@
+All fixtures in this directory are synthetic. They contain no Garmin account identifiers, health data, credentials, names, or coordinates from any real person. Field keys confirmed in python-garminconnect's typed.py and routes in __init__.py; guessed fields require a future manually reviewed, scrubbed capture.

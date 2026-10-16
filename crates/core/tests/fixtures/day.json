@@ -1,0 +1,11 @@
+{
+  "profile": {"displayName":"Sample User"},
+  "summary": {"restingHeartRate":52},
+  "readiness": [{"inputContext":"AFTER_WAKEUP_RESET","score":82,"level":"HIGH","sleepScoreFactorPercent":85,"recoveryTimeFactorPercent":90,"hrvFactorPercent":73,"acwrFactorPercent":65,"stressHistoryFactorPercent":77}],
+  "sleep": {"dailySleepDTO":{"sleepTimeSeconds":28200,"sleepStartTimestampLocal":"2025-01-01T23:15:00","sleepEndTimestampLocal":"2025-01-02T07:25:00","sleepScores":{"overall":{"value":84}},"deepSleepSeconds":5100,"remSleepSeconds":6000,"lightSleepSeconds":17100,"awakeSleepSeconds":1200,"sleepNeed":{"totalSleepNeedInSeconds":27120}}},
+  "hrv": {"hrvSummary":{"lastNightAvg":58,"status":"BALANCED","baseline":{"balancedLow":48,"balancedUpper":67}}},
+  "training": {"trainingStatus":"PRODUCTIVE","acuteTrainingLoad":612,"optimalRangeMin":420,"optimalRangeMax":760},
+  "fitness_age": {"fitnessAge":39,"chronologicalAge":42},
+  "activity": {"activityId":123456,"activityName":"Morning Run","activityType":{"typeKey":"running"},"startTimeLocal":"2025-01-02T06:45:00","distance":10200,"duration":3134,"activityTrainingLoad":186,"aerobicTrainingEffect":3.8,"aerobicTrainingEffectMessage":"IMPROVING","trainingEffectLabel":"TEMPO"},
+  "zones": [{"zoneNumber":1,"secsInZone":120},{"zoneNumber":2,"secsInZone":530},{"zoneNumber":3,"secsInZone":1150},{"zoneNumber":4,"secsInZone":940},{"zoneNumber":5,"secsInZone":394}]
+}
