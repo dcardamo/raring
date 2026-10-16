@@ -96,7 +96,7 @@ fn native(req: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
 }
 fn http_error(r: &reqwest::Response) -> Error {
     match r.status() {
-        StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => Error::NeedsSignIn,
+        StatusCode::UNAUTHORIZED => Error::NeedsSignIn,
         StatusCode::NOT_FOUND => Error::NotFound,
         StatusCode::TOO_MANY_REQUESTS => Error::RateLimited {
             retry_after: r
@@ -214,7 +214,11 @@ pub async fn refresh_at(http: &reqwest::Client, url: &str, old: &Tokens) -> Resu
             ("refresh_token", &old.refresh_token),
         ],
     )
-    .await?;
+    .await
+    .map_err(|e| match e {
+        Error::Http(400) | Error::NeedsSignIn => Error::NeedsSignIn,
+        other => other,
+    })?;
     token_from(v, Some(old), &old.client_id)
 }
 
@@ -288,6 +292,9 @@ impl Client {
             }
             if !r.status().is_success() {
                 return Err(http_error(&r));
+            }
+            if r.status() == StatusCode::NO_CONTENT {
+                return Err(Error::NotFound);
             }
             return r.json().await.map_err(|_| Error::Decode);
         }

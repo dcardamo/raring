@@ -56,7 +56,7 @@ fn demo_seeds_current_day_and_screen_details() {
     assert_eq!(today.body_battery.now, Some(78.));
     assert_eq!(
         today.call_note.as_deref(),
-        Some("Morning Run done · 186 load")
+        Some("Load is your biggest drag today.")
     );
     assert_eq!(today.fitness_age.chronological_age, Some(46.));
     assert_eq!(today.vitals.readings.len(), 5);
@@ -260,6 +260,70 @@ fn metric_change_notifications_obey_shared_setting() {
         .any(|n| n.kind == "vo2max" || n.kind == "fitness-age"));
 }
 #[test]
+fn metric_notifications_compare_rounded_values_past_missing_days() {
+    let s = Store::open(":memory:").unwrap();
+    let when = chrono::NaiveDate::from_ymd_opt(2025, 1, 3)
+        .unwrap()
+        .and_hms_opt(9, 0, 0)
+        .unwrap()
+        .and_local_timezone(Local)
+        .single()
+        .unwrap();
+    s.put(
+        "fitness_age",
+        "2025-01-01",
+        "now",
+        &json!({"fitnessAge":39.49}),
+    )
+    .unwrap();
+    s.put("fitness_age", "2025-01-02", "now", &Value::Null)
+        .unwrap();
+    s.put(
+        "fitness_age",
+        "2025-01-03",
+        "now",
+        &json!({"fitnessAge":39.40}),
+    )
+    .unwrap();
+    s.put(
+        "max_metrics",
+        "2025-01-01",
+        "now",
+        &json!([{"generic":{"vo2MaxValue":50.49}}]),
+    )
+    .unwrap();
+    s.put(
+        "max_metrics",
+        "2025-01-03",
+        "now",
+        &json!([{"generic":{"vo2MaxValue":50.40}}]),
+    )
+    .unwrap();
+    assert!(!notifications::notifications(&s, when)
+        .iter()
+        .any(|n| n.kind == "fitness-age" || n.kind == "vo2max"));
+    s.put(
+        "fitness_age",
+        "2025-01-03",
+        "now",
+        &json!({"fitnessAge":40.10}),
+    )
+    .unwrap();
+    s.put(
+        "max_metrics",
+        "2025-01-03",
+        "now",
+        &json!([{"generic":{"vo2MaxValue":51.10}}]),
+    )
+    .unwrap();
+    assert!(notifications::notifications(&s, when)
+        .iter()
+        .any(|n| n.kind == "fitness-age"));
+    assert!(notifications::notifications(&s, when)
+        .iter()
+        .any(|n| n.kind == "vo2max"));
+}
+#[test]
 fn privacy_guards() {
     let folder = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
     let files = std::fs::read_dir(folder).unwrap();
@@ -383,6 +447,165 @@ fn mock(
         }
     });
     (url, seen, thread)
+}
+#[tokio::test]
+async fn no_content_is_cached_and_bad_item_does_not_stop_readiness() {
+    let store = Store::open(":memory:").unwrap();
+    store
+        .put(
+            "profile",
+            "me",
+            "now",
+            &json!({"displayName":"Sample User"}),
+        )
+        .unwrap();
+    let (url, seen, thread) = mock(vec![
+        (204, "".into()),
+        (500, "{}".into()),
+        (200, "{}".into()),
+        (200, "[{\"score\":80}]".into()),
+    ]);
+    let c = Client::with_urls(
+        Tokens {
+            access_token: token(1900000000),
+            refresh_token: "refresh".into(),
+            client_id: "TEST_DI".into(),
+            expires_at: Utc::now() + Duration::days(30),
+        },
+        &url,
+        &url,
+        std::time::Duration::ZERO,
+    )
+    .unwrap();
+    let report = pepometer_core::sync::sync(&store, &c, Local::now(), 4).await;
+    thread.join().unwrap();
+    assert_eq!(report.requests, 4);
+    assert_eq!(report.data_failures, 1);
+    assert!(report.error.is_none());
+    assert!(!report.auth_failed);
+    assert!(store
+        .get("summary", &Local::now().date_naive().to_string())
+        .unwrap()
+        .is_null());
+    assert!(report.readiness_present);
+    assert!(seen
+        .lock()
+        .unwrap()
+        .iter()
+        .any(|r| r.contains("trainingreadiness")));
+}
+#[tokio::test]
+async fn backfill_scans_existing_days_to_fill_older_gaps() {
+    let s = Store::open(":memory:").unwrap();
+    let now = chrono::NaiveDate::from_ymd_opt(2025, 1, 10)
+        .unwrap()
+        .and_hms_opt(12, 0, 0)
+        .unwrap()
+        .and_local_timezone(Local)
+        .single()
+        .unwrap();
+    s.put(
+        "profile",
+        "me",
+        "now",
+        &json!({"displayName":"Sample User"}),
+    )
+    .unwrap();
+    for day in ["2025-01-10", "2025-01-08"] {
+        for kind in [
+            "summary",
+            "sleep",
+            "hrv",
+            "readiness",
+            "training",
+            "training_daily",
+            "load_focus",
+            "battery",
+            "spo2",
+            "respiration",
+            "stress",
+            "max_metrics",
+        ] {
+            s.put(kind, day, "now", &Value::Null).unwrap();
+        }
+    }
+    for kind in ["fitness_age", "races", "endurance", "hill", "tolerance"] {
+        s.put(kind, "2025-01-10", "now", &Value::Null).unwrap();
+    }
+    s.put("records", "all", "now", &Value::Null).unwrap();
+    s.set_cursor("records_checked", &Utc::now().timestamp().to_string())
+        .unwrap();
+    let mut replies = vec![(200, "{}".into()); 12];
+    replies.extend([(200, "[]".into()), (200, "{}".into())]);
+    let (url, seen, thread) = mock(replies);
+    let c = Client::with_urls(
+        Tokens {
+            access_token: token(1900000000),
+            refresh_token: "refresh".into(),
+            client_id: "TEST_DI".into(),
+            expires_at: Utc::now() + Duration::days(30),
+        },
+        &url,
+        &url,
+        std::time::Duration::ZERO,
+    )
+    .unwrap();
+    let report = pepometer_core::sync::sync(&s, &c, now, 14).await;
+    thread.join().unwrap();
+    assert_eq!(report.requests, 14);
+    assert!(s.get("summary", "2025-01-07").is_some());
+    assert!(seen.lock().unwrap()[13].contains("2025-01-07"));
+}
+#[tokio::test]
+async fn forbidden_is_not_signout_and_rejected_refresh_is() {
+    let t = Tokens {
+        access_token: token(1900000000),
+        refresh_token: "refresh".into(),
+        client_id: "TEST_DI".into(),
+        expires_at: Utc::now() + Duration::days(30),
+    };
+    let (url, _, thread) = mock(vec![(403, "{}".into())]);
+    let c = Client::with_urls(t.clone(), &url, &url, std::time::Duration::ZERO).unwrap();
+    assert!(matches!(
+        c.get("/data", &[]).await,
+        Err(garmin::Error::Http(403))
+    ));
+    thread.join().unwrap();
+    let (url, _, thread) = mock(vec![(400, "{\"error\":\"invalid_grant\"}".into())]);
+    assert!(matches!(
+        garmin::refresh_at(&reqwest::Client::new(), &url, &t).await,
+        Err(garmin::Error::NeedsSignIn)
+    ));
+    thread.join().unwrap();
+}
+#[test]
+fn nested_training_and_midnight_spread() {
+    let s = Store::open(":memory:").unwrap();
+    s.put("training", "2025-01-02", "now", &json!({"mostRecentTrainingStatus":{"latestTrainingStatusData":{"deviceA":{"trainingStatus":"PRODUCTIVE","acuteChronicWorkloadRatio":1.4,"acuteTrainingLoadDTO":{"dailyTrainingLoadAcute":630,"minOptimalLoad":400,"maxOptimalLoad":700}}}}})).unwrap();
+    s.put("load_focus", "2025-01-02", "now", &json!({"mostRecentTrainingLoadBalance":{"metricsTrainingLoadBalanceDTOMap":{"deviceA":{"lowAerobic":{"value":300,"optimalMin":250,"optimalMax":400}}}}})).unwrap();
+    let training = pepometer_core::screens::training(&s, "2025-01-02");
+    assert_eq!(training.acute.unwrap().value, 630.);
+    assert_eq!(training.status.as_deref(), Some("Productive"));
+    assert_eq!(training.load_focus.len(), 1);
+    assert_eq!(
+        pepometer_core::screens::today(&s, "2025-01-02")
+            .load
+            .unwrap()
+            .band,
+        Some([400., 700.])
+    );
+    for i in 0..14 {
+        let day =
+            (chrono::NaiveDate::from_ymd_opt(2025, 1, 2).unwrap() - Duration::days(i)).to_string();
+        let start = format!("{day}T{}", if i % 2 == 0 { "00:20:00" } else { "23:40:00" });
+        s.put("sleep", &day, "now", &json!({"dailySleepDTO":{"sleepStartTimestampLocal":start,"sleepEndTimestampLocal":format!("{day}T08:00:00")}})).unwrap();
+    }
+    assert!(
+        pepometer_core::screens::sleep_view(&s, "2025-01-02")
+            .consistency_spread_min
+            .unwrap()
+            < 60.
+    );
 }
 #[tokio::test]
 async fn endpoint_paths_and_query_match_reference() {

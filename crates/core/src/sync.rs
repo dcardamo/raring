@@ -2,7 +2,7 @@ use crate::{
     garmin::{self, Client, Tokens},
     store::Store,
 };
-use chrono::{DateTime, Duration, Local, NaiveDate, Utc};
+use chrono::{DateTime, Duration, Local, NaiveDate, Timelike, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -10,6 +10,7 @@ pub struct SyncReport {
     pub requests: usize,
     pub stored: usize,
     pub activities: usize,
+    pub data_failures: usize,
     pub sleep_present: bool,
     pub readiness_present: bool,
     pub rate_limited: bool,
@@ -92,7 +93,11 @@ pub async fn sync(
         return report;
     }
     let name = name.unwrap_or_default();
-    for i in 0..2 {
+    for i in 0..(if (4..=10).contains(&now_local.hour()) {
+        2
+    } else {
+        1
+    }) {
         let key = date(today - Duration::days(i));
         for kind in DAILY {
             if !fetch(
@@ -121,7 +126,12 @@ pub async fn sync(
             } else {
                 date(today)
             };
-            if store.get(kind, &key).is_none()
+            if (store.get(kind, &key).is_none()
+                || (*kind == "records"
+                    && store
+                        .cursor("records_checked")
+                        .and_then(|s| s.parse::<i64>().ok())
+                        .is_none_or(|t| now.timestamp() - t > 7 * 86400)))
                 && !fetch(
                     store,
                     client,
@@ -214,10 +224,7 @@ pub async fn sync(
         }
     }
     if !report.rate_limited && report.error.is_none() && report.requests < budget {
-        let mut day = store
-            .cursor("backfill_day")
-            .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok())
-            .unwrap_or(today - Duration::days(2));
+        let mut day = today - Duration::days(2);
         while day >= today - Duration::days(89) && report.requests < budget {
             let key = date(day);
             for kind in DAILY {
@@ -241,7 +248,6 @@ pub async fn sync(
                 break;
             }
             day -= Duration::days(1);
-            let _ = store.set_cursor("backfill_day", &date(day));
         }
     }
     let key = date(today);
@@ -253,7 +259,9 @@ pub async fn sync(
         .is_some_and(|v| v.as_array().is_some_and(|a| !a.is_empty()) || v.is_object());
     if report.error.is_none() && !report.rate_limited {
         let _ = store.set_cursor("last_sync", &now_local.to_rfc3339());
-        let _ = store.set_cursor("last_error", "");
+        if report.data_failures == 0 {
+            let _ = store.set_cursor("last_error", "");
+        }
     }
     report.tokens = Some(client.tokens().await);
     report
@@ -272,6 +280,14 @@ async fn fetch(
     if report.requests >= budget || report.rate_limited || report.error.is_some() {
         return false;
     }
+    let retry_key = format!("retry:{kind}:{key}");
+    if store
+        .cursor(&retry_key)
+        .and_then(|s| s.parse::<i64>().ok())
+        .is_some_and(|t| t > now.timestamp())
+    {
+        return true;
+    }
     report.requests += 1;
     match client.endpoint(kind, key, name).await {
         Ok(v) => {
@@ -280,11 +296,21 @@ async fn fetch(
                 return false;
             }
             report.stored += 1;
+            if kind == "records" {
+                let _ = store.set_cursor("records_checked", &now.timestamp().to_string());
+            }
+            let _ = store.set_cursor(&retry_key, "0");
             true
         }
         Err(garmin::Error::NotFound) => {
             // Cache absence so optional device metrics do not consume backfill budget forever.
             let _ = store.put(kind, key, &now.to_rfc3339(), &serde_json::Value::Null);
+            true
+        }
+        Err(e @ (garmin::Error::Decode | garmin::Error::Http(_))) => {
+            report.data_failures += 1;
+            let _ = store.set_cursor(&retry_key, &(now.timestamp() + 3600).to_string());
+            let _ = store.set_cursor("last_error", &format!("{kind}: {e}"));
             true
         }
         Err(e) => {

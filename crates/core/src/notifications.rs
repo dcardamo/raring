@@ -63,11 +63,11 @@ pub fn notifications(store: &Store, now: DateTime<Local>) -> Vec<Notification> {
     }
     if let Some(v) = view.fitness_age.fitness_age {
         if let Some(previous) = store
-            .history("fitness_age", &day, 2)
-            .get(1)
-            .and_then(|(_, v)| v["fitnessAge"].as_f64())
+            .history("fitness_age", &day, 90)
+            .into_iter()
+            .find_map(|(d, v)| (d != day).then(|| v["fitnessAge"].as_f64()).flatten())
         {
-            if (v - previous).abs() > 0.001 {
+            if v.round() != previous.round() {
                 add(
                     "fitness-age",
                     "Fitness Age changed",
@@ -82,11 +82,11 @@ pub fn notifications(store: &Store, now: DateTime<Local>) -> Vec<Notification> {
         .and_then(|v| screens::vo2(&v))
     {
         if let Some(previous) = store
-            .history("max_metrics", &day, 2)
-            .get(1)
-            .and_then(|(_, v)| screens::vo2(v))
+            .history("max_metrics", &day, 90)
+            .into_iter()
+            .find_map(|(d, v)| (d != day).then(|| screens::vo2(&v)).flatten())
         {
-            if (v - previous).abs() > 0.001 {
+            if v.round() != previous.round() {
                 add(
                     "vo2max",
                     "VO2max changed",
@@ -98,8 +98,8 @@ pub fn notifications(store: &Store, now: DateTime<Local>) -> Vec<Notification> {
     }
     let statuses = store.history("training", &day, 2);
     if statuses.len() == 2 {
-        let current = statuses[0].1["trainingStatus"].as_str();
-        let before = statuses[1].1["trainingStatus"].as_str();
+        let current = screens::status(&statuses[0].1);
+        let before = screens::status(&statuses[1].1);
         if current.is_some() && current != before {
             add(
                 "training-status",

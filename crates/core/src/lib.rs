@@ -38,6 +38,13 @@ impl Pepometer {
             store: Arc::new(store::Store::open(db_path)?),
         })
     }
+    pub async fn refresh_tokens(tokens: &Tokens) -> Result<Tokens> {
+        let http = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(20))
+            .build()
+            .map_err(|_| garmin::Error::Network)?;
+        Ok(garmin::refresh(&http, tokens).await?)
+    }
     pub async fn sign_in_with_ticket(ticket: &str) -> Result<Tokens> {
         let http = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(30))

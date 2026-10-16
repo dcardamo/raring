@@ -115,30 +115,69 @@ fn label(v: Option<String>) -> String {
         .collect::<Vec<_>>()
         .join(" ")
 }
-fn status(v: &Value) -> Option<String> {
+fn device(v: &Value) -> &Value {
+    v.as_object()
+        .and_then(|map| map.values().find(|value| value.is_object()))
+        .unwrap_or(&Value::Null)
+}
+fn training_device(v: &Value) -> &Value {
+    device(&v["mostRecentTrainingStatus"]["latestTrainingStatusData"])
+}
+fn load_device(v: &Value) -> &Value {
+    device(&v["mostRecentTrainingLoadBalance"]["metricsTrainingLoadBalanceDTOMap"])
+}
+fn ratio(v: &Value) -> Option<f64> {
+    num(v, &[&["acuteChronicWorkloadRatio"], &["acwrPercent"]]).or_else(|| {
+        num(
+            training_device(v),
+            &[
+                &["acuteChronicWorkloadRatio"],
+                &["acuteTrainingLoadDTO", "acuteChronicWorkloadRatio"],
+            ],
+        )
+    })
+}
+pub(crate) fn status(v: &Value) -> Option<String> {
     string(
-        v,
-        &[
-            &["trainingStatus"],
-            &["trainingStatusFeedbackPhrase"],
-            &["trainingStatusData", "trainingStatus"],
-            &["latestTrainingStatusData", "trainingStatus"],
-        ],
+        training_device(v),
+        &[&["trainingStatus"], &["trainingStatusFeedbackPhrase"]],
     )
+    .or_else(|| {
+        string(
+            v,
+            &[
+                &["trainingStatus"],
+                &["trainingStatusFeedbackPhrase"],
+                &["trainingStatusData", "trainingStatus"],
+                &["latestTrainingStatusData", "trainingStatus"],
+            ],
+        )
+    })
 }
 fn acute(v: &Value) -> Option<f64> {
     num(
-        v,
+        training_device(v),
         &[
+            &["acuteTrainingLoadDTO", "dailyTrainingLoadAcute"],
+            &["acuteTrainingLoadDTO", "acuteTrainingLoad"],
             &["acuteTrainingLoad"],
-            &["acuteLoad"],
-            &["trainingStatusData", "acuteTrainingLoad"],
-            &["latestTrainingStatusData", "acuteTrainingLoad"],
         ],
     )
+    .or_else(|| {
+        num(
+            v,
+            &[
+                &["acuteTrainingLoad"],
+                &["acuteLoad"],
+                &["trainingStatusData", "acuteTrainingLoad"],
+                &["latestTrainingStatusData", "acuteTrainingLoad"],
+            ],
+        )
+    })
 }
 fn band(v: &Value) -> Option<[f64; 2]> {
-    Some([
+    let nested = &training_device(v)["acuteTrainingLoadDTO"];
+    let low = num(nested, &[&["minOptimalLoad"], &["optimalRangeMin"]]).or_else(|| {
         num(
             v,
             &[
@@ -146,7 +185,9 @@ fn band(v: &Value) -> Option<[f64; 2]> {
                 &["minOptimalLoad"],
                 &["trainingStatusData", "optimalRangeMin"],
             ],
-        )?,
+        )
+    })?;
+    let high = num(nested, &[&["maxOptimalLoad"], &["optimalRangeMax"]]).or_else(|| {
         num(
             v,
             &[
@@ -154,8 +195,9 @@ fn band(v: &Value) -> Option<[f64; 2]> {
                 &["maxOptimalLoad"],
                 &["trainingStatusData", "optimalRangeMax"],
             ],
-        )?,
-    ])
+        )
+    })?;
+    Some([low, high])
 }
 fn factor_tone(feedback: Option<&str>, percent: Option<f64>) -> Tone {
     let feedback = feedback.unwrap_or("").to_ascii_uppercase();
@@ -360,13 +402,7 @@ pub fn today(store: &Store, date: &str) -> TodayView {
     let h = store.get("hrv", date).unwrap_or(Value::Null);
     let hs = hrv(&h);
     let rl = string(readiness(&r), &[&["level"], &["trainingReadinessLevel"]]);
-    let ratio = num(&t, &[&["acuteChronicWorkloadRatio"], &["acwrPercent"]]).map(|v| {
-        if v > 10. {
-            v / 100.
-        } else {
-            v
-        }
-    });
+    let ratio = ratio(&t).map(|v| if v > 10. { v / 100. } else { v });
     let call = rl.as_deref().map(|s| rules::effort(s, ratio));
     let factors = [
         (
@@ -424,6 +460,11 @@ pub fn today(store: &Store, date: &str) -> TodayView {
             .unwrap_or(100.)
             .total_cmp(&b.percent.unwrap_or(100.))
     });
+    let drag = factors
+        .iter()
+        .filter_map(|f| f.percent.map(|p| (f.name.as_str(), p)))
+        .collect::<Vec<_>>();
+    let biggest_drag = rules::biggest_drag(&drag).map(str::to_owned);
     let mut chips = vec![];
     if let Some(v) = num(sleep(&s), &[&["sleepTimeSeconds"]]) {
         chips.push(Chip {
@@ -512,27 +553,36 @@ pub fn today(store: &Store, date: &str) -> TodayView {
                 band(&t),
             )
         }),
-        headline: match call {
-            Some(Effort::Push) => "Ready to push",
-            Some(Effort::Steady) => "Room to build",
-            Some(Effort::Easy) | Some(Effort::Rest) => "Take it easy",
-            None => "Waiting for readiness",
-        }
-        .into(),
+        headline: string(readiness(&r), &[&["feedbackShort"]])
+            .filter(|s| !s.is_empty() && s.len() <= 48)
+            .unwrap_or_else(|| {
+                match call {
+                    Some(Effort::Push) => "Ready to push",
+                    Some(Effort::Steady) => "Room to build",
+                    Some(Effort::Easy) | Some(Effort::Rest) => "Take it easy",
+                    None => "Waiting for readiness",
+                }
+                .into()
+            }),
         chips,
         factors,
         call,
-        call_note: activities(store, date)
-            .first()
-            .filter(|a| a.start_local.starts_with(date))
-            .map(|a| {
-                format!(
-                    "{} done · {} load",
-                    a.name,
-                    a.load
-                        .map(|v| format!("{v:.0}"))
-                        .unwrap_or_else(|| "—".into())
-                )
+        call_note: string(readiness(&r), &[&["feedbackLong"]])
+            .filter(|s| !s.is_empty())
+            .or_else(|| biggest_drag.map(|d| format!("{d} is your biggest drag today.")))
+            .or_else(|| {
+                activities(store, date)
+                    .first()
+                    .filter(|a| a.start_local.starts_with(date))
+                    .map(|a| {
+                        format!(
+                            "{} done · {} load",
+                            a.name,
+                            a.load
+                                .map(|v| format!("{v:.0}"))
+                                .unwrap_or_else(|| "—".into())
+                        )
+                    })
             }),
         body_battery: BodyBatteryCard {
             now: num(b, &[&["bodyBatteryValue"], &["currentValue"]])
@@ -730,7 +780,10 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
         })
         .collect(),
         consistency_spread_min: rules::normal(
-            &windows.iter().map(|w| w.bed_hour * 60.).collect::<Vec<_>>(),
+            &windows
+                .iter()
+                .map(|w| (w.bed_hour + if w.bed_hour < 12. { 24. } else { 0. }) * 60.)
+                .collect::<Vec<_>>(),
         )
         .map(|r| (r[1] - r[0]) / 2.),
         bed_window: rules::normal(
@@ -781,7 +834,12 @@ pub fn training(store: &Store, date: &str) -> TrainingView {
     ]
     .iter()
     .filter_map(|(key, name)| {
-        let data = &focus[*key];
+        let nested = load_device(&focus);
+        let data = if nested[*key].is_object() {
+            &nested[*key]
+        } else {
+            &focus[*key]
+        };
         num(data, &[&["value"], &["load"]]).map(|value| {
             let target = match (num(data, &[&["optimalMin"]]), num(data, &[&["optimalMax"]])) {
                 (Some(a), Some(b)) => Some([a, b]),
@@ -854,7 +912,7 @@ pub fn training(store: &Store, date: &str) -> TrainingView {
                 .unwrap_or_else(|| "Training at a glance".into()),
         },
         chips: [
-            num(&v, &[&["acuteChronicWorkloadRatio"]]).map(|ratio| Chip {
+            ratio(&v).map(|ratio| Chip {
                 icon: Icon::Flame,
                 value: Some(format!("{ratio:.1}")),
                 text: Some("Load ratio".into()),
