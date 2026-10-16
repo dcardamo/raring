@@ -23,9 +23,19 @@ try{
   await page.evaluate(()=>document.fonts.ready);
   await page.screenshot({path:resolve(output,`${name}.png`)});
   console.log(`${name}: ${resolve(output,`${name}.png`)}`);
+  if(name==='workout' && !(await page.locator('.map > path').first().getAttribute('d')).includes('C'))throw new Error('Sparse route was not smoothed');
+  if(name==='settings' && await page.locator('input[type="checkbox"]').count()!==6)throw new Error('Expected six notification switches');
+  if(name==='today-missing' && await page.getByText("Today's call").count())throw new Error('Missing-data variant still shows a call');
+  if(name==='readiness'){
+   await page.getByText('Readiness · 30 days').waitFor();
+   await page.locator('.scroll').evaluate(el=>{el.scrollTop=el.scrollHeight});
+   await page.waitForFunction(()=>document.querySelector('.scroll').scrollTop>0);
+   await page.screenshot({path:resolve(output,'readiness-trend.png')});
+   console.log(`readiness-trend: ${resolve(output,'readiness-trend.png')}`);
+  }
   if(name==='checkin'){
    for(const area of ['sleep','training','health','summary']){
-    await page.getByRole('button',{name:'Next →'}).click();
+    await page.getByRole('button',{name:'Next'}).click();
     await page.screenshot({path:resolve(output,`checkin-${area}.png`)});
     console.log(`checkin-${area}: ${resolve(output,`checkin-${area}.png`)}`);
    }
@@ -37,6 +47,20 @@ try{
  await page.waitForURL('**/#readiness');
  await page.goBack();
  await page.waitForURL('**/#today');
+ await page.goto(`${url}/#workout/9000000000001`);
+ await page.locator('.tab.on').getByText('Training').waitFor();
+ await page.goto(`${url}/#readiness`);
+ await page.locator('.tab.on').getByText('Today').waitFor();
+ await page.goto(`${url}/#checkin`);
+ await page.locator('.tab.on').getByText('Today').waitFor();
+ await page.goto(`${url}/#sleep`);
+ await page.getByRole('button',{name:'Settings'}).click();
+ await page.waitForURL('**/#settings');
+ await page.locator('.tab.on').getByText('Sleep').waitFor();
+ await page.goto(`${url}/#training`);
+ await page.getByRole('button',{name:'Settings'}).click();
+ await page.waitForURL('**/#settings');
+ await page.locator('.tab.on').getByText('Training').waitFor();
  if(pageErrors.length)throw new Error(pageErrors.map(e=>e.message).join('; '));
  console.log('Hash navigation and browser back: passed');
 }finally{await browser?.close();await server.close()}
