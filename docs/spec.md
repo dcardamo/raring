@@ -1,94 +1,119 @@
 # Pepometer v1 spec
 
 Pepometer turns Garmin data into a Whoop-style daily answer: how am I doing,
-why, and what should I do today. It shows Garmin's own metrics, explains them
-in plain words, and nudges you to improve. No data dumps, no invented scores.
+why, and what should I do today, readable at a glance from dials, charts and
+color. It shows Garmin's own metrics and nudges you to improve. No data dumps,
+no invented scores.
 
 Android first. Web and iOS come after v1.
 
+The visual reference is [design/mockup](../design/mockup/): open
+`index.html` in a browser (narrow windows behave like the phone app), or see
+`screens.png`. It uses sample data.
+
 ## Principles
 
-- **Garmin's numbers, explained.** Every metric is Garmin's. Pepometer's own
-  math is limited to your normal ranges, week-over-week changes, and the
-  advice rules below.
-- **Answer first.** Every screen opens with one sentence: the state, the main
-  reason, and what to do. Numbers sit underneath; detail is one tap away.
+- **Visual first.** Graphics carry the meaning: dials, gauges, bars, charts
+  and color. Text is a headline of a few words, labels and numbers. Anything
+  longer sits behind a tap.
+- **Garmin's numbers.** Every metric is Garmin's. Pepometer's own math is
+  limited to your normal ranges, week-over-week changes, and the advice rules
+  below.
 - **Fast.** Opens instantly from local data and syncs in the background.
 - **Private.** Data stays on the phone. No accounts, analytics, or services
   other than Garmin.
 - **Its own identity.** Own name, palette, icons and copy. Garmin's metric
   names describe Garmin data. Nothing from WHOOP's brand or app.
 
+## Look
+
+- Dark ink background with a soft glow tinted by the screen's main state, for
+  example green when readiness is high.
+- One color per area: readiness mint to cyan (amber and coral at lower
+  levels), sleep violet, load and training orange. Heart-rate zones run gray,
+  blue, green, amber, red.
+- Gauges are arcs open at the bottom, with a soft halo. Load gauges mark
+  Garmin's optimal range as a band, with a dot for the current value.
+- Rounded cards, Outfit for numbers and headings, Inter for text.
+
 ## Screens
 
-Bottom tabs: **Today · Sleep · Training · Health**.
+Bottom tabs: **Today · Sleep · Training · Health**. Tapping a dial or card
+opens its detail.
 
 ### Today
 
-- Three dials: **Readiness** (Training Readiness, 0–100), **Sleep** (Sleep
-  Score, 0–100) and **Load** (7-day acute load on a gauge marked with Garmin's
-  optimal range).
-- A coaching line, for example: "Readiness 38, low. You slept 5h 50m of the
-  7h 40m you needed and HRV is below your range. Keep today easy and be asleep
-  by 22:15."
-- Cards: Body Battery now and its overnight charge, HRV status, vitals ("All
-  normal" or what is off), today's workouts, Fitness Age with its trend, and
-  the weekly check-in on Mondays.
+- Three gauges: **Readiness** (Training Readiness, 0–100) large in the
+  middle, **Sleep** (Sleep Score) on the left, **Load** (7-day acute load
+  against Garmin's optimal range) on the right.
+- A few-word headline ("Ready to push", "Take it easy") and three reason
+  chips: sleep time, HRV and load.
+- **What's driving it**: Garmin's six readiness factors as colored bars.
+- **Today's call**: Rest, Easy, Steady or Push, with the suggestion lit up.
+- Body Battery as a battery with its overnight charge; HRV with a 7-day line
+  over Garmin's baseline band.
+- Vitals as five rings that turn amber or red when a value is outside your
+  normal range.
+- Today's workouts with a heart-rate zone strip, and Fitness Age with its
+  trend line. The weekly check-in card appears here on Mondays.
 
 ### Readiness
 
-- Score and Garmin's level (Prime/High green, Moderate amber, Low/Poor red),
-  with Garmin's feedback rephrased in plain words.
-- Garmin's factors (last night's sleep, recovery time, HRV status, acute load,
-  sleep history, stress history), worst first. The biggest drag gets one line
-  on what it means.
-- 30-day trend and today's suggested effort.
+- Large gauge with Garmin's level (Prime/High green, Moderate amber, Low/Poor
+  red) and a few-word headline from Garmin's own feedback.
+- Factor bars worst first; tapping one explains it in a sentence.
+- 30-day trend chart and today's call.
 
 ### Sleep
 
-- Score and Garmin's rating; time asleep against Garmin's sleep need (when the
-  watch reports it); tonight's suggested bedtime.
-- Stage timeline, stage totals against your usual, and Garmin's sleep-score
-  factors.
-- Overnight HRV, respiration, SpO2 and resting heart rate.
-- 14-day bed and wake consistency.
+- Score gauge, and a time-asleep bar with a marker at Garmin's sleep need
+  (when the watch reports it).
+- Stage timeline (awake, REM, light, deep) and a stage bar with each stage's
+  change against your usual.
+- Overnight tiles with lines: HRV, heart rate, respiration, SpO2.
+- 14-night consistency chart with your bed and wake windows shaded.
+- Tonight's suggested bedtime.
 
 ### Training
 
-- Acute load gauge with Garmin's optimal band and load-ratio status.
-- Training status (Productive, Maintaining, Unproductive, …): what it means
-  and what to change.
-- Load focus (low aerobic, high aerobic, anaerobic) against Garmin's targets,
-  with any shortage called out.
-- VO2max trend, race predictions, endurance and hill scores, running
+- Large semicircle acute-load gauge with Garmin's optimal band, training
+  status chip (Productive, Maintaining, …), load ratio and recovery time.
+- Daily load bars for the week.
+- Load focus bars (low aerobic, high aerobic, anaerobic) against Garmin's
+  target ranges, with a shortage flag.
+- VO2max with its trend, race predictions, endurance and hill scores, running
   tolerance.
-- Workout list.
+- Workout list with zone strips and load.
 
 ### Workout
 
-- One line on what it did: Garmin's aerobic and anaerobic Training Effect,
-  primary benefit, training load and recovery time added.
-- Time in heart-rate zones, heart-rate chart, route map, laps and splits, and
-  pace, power, cadence and running dynamics when present.
+- Training load, aerobic and anaerobic Training Effect gauges, primary
+  benefit and recovery time.
+- Stats grid, route map, heart-rate chart colored by zone, time-in-zone bars,
+  and split bars with the fastest highlighted. Power, cadence and running
+  dynamics when present.
 
 ### Health
 
-- **Fitness Age** against your real age, with its trend and Garmin's drivers
-  (VO2max, resting heart rate, BMI or body fat, vigorous minutes). Each driver
-  shows your value and Garmin's target; the biggest lever comes first.
-- **Vitals**: last night's resting heart rate, HRV, respiration, SpO2 and
-  skin-temperature change, each on a bar showing your normal range. When two
-  or more are outside it, a banner says so: "Your body may be fighting
-  something or under strain. Take it easy today." 30-day charts.
+- **Fitness Age**: large number, trend line, and a bar placing it against your
+  real age.
+- **Biggest lever**: a progress ring toward Garmin's target for the driver
+  that would help most (for example vigorous minutes), with the age you'd
+  reach.
+- **Drivers**: VO2max, resting heart rate, BMI or body fat, and vigorous
+  minutes as tiles with range bars.
+- **Vitals**: resting heart rate, HRV, respiration, SpO2 and skin-temperature
+  change, each with a normal-range bar and a 30-day line. When two or more are
+  outside range, a banner turns amber: "Possible illness or strain. Take it
+  easy."
 
 ### Weekly check-in
 
-Generated Monday morning for the week just ended, compared with the week
-before: average readiness; sleep score, time asleep against need, and
-consistency; total load and training status; HRV and resting heart rate
-trends; VO2max and Fitness Age changes. It ends with one win (a personal
-record, a best week, an improvement) and one focus for the coming week. Past
-check-ins stay in a list.
+Opened from the Monday notification: a short stack of swipeable cards for the
+week just ended. Readiness, sleep, training and health each get a gauge or
+chart with an arrow against the week before. VO2max and Fitness Age changes
+are called out. It ends with one win and one focus for the coming week, a line
+each. Past check-ins stay in a list.
 
 ## Notifications
 
