@@ -94,6 +94,7 @@ mod tests {
         for (s, r, e) in [
             ("PRIME", None, Effort::Push),
             ("HIGH", Some(1.4), Effort::Steady),
+            ("HIGH", Some(1.2), Effort::Push),
             ("MODERATE", None, Effort::Steady),
             ("LOW", None, Effort::Easy),
             ("POOR", None, Effort::Rest),
@@ -104,11 +105,14 @@ mod tests {
     #[test]
     fn ranges() {
         assert_eq!(normal(&[2.; 13]), None);
+        let range = normal(&(0..14).map(f64::from).collect::<Vec<_>>()).unwrap();
+        assert!((range[0] - 1.3).abs() < 1e-9 && (range[1] - 11.7).abs() < 1e-9);
         assert_eq!(
             normal(&(0..30).map(f64::from).collect::<Vec<_>>()),
             Some([2.9000000000000004, 26.1])
         );
         assert_eq!(bedtime(&[7., 8., 9.], 480.), Some("00:00".into()));
+        assert_eq!(bedtime(&[7., 8.], 450.), Some("00:00".into()));
     }
     #[test]
     fn decisions() {
@@ -117,5 +121,10 @@ mod tests {
             weekly_focus(Some(0.2), Some(0.1), None, None),
             Some("Sleep")
         );
+        assert_eq!(
+            weekly_focus(Some(0.1), Some(0.5), Some(0.2), Some(0.3)),
+            Some("Load focus")
+        );
+        assert_eq!(weekly_focus(None, None, None, None), None);
     }
 }

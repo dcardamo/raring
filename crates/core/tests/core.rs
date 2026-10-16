@@ -60,6 +60,21 @@ fn views_match_synthetic_mockup() {
     assert!(pepometer_core::screens::workout(&s, "123456").is_some());
 }
 #[test]
+fn health_lever_follows_unmet_garmin_targets() {
+    let store = Store::open(":memory:").unwrap();
+    store.put("fitness_age","2025-01-02","now",&json!({"fitnessAge":39,"fitnessAgeData":{"vigorousMinutes":{"value":10,"target":30,"ageIfMet":38},"restingHr":{"value":60,"target":55}}})).unwrap();
+    let view = pepometer_core::screens::health(&store, "2025-01-02");
+    assert_eq!(view.lever.unwrap().key, "vigorousMinutes");
+    assert!(
+        !view
+            .drivers
+            .iter()
+            .find(|d| d.key == "restingHr")
+            .unwrap()
+            .met
+    );
+}
+#[test]
 fn sleep_accepts_numeric_garmin_timestamps() {
     let s = Store::open(":memory:").unwrap();
     s.put("sleep","2025-01-02","now",&json!({"dailySleepDTO":{"sleepStartTimestampLocal":1735772400000_i64,"sleepEndTimestampLocal":1735801200000_i64,"sleepTimeSeconds":28000}})).unwrap();
@@ -93,6 +108,48 @@ fn notification_log_and_defaults() {
     assert!(!notifications::notifications(&s, when)
         .iter()
         .any(|v| v.kind == "morning"));
+}
+#[test]
+fn metric_change_notifications_obey_shared_setting() {
+    let s = Store::open(":memory:").unwrap();
+    seed(&s);
+    s.put(
+        "max_metrics",
+        "2025-01-01",
+        "now",
+        &json!([{"generic":{"vo2MaxValue":43.}}]),
+    )
+    .unwrap();
+    s.put(
+        "max_metrics",
+        "2025-01-02",
+        "now",
+        &json!([{"generic":{"vo2MaxValue":44.}}]),
+    )
+    .unwrap();
+    s.put(
+        "fitness_age",
+        "2025-01-01",
+        "now",
+        &json!({"fitnessAge":40}),
+    )
+    .unwrap();
+    let when = chrono::NaiveDate::from_ymd_opt(2025, 1, 2)
+        .unwrap()
+        .and_hms_opt(9, 0, 0)
+        .unwrap()
+        .and_local_timezone(Local)
+        .single()
+        .unwrap();
+    let items = notifications::notifications(&s, when);
+    assert!(items.iter().any(|n| n.kind == "vo2max"));
+    assert!(items.iter().any(|n| n.kind == "fitness-age"));
+    let mut settings = s.settings();
+    settings.notify_metric_changes = false;
+    s.set_settings(&settings).unwrap();
+    assert!(!notifications::notifications(&s, when)
+        .iter()
+        .any(|n| n.kind == "vo2max" || n.kind == "fitness-age"));
 }
 #[test]
 fn privacy_guards() {

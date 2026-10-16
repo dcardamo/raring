@@ -515,6 +515,9 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
         ],
     )
     .map(|s| s / 60.);
+    let stage_history: Vec<Value> = (0..30)
+        .filter_map(|i| store.get("sleep", &date_sub(date, i)))
+        .collect();
     let nights: Vec<(String, Value)> = (0..14)
         .rev()
         .filter_map(|i| {
@@ -605,9 +608,9 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
         .iter()
         .filter_map(|(stage, key)| {
             num(v, &[&[*key]]).map(|s| {
-                let history: Vec<f64> = nights
+                let history: Vec<f64> = stage_history
                     .iter()
-                    .filter_map(|(_, night)| num(sleep(night), &[&[*key]]))
+                    .filter_map(|night| num(sleep(night), &[&[*key]]))
                     .collect();
                 let average = (!history.is_empty())
                     .then(|| history.iter().sum::<f64>() / history.len() as f64);
@@ -879,7 +882,7 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
 }
 pub fn health(store: &Store, date: &str) -> HealthView {
     let v = store.get("fitness_age", date).unwrap_or(Value::Null);
-    let drivers = [
+    let drivers: Vec<Driver> = [
         ("vo2max", "VO2max", "ml/kg/min"),
         ("restingHr", "Resting HR", "bpm"),
         ("bmi", "BMI", ""),
@@ -890,20 +893,60 @@ pub fn health(store: &Store, date: &str) -> HealthView {
     .filter_map(|(key, name, unit)| {
         let data = &v["fitnessAgeData"][*key];
         let value = num(data, &[&["value"]]);
-        value.map(|value| Driver {
-            key: (*key).into(),
-            name: (*name).into(),
-            value: Some(value),
-            unit: (*unit).into(),
-            target: num(data, &[&["target"]]),
-            met: num(data, &[&["target"]]).is_some_and(|t| value >= t),
-            tone: Tone::Neutral,
+        value.map(|value| {
+            let target = num(data, &[&["target"]]);
+            let met = target.is_some_and(|t| {
+                if matches!(*key, "restingHr" | "bmi" | "bodyFat") {
+                    value <= t
+                } else {
+                    value >= t
+                }
+            });
+            Driver {
+                key: (*key).into(),
+                name: (*name).into(),
+                value: Some(value),
+                unit: (*unit).into(),
+                target,
+                met,
+                tone: if target.is_none() {
+                    Tone::Neutral
+                } else if met {
+                    Tone::Good
+                } else {
+                    Tone::Fair
+                },
+            }
         })
     })
     .collect();
+    let lever = drivers
+        .iter()
+        .filter_map(|d: &Driver| {
+            let (Some(current), Some(target)) = (d.value, d.target) else {
+                return None;
+            };
+            if target <= 0. || d.met {
+                return None;
+            }
+            let gap = ((target - current) / target).abs();
+            Some((
+                gap,
+                Lever {
+                    key: d.key.clone(),
+                    name: d.name.clone(),
+                    current,
+                    target,
+                    unit: d.unit.clone(),
+                    age_if_met: num(&v["fitnessAgeData"][&d.key], &[&["ageIfMet"]]),
+                },
+            ))
+        })
+        .max_by(|a, b| a.0.total_cmp(&b.0))
+        .map(|(_, lever)| lever);
     HealthView {
         fitness_age: age(store, date),
-        lever: None,
+        lever,
         drivers,
         vitals: vitals(store, date),
     }
