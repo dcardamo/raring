@@ -10,9 +10,11 @@ adb logcat -c
 adb shell am broadcast -n "$pkg/ca.hld.pepometer.DebugSyncReceiver" \
   -a ca.hld.pepometer.DEBUG_SYNC --ez seedSynthetic true
 for attempt in $(seq 1 40); do
-  if adb logcat -d -s PepometerSync:I '*:S' | grep -q 'background JNI sync completed'; then
-    if adb shell dumpsys notification --noredact | grep -q 'Background sync ran'; then
-      echo 'PASS: JNI background sync completed after force-stop; notification posted'
+  if adb logcat -d -s PepometerSync:I '*:S' | grep -q 'background JNI sync completed' &&
+     adb logcat -d -s PepometerSync:I '*:S' | grep -q 'notification posted: background-sync'; then
+    if adb shell dumpsys notification --noredact | grep -q 'Background sync ran' &&
+       ! adb shell run-as "$pkg" cat no_backup/tokens.enc | grep -a -q synthetic; then
+      echo 'PASS: encrypted vault; JNI background sync completed after force-stop; notification posted'
       exit 0
     fi
   fi

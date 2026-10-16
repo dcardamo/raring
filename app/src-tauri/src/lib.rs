@@ -1,21 +1,11 @@
 use pepometer_core::{garmin::sso, view::*};
-use serde::{Deserialize, Serialize};
+#[cfg(target_os = "android")]
+use serde::Deserialize;
 use std::sync::Mutex;
 use tauri::{Emitter, Manager};
 
 #[derive(Default)]
 struct SignInState(Mutex<Option<String>>);
-
-#[derive(Clone, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Settings {
-    morning_readiness: bool,
-    weekly_checkin: bool,
-    metric_changes: bool,
-    vitals_off: bool,
-    training_status: bool,
-    bedtime: bool,
-}
 
 fn home_url() -> tauri::Url {
     #[cfg(target_os = "android")]
@@ -199,22 +189,30 @@ fn request_notification_permission(app: tauri::AppHandle) -> Result<bool, String
     }
 }
 
-#[tauri::command]
-fn get_settings(app: tauri::AppHandle) -> Result<Settings, String> {
-    let path = app
+// Integration point: replace local JSON with core facade settings access.
+#[allow(dead_code)]
+fn database_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    let root = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    // Tauri Android's app_data_dir is Context.dataDir, NOT Context.filesDir.
+    #[cfg(target_os = "android")]
+    let root = root.join("files");
+    Ok(root.join("pepometer.db"))
+}
+
+fn settings_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    Ok(app
         .path()
         .app_data_dir()
         .map_err(|e| e.to_string())?
-        .join("settings.json");
+        .join("settings.json"))
+}
+
+#[tauri::command]
+fn get_settings(app: tauri::AppHandle) -> Result<Settings, String> {
+    let path = settings_path(&app)?;
     match std::fs::read(path) {
         Ok(bytes) => serde_json::from_slice(&bytes).map_err(|e| e.to_string()),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Settings {
-            morning_readiness: true,
-            weekly_checkin: true,
-            metric_changes: true,
-            vitals_off: true,
-            ..Default::default()
-        }),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Settings::default()),
         Err(e) => Err(e.to_string()),
     }
 }
@@ -224,7 +222,7 @@ fn set_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String>
     let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     std::fs::write(
-        dir.join("settings.json"),
+        settings_path(&app)?,
         serde_json::to_vec(&settings).map_err(|e| e.to_string())?,
     )
     .map_err(|e| e.to_string())
