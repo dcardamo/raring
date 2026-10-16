@@ -1,6 +1,6 @@
 [package]
 name = "pepometer-app"
-description = "Pepometer: a Whoop-style app for Garmin data"
+description = "Pepometer: readiness, sleep and training from Garmin data"
 version.workspace = true
 edition.workspace = true
 repository.workspace = true

@@ -1,7 +1,7 @@
 # Pepometer
 
-A Whoop-style app for Garmin data: a Rust core and a Tauri 2 app with a
-Svelte + TypeScript UI. Android first; web and iOS later.
+A readiness, sleep and training app for Garmin data: a Rust core and a
+Tauri 2 app with a Svelte + TypeScript UI. Android first; web and iOS later.
 
 - Spec: `docs/spec.md`. Visual reference: `design/mockup/` (open
   `index.html`; narrow windows behave like the phone).
@@ -58,6 +58,6 @@ keystore: installed copies would reject every update.
   blocks secrets; never bypass it with `--no-verify`. CI scans every push.
 - Show Garmin's metrics. Pepometer's own math is limited to what the spec's
   Rules section lists.
-- No WHOOP names, assets or copy.
+- No other fitness brands' names, assets or copy.
 - Commit with explicit paths; never amend.
 - Comments explain non-obvious constraints, not history.

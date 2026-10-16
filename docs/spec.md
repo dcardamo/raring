@@ -1,6 +1,6 @@
 # Pepometer v1 spec
 
-Pepometer turns Garmin data into a Whoop-style daily answer: how am I doing,
+Pepometer turns Garmin data into a clear daily answer: how am I doing,
 why, and what should I do today, readable at a glance from dials, charts and
 color. It shows Garmin's own metrics and nudges you to improve. No data dumps,
 no invented scores.
@@ -23,7 +23,7 @@ The visual reference is [design/mockup](../design/mockup/): open
 - **Private.** Data stays on the phone. No accounts, analytics, or services
   other than Garmin.
 - **Its own identity.** Own name, palette, icons and copy. Garmin's metric
-  names describe Garmin data. Nothing from WHOOP's brand or app.
+  names describe Garmin data. Nothing copied from other fitness apps.
 
 ## Look
 
@@ -180,7 +180,7 @@ Sent by the phone itself.
 
 ## Milestones
 
-0. **Spike (go/no-go gate)**: a bare app on Dan's phone that signs in to
+0. **Spike (go/no-go gate)**: a bare app on a real phone that signs in to
    Garmin, syncs readiness with the app closed, and posts a notification. If
    any of the three fails, stop and report.
 1. Core: Garmin client, storage, sync and backfill, plus a dev CLI that runs
@@ -204,7 +204,7 @@ lifestyle logging is readable through the same API).
 - A test fails if fixtures contain email addresses, Garmin IDs or tokens. Real
   data and tokens are gitignored.
 
-## What Dan provides
+## Manual steps
 
 - One terminal sign-in on the development machine for a token, so the app
   can be built against real data that never leaves that machine.

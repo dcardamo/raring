@@ -1,7 +1,7 @@
 # Pepometer
 
-A Whoop-style app for Garmin watches: open it and see how you're doing, why,
-and what to do today, using Garmin's own metrics explained in plain words.
+A readiness, sleep and training app for Garmin watches: open it and see how
+you're doing, why, and what to do today, from Garmin's own metrics.
 
 Status: first test build (Android). See [docs/spec.md](docs/spec.md) and the
 [mockup](design/mockup/) (sample data).
@@ -19,5 +19,5 @@ While this repository is private, Obtainium needs a GitHub fine-grained token
 with read-only access to its contents (Obtainium → Settings → GitHub personal
 access token).
 
-Pepometer is not affiliated with Garmin or WHOOP. It uses Garmin Connect's
+Pepometer is not affiliated with Garmin. It uses Garmin Connect's
 unofficial API, which Garmin can change at any time.
