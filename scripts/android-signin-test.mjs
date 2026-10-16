@@ -44,12 +44,25 @@ console.log('Navigation:', await call('Runtime.evaluate', { expression: "const a
 await new Promise(resolve => setTimeout(resolve, 3000));
 const home = (await (await fetch('http://127.0.0.1:9229/json')).json()).find(x => x.id === page.id)?.url;
 console.log('After ticket:', home);
-if (home !== 'http://tauri.localhost/') throw new Error('Ticket redirect did not return to app');
+if (!home?.startsWith('http://tauri.localhost/#today')) throw new Error('Ticket redirect did not return to app');
+let status;
+for (let attempt = 0; attempt < 40; attempt++) {
+  status = (await call('Runtime.evaluate', {
+    expression: "window.__TAURI_INTERNALS__.invoke('app_status')",
+    awaitPromise: true, returnByValue: true,
+  })).result?.result?.value;
+  if (status?.lastError) break;
+  await new Promise(resolve => setTimeout(resolve, 1000));
+}
+if (status?.lastError !== 'Garmin sign-in failed — try again' || status.signedIn) {
+  throw new Error(`Synthetic ticket did not fail cleanly: ${JSON.stringify(status)}`);
+}
+console.log('PASS: synthetic ticket fails with user-facing error; no tokens');
 await call('Runtime.evaluate', { expression: "window.__TAURI_INTERNALS__.invoke('begin_sign_in')", awaitPromise: true });
 await new Promise(resolve => setTimeout(resolve, 1800));
 adb('shell', 'input', 'keyevent', 'KEYCODE_BACK');
 await new Promise(resolve => setTimeout(resolve, 1800));
 const afterBack = (await (await fetch('http://127.0.0.1:9229/json')).json()).find(x => x.id === page.id)?.url;
 console.log('After Back:', afterBack);
-if (afterBack !== 'http://tauri.localhost/') throw new Error('Back from Garmin did not return to app');
+if (!afterBack?.startsWith('http://tauri.localhost/#today')) throw new Error('Back from Garmin did not return to app');
 socket.close();
