@@ -13,7 +13,12 @@ export type TodayView = {
 /**
  * Local date, YYYY-MM-DD.
  */
-date: string, readiness: Gauge | null, sleep: Gauge | null, load: Gauge | null, 
+date: string, readiness: Gauge | null, 
+/**
+ * Readiness scores for the last 30 days, oldest first (the Readiness
+ * detail chart).
+ */
+readinessTrend: Array<number | null>, sleep: Gauge | null, load: Gauge | null, 
 /**
  * A few words: "Ready to push", "Take it easy".
  */
