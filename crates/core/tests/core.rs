@@ -54,9 +54,10 @@ fn demo_seeds_current_day_and_screen_details() {
     assert_eq!(today.chips[2].text.as_deref(), Some("On track"));
     assert_eq!(today.factors.len(), 6);
     assert_eq!(today.body_battery.now, Some(78.));
+    assert_eq!(today.headline, "Ready to push");
     assert_eq!(
         today.call_note.as_deref(),
-        Some("Load is your biggest drag today.")
+        Some("Morning Run done · 186 load")
     );
     assert_eq!(today.fitness_age.chronological_age, Some(46.));
     assert_eq!(today.vitals.readings.len(), 5);

@@ -18,6 +18,22 @@ fn string(v: &Value, paths: &[&[&str]]) -> Option<String> {
         .iter()
         .find_map(|p| at(v, p).as_str().map(str::to_owned))
 }
+/// Garmin sends feedback as codes ("LET_YOUR_BODY_RECOVER"); show them as a
+/// short sentence ("Let your body recover"). Text that already reads as prose
+/// passes through unchanged.
+pub(crate) fn humanize_code(code: &str) -> Option<String> {
+    let code = code.trim();
+    if code.is_empty() || code.len() > 60 {
+        return None;
+    }
+    if code.chars().any(|c| c.is_ascii_lowercase()) {
+        return Some(code.to_owned());
+    }
+    let words = code.to_ascii_lowercase().replace('_', " ");
+    let mut chars = words.trim().chars();
+    let first = chars.next()?;
+    Some(first.to_ascii_uppercase().to_string() + chars.as_str())
+}
 fn local_time(v: &Value, keys: &[&str]) -> Option<String> {
     let value = at(v, keys);
     if let Some(s) = value.as_str() {
@@ -553,37 +569,38 @@ pub fn today(store: &Store, date: &str) -> TodayView {
                 band(&t),
             )
         }),
-        headline: string(readiness(&r), &[&["feedbackShort"]])
-            .filter(|s| !s.is_empty() && s.len() <= 48)
-            .unwrap_or_else(|| {
-                match call {
-                    Some(Effort::Push) => "Ready to push",
-                    Some(Effort::Steady) => "Room to build",
-                    Some(Effort::Easy) | Some(Effort::Rest) => "Take it easy",
-                    None => "Waiting for readiness",
-                }
-                .into()
-            }),
+        headline: match call {
+            Some(Effort::Push) => "Ready to push",
+            Some(Effort::Steady) => "Room to build",
+            Some(Effort::Easy) | Some(Effort::Rest) => "Take it easy",
+            None => "Waiting for readiness",
+        }
+        .into(),
         chips,
         factors,
         call,
-        call_note: string(readiness(&r), &[&["feedbackLong"]])
-            .filter(|s| !s.is_empty())
-            .or_else(|| biggest_drag.map(|d| format!("{d} is your biggest drag today.")))
+        // A finished workout comes first, then Garmin's own readiness feedback
+        // (sent as codes such as LET_YOUR_BODY_RECOVER), then the biggest drag.
+        call_note: activities(store, date)
+            .first()
+            .filter(|a| a.start_local.starts_with(date))
+            .map(|a| {
+                format!(
+                    "{} done · {} load",
+                    a.name,
+                    a.load
+                        .map(|v| format!("{v:.0}"))
+                        .unwrap_or_else(|| "—".into())
+                )
+            })
             .or_else(|| {
-                activities(store, date)
-                    .first()
-                    .filter(|a| a.start_local.starts_with(date))
-                    .map(|a| {
-                        format!(
-                            "{} done · {} load",
-                            a.name,
-                            a.load
-                                .map(|v| format!("{v:.0}"))
-                                .unwrap_or_else(|| "—".into())
-                        )
-                    })
-            }),
+                string(
+                    readiness(&r),
+                    &[&["feedbackShort"], &["feedbackLong"], &["feedbackPhrase"]],
+                )
+                .and_then(|code| humanize_code(&code))
+            })
+            .or_else(|| biggest_drag.map(|d| format!("{d} is your biggest drag today."))),
         body_battery: BodyBatteryCard {
             now: num(b, &[&["bodyBatteryValue"], &["currentValue"]])
                 .or_else(|| num(&summary, &[&["bodyBatteryHighestValue"]])),
@@ -1248,5 +1265,27 @@ pub fn checkin(store: &Store, monday: &str) -> CheckinView {
         fitness_age_change,
         win,
         focus,
+    }
+}
+
+#[cfg(test)]
+mod humanize_tests {
+    use super::humanize_code;
+
+    #[test]
+    fn garmin_feedback_codes_read_as_sentences() {
+        assert_eq!(
+            humanize_code("LET_YOUR_BODY_RECOVER").as_deref(),
+            Some("Let your body recover")
+        );
+        assert_eq!(
+            humanize_code("GOOD_SLEEP_HISTORY").as_deref(),
+            Some("Good sleep history")
+        );
+        assert_eq!(
+            humanize_code("Already prose").as_deref(),
+            Some("Already prose")
+        );
+        assert_eq!(humanize_code("  "), None);
     }
 }
