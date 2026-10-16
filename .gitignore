@@ -1,0 +1,13 @@
+/target/
+node_modules/
+/app/dist/
+/app/src-tauri/target/
+/app/src-tauri/gen/schemas/
+/.android-avd/
+/.android-user/
+# Local Garmin data, tokens and signing keys. Never commit these.
+/.data/
+*.sqlite
+*.sqlite-*
+garmin_tokens.json
+*.keystore

@@ -1,0 +1,15 @@
+[package]
+name = "pepometer-cli"
+description = "Developer CLI for Pepometer: sign in, sync, inspect"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "pepometer"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.104"
+pepometer-core = { path = "../core" }
+tokio = { version = "1.53.3", features = ["rt-multi-thread", "macros"] }
