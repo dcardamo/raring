@@ -672,6 +672,133 @@ pub fn vitals(store: &Store, date: &str) -> VitalsCard {
         baseline_ready,
     }
 }
+fn stress_average(store: &Store, date: &str) -> Option<f64> {
+    // Garmin reports -1 for a day without enough readings.
+    store
+        .get("stress", date)
+        .and_then(|v| num(&v, &[&["avgStressLevel"]]))
+        .or_else(|| {
+            store
+                .get("summary", date)
+                .and_then(|v| num(&v, &[&["averageStressLevel"]]))
+        })
+        .filter(|v| (0. ..=100.).contains(v))
+}
+fn stress_level(value: f64) -> StressLevel {
+    if value < 26. {
+        StressLevel::Rest
+    } else if value < 51. {
+        StressLevel::Low
+    } else if value < 76. {
+        StressLevel::Medium
+    } else {
+        StressLevel::High
+    }
+}
+/// Garmin samples every three minutes and marks unmeasurable readings with
+/// negative values: -1 off-wrist or too little data, -2 too much motion.
+fn stress_timeline(v: &Value) -> (Vec<Option<f64>>, Vec<[f64; 2]>) {
+    let start = string(v, &[&["startTimestampGMT"]])
+        .and_then(|s| NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%.f").ok())
+        .map(|d| d.and_utc().timestamp_millis());
+    let (Some(start), Some(samples)) = (start, v["stressValuesArray"].as_array()) else {
+        return (vec![], vec![]);
+    };
+    let mut slots: Vec<Option<f64>> = vec![];
+    let mut active: Vec<[f64; 2]> = vec![];
+    for sample in samples {
+        let (Some(time), Some(value)) = (
+            sample.get(0).and_then(Value::as_i64),
+            sample.get(1).and_then(Value::as_f64),
+        ) else {
+            continue;
+        };
+        let minute = (time - start) as f64 / 60_000.;
+        if !(0. ..1440.).contains(&minute) {
+            continue;
+        }
+        let slot = (minute / 3.) as usize;
+        if slots.len() <= slot {
+            slots.resize(slot + 1, None);
+        }
+        let from = slot as f64 * 3.;
+        if (0. ..=100.).contains(&value) {
+            slots[slot] = Some(value);
+        } else if value == -2. {
+            match active.last_mut() {
+                Some([_, end]) if *end >= from => *end = from + 3.,
+                _ => active.push([from, from + 3.]),
+            }
+        }
+    }
+    (slots, active)
+}
+pub fn stress(store: &Store, date: &str) -> StressCard {
+    let raw = store.get("stress", date).unwrap_or(Value::Null);
+    let summary = store.get("summary", date).unwrap_or(Value::Null);
+    let average = stress_average(store, date);
+    let level = average.map(stress_level);
+    let qualifier =
+        string(&summary, &[&["stressQualifier"]]).filter(|q| !q.is_empty() && q != "UNKNOWN");
+    let tone = match qualifier.as_deref() {
+        Some("CALM" | "BALANCED") => Tone::Good,
+        Some("STRESSFUL") => Tone::Fair,
+        Some("VERY_STRESSFUL") => Tone::Poor,
+        _ => match level {
+            Some(StressLevel::Rest | StressLevel::Low) => Tone::Good,
+            Some(StressLevel::Medium) => Tone::Fair,
+            Some(StressLevel::High) => Tone::Poor,
+            None => Tone::Neutral,
+        },
+    };
+    let (timeline, active) = stress_timeline(&raw);
+    let midnight = NaiveDate::parse_from_str(date, "%Y-%m-%d")
+        .ok()
+        .and_then(|d| d.and_hms_opt(0, 0, 0));
+    let minute = |field: &str| {
+        let time = local_time(sleep(&store.get("sleep", date)?), &[field])?;
+        let time = NaiveDateTime::parse_from_str(&time, "%Y-%m-%dT%H:%M:%S%.f").ok()?;
+        Some((time - midnight?).num_minutes() as f64)
+    };
+    let asleep = minute("sleepStartTimestampLocal")
+        .zip(minute("sleepEndTimestampLocal"))
+        .filter(|(_, end)| *end > 0.)
+        .map(|(start, end)| [start.max(0.), end.min(1440.)]);
+    let time: Vec<StressTime> = [
+        (StressLevel::Rest, "restStressDuration"),
+        (StressLevel::Low, "lowStressDuration"),
+        (StressLevel::Medium, "mediumStressDuration"),
+        (StressLevel::High, "highStressDuration"),
+    ]
+    .iter()
+    .filter_map(|(level, field)| {
+        num(&summary, &[&[*field]])
+            .filter(|s| *s >= 0.)
+            .map(|seconds| StressTime {
+                level: *level,
+                seconds,
+            })
+    })
+    .collect();
+    StressCard {
+        average,
+        max: num(&raw, &[&["maxStressLevel"]])
+            .or_else(|| num(&summary, &[&["maxStressLevel"]]))
+            .filter(|v| (0. ..=100.).contains(v)),
+        level,
+        qualifier: qualifier.map(|q| label(Some(q))),
+        tone,
+        timeline,
+        active,
+        sleep: asleep,
+        active_s: num(&summary, &[&["activityStressDuration"]]).filter(|s| *s >= 0.),
+        time,
+        trend: (0..30)
+            .rev()
+            .map(|i| stress_average(store, &date_sub(date, i)))
+            .collect(),
+    }
+}
 pub fn today(store: &Store, date: &str) -> TodayView {
     let r = store.get("readiness", date).unwrap_or(Value::Null);
     let s = store.get("sleep", date).unwrap_or(Value::Null);
@@ -873,6 +1000,7 @@ pub fn today(store: &Store, date: &str) -> TodayView {
             drained: num(b, &[&["drained"], &["drainedValue"]])
                 .or_else(|| num(&summary, &[&["bodyBatteryDrainedValue"]])),
         },
+        stress: stress(store, date),
         hrv: HrvCard {
             last_night: num(hs, &[&["lastNightAvg"]]),
             status: hstatus.clone().map(|s| label(Some(s))),
@@ -1490,6 +1618,7 @@ pub fn health(store: &Store, date: &str) -> HealthView {
         lever,
         drivers,
         vitals: vitals(store, date),
+        stress: stress(store, date),
     }
 }
 pub fn checkin(store: &Store, monday: &str) -> CheckinView {

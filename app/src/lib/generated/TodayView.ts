@@ -8,6 +8,7 @@ import type { FitnessAgeCard } from "./FitnessAgeCard";
 import type { Gauge } from "./Gauge";
 import type { HrvCard } from "./HrvCard";
 import type { SleepPlan } from "./SleepPlan";
+import type { StressCard } from "./StressCard";
 import type { VitalsCard } from "./VitalsCard";
 
 export type TodayView = { 
@@ -27,7 +28,7 @@ headline: string, chips: Array<Chip>, factors: Array<Factor>, call: Effort | nul
 /**
  * For example "Morning Run done · 186 load".
  */
-callNote: string | null, bodyBattery: BodyBatteryCard, hrv: HrvCard, vitals: VitalsCard, activities: Array<ActivityCard>, fitnessAge: FitnessAgeCard, 
+callNote: string | null, bodyBattery: BodyBatteryCard, stress: StressCard, hrv: HrvCard, vitals: VitalsCard, activities: Array<ActivityCard>, fitnessAge: FitnessAgeCard, 
 /**
  * True on Mondays once the weekly check-in exists.
  */

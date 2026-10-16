@@ -1,7 +1,7 @@
 export const tabs = ['today', 'sleep', 'training', 'health'] as const;
 
 const metrics = new Set([
-  'bodyBattery', 'restingHr', 'hrv', 'respiration', 'spo2', 'skinTemp',
+  'bodyBattery', 'stress', 'restingHr', 'hrv', 'respiration', 'spo2', 'skinTemp',
   'vo2max', 'endurance', 'hill', 'runningTolerance',
 ]);
 const routes = new Set([...tabs, 'readiness', 'checkin', 'settings', 'onboarding']);
@@ -37,7 +37,7 @@ export function routeTrail(target: string, fromTrail: string[] = []): string[] {
     return parent === 'today' ? ['today', route] : ['today', 'training', route];
   }
   const metric = route.slice(7);
-  const parent = section(fromTrail) ?? (fromTrail[0] === 'today' || metric === 'bodyBattery' ? 'today' :
+  const parent = section(fromTrail) ?? (fromTrail[0] === 'today' || metric === 'bodyBattery' || metric === 'stress' ? 'today' :
     trainingMetrics.has(metric) ? 'training' : 'health');
   return parent === 'today' ? ['today', route] : ['today', parent, route];
 }

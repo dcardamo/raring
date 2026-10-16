@@ -4,12 +4,13 @@ export const vitalNames: Record<string, string> = {
 };
 
 export const metricNames: Record<string, string> = {
-  ...vitalNames, bodyBattery: 'Body Battery', vo2max: 'VO₂ max',
+  ...vitalNames, bodyBattery: 'Body Battery', stress: 'Stress', vo2max: 'VO₂ max',
   endurance: 'Endurance', hill: 'Hill score', runningTolerance: 'Running tolerance',
 };
 
 export const metricDescriptions: Record<string, string> = {
   bodyBattery: 'Garmin’s estimate of your energy reserves, from 0 to 100. Rest and sleep recharge it; activity and stress drain it. This is the latest synced reading, not a live watch connection.',
+  stress: 'Garmin estimates stress from your heart rate and heart rate variability while you are still, on a scale of 0 to 100: 0–25 is rest, 26–50 low, 51–75 medium and 76–100 high. It cannot rate stress while you are moving or not wearing the watch; those times are gaps, never zero. A higher reading is not a medical finding. This is the latest synced data, not a live reading.',
   restingHr: 'Your resting heart rate from Garmin. The shaded band shows your usual range, not a medical target.',
   hrv: 'Heart rate variability measures the variation between heartbeats during sleep. This is your nightly average against Garmin’s baseline, not your HRV status. Garmin’s Balanced status uses your seven-day average, so a single night can fall outside the baseline while your status stays Balanced.',
   respiration: 'Breaths per minute during sleep, as reported by Garmin. The shaded band shows your usual overnight range.',
@@ -22,7 +23,7 @@ export const metricDescriptions: Record<string, string> = {
 };
 
 export function metricSource(key: string): 'today' | 'health' | 'training' {
-  if (key === 'bodyBattery') return 'today';
+  if (key === 'bodyBattery' || key === 'stress') return 'today';
   if (['vo2max', 'endurance', 'hill', 'runningTolerance'].includes(key)) return 'training';
   return 'health';
 }

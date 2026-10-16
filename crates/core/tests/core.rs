@@ -62,6 +62,11 @@ fn demo_seeds_current_day_and_screen_details() {
     assert_eq!(today.fitness_age.chronological_age, Some(46.));
     assert_eq!(today.vitals.readings.len(), 5);
     assert_eq!(today.vitals.off_count, 0);
+    assert!(today.stress.average.is_some());
+    assert_eq!(today.stress.timeline.len(), 240);
+    assert_eq!(today.stress.active, vec![[372., 426.]]);
+    assert_eq!(today.stress.time.len(), 4);
+    assert!(today.stress.trend.iter().all(Option::is_some));
     let sleep = raring_core::screens::sleep_view(&store, &date.to_string());
     assert_eq!(sleep.stages.len(), 23);
     assert_eq!(sleep.overnight.len(), 4);
@@ -215,6 +220,43 @@ fn sleep_accepts_numeric_garmin_timestamps() {
     let view = raring_core::screens::sleep_view(&s, "2025-01-02");
     assert!(view.start_local.unwrap().contains('T'));
     assert_eq!(view.consistency.len(), 1);
+}
+#[test]
+fn stress_keeps_garmin_gaps_and_categories() {
+    let s = Store::open(":memory:").unwrap();
+    // 05:00 GMT is local midnight; readings at 00:00, 00:03, 00:06, 00:09, 00:12, 01:00.
+    let t = |minute: i64| 1735794000000_i64 + minute * 60_000;
+    s.put("stress","2025-01-02","now",&json!({"avgStressLevel":55,"maxStressLevel":90,"startTimestampGMT":"2025-01-02T05:00:00.0","stressValuesArray":[[t(0),20],[t(3),-1],[t(6),-2],[t(9),-2],[t(12),80],[t(60),-2]]})).unwrap();
+    s.put("summary","2025-01-02","now",&json!({"stressQualifier":"VERY_STRESSFUL","restStressDuration":600,"highStressDuration":180,"activityStressDuration":540})).unwrap();
+    s.put(
+        "summary",
+        "2025-01-01",
+        "now",
+        &json!({"averageStressLevel":-1}),
+    )
+    .unwrap();
+    s.put("sleep","2025-01-02","now",&json!({"dailySleepDTO":{"sleepStartTimestampLocal":"2025-01-01T23:10:00","sleepEndTimestampLocal":"2025-01-02T06:30:00"}})).unwrap();
+    let stress = raring_core::screens::today(&s, "2025-01-02").stress;
+    assert_eq!(stress.average, Some(55.));
+    assert_eq!(stress.level, Some(raring_core::view::StressLevel::Medium));
+    assert_eq!(stress.qualifier.as_deref(), Some("Very Stressful"));
+    assert_eq!(stress.tone, raring_core::view::Tone::Poor);
+    assert_eq!(stress.timeline.len(), 21);
+    assert_eq!(
+        &stress.timeline[..5],
+        &[Some(20.), None, None, None, Some(80.)]
+    );
+    assert_eq!(stress.active, vec![[6., 12.], [60., 63.]]);
+    assert_eq!(stress.sleep, Some([0., 390.]));
+    assert_eq!(stress.time.len(), 2);
+    assert_eq!(stress.active_s, Some(540.));
+    assert_eq!(stress.trend.len(), 30);
+    assert_eq!(
+        stress.trend[28], None,
+        "Garmin's -1 average is missing, not zero"
+    );
+    let empty = raring_core::screens::today(&s, "2025-01-05").stress;
+    assert!(empty.average.is_none() && empty.timeline.is_empty() && empty.time.is_empty());
 }
 #[test]
 fn unknown_data_degrades() {

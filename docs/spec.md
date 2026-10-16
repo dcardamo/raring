@@ -66,6 +66,11 @@ optional after sign-in.
   explicitly labeled, along with the number of recorded wake times. Hide the plan if need or wake history is unavailable.
 - Body Battery as a battery with its overnight charge; HRV with a 7-day line
   over Garmin's baseline band.
+- **Stress**: Garmin's average so far today, its category and day word, and
+  the day in 15-minute bars. Tap for the full day of three-minute readings
+  with sleep and activity marked, Garmin's time in each category, and 7-/30-day
+  daily averages. Times Garmin cannot rate (moving, off-wrist) are gaps, never
+  zero.
 - Vitals as five compact readings with units, a range-status indicator and
   a count of recorded and comparable readings. Missing or uncalibrated data
   is neutral, never an all-clear.
@@ -121,6 +126,8 @@ optional after sign-in.
   shaded, actual dates and missing nights left blank. Nightly HRV against the
   baseline is distinct from Garmin's seven-day HRV status. Explain the comparison
   method behind a tap; personal ranges are not medical targets.
+- **Stress**: today's average with a 30-day line of daily averages, opening
+  the same detail as Today.
 - **Fitness Age**: large number, trend line, and a bar placing it against your
   real age.
 - **Biggest lever**: a progress ring toward Garmin's target for the driver
@@ -164,6 +171,8 @@ Sent by the phone itself.
   adjusted need or the 14-day average). Label the source and wake-history count.
 - **Normal range**: the middle 80% of the last 30 nights, once there are at
   least 14. HRV uses Garmin's own baseline instead.
+- **Stress bars**: the Today card averages each 15 minutes of Garmin's
+  readings; the detail shows every reading. Colors follow Garmin's categories.
 - **Weekly focus**: the biggest gap among sleep against need, load-focus
   shortage, falling readiness, and vigorous minutes against the Fitness Age
   target.
@@ -180,7 +189,7 @@ Sent by the phone itself.
   does. Tokens are encrypted with an Android Keystore key and refresh
   themselves.
 - **Data** comes from `connectapi.garmin.com`: daily summary, sleep, HRV,
-  training readiness, Body Battery, SpO2, respiration, training status, max
+  training readiness, Body Battery, stress, SpO2, respiration, training status, max
   metrics, Fitness Age, endurance and hill scores, race predictions, running
   tolerance, personal records, and activities (summary, splits, heart-rate
   zones, charts and GPS routes).

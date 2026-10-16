@@ -35,7 +35,21 @@ try {
  await page.getByRole('button',{name:'View HRV',exact:true}).first().click();await waitRoute('metric/hrv');
  await page.getByText('Garmin baseline',{exact:true}).waitFor();
  await back('today');
+ await page.getByRole('button',{name:/^Stress/}).click();await waitRoute('metric/stress');
+ const timeline=page.getByRole('slider',{name:/^Stress through the day/});
+ assert.equal(await timeline.getAttribute('aria-valuetext'),'13:27: '+await page.locator('.readout b').textContent()+', '+await page.locator('.readout em').textContent());
+ await timeline.focus();await timeline.press('Home');
+ assert.match(await timeline.getAttribute('aria-valuetext'),/^00:00: \d+, Rest$/);
+ for(let i=0;i<6;i++)await timeline.press('Shift+ArrowRight');
+ for(let i=0;i<4;i++)await timeline.press('ArrowRight');
+ assert.equal(await timeline.getAttribute('aria-valuetext'),'06:12: active, not rated','movement is a labelled gap, not zero');
+ for(let i=0;i<21;i++)await timeline.press('ArrowRight');
+ assert.equal(await timeline.getAttribute('aria-valuetext'),'07:15: no reading','off-wrist time is a gap, not zero');
+ assert.equal(await page.locator('.stress-row').count(),5);
+ await back('today');
  await tab('Health');
+ await page.getByRole('button',{name:/^Stress/}).click();await waitRoute('metric/stress');
+ await back('health');
  await page.getByRole('button',{name:'View Respiration',exact:true}).click();await waitRoute('metric/respiration');
  await back('health');await back('today');
  await page.locator('.activity').first().click();await waitRoute('workout/9000000000001');
@@ -85,7 +99,7 @@ try {
 
  for(const width of [360,390,720,840,1024]) {
   await page.setViewportSize({width,height:900});
-  for(const route of ['today','sleep','training','health','readiness','workout/9000000000001','metric/hrv','metric/bodyBattery','settings','checkin','onboarding']) {
+  for(const route of ['today','sleep','training','health','readiness','workout/9000000000001','metric/hrv','metric/bodyBattery','metric/stress','settings','checkin','onboarding']) {
    await page.goto(`${url}/#${route}`);await waitRoute(route);
    const layout=await page.evaluate(()=>{
     const main=document.querySelector('main'),grid=document.querySelector('.dashboard'),phone=document.querySelector('.phone');

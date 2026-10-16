@@ -108,6 +108,53 @@ pub struct BodyBatteryCard {
     pub drained: Option<f64>,
 }
 
+/// Garmin's stress categories: rest 0–25, low 26–50, medium 51–75, high 76–100.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum StressLevel {
+    Rest,
+    Low,
+    Medium,
+    High,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct StressTime {
+    pub level: StressLevel,
+    pub seconds: f64,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct StressCard {
+    /// Garmin's average for the day so far, 0–100.
+    pub average: Option<f64>,
+    pub max: Option<f64>,
+    /// The category the average falls in.
+    pub level: Option<StressLevel>,
+    /// Garmin's word for the day: Calm, Balanced, Stressful, Very Stressful.
+    pub qualifier: Option<String>,
+    pub tone: Tone,
+    /// Readings in three-minute slots from local midnight (Garmin's sampling
+    /// interval). Off-wrist and unmeasurable readings are gaps.
+    pub timeline: Vec<Option<f64>>,
+    /// Minute ranges from midnight where Garmin could not measure stress
+    /// because you were moving.
+    pub active: Vec<[f64; 2]>,
+    /// Last night's sleep, as minutes from midnight (clipped at midnight).
+    pub sleep: Option<[f64; 2]>,
+    /// Garmin's time in each category today; empty until reported.
+    pub time: Vec<StressTime>,
+    /// Time Garmin could not rate because you were moving, seconds.
+    pub active_s: Option<f64>,
+    /// Daily averages for the last 30 days, oldest first.
+    pub trend: Vec<Option<f64>>,
+}
+
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -220,6 +267,7 @@ pub struct TodayView {
     /// For example "Morning Run done · 186 load".
     pub call_note: Option<String>,
     pub body_battery: BodyBatteryCard,
+    pub stress: StressCard,
     pub hrv: HrvCard,
     pub vitals: VitalsCard,
     pub activities: Vec<ActivityCard>,
@@ -476,6 +524,7 @@ pub struct HealthView {
     pub lever: Option<Lever>,
     pub drivers: Vec<Driver>,
     pub vitals: VitalsCard,
+    pub stress: StressCard,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]

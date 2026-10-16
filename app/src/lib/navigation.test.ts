@@ -5,7 +5,7 @@ describe('routes', () => {
   it('accepts known routes and rejects invalid or malformed fragments', () => {
     expect(tabs).toEqual(['today', 'sleep', 'training', 'health']);
     for (const route of [...tabs, 'readiness', 'checkin', 'settings', 'onboarding',
-      'workout/123_abc-2', ...['bodyBattery', 'restingHr', 'hrv', 'respiration', 'spo2',
+      'workout/123_abc-2', ...['bodyBattery', 'stress', 'restingHr', 'hrv', 'respiration', 'spo2',
         'skinTemp', 'vo2max', 'endurance', 'hill', 'runningTolerance'].map(id => `metric/${id}`)]) {
       expect(normalizeRoute(`#${route}`)).toBe(route);
     }
@@ -28,6 +28,8 @@ describe('routes', () => {
     expect(routeTrail('metric/hrv')).toEqual(['today', 'health', 'metric/hrv']);
     expect(routeTrail('metric/hrv', ['today'])).toEqual(['today', 'metric/hrv']);
     expect(routeTrail('metric/bodyBattery')).toEqual(['today', 'metric/bodyBattery']);
+    expect(routeTrail('metric/stress')).toEqual(['today', 'metric/stress']);
+    expect(routeTrail('metric/stress', ['today', 'health'])).toEqual(['today', 'health', 'metric/stress']);
     expect(routeTrail('metric/vo2max')).toEqual(['today', 'training', 'metric/vo2max']);
     expect(routeTrail('metric/hrv', ['today', 'sleep'])).toEqual(['today', 'sleep', 'metric/hrv']);
     expect(routeTrail('onboarding', ['today', 'settings'])).toEqual(['onboarding']);

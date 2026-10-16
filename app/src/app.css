@@ -40,6 +40,15 @@ button:disabled{cursor:default;opacity:.6}
 .battery-totals{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 .battery-totals>div{display:grid;gap:8px}
 .battery-totals span{color:var(--text2)}
+.stress-summary{display:flex;align-items:center;gap:16px}
+.stress-summary>div:first-child{flex:none}
+.stress-summary svg{flex:1;min-width:0}
+.stress-row{display:grid;grid-template-columns:62px 1fr 44px 34px;align-items:center;gap:10px;margin-top:10px}
+.stress-row:first-of-type{margin-top:0}
+.stress-row b{font:500 13px Inter;color:var(--text2)}
+.stress-row span{font:600 14px Outfit;text-align:right}
+.stress-row small{color:var(--text3);text-align:right}
+.stress-row .bar{margin:0;height:10px}
 @media(min-width:720px){
  .scroll{padding:20px 28px 110px}
  .dashboard{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}

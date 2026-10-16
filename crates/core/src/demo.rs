@@ -5,6 +5,57 @@ use serde_json::{json, Value};
 
 pub const WORKOUT_ID: &str = "123456";
 
+/// A day of three-minute stress readings in Garmin's shape: calm sleep, a
+/// morning workout Garmin cannot rate (-2), a short off-wrist gap (-1) and a
+/// busier afternoon. Today stops at midday, as if synced then.
+fn stress(date: NaiveDate, days_ago: i64) -> (Value, Value) {
+    let start = date
+        .and_hms_opt(5, 0, 0)
+        .unwrap()
+        .and_utc()
+        .timestamp_millis();
+    let slots = if days_ago == 0 { 240 } else { 480 };
+    let wobble = |i: i64, f: f64| ((i as f64 * f + days_ago as f64).sin() * 6.).round() as i64;
+    let values: Vec<i64> = (0..slots)
+        .map(|i| match i * 3 {
+            m if m < 372 => 14 + wobble(i, 0.7),
+            m if (372..424).contains(&m) => -2,
+            m if (424..445).contains(&m) => -1,
+            m if m < 720 => 30 + wobble(i, 0.4) + (i % 9) * 2,
+            m if m < 1020 => 42 + wobble(i, 0.3) + ((i * 7 + days_ago) % 23) * 2,
+            m if m < 1350 => 24 + wobble(i, 0.5),
+            _ => 16 + wobble(i, 0.8),
+        })
+        .collect();
+    let seconds = |range: std::ops::RangeInclusive<i64>| {
+        values.iter().filter(|v| range.contains(v)).count() as i64 * 180
+    };
+    let measured: Vec<i64> = values.iter().copied().filter(|v| *v >= 0).collect();
+    let average = measured.iter().sum::<i64>() / measured.len().max(1) as i64;
+    let stress = json!({
+        "calendarDate": date.to_string(),
+        "startTimestampGMT": format!("{date}T05:00:00.0"),
+        "startTimestampLocal": format!("{date}T00:00:00.0"),
+        "avgStressLevel": average,
+        "maxStressLevel": measured.iter().max(),
+        "stressValuesArray": values
+            .iter()
+            .enumerate()
+            .map(|(i, v)| json!([start + i as i64 * 180_000, v]))
+            .collect::<Vec<_>>(),
+    });
+    let summary = json!({
+        "averageStressLevel": average,
+        "stressQualifier": if days_ago == 0 { "UNKNOWN" } else if average < 26 { "CALM" } else { "BALANCED" },
+        "restStressDuration": seconds(0..=25),
+        "lowStressDuration": seconds(26..=50),
+        "mediumStressDuration": seconds(51..=75),
+        "highStressDuration": seconds(76..=100),
+        "activityStressDuration": seconds(-2..=-2),
+    });
+    (stress, summary)
+}
+
 pub fn seed(store: &Store, day: NaiveDate) -> rusqlite::Result<()> {
     let fixture: Value = serde_json::from_str(include_str!("../tests/fixtures/day.json"))
         .expect("synthetic fixture must be valid JSON");
@@ -192,6 +243,11 @@ pub fn seed(store: &Store, day: NaiveDate) -> rusqlite::Result<()> {
             "bmi":{"value":23.8,"target":25},
             "vigorousMinutes":{"value":112,"target":150,"ageIfMet":38}
         });
+        let (stress, summary) = stress(date, days_ago);
+        store.put("stress", &key, "synthetic", &stress)?;
+        for (field, value) in summary.as_object().unwrap() {
+            values["summary"][field] = value.clone();
+        }
         for kind in [
             "summary",
             "readiness",
