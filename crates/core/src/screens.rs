@@ -157,6 +157,32 @@ fn band(v: &Value) -> Option<[f64; 2]> {
         )?,
     ])
 }
+fn factor_tone(feedback: Option<&str>, percent: Option<f64>) -> Tone {
+    let feedback = feedback.unwrap_or("").to_ascii_uppercase();
+    let words: Vec<&str> = feedback.split(|c: char| !c.is_ascii_alphabetic()).collect();
+    if words.iter().any(|w| {
+        matches!(
+            *w,
+            "POOR" | "LOW" | "NEGATIVE" | "UNBALANCED" | "INSUFFICIENT" | "HIGH"
+        )
+    }) {
+        Tone::Poor
+    } else if words
+        .iter()
+        .any(|w| matches!(*w, "FAIR" | "MODERATE" | "AVERAGE"))
+    {
+        Tone::Fair
+    } else if words.iter().any(|w| {
+        matches!(
+            *w,
+            "GOOD" | "EXCELLENT" | "OPTIMAL" | "BALANCED" | "POSITIVE" | "IDEAL"
+        )
+    }) {
+        Tone::Good
+    } else {
+        percent.map(rules::score).unwrap_or(Tone::Neutral)
+    }
+}
 fn activity(store: &Store, id: &str) -> Option<ActivityCard> {
     let v = store.get("activity", id).or_else(|| {
         store
@@ -190,7 +216,9 @@ fn activity(store: &Store, id: &str) -> Option<ActivityCard> {
         name: string(&v, &[&["activityName"]]).unwrap_or_else(|| "Workout".into()),
         start_local: string(&v, &[&["startTimeLocal"]]).unwrap_or_default(),
         duration_s: num(&v, &[&["duration"]]).unwrap_or(0.),
-        distance_km: num(&v, &[&["distance"]]).map(|m| m / 1000.),
+        distance_km: num(&v, &[&["distance"]])
+            .filter(|m| *m > 0.)
+            .map(|m| m / 1000.),
         load: num(&v, &[&["activityTrainingLoad"], &["trainingLoad"]]),
         zone_seconds: zones
             .as_array()
@@ -341,37 +369,53 @@ pub fn today(store: &Store, date: &str) -> TodayView {
     });
     let call = rl.as_deref().map(|s| rules::effort(s, ratio));
     let factors = [
-        ("sleep", "Sleep", Icon::Moon, "sleepScoreFactorPercent"),
+        (
+            "sleep",
+            "Sleep",
+            "sleepScoreFactorPercent",
+            "sleepScoreFactorFeedback",
+        ),
         (
             "recovery",
             "Recovery",
-            Icon::Clock,
             "recoveryTimeFactorPercent",
+            "recoveryTimeFactorFeedback",
         ),
-        ("hrv", "HRV", Icon::Hrv, "hrvFactorPercent"),
-        ("acuteLoad", "Load", Icon::Flame, "acwrFactorPercent"),
+        ("hrv", "HRV", "hrvFactorPercent", "hrvFactorFeedback"),
+        (
+            "acuteLoad",
+            "Load",
+            "acwrFactorPercent",
+            "acwrFactorFeedback",
+        ),
         (
             "sleepHistory",
             "Sleep history",
-            Icon::Moon,
             "sleepHistoryFactorPercent",
+            "sleepHistoryFactorFeedback",
         ),
         (
             "stressHistory",
             "Stress",
-            Icon::Heart,
             "stressHistoryFactorPercent",
+            "stressHistoryFactorFeedback",
         ),
     ];
     let mut factors: Vec<Factor> = factors
         .iter()
-        .filter_map(|(key, name, _, field)| {
-            num(readiness(&r), &[&[*field]]).map(|p| Factor {
+        .filter_map(|(key, name, field, feedback_field)| {
+            let snapshot = readiness(&r);
+            let percent = num(snapshot, &[&[*field]]);
+            let feedback = snapshot[*feedback_field].as_str().filter(|s| !s.is_empty());
+            (percent.is_some() || feedback.is_some()).then(|| Factor {
                 key: (*key).into(),
                 name: (*name).into(),
-                percent: Some(p),
-                tone: rules::score(p),
-                detail: format!("Garmin rates your {name} at {p:.0}%."),
+                percent,
+                tone: factor_tone(feedback, percent),
+                detail: feedback
+                    .map(|s| label(Some(s.into())))
+                    .or_else(|| percent.map(|p| format!("Garmin rates your {name} at {p:.0}%.")))
+                    .unwrap_or_default(),
             })
         })
         .collect();
@@ -384,26 +428,36 @@ pub fn today(store: &Store, date: &str) -> TodayView {
     if let Some(v) = num(sleep(&s), &[&["sleepTimeSeconds"]]) {
         chips.push(Chip {
             icon: Icon::Moon,
-            value: Some(format!("{:.1}h", v / 3600.)),
-            text: Some("sleep".into()),
+            value: Some(format!(
+                "{}:{:02}",
+                (v / 3600.).floor() as u32,
+                (v as u32 % 3600) / 60
+            )),
+            text: None,
             tone: sscore(&s).map(rules::score).unwrap_or(Tone::Neutral),
         });
     }
     if let Some(v) = num(hs, &[&["lastNightAvg"]]) {
         chips.push(Chip {
             icon: Icon::Hrv,
-            value: Some(format!("{v:.0} ms")),
-            text: Some("HRV".into()),
+            value: Some(format!("{v:.0}")),
+            text: Some("ms".into()),
             tone: rules::level(hs["status"].as_str().unwrap_or("")),
         });
     }
     let load = acute(&t);
     if let Some(v) = load {
+        let (text, tone) = match band(&t) {
+            Some([lo, _]) if v < lo => ("Room to build", Tone::Fair),
+            Some([_, hi]) if v > hi => ("Load high", Tone::Poor),
+            Some(_) => ("On track", Tone::Good),
+            None => ("Load", Tone::Neutral),
+        };
         chips.push(Chip {
             icon: Icon::Flame,
-            value: Some(format!("{v:.0}")),
-            text: Some("load".into()),
-            tone: Tone::Neutral,
+            value: None,
+            text: Some(text.into()),
+            tone,
         });
     }
     let b = store.get("battery", date).unwrap_or(Value::Null);
@@ -468,7 +522,18 @@ pub fn today(store: &Store, date: &str) -> TodayView {
         chips,
         factors,
         call,
-        call_note: None,
+        call_note: activities(store, date)
+            .first()
+            .filter(|a| a.start_local.starts_with(date))
+            .map(|a| {
+                format!(
+                    "{} done · {} load",
+                    a.name,
+                    a.load
+                        .map(|v| format!("{v:.0}"))
+                        .unwrap_or_else(|| "—".into())
+                )
+            }),
         body_battery: BodyBatteryCard {
             now: num(b, &[&["bodyBatteryValue"], &["currentValue"]])
                 .or_else(|| num(&summary, &[&["bodyBatteryHighestValue"]])),
@@ -652,7 +717,15 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
                 kind: *kind,
                 value: Some(n),
                 unit: (*unit).into(),
-                series: vec![],
+                series: raw["overnightSeries"][match kind {
+                    OvernightKind::Hrv => "hrv",
+                    OvernightKind::HeartRate => "heartRate",
+                    OvernightKind::Respiration => "respiration",
+                    OvernightKind::Spo2 => "spo2",
+                }]
+                .as_array()
+                .map(|a| a.iter().filter_map(Value::as_f64).collect())
+                .unwrap_or_default(),
             })
         })
         .collect(),
@@ -693,7 +766,10 @@ pub fn training(store: &Store, date: &str) -> TrainingView {
         .rev()
         .filter_map(|i| {
             let date = date_sub(date, i);
-            acute(&store.get("training", &date)?).map(|load| DayLoad { date, load })
+            let v = store.get("training", &date)?;
+            num(&v, &[&["dailyTrainingLoad"]])
+                .or_else(|| acute(&v))
+                .map(|load| DayLoad { date, load })
         })
         .collect();
     let m = store.get("max_metrics", date).unwrap_or(Value::Null);
@@ -752,7 +828,12 @@ pub fn training(store: &Store, date: &str) -> TrainingView {
             gauge(
                 amount,
                 (amount * 1.3).max(band(&v).map(|b| b[1] * 1.2).unwrap_or(1000.)),
-                "Acute load",
+                match band(&v) {
+                    Some([lo, _]) if amount < lo => "Low",
+                    Some([_, hi]) if amount > hi => "High",
+                    Some(_) => "Optimal",
+                    None => "Acute load",
+                },
                 match band(&v) {
                     Some([lo, hi]) if amount >= lo && amount <= hi => Tone::Good,
                     Some([_, hi]) if amount > hi => Tone::Poor,
@@ -764,10 +845,35 @@ pub fn training(store: &Store, date: &str) -> TrainingView {
         }),
         status: status.clone().map(|s| label(Some(s))),
         status_tone: status.as_deref().map(rules::level).unwrap_or(Tone::Neutral),
-        headline: status
-            .map(|s| label(Some(s)))
-            .unwrap_or_else(|| "Training at a glance".into()),
-        chips: vec![],
+        headline: match (load, band(&v)) {
+            (Some(amount), Some([lo, _])) if amount < lo => "Room to build".into(),
+            (Some(amount), Some([_, hi])) if amount > hi => "Load high".into(),
+            (Some(_), Some(_)) => "Room to build".into(),
+            _ => status
+                .map(|s| label(Some(s)))
+                .unwrap_or_else(|| "Training at a glance".into()),
+        },
+        chips: [
+            num(&v, &[&["acuteChronicWorkloadRatio"]]).map(|ratio| Chip {
+                icon: Icon::Flame,
+                value: Some(format!("{ratio:.1}")),
+                text: Some("Load ratio".into()),
+                tone: Tone::Fair,
+            }),
+            num(
+                readiness(&store.get("readiness", date).unwrap_or(Value::Null)),
+                &[&["recoveryTime"]],
+            )
+            .map(|minutes| Chip {
+                icon: Icon::Clock,
+                value: Some(format!("{:.0}h", minutes / 60.)),
+                text: Some("Recovery".into()),
+                tone: Tone::Neutral,
+            }),
+        ]
+        .into_iter()
+        .flatten()
+        .collect(),
         week,
         load_focus,
         vo2max,
@@ -828,26 +934,41 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
         }
     }
     let splits = store.get("splits", id).unwrap_or(Value::Null);
+    let mut stats: Vec<Stat> = [
+        ("distance", "Distance", "km", 1000.),
+        ("duration", "Time", "s", 1.),
+        ("averageHR", "Avg HR", "bpm", 1.),
+        ("maxHR", "Max HR", "bpm", 1.),
+        ("calories", "Calories", "kcal", 1.),
+        ("elevationGain", "Ascent", "m", 1.),
+    ]
+    .iter()
+    .filter_map(|(key, label, unit, div)| {
+        num(&v, &[&[*key]]).map(|v| Stat {
+            key: (*key).into(),
+            label: (*label).into(),
+            value: v / div,
+            unit: (*unit).into(),
+        })
+    })
+    .collect();
+    if let Some(distance) = summary.distance_km.filter(|d| *d > 0.) {
+        if summary.duration_s > 0. {
+            stats.insert(
+                2,
+                Stat {
+                    key: "pace".into(),
+                    label: "Pace".into(),
+                    value: summary.duration_s / distance,
+                    unit: "s/km".into(),
+                },
+            );
+        }
+    }
     Some(WorkoutView {
         summary,
         recovery_hours: num(&v, &[&["recoveryTime"]]).map(|s| s / 3600.),
-        stats: [
-            ("distance", "Distance", "km", 1000.),
-            ("duration", "Time", "s", 1.),
-            ("averageHR", "Avg HR", "bpm", 1.),
-            ("calories", "Calories", "kcal", 1.),
-            ("elevationGain", "Ascent", "m", 1.),
-        ]
-        .iter()
-        .filter_map(|(key, label, unit, div)| {
-            num(&v, &[&[*key]]).map(|v| Stat {
-                key: (*key).into(),
-                label: (*label).into(),
-                value: v / div,
-                unit: (*unit).into(),
-            })
-        })
-        .collect(),
+        stats,
         route,
         heart_rate,
         zone_floors: store

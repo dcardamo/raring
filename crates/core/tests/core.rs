@@ -1,4 +1,4 @@
-use chrono::{Duration, Local, Utc};
+use chrono::{Datelike, Duration, Local, Utc};
 use pepometer_core::{
     garmin::{self, Client, Tokens},
     notifications,
@@ -41,12 +41,44 @@ fn seed(store: &Store) {
 #[test]
 fn demo_seeds_current_day_and_screen_details() {
     let store = Store::open(":memory:").unwrap();
-    let date = Local::now().date_naive();
+    let date = chrono::NaiveDate::from_ymd_opt(2026, 10, 16).unwrap();
     pepometer_core::demo::seed(&store, date).unwrap();
-    assert_eq!(store.days(), 30);
+    assert!(store.days() >= 42);
     let today = pepometer_core::screens::today(&store, &date.to_string());
-    assert_eq!(today.readiness.unwrap().value, 82.);
+    assert_eq!(today.readiness.as_ref().unwrap().value, 82.);
+    assert_eq!(today.sleep.as_ref().unwrap().value, 84.);
+    assert_eq!(today.load.as_ref().unwrap().value, 612.);
+    assert_eq!(today.chips[0].value.as_deref(), Some("7:48"));
+    assert_eq!(today.chips[1].value.as_deref(), Some("58"));
+    assert_eq!(today.chips[1].text.as_deref(), Some("ms"));
+    assert_eq!(today.chips[2].text.as_deref(), Some("On track"));
+    assert_eq!(today.factors.len(), 6);
     assert_eq!(today.body_battery.now, Some(78.));
+    assert_eq!(
+        today.call_note.as_deref(),
+        Some("Morning Run done · 186 load")
+    );
+    assert_eq!(today.fitness_age.chronological_age, Some(46.));
+    assert_eq!(today.vitals.readings.len(), 5);
+    assert_eq!(today.vitals.off_count, 0);
+    let sleep = pepometer_core::screens::sleep_view(&store, &date.to_string());
+    assert_eq!(sleep.stages.len(), 23);
+    assert_eq!(sleep.overnight.len(), 4);
+    assert!(sleep.overnight.iter().all(|o| o.series.len() >= 8));
+    assert_eq!(sleep.consistency.len(), 14);
+    assert!(sleep.consistency_spread_min.unwrap() > 0.);
+    let health = pepometer_core::screens::health(&store, &date.to_string());
+    assert_eq!(health.lever.as_ref().unwrap().key, "vigorousMinutes");
+    assert_eq!(health.fitness_age.trend.len(), 12);
+    assert!(health.fitness_age.trend.iter().all(Option::is_some));
+    let monday = date - Duration::days(date.weekday().num_days_from_monday() as i64);
+    let checkin = pepometer_core::screens::checkin(&store, &monday.to_string());
+    assert!(checkin
+        .cards
+        .iter()
+        .all(|c| c.value.is_some() && c.previous.is_some()));
+    assert!(checkin.fitness_age_change.is_some_and(|delta| delta <= -1.));
+    assert!(checkin.vo2max_change.is_some_and(|delta| delta >= 1.));
     assert_eq!(
         pepometer_core::screens::training(&store, &date.to_string())
             .load_focus
@@ -56,7 +88,63 @@ fn demo_seeds_current_day_and_screen_details() {
     let workout =
         pepometer_core::screens::workout(&store, pepometer_core::demo::WORKOUT_ID).unwrap();
     assert_eq!(workout.splits.len(), 10);
-    assert_eq!(workout.heart_rate.len(), 80);
+    assert_eq!(workout.heart_rate.len(), 210);
+    assert_eq!(workout.route.len(), 210);
+    assert_eq!(workout.zone_floors.len(), 4);
+    assert_eq!(
+        pepometer_core::screens::training(&store, &date.to_string())
+            .workouts
+            .len(),
+        3
+    );
+}
+#[test]
+fn readiness_feedback_overrides_percent_and_missing_feedback_falls_back() {
+    use pepometer_core::view::Tone;
+    let store = Store::open(":memory:").unwrap();
+    store
+        .put(
+            "readiness",
+            "2025-01-02",
+            "now",
+            &json!([{
+                "score":82,"level":"HIGH",
+                "sleepScoreFactorPercent":91,"sleepScoreFactorFeedback":"POOR",
+                "hrvFactorPercent":12,"hrvFactorFeedback":"BALANCED",
+                "acwrFactorPercent":50,"acwrFactorFeedback":"MODERATE",
+                "recoveryTimeFactorPercent":85,"sleepHistoryFactorPercent":80,
+                "stressHistoryFactorFeedback":"GOOD"
+            }]),
+        )
+        .unwrap();
+    let view = pepometer_core::screens::today(&store, "2025-01-02");
+    assert_eq!(view.factors.len(), 6);
+    let factor = |key| view.factors.iter().find(|f| f.key == key).unwrap().tone;
+    assert_eq!(factor("sleep"), Tone::Poor);
+    assert_eq!(factor("hrv"), Tone::Good);
+    assert_eq!(factor("acuteLoad"), Tone::Fair);
+    assert_eq!(factor("recovery"), Tone::Good);
+    assert_eq!(factor("stressHistory"), Tone::Good);
+}
+#[test]
+fn load_chip_uses_garmin_optimal_range() {
+    let store = Store::open(":memory:").unwrap();
+    for (amount, expected) in [
+        (350, "Room to build"),
+        (612, "On track"),
+        (810, "Load high"),
+    ] {
+        store
+            .put(
+                "training",
+                "2025-01-02",
+                "now",
+                &json!({"acuteTrainingLoad":amount,"optimalRangeMin":420,"optimalRangeMax":760}),
+            )
+            .unwrap();
+        let view = pepometer_core::screens::today(&store, "2025-01-02");
+        assert_eq!(view.chips[0].text.as_deref(), Some(expected));
+    }
 }
 #[test]
 fn views_match_synthetic_mockup() {
