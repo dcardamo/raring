@@ -1,0 +1,189 @@
+{
+  "acute": {
+    "value": 612,
+    "max": 1000,
+    "label": "Optimal",
+    "tone": "good",
+    "band": [
+      420,
+      760
+    ]
+  },
+  "status": "Productive",
+  "statusTone": "good",
+  "headline": "Room to build",
+  "chips": [
+    {
+      "icon": "flame",
+      "value": "1.1",
+      "text": "Load ratio",
+      "tone": "fair"
+    },
+    {
+      "icon": "clock",
+      "value": "18h",
+      "text": "Recovery",
+      "tone": "neutral"
+    }
+  ],
+  "week": [
+    {
+      "date": "2025-10-10",
+      "load": 0
+    },
+    {
+      "date": "2025-10-11",
+      "load": 142
+    },
+    {
+      "date": "2025-10-12",
+      "load": 210
+    },
+    {
+      "date": "2025-10-13",
+      "load": 0
+    },
+    {
+      "date": "2025-10-14",
+      "load": 95
+    },
+    {
+      "date": "2025-10-15",
+      "load": 320
+    },
+    {
+      "date": "2025-10-16",
+      "load": 186
+    }
+  ],
+  "loadFocus": [
+    {
+      "key": "lowAerobic",
+      "name": "Low aerobic",
+      "value": 450,
+      "target": [
+        300,
+        600
+      ],
+      "shortage": false
+    },
+    {
+      "key": "highAerobic",
+      "name": "High aerobic",
+      "value": 610,
+      "target": [
+        400,
+        800
+      ],
+      "shortage": false
+    },
+    {
+      "key": "anaerobic",
+      "name": "Anaerobic",
+      "value": 60,
+      "target": [
+        150,
+        350
+      ],
+      "shortage": true
+    }
+  ],
+  "vo2max": 52,
+  "vo2maxChange30d": 1,
+  "vo2maxTrend": [
+    49,
+    49,
+    50,
+    50,
+    50,
+    51,
+    51,
+    52
+  ],
+  "races": [
+    {
+      "label": "5K",
+      "seconds": 1300
+    },
+    {
+      "label": "10K",
+      "seconds": 2710
+    },
+    {
+      "label": "Half",
+      "seconds": 5990
+    },
+    {
+      "label": "Full",
+      "seconds": 12665
+    }
+  ],
+  "enduranceScore": 6800,
+  "hillScore": 74,
+  "runningToleranceKm": 63,
+  "workouts": [
+    {
+      "id": "9000000000001",
+      "icon": "run",
+      "name": "Morning Run",
+      "startLocal": "2025-10-16T06:12:00",
+      "durationS": 3134,
+      "distanceKm": 10.2,
+      "load": 186,
+      "zoneSeconds": [
+        190,
+        585,
+        1100,
+        1050,
+        209
+      ],
+      "aerobicTe": 3.8,
+      "aerobicLabel": "Improving",
+      "anaerobicTe": 1.2,
+      "anaerobicLabel": "Minor",
+      "benefit": "Tempo"
+    },
+    {
+      "id": "9000000000002",
+      "icon": "strength",
+      "name": "Strength",
+      "startLocal": "2025-10-15T17:12:00",
+      "durationS": 2882,
+      "distanceKm": null,
+      "load": 74,
+      "zoneSeconds": [
+        840,
+        1320,
+        540,
+        180,
+        2
+      ],
+      "aerobicTe": null,
+      "aerobicLabel": null,
+      "anaerobicTe": null,
+      "anaerobicLabel": null,
+      "benefit": null
+    },
+    {
+      "id": "9000000000003",
+      "icon": "bike",
+      "name": "Evening Ride",
+      "startLocal": "2025-10-15T18:12:00",
+      "durationS": 5050,
+      "distanceKm": 38.4,
+      "load": 246,
+      "zoneSeconds": [
+        480,
+        1800,
+        1920,
+        720,
+        120
+      ],
+      "aerobicTe": 2.9,
+      "aerobicLabel": "Improving",
+      "anaerobicTe": 1.2,
+      "anaerobicLabel": "Minor",
+      "benefit": "Base"
+    }
+  ]
+}

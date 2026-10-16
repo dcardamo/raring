@@ -1,0 +1,303 @@
+{
+  "date": "2025-10-16",
+  "startLocal": "2025-10-15T22:31:00",
+  "endLocal": "2025-10-16T06:39:00",
+  "score": {
+    "value": 84,
+    "max": 100,
+    "label": "Good",
+    "tone": "good",
+    "band": null
+  },
+  "asleepMin": 468,
+  "needMin": 450,
+  "headline": "A good night",
+  "stages": [
+    {
+      "stage": "light",
+      "startMin": 0,
+      "minutes": 12
+    },
+    {
+      "stage": "deep",
+      "startMin": 12,
+      "minutes": 38
+    },
+    {
+      "stage": "light",
+      "startMin": 50,
+      "minutes": 22
+    },
+    {
+      "stage": "rem",
+      "startMin": 72,
+      "minutes": 14
+    },
+    {
+      "stage": "light",
+      "startMin": 86,
+      "minutes": 30
+    },
+    {
+      "stage": "deep",
+      "startMin": 116,
+      "minutes": 32
+    },
+    {
+      "stage": "light",
+      "startMin": 148,
+      "minutes": 18
+    },
+    {
+      "stage": "awake",
+      "startMin": 166,
+      "minutes": 4
+    },
+    {
+      "stage": "rem",
+      "startMin": 170,
+      "minutes": 22
+    },
+    {
+      "stage": "light",
+      "startMin": 192,
+      "minutes": 34
+    },
+    {
+      "stage": "deep",
+      "startMin": 226,
+      "minutes": 18
+    },
+    {
+      "stage": "light",
+      "startMin": 244,
+      "minutes": 26
+    },
+    {
+      "stage": "rem",
+      "startMin": 270,
+      "minutes": 28
+    },
+    {
+      "stage": "awake",
+      "startMin": 298,
+      "minutes": 6
+    },
+    {
+      "stage": "light",
+      "startMin": 304,
+      "minutes": 40
+    },
+    {
+      "stage": "deep",
+      "startMin": 344,
+      "minutes": 8
+    },
+    {
+      "stage": "light",
+      "startMin": 352,
+      "minutes": 24
+    },
+    {
+      "stage": "rem",
+      "startMin": 376,
+      "minutes": 30
+    },
+    {
+      "stage": "light",
+      "startMin": 406,
+      "minutes": 28
+    },
+    {
+      "stage": "awake",
+      "startMin": 434,
+      "minutes": 5
+    },
+    {
+      "stage": "rem",
+      "startMin": 439,
+      "minutes": 26
+    },
+    {
+      "stage": "light",
+      "startMin": 465,
+      "minutes": 18
+    },
+    {
+      "stage": "awake",
+      "startMin": 483,
+      "minutes": 5
+    }
+  ],
+  "totals": [
+    {
+      "stage": "deep",
+      "minutes": 96,
+      "usualDeltaMin": 12
+    },
+    {
+      "stage": "light",
+      "minutes": 252,
+      "usualDeltaMin": -4
+    },
+    {
+      "stage": "rem",
+      "minutes": 120,
+      "usualDeltaMin": 9
+    },
+    {
+      "stage": "awake",
+      "minutes": 20,
+      "usualDeltaMin": -6
+    }
+  ],
+  "overnight": [
+    {
+      "kind": "hrv",
+      "value": 58,
+      "unit": "ms",
+      "series": [
+        49,
+        54,
+        57,
+        61,
+        60,
+        58,
+        56,
+        59
+      ]
+    },
+    {
+      "kind": "heartRate",
+      "value": 46,
+      "unit": "bpm",
+      "series": [
+        52,
+        50,
+        48,
+        47,
+        46,
+        46,
+        47,
+        46,
+        48,
+        47,
+        49,
+        51
+      ]
+    },
+    {
+      "kind": "respiration",
+      "value": 14.1,
+      "unit": "brpm",
+      "series": [
+        14.4,
+        14.2,
+        14,
+        13.9,
+        14.1,
+        14,
+        14.2,
+        14.1
+      ]
+    },
+    {
+      "kind": "spo2",
+      "value": 96,
+      "unit": "%",
+      "series": [
+        97,
+        96,
+        95,
+        96,
+        96,
+        95,
+        96,
+        96
+      ]
+    }
+  ],
+  "consistency": [
+    {
+      "date": "2025-10-03",
+      "bedHour": 22.6,
+      "wakeHour": 6.5
+    },
+    {
+      "date": "2025-10-04",
+      "bedHour": 23.1,
+      "wakeHour": 6.7
+    },
+    {
+      "date": "2025-10-05",
+      "bedHour": 22.9,
+      "wakeHour": 6.6
+    },
+    {
+      "date": "2025-10-06",
+      "bedHour": 23.6,
+      "wakeHour": 7
+    },
+    {
+      "date": "2025-10-07",
+      "bedHour": 22.5,
+      "wakeHour": 6.4
+    },
+    {
+      "date": "2025-10-08",
+      "bedHour": 23.3,
+      "wakeHour": 6.9
+    },
+    {
+      "date": "2025-10-09",
+      "bedHour": 22.8,
+      "wakeHour": 6.6
+    },
+    {
+      "date": "2025-10-10",
+      "bedHour": 22.7,
+      "wakeHour": 6.5
+    },
+    {
+      "date": "2025-10-11",
+      "bedHour": 23,
+      "wakeHour": 6.7
+    },
+    {
+      "date": "2025-10-12",
+      "bedHour": 24,
+      "wakeHour": 7.1
+    },
+    {
+      "date": "2025-10-13",
+      "bedHour": 22.6,
+      "wakeHour": 6.5
+    },
+    {
+      "date": "2025-10-14",
+      "bedHour": 22.9,
+      "wakeHour": 6.8
+    },
+    {
+      "date": "2025-10-15",
+      "bedHour": 22.7,
+      "wakeHour": 6.6
+    },
+    {
+      "date": "2025-10-16",
+      "bedHour": 22.52,
+      "wakeHour": 6.65
+    }
+  ],
+  "consistencySpreadMin": 18,
+  "bedWindow": [
+    22.5,
+    23
+  ],
+  "wakeWindow": [
+    6.5,
+    7
+  ],
+  "tonightBedtime": "22:50",
+  "tonightNeedMin": 455
+}
