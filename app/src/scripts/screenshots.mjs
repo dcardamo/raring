@@ -32,4 +32,11 @@ try{
   }
   if(pageErrors.length)throw new Error(`${name}: ${pageErrors.map(e=>e.message).join('; ')}`);
  }
+ await page.goto(`${url}/#today`);
+ await page.locator('.dial-button.large').click();
+ await page.waitForURL('**/#readiness');
+ await page.goBack();
+ await page.waitForURL('**/#today');
+ if(pageErrors.length)throw new Error(pageErrors.map(e=>e.message).join('; '));
+ console.log('Hash navigation and browser back: passed');
 }finally{await browser?.close();await server.close()}
