@@ -65,44 +65,44 @@ rose strength); the spec's Look section now describes it.
   capped at 100%. It goes into the spec's Rules section with the weekly plan.
 - The body map figure defaults from the Garmin profile when it has one; the
   strength intro's choice overrides it.
+- **Pace** decides whether a goal is amber: the share of the week's
+  training days (nights, for sleep) that have passed. Yes. *Rules: add to
+  the spec when the weekly plan ships.*
+- **Sets per muscle** count a set once for each primary muscle in Garmin's
+  catalog. If the catalog has no muscle data, Raring keeps a small mapping
+  table. *Rules: add to the spec when strength ships.*
+- **Help content** lives in the app, offline, as short pages, with a link to
+  GitHub for questions. Ship the strength pages with strength, and the rest
+  as each area ships.
+- **Week start** follows Garmin's start-of-week setting so intensity minutes
+  match Garmin's total; the mockup uses Monday.
+- **Asleep on time** means within 15 minutes of the suggested time, and
+  nights without a plan are left out. *Rules: add to the spec when the
+  weekly plan ships.*
+- **Miscount flags:** 0 reps; reps at least 1.8 times the median of the
+  exercise's other sets; an exercise Garmin couldn't name. Never fixed
+  automatically. *Rules: add to the spec when strength ships.*
+- **Progression defaults:** double progression with the smallest equipment
+  step; add reps first when the next step is over 10% heavier; drop one
+  step after two sessions below range; wait two sessions on a new exercise.
+  *Rules: add to the spec when the builder ships.*
+- **Step cap:** warn at 90, offer "split workout" at 100. The spike needs to
+  confirm how Garmin counts repeats.
+- **Weekly repeat** ("Every Sat") needs Raring to reschedule each week.
+  Ship "Once" first.
+- **Compatibility page:** publish only when the features ship; name only
+  tested models; create a `compatibility` issue label first.
+- **Units** follow Garmin's setting.
 
-## Open questions
+## Open gates
 
-Each has a recommendation. *Rules* marks Raring's own math, which needs a
-line in the spec's Rules section.
-
-1. **Pace** decides whether a goal is amber: the share of the week's
-   training days (nights, for sleep) that have passed. Recommend yes. *Rules.*
-2. **Body map art.** The figures are hand-drawn placeholders and need an
-   illustration pass before shipping.
-3. **Sets per muscle** count a set once for each primary muscle in Garmin's
-   catalog. If the catalog has no muscle data, Raring keeps a small mapping
-   table. *Rules.*
-4. **Help content** lives in the app, offline, as short pages, with a link to
-   GitHub for questions. Recommend shipping the strength pages with strength,
-   and the rest as each area ships.
-5. **Week start** follows Garmin's start-of-week setting so intensity minutes
-   match Garmin's total. Recommend yes; the mockup uses Monday.
-6. **Asleep on time** means within 15 minutes of the suggested time, and
-   nights without a plan are left out. *Rules.*
-7. **Miscount flags:** 0 reps; reps at least 1.8 times the median of the
-   exercise's other sets; an exercise Garmin couldn't name. Never fixed
-   automatically. *Rules.*
-8. **Readiness brake timing.** Readiness only exists on the morning. Recommend
-   scheduling progressed weights and swapping in held weights after the
-   morning sync on a Rest or Easy day. This depends on the watch syncing
-   before the session, which the Forerunner 970 spike has to confirm.
-9. **Progression defaults:** double progression with the smallest equipment
-   step; add reps first when the next step is over 10% heavier; drop one
-   step after two sessions below range; wait two sessions on a new exercise.
-   *Rules.*
-10. **Step cap:** warn at 90, offer "split workout" at 100. The spike needs to
-    confirm how Garmin counts repeats.
-11. **Weekly repeat** ("Every Sat") needs Raring to reschedule each week.
-    Recommend shipping "Once" first.
-12. **Compatibility page:** publish only when the features ship; name only
-    tested models; create a `compatibility` issue label first.
-13. **Units** follow Garmin's setting.
+- **Body map art (question 2).** The figures are hand-drawn placeholders;
+  defer the illustration pass until strength ships.
+- **Readiness brake timing (question 8).** Readiness only exists on the
+  morning. Schedule progressed weights and swap in held weights after the
+  morning sync on a Rest or Easy day, if the builder's Forerunner 970
+  workout-push spike confirms the watch syncs before the session. *Rules:
+  add the brake to the spec when the builder ships.*
 
 Not mocked: empty states, saving offline, a failed save. For a failed save,
 recommend keeping edits on the device, fetching the sets again before writing

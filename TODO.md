@@ -185,7 +185,43 @@ scores that seem to disagree.
 
 ## Next
 
-### 7. Persistent status notification (opt-in)
+### 7. Weekly plan, intensity minutes and goals
+
+Add a weekly plan to Today and the check-in, backed by Garmin's intensity
+minutes and goals: `/wellness-service/wellness/daily/im/{d}`,
+`/usersummary-service/stats/im/weekly/{start}/{end}` and
+`/goal-service/goal/user/effective/{d}`. Show the intensity-minutes ring on
+Health and in the check-in; it feeds the weekly focus and Fitness Age lever.
+
+- Targets: strength sessions, vigorous/intensity minutes (Garmin's goal by
+  default), Zone 2 minutes and asleep-on-time nights. Show partial credit,
+  planned rest days, the weekly check-in and week-over-week history. See
+  `design/mockup/` screens `plan`, `plan-setup` and `checkin`.
+- Decisions in `design/mockup/NOTES.md`: start the week on Garmin's setting;
+  follow Garmin's units. Pace uses elapsed training days (nights for sleep);
+  asleep-on-time means within 15 minutes of the suggested time, excluding
+  nights without a plan. History averages target completion capped at 100%
+  per target. Add Raring's pace, timing and completion math to the spec's
+  Rules section when this ships.
+
+### 8. Read-only strength view
+
+- First read real strength activities from the maintainer's Forerunner 970
+  and check the quality of `/activity-service/activity/{id}/exerciseSets`.
+  Do not call the endpoint verified until a real-account read succeeds.
+- Show recorded sets, reps and weights per activity, last time, PRs, weekly
+  sets per muscle, a body map and miscount flags. See `design/mockup/` screens
+  `strength-workout` and `strength-history`.
+- Decisions in `design/mockup/NOTES.md`: count a set once for each primary
+  muscle in Garmin's catalog (use a small mapping if absent); flag zero
+  reps, reps at least 1.8 times the exercise's other-set median, or an
+  unnamed exercise, without auto-correction. Body map art gets an
+  illustration pass when strength ships; ship its offline help pages then.
+  Publish compatibility only for tested models when features ship, after
+  creating a `compatibility` issue label. Add Raring's set-count and flag
+  math to the spec's Rules section when this ships.
+
+### 9. Persistent status notification (opt-in)
 
 A silent, ongoing notification that always shows the latest values, like
 the persistent notification a weather app keeps up to date.
@@ -204,15 +240,15 @@ the persistent notification a weather app keeps up to date.
 - Low-importance channel, no sound, off by default, toggled in Settings and
   offered once after the first sync.
 
-### 8. Home-screen widgets
+### 10. Home-screen widgets
 
 - Small: readiness gauge and focus. Medium: readiness, sleep, Body Battery,
-  stress. Same data and refresh as item 7; tapping opens the matching
+  stress. Same data and refresh as item 9; tapping opens the matching
   screen.
 - Rendered natively (Glance or RemoteViews) from a small snapshot the Rust
   core writes after each sync, so the widget never starts the web view.
 
-### 9. Long-term trends and comparisons
+### 11. Long-term trends and comparisons
 
 Depends on item 1. The analysis Garmin's subscription charges for, free.
 
@@ -224,7 +260,7 @@ Depends on item 1. The analysis Garmin's subscription charges for, free.
 - Display only: averages and overlays, no new scores. Spec: add the
   averaging to Rules.
 
-### 10. Export
+### 12. Export
 
 - Settings → Export: a zip of JSON (raw Garmin responses) plus CSVs of the
   daily tables, through the Android share sheet.
@@ -235,39 +271,32 @@ Depends on item 1. The analysis Garmin's subscription charges for, free.
 
 Each is a tile or detail in an existing screen first.
 
-11. **Intensity minutes and goals**: `/wellness-service/wellness/daily/im/{d}`,
-    `/usersummary-service/stats/im/weekly/{start}/{end}`,
-    `/goal-service/goal/user/effective/{d}`. Weekly ring on Health and in the
-    check-in; feeds the weekly focus and the Fitness Age lever.
-12. **Weight and body composition**: `/weight-service/weight/dateRange`,
+13. **Weight and body composition**: `/weight-service/weight/dateRange`,
     `/weight-service/weight/latest`. Trend tile and the BMI or body-fat
     Fitness Age driver.
-13. **All-day heart rate**:
+14. **All-day heart rate**:
     `/wellness-service/wellness/dailyHeartRate/{displayName}?date=`. Day chart
     with sleep and activities marked, like the stress detail.
-14. **Planned training**: Garmin Coach plans
+15. **Planned training**: Garmin Coach plans
     (`/trainingplan-service/trainingplan/active-plans`, `/tasks/{id}`),
     scheduled workouts
     (`/workout-service/schedule/workoutScheduleByPeriod`) and races
     (`/calendar-service/events/upcoming`). Today shows the planned session
     beside readiness; a race countdown on Training. Read-only here.
-15. **Gear**: `/gear-service/gear/v2/list`. Shoe and bike distance against
+16. **Gear**: `/gear-service/gear/v2/list`. Shoe and bike distance against
     the retirement threshold, with an optional notification.
-16. **Thresholds and acclimation**: lactate threshold, cycling FTP and
+17. **Thresholds and acclimation**: lactate threshold, cycling FTP and
     heat/altitude acclimation
     (`/biometric-service/biometric/latestLactateThreshold`,
     `/latestFunctionalThresholdPower/CYCLING`,
     `/metrics-service/metrics/heataltitudeacclimation/latest/{d}`). Training
     detail tiles, shown only when the watch records them.
-17. **Naps and journal**: `/sleep-service/sleep/naps/{d}`; the lifestyle
+18. **Naps and journal**: `/sleep-service/sleep/naps/{d}`; the lifestyle
     log (`/lifestylelogging-service/dailyLog/{d}`) as the planned journal.
-18. **Women's health (opt-in)**: cycle and pregnancy views
+19. **Women's health (opt-in)**: cycle and pregnancy views
     (`/periodichealth-service/menstrualcycle/…`) as context on readiness and
     vitals. Sensitive: off by default, excluded from notifications unless
     chosen.
-19. **Strength**: read-only sets, reps and weights per strength activity
-    (`/activity-service/activity/{id}/exerciseSets`), then the weekly plan.
-    Design notes exist from earlier research.
 
 ## Later: changing Garmin settings
 
@@ -303,18 +332,37 @@ faces, screens, sensors and audio prompts stay in Connect.
     value back and shows success or failure; nothing writes in the
     background; deletes ask first; a local log lists recent changes. Spec:
     a Garmin writes section.
-22. **Day-to-day settings**, in order:
+22. **Strength workout builder**: after the write rules, start with a
+    workout-push spike on the Forerunner 970: create and schedule a strength
+    workout, confirm it reaches the watch, do it and read the sets back.
+    Check whether morning readiness sync arrives before a session (gates the
+    readiness brake) and how Garmin counts repeats against the ~100-step cap.
+    Then build workouts with progression: double progression with the smallest
+    equipment step, reps first if the next step is over 10% heavier, one step
+    down after two sessions below range and two sessions' wait on a new
+    exercise. Schedule progressed weights, swapping in held weights after
+    morning sync on Rest or Easy days only if the spike supports it. Warn at
+    90 steps, offer a split at 100, subject to the spike's repeat count;
+    ship one-time scheduling first, not weekly rescheduling. See
+    `design/mockup/NOTES.md` and the `builder` mockup; add Raring's
+    progression math and readiness brake to the spec's Rules section when
+    this ships. Ship builder help and compatibility for tested models then.
+23. **Day-to-day settings**, in order:
     - Alarms: list, toggle, add, edit time and days.
     - Sleep schedule: bed and wake times, linked from tonight's sleep plan.
     - Daily goals: steps (`set_steps_goal`), intensity minutes, floors,
       hydration (`PUT /goal-service/goal/user/effective/{type}/{d}`).
     - Do not disturb on or off, if the spike shows it reaches the watch.
-23. **Quick logging**: weight (`/weight-service/user-weight`), hydration
+24. **Quick logging**: weight (`/weight-service/user-weight`), hydration
     (`/usersummary-service/usersummary/hydration/log`), blood pressure
     (`/bloodpressure-service/bloodpressure`; it can't be edited, only deleted
     and added again).
-24. **Activity edits**: rename, change type, notes
-    (`PUT /activity-service/activity/{id}`); then strength set correction.
+25. **Activity edits and strength set correction**: rename, change type,
+    notes (`PUT /activity-service/activity/{id}`), then correct recorded
+    strength sets. Follow the write rules in item 21; for a failed save,
+    retain local edits, fetch the sets again before retrying in case they
+    changed in Connect, and explain what was rejected (see
+    `design/mockup/NOTES.md` and the `fix` mockup).
 
 ## Not planned
 
