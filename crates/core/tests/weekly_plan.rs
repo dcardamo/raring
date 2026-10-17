@@ -557,6 +557,7 @@ fn put_for_scan(store: &Store, today: chrono::NaiveDate) {
         "intensity_weeks_checked",
         "weight_latest_checked",
         "weight_recent_checked",
+        "gear_checked",
     ] {
         store
             .set_cursor(key, &chrono::Utc::now().timestamp().to_string())

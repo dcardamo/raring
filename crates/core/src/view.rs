@@ -737,6 +737,28 @@ pub struct UpcomingRace {
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
+pub struct GearItem {
+    pub id: String,
+    pub name: String,
+    pub kind: String,
+    pub status: String,
+    pub distance: Option<f64>,
+    pub threshold: Option<f64>,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct GearView {
+    pub items: Vec<GearItem>,
+    pub unit: String,
+    /// API fetch time, not a watch measurement or activity time.
+    pub fetched_at: String,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct TrainingView {
     /// Acute load on a scale, with Garmin's optimal range as the band.
     pub acute: Option<Gauge>,
@@ -758,6 +780,7 @@ pub struct TrainingView {
     pub hill_score: Option<f64>,
     pub running_tolerance_km: Option<f64>,
     pub workouts: Vec<ActivityCard>,
+    pub gear: Option<GearView>,
     pub planned: PlannedTraining,
     pub race: Option<UpcomingRace>,
     pub race_state: PlannedState,

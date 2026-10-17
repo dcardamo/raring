@@ -379,6 +379,7 @@ impl Client {
                 "/userprofile-service/userprofile/user-settings".into(),
                 vec![],
             ),
+            "gear" => ("/gear-service/gear/v2/list".into(), vec![]),
             "devices" => ("/device-service/deviceregistration/devices".into(), vec![]),
             "device_detail" => (device_detail_path(key)?, vec![]),
             "summary" => (

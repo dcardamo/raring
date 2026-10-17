@@ -2259,6 +2259,7 @@ pub fn training_at_calendar(store: &Store, date: &str, calendar: NaiveDate, now:
                 .or_else(|| num(&v, &[&["runningTolerance"], &["tolerance"]]))
         }),
         workouts,
+        gear: crate::gear::view(store),
         planned: planned::session(store, &calendar.to_string(), now),
         race,
         race_state,

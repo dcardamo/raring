@@ -773,6 +773,7 @@ async fn backfill_includes_yesterday_and_scans_existing_days_to_fill_older_gaps(
             .unwrap();
         s.set_cursor("intensity_weeks_checked", &Utc::now().timestamp().to_string())
             .unwrap();
+        s.set_cursor("gear_checked", &Utc::now().timestamp().to_string()).unwrap();
         for kind in ["weight_latest", "weight_recent"] {
             s.set_cursor(&format!("{kind}_checked"), &Utc::now().timestamp().to_string()).unwrap();
         }
@@ -823,6 +824,7 @@ async fn backfill_skips_old_health_status_days_and_still_fetches_history_ranges(
     store.set_cursor("devices_checked", &Utc::now().timestamp().to_string()).unwrap();
     store.set_cursor("intensity_weeks_checked", &Utc::now().timestamp().to_string()).unwrap();
     store.put("sleep_stats", &today.to_string(), "now", &json!({})).unwrap();
+    store.set_cursor("gear_checked", &Utc::now().timestamp().to_string()).unwrap();
     for kind in ["weight_latest", "weight_recent"] {
         store.set_cursor(&format!("{kind}_checked"), &Utc::now().timestamp().to_string()).unwrap();
     }

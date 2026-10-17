@@ -2,6 +2,7 @@
 pub mod demo;
 mod export;
 pub mod garmin;
+mod gear;
 pub mod notifications;
 pub mod phase;
 pub mod plan;

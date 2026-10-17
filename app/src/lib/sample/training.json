@@ -242,6 +242,36 @@
     "daysUntil": 12
   },
   "raceState": "available",
+  "gear": {
+    "unit": "km",
+    "fetchedAt": "2025-10-16T10:30:00Z",
+    "items": [
+      {
+        "id": "sample-shoes",
+        "name": "Road shoes",
+        "kind": "Shoes",
+        "status": "Active",
+        "distance": 420,
+        "threshold": 650
+      },
+      {
+        "id": "sample-bike",
+        "name": "City bike",
+        "kind": "Bike",
+        "status": "Retired",
+        "distance": 1240,
+        "threshold": null
+      },
+      {
+        "id": "sample-spare",
+        "name": "Spare shoes",
+        "kind": "Shoes",
+        "status": "Active",
+        "distance": 0,
+        "threshold": null
+      }
+    ]
+  },
   "strength": {
     "figure": "female",
     "weekStart": "2025-10-13",

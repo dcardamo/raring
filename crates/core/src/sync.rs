@@ -219,6 +219,7 @@ pub async fn sync(
     if !report.rate_limited && report.error.is_none() {
         sync_intensity_weeks(store, client, &mut report, today, budget, now).await;
         sync_weight(store, client, &mut report, today, budget, now).await;
+        sync_gear(store, client, &mut report, budget, now).await;
     }
     // The app uses a 60-request sync. Tiny explicit budgets keep existing daily
     // metrics first; planned data waits for a normal run.
@@ -774,6 +775,46 @@ async fn sync_weight(
             report.error = Some("local storage failed".into());
             return;
         }
+    }
+}
+
+/// Gear is a complete snapshot, not an append-only series. A failed or malformed
+/// list must not remove previously retired/deleted items. An empty valid list does.
+#[doc(hidden)]
+pub async fn sync_gear(
+    store: &Store,
+    client: &Client,
+    report: &mut SyncReport,
+    budget: usize,
+    now: DateTime<Utc>,
+) {
+    if store.cursor("gear_checked")
+        .and_then(|v| v.parse::<i64>().ok())
+        .is_some_and(|t| t <= now.timestamp() && now.timestamp() - t < 86400)
+    {
+        return;
+    }
+    let result = request(store, client, report, "gear", "me", None, budget, now).await;
+    let snapshot = match result {
+        Some(Got::Value(v)) if crate::gear::valid_list(&v) => Some(v),
+        Some(Got::Value(_)) => {
+            report.data_failures += 1;
+            // A malformed 200 is not an empty list, but must not spin on
+            // every hourly worker run either.
+            if store.set_cursor("gear_checked", &now.timestamp().to_string()).is_err() {
+                report.error = Some("local storage failed".into());
+            }
+            return;
+        }
+        Some(Got::Absent) => None,
+        Some(Got::Later) | None => return,
+    };
+    if snapshot.as_ref().is_some_and(|v| store.put("gear", "me", &now.to_rfc3339(), v).is_err())
+        || store.set_cursor("gear_checked", &now.timestamp().to_string()).is_err()
+    {
+        report.error = Some("local storage failed".into());
+    } else if snapshot.is_some() {
+        report.stored += 1;
     }
 }
 

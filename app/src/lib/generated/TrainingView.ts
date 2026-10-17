@@ -3,6 +3,7 @@ import type { ActivityCard } from "./ActivityCard";
 import type { Chip } from "./Chip";
 import type { DayLoad } from "./DayLoad";
 import type { Gauge } from "./Gauge";
+import type { GearView } from "./GearView";
 import type { LoadFocusBar } from "./LoadFocusBar";
 import type { PlannedState } from "./PlannedState";
 import type { PlannedTraining } from "./PlannedTraining";
@@ -28,7 +29,7 @@ week: Array<DayLoad>, loadFocus: Array<LoadFocusBar>, vo2max: number | null, vo2
 /**
  * Weekly values, oldest first.
  */
-vo2maxTrend: Array<number | null>, races: Array<RacePrediction>, enduranceScore: number | null, hillScore: number | null, runningToleranceKm: number | null, workouts: Array<ActivityCard>, planned: PlannedTraining, race: UpcomingRace | null, raceState: PlannedState, 
+vo2maxTrend: Array<number | null>, races: Array<RacePrediction>, enduranceScore: number | null, hillScore: number | null, runningToleranceKm: number | null, workouts: Array<ActivityCard>, gear: GearView | null, planned: PlannedTraining, race: UpcomingRace | null, raceState: PlannedState, 
 /**
  * This week's strength sets, when any strength session has sets in
  * the last 12 weeks.

@@ -29,6 +29,7 @@
  import StrengthHistory from './lib/components/StrengthHistory.svelte';
  import HelpSheet from './lib/components/HelpSheet.svelte';
  import BodyMap from './lib/components/BodyMap.svelte';
+ import GearCard from './lib/components/GearCard.svelte';
  import {help as helpContent,helpSections,GITHUB_QUESTIONS} from './lib/help';
  import type {StrengthView} from './lib/generated/StrengthView';
  import WhySheet from './lib/components/WhySheet.svelte';
@@ -336,6 +337,7 @@
  {#if trainingData.enduranceScore!=null || trainingData.hillScore!=null || trainingData.runningToleranceKm!=null}<Card title="More metrics"><div class="metrics">{#if trainingData.enduranceScore!=null}<button class="metric-link" onclick={()=>navigate('metric/endurance')}><b>{num(trainingData.enduranceScore)}</b><span>Endurance</span></button>{/if}{#if trainingData.hillScore!=null}<button class="metric-link" onclick={()=>navigate('metric/hill')}><b>{num(trainingData.hillScore)}</b><span>Hill score</span></button>{/if}{#if trainingData.runningToleranceKm!=null}<button class="metric-link" onclick={()=>navigate('metric/runningTolerance')}><b>{num(trainingData.runningToleranceKm)} km</b><span>Run tolerance</span></button>{/if}</div></Card>{/if}
  <Card title="Load history"><HistoryChart values={[]} label="Acute load" metric="acuteLoad" initialRange="days30"/></Card>
  {#if trainingData.strength}{@const st=trainingData.strength}<Card title="Strength · this week" onclick={()=>navigate('strength')}>{#snippet aside()}{#if st.records}<span class="pill ok"><Icon name="star" size={12}/>{st.records===1?'1 record':`${st.records} records`}</span>{/if}{/snippet}<div class="strength-week"><div><div class="big n">{st.sets}</div><div class="small">sets · {st.sessionsWithSets===1?'1 session':`${st.sessionsWithSets} sessions`} with sets{#if st.strengthActivities>st.sessionsWithSets}<br>{st.strengthActivities-st.sessionsWithSets} without sets{/if}</div></div><BodyMap figure={st.figure} muscles={st.muscles} width={96} max={12} legend={false}/></div></Card>{/if}
+ {#if trainingData.gear}<GearCard gear={trainingData.gear}/>{/if}
  {#if trainingData.workouts.length}<Card title="Recent workouts">{#each trainingData.workouts as a}<div class="workout-item"><ActivityRow activity={a} open={()=>navigate('workout/'+a.id)}/></div>{/each}</Card>{/if}
 </div>
 {:else if workoutData}

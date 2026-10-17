@@ -191,8 +191,6 @@ separate export. The offline JSON/CSV export does not make network requests.
 
 Each is a tile or detail in an existing screen first.
 
-16. **Gear**: `/gear-service/gear/v2/list`. Shoe and bike distance against
-    the retirement threshold, with an optional notification.
 17. **Thresholds and acclimation**: lactate threshold, cycling FTP and
     heat/altitude acclimation
     (`/biometric-service/biometric/latestLactateThreshold`,
@@ -280,6 +278,30 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **16. Read-only gear** (commit "Show Garmin gear distance on Training").
+  Training has an expandable gear card showing shoes and bikes, including
+  retired items, Garmin's accumulated distance and a Garmin retirement
+  threshold only when supplied. It labels the last successful list fetch;
+  missing distance and zero/missing thresholds stay neutral. No gear writes,
+  activity assignment or notifications. The complete list is checked at most
+  daily within the existing sync budget and 429 backoff, including empty/404
+  answers; failures preserve the last good list. Verified by three read-only
+  account requests (no 429 or auth failure): `GET /gear-service/gear/v2/list`
+  returns an array without parameters; `userProfilePk` also returned the same
+  list, as did the community client's `/gear-service/gear/filterGear` with
+  `userProfilePk`. Each v2 row has `uuid`, `gearType`, `status`, `name`, `brand`,
+  `usageType`, `distanceUsedMeters`, `maxUsageDistanceMeters`, `firstUseDate`,
+  `numActivitiesLinked`, `durationUsedSeconds`, `daysUsed`, `processing`,
+  `createdDate` and `userProfilePk`. Distance and threshold are metres;
+  the community client's gear creation converts km to metres. Retired state,
+  shoes, empty lists, absent distance and absent thresholds were not established
+  by these reads; synthetic tests cover them.
+  - Follow-up: compare the card's units, status and threshold to Garmin
+    Connect on a phone, including a retired item and an account without gear.
+  - Optional threshold notification: if added later, opt-in consent, Garmin's
+    own positive threshold and per-gear/per-threshold deduplication are
+    required; do not change the existing notification cadence.
 
 - **15. Planned training, read-only** (commit "Show planned training and upcoming races").
   Today and Training show Garmin's next scheduled session and Coach context;

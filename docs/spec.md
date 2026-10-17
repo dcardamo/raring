@@ -208,6 +208,13 @@ optional after sign-in.
   and unavailable schedule/calendar states are distinct. No scheduled item is
   marked done by time or name; the workout list below contains recorded
   activities with zone strips and load.
+- **Gear**: a compact expandable card lists Garmin shoes and bikes, including
+  retired gear, with Garmin's accumulated distance against its own distance
+  threshold when one exists. Distance uses Garmin account distance units when
+  known, otherwise the endpoint's metres. A missing distance is not zero;
+  a zero or absent threshold is not a suggested lifespan. The card labels
+  Raring's last successful gear-list fetch time, not an activity measurement.
+  No gear changes, activity assignments or gear notifications.
 
 ### Workout
 
@@ -413,6 +420,12 @@ Sent by the phone itself.
 
 ## Rules
 
+- **Gear snapshots**: `/gear-service/gear/v2/list` is a complete array;
+  `distanceUsedMeters` and `maxUsageDistanceMeters` are metres. Check at most
+  daily within sync's request budget and backoff. An empty valid list replaces
+  the old list, including retired or deleted items; 404, failed or malformed
+  fetches retain the last good snapshot. No request on navigation. Zero
+  threshold means no distance threshold, not a retirement verdict.
 - **Weight history**: Garmin's weigh-ins are grams; display kg or lb to 0.1
   from the account's measurement system. For repeated weigh-ins on a date,
   keep the latest timestamp. The 12-week trend shows the last recorded value
