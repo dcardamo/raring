@@ -116,13 +116,11 @@ Extend Sleep and the shared Tonight's sleep card, not a new screen. The
 Change emphasis, not navigation. Put one timely action first while keeping
 Today · Sleep · Training · Health and metric access predictable.
 
-- UX research (2026-10-17): the [adaptive daily overview][daily-overview]
-  combines changing highlights with stable metric shortcuts.
-  [Bedtime guidance][bedtime-guidance] stays collapsed earlier in the day,
-  rises to the top one hour before its window, and opens timing history.
-  The [body-clock explanation][body-clock] separates longer-term rhythm
-  from tonight's practical recommendation. Use those interaction principles,
-  not another app's branding, assets, copy or scoring algorithms.
+- Keep stable metric shortcuts alongside a changing highlight. Bedtime
+  guidance stays collapsed earlier in the day, rises about an hour before
+  its window, and opens timing history. Keep longer-term rhythm separate
+  from tonight's recommendation. Sources are in the maintainer's private
+  research notes; use no other app's branding, assets, copy or scoring.
 - **After waking:** last night's sleep and readiness, the main limiting
   factor, then today's effort suggestion. Missing sleep is neutral: show
   freshness and the known missing-data reason, not a bad-night verdict.
@@ -131,7 +129,7 @@ Today · Sleep · Training · Health and metric access predictable.
   or invent a planned workout before planned-training support exists.
 - **Approaching sleep:** promote the shared bedtime plan from item 3,
   emphasizing wind-down and bedtime timing rather than yesterday's sleep
-  score. Prototype promotion two hours before the window starts, followed
+  score. Prototype promotion about an hour before the window starts, followed
   by a calm wind-down state. Once the window has passed, avoid a red
   countdown or pressure to exercise; do not assume the person is asleep.
 - Anchor phases to the person's main sleep/wake pattern and upcoming plan,
@@ -153,9 +151,6 @@ Today · Sleep · Training · Health and metric access predictable.
 
 [garmin-sleep-rhythm]: https://www.garmin.com/en-US/blog/fitness/the-difference-between-garmin-venu-3-and-venu-4/
 [garmin-alignment-fields]: https://github.com/cyberjunky/ha-garmin/blob/main/src/ha_garmin/client.py
-[daily-overview]: https://support.ouraring.com/hc/en-us/articles/42987005571859-How-to-Use-the-Oura-App
-[bedtime-guidance]: https://support.ouraring.com/hc/en-us/articles/360025445154-Bedtime-Guidance
-[body-clock]: https://support.ouraring.com/hc/en-us/articles/14594974129555-Body-Clock-and-Chronotype
 
 ### 5. Garmin's Health Status
 
