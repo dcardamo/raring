@@ -728,7 +728,14 @@ async fn backfill_includes_yesterday_and_scans_existing_days_to_fill_older_gaps(
                 s.put(kind, day, "now", &Value::Null).unwrap();
             }
         }
-        for kind in ["fitness_age", "races", "endurance", "hill", "tolerance"] {
+        for kind in [
+            "sleep_stats",
+            "fitness_age",
+            "races",
+            "endurance",
+            "hill",
+            "tolerance",
+        ] {
             s.put(kind, "2025-01-10", "now", &Value::Null).unwrap();
         }
         s.put("records", "all", "now", &Value::Null).unwrap();
@@ -781,6 +788,7 @@ async fn backfill_skips_old_health_status_days_and_still_fetches_history_ranges(
     store.set_cursor("records_checked", &Utc::now().timestamp().to_string()).unwrap();
     store.put("devices", "me", "now", &json!([])).unwrap();
     store.set_cursor("devices_checked", &Utc::now().timestamp().to_string()).unwrap();
+    store.put("sleep_stats", &today.to_string(), "now", &json!({})).unwrap();
     let mut replies = vec![(200, "{}".into()); 13];
     replies[4] = (200, json!({"data":{"healthStatusSummary":null}}).to_string());
     replies.extend([(200, "[]".into()), (200, json!({"data":[]}).to_string())]);
@@ -804,6 +812,123 @@ async fn backfill_skips_old_health_status_days_and_still_fetches_history_ranges(
     assert_eq!(seen.iter().filter(|r| r.contains("POST /graphql-gateway/graphql")).count(), 1);
     assert!(seen[14].contains("/usersummary-service/v2/dailysummaries"));
     assert!(store.get("health_status", &(today - Duration::days(30)).to_string()).is_none());
+}
+#[tokio::test]
+async fn sleep_stats_refetch_until_they_include_last_night() {
+    let s = Store::open(":memory:").unwrap();
+    let now = chrono::NaiveDate::from_ymd_opt(2025, 1, 10)
+        .unwrap()
+        .and_hms_opt(13, 0, 0)
+        .unwrap()
+        .and_local_timezone(Local)
+        .single()
+        .unwrap();
+    s.put(
+        "profile",
+        "me",
+        "now",
+        &json!({"displayName":"Sample User"}),
+    )
+    .unwrap();
+    s.put("devices", "me", "now", &json!([])).unwrap();
+    s.set_cursor("devices_checked", &Utc::now().timestamp().to_string())
+        .unwrap();
+    let night = json!({"dailySleepDTO":{"sleepTimeSeconds":25000}}).to_string();
+    let stats = |date: &str| {
+        json!({"overallStats":{},"individualStats":[{"calendarDate":date}]}).to_string()
+    };
+    for (sleep, stored, fetches) in [
+        // Before last night has synced, any copy will do.
+        ("{}".to_owned(), None, true),
+        ("{}".to_owned(), Some(stats("2025-01-09")), false),
+        // Once it has, a copy without it is refetched.
+        (night.clone(), Some(stats("2025-01-09")), true),
+        (night.clone(), Some(stats("2025-01-10")), false),
+    ] {
+        // Each case stands for a later hour, past the hourly retry limit.
+        s.set_cursor("checked:sleep_stats:2025-01-10", "0").unwrap();
+        if let Some(stored) = &stored {
+            s.put(
+                "sleep_stats",
+                "2025-01-10",
+                "now",
+                &serde_json::from_str(stored).unwrap(),
+            )
+            .unwrap();
+        }
+        let mut replies = vec![(200, "{}".to_owned()), (200, sleep)];
+        replies.extend(vec![(200, "{}".to_owned()); 12]);
+        // A valid Health Status answer keeps its retry backoff from shifting later requests.
+        replies[4] = (200, json!({"data":{"healthStatusSummary":null}}).to_string());
+        let (url, seen, thread) = mock(replies);
+        let c = Client::with_urls(
+            Tokens {
+                access_token: token(1900000000),
+                refresh_token: "refresh".into(),
+                client_id: "TEST_DI".into(),
+                expires_at: Utc::now() + Duration::days(30),
+            },
+            &url,
+            &url,
+            std::time::Duration::ZERO,
+        )
+        .unwrap();
+        raring_core::sync::sync(&s, &c, now, 14).await;
+        thread.join().unwrap();
+        let last = seen.lock().unwrap()[13].clone();
+        assert_eq!(
+            last.contains("/sleep-service/stats/sleep/daily/2025-01-04/2025-01-10"),
+            fetches,
+            "{last}"
+        );
+    }
+}
+#[tokio::test]
+async fn empty_or_missing_sleep_stats_are_asked_for_at_most_hourly() {
+    let now = chrono::NaiveDate::from_ymd_opt(2025, 1, 10)
+        .unwrap()
+        .and_hms_opt(13, 0, 0)
+        .unwrap()
+        .and_local_timezone(Local)
+        .single()
+        .unwrap();
+    let night = json!({"dailySleepDTO":{"sleepTimeSeconds":25000}}).to_string();
+    let path = "/sleep-service/stats/sleep/daily/2025-01-04/2025-01-10";
+    for (status, body) in [(200, "{}"), (200, "null"), (204, ""), (404, "{}")] {
+        let s = Store::open(":memory:").unwrap();
+        s.put("profile", "me", "now", &json!({"displayName":"Sample User"}))
+            .unwrap();
+        s.put("devices", "me", "now", &json!([])).unwrap();
+        s.set_cursor("devices_checked", &Utc::now().timestamp().to_string())
+            .unwrap();
+        for run in 0..2 {
+            let mut replies = vec![(200, "{}".to_owned()), (200, night.clone())];
+            replies.extend(vec![(200, "{}".to_owned()); 11]);
+            replies[4] = (200, json!({"data":{"healthStatusSummary":null}}).to_string());
+            replies.push((status, body.to_owned()));
+            let (url, seen, thread) = mock(replies);
+            let c = Client::with_urls(
+                Tokens {
+                    access_token: token(1900000000),
+                    refresh_token: "refresh".into(),
+                    client_id: "TEST_DI".into(),
+                    expires_at: Utc::now() + Duration::days(30),
+                },
+                &url,
+                &url,
+                std::time::Duration::ZERO,
+            )
+            .unwrap();
+            raring_core::sync::sync(&s, &c, now, 14).await;
+            thread.join().unwrap();
+            let last = seen.lock().unwrap()[13].clone();
+            assert_eq!(
+                last.contains(path),
+                run == 0,
+                "{status} {body:?} run {run}: {last}"
+            );
+        }
+    }
 }
 #[tokio::test]
 async fn forbidden_is_not_signout_and_rejected_refresh_is() {

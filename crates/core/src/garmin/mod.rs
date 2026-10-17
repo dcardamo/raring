@@ -395,6 +395,15 @@ impl Client {
                 format!("/metrics-service/metrics/maxmet/daily/{key}/{key}"),
                 vec![],
             ),
+            // Seven days ending on `key`; overallStats holds Garmin's average bed and wake times.
+            "sleep_stats" => {
+                let end = NaiveDate::parse_from_str(key, "%Y-%m-%d").map_err(|_| Error::Decode)?;
+                let start = end - chrono::Duration::days(6);
+                (
+                    format!("/sleep-service/stats/sleep/daily/{start}/{end}"),
+                    vec![],
+                )
+            }
             "fitness_age" => (format!("/fitnessage-service/fitnessage/{key}"), vec![]),
             "endurance" => (
                 "/metrics-service/metrics/endurancescore".into(),

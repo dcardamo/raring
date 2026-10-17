@@ -337,7 +337,15 @@ fn get_settings(app: tauri::AppHandle) -> Result<Settings, String> {
 fn set_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String> {
     core(&app)?
         .set_settings(settings)
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    // The bedtime switch and wind-down lead move tonight's reminder.
+    #[cfg(target_os = "android")]
+    std::thread::spawn(move || {
+        let _ = vault(&app)
+            .0
+            .run_mobile_plugin::<serde_json::Value>("schedule", serde_json::json!({}));
+    });
+    Ok(())
 }
 
 #[cfg(debug_assertions)]

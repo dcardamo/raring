@@ -8,4 +8,8 @@ export type Settings = { notifyMorningReadiness: boolean, notifyWeeklyCheckin: b
 /**
  * VO2max and Fitness Age changes.
  */
-notifyMetricChanges: boolean, notifyVitals: boolean, notifyTrainingStatus: boolean, notifyBedtime: boolean, };
+notifyMetricChanges: boolean, notifyVitals: boolean, notifyTrainingStatus: boolean, notifyBedtime: boolean, 
+/**
+ * Minutes between the wind-down reminder and the bedtime window.
+ */
+bedtimeLeadMin: number, };

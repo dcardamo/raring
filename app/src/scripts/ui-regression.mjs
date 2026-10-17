@@ -97,6 +97,19 @@ try {
  await page.getByRole('button',{name:/^Tonight's sleep/}).click();await waitRoute('sleep');
  assert.ok((await page.locator('.sleep-plan').textContent()).includes('23:06'));
  assert.ok((await page.locator('.sleep-plan').textContent()).includes('22:30–23:06'));
+ const plan=page.locator('.sleep-plan');
+ assert.ok((await plan.textContent()).includes('Wind down22:00'),'the plan leads with the wind-down time');
+ assert.ok((await plan.textContent()).includes('Garmin plan'));
+ assert.ok((await plan.textContent()).includes("Garmin added 20 min for today's activity and load."));
+ await plan.getByRole('button',{name:'Why this plan'}).click();
+ const evidence=await plan.locator('.evidence').textContent();
+ assert.ok(evidence.includes("Garmin's recommendation for tonight.") && evidence.includes("Training: today's activity and load") && evidence.includes('30 min before the window starts'),evidence);
+ const alignment=page.locator('.alignment');
+ assert.equal(await alignment.locator('h3 .pill').textContent(),'Aligned');
+ assert.equal(await alignment.locator('.night').count(),7,'a week of nights against Garmin\'s optimal window');
+ assert.equal(await alignment.locator('rect.optimal').getAttribute('stroke-dasharray'),'4 3','Garmin\'s target is outlined, never shaded like usual windows');
+ assert.ok((await alignment.textContent()).includes('Optimal 22:45–06:15'));
+ assert.ok((await page.locator('.consistency .averages').textContent()).includes('22:55'));
  await tab('Health');
  assert.equal(await page.locator('.dashboard>.card').first().locator('h3>span').first().textContent(),'Vitals');
  assert.equal(await page.locator('.signal-tile').count(),5);
@@ -119,7 +132,24 @@ try {
  const chart=await history.locator('.chart-surface').boundingBox();
  await history.locator('.chart-surface').click({position:{x:chart.width*.55,y:chart.height*.5}});
  assert.notEqual(await slider.inputValue(),'29','chart taps select a reading');
- console.log('Daily focus, sleep plan and keyboard/touch history: passed');
+ await page.goto(`${url}/#checkin`);await waitRoute('checkin');
+ for(let i=0;i<4;i++)await page.getByRole('button',{name:'Next'}).click();
+ const timing=page.locator('.timing-review');
+ await timing.waitFor();
+ assert.equal(await page.locator('.checkin-controls span').textContent(),'5 / 6','the timing review sits before the summary');
+ const review=await timing.textContent();
+ assert.ok(review.includes('Bedtimes22:31–00:30') && review.includes('Garmin: 5 aligned · 2 behind') && review.includes('Keep waking near 06:48.'),review);
+ assert.equal(await timing.locator('rect.night').count(),7);
+ await page.getByRole('button',{name:'Next'}).click();
+ await page.getByText('THE FOCUS',{exact:true}).waitFor();
+ await page.goto(`${url}/#settings`);await waitRoute('settings');
+ assert.equal(await page.locator('.setting.lead').count(),0,'the lead appears with the bedtime reminder');
+ await page.locator('label.setting',{hasText:'Bedtime'}).locator('input').check();
+ await page.locator('.setting.lead select').selectOption('45');
+ await tab('Today');
+ await page.getByRole('button',{name:'Settings',exact:true}).click();await waitRoute('settings');
+ assert.equal(await page.locator('.setting.lead select').inputValue(),'45');
+ console.log('Daily focus, sleep plan, rhythm, timing review, reminder lead and keyboard/touch history: passed');
 
  for(const width of [344,360,390,660,707,840,1024]) {
   await page.setViewportSize({width,height:900});
@@ -180,7 +210,7 @@ try {
     if(command==='request_notification_permission'){state.permissions++;return true}
     if(command==='sign_out'){state.signedIn=false;return}
     if(command==='sync_now')return;
-    if(command==='get_settings')return {notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false};
+    if(command==='get_settings')return {notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,bedtimeLeadMin:30};
     if(command.startsWith('plugin:event|'))return 1;
     if(command in samples)return structuredClone(samples[command]);
     throw Error('Unexpected onboarding command '+command);
@@ -342,10 +372,11 @@ try {
  assert.equal(await live.locator('.history .history-bar').count(),0);
  assert.equal(await live.locator('.history input').getAttribute('aria-valuetext'),'Thu 16 Oct: Not recorded','history is anchored to stored data, not the system clock');
  await live.screenshot({path:resolve(output,'history-missing.png')});
- await live.evaluate(()=>{window.testBackend.samples.today.sleepPlan.bedtimeStart=null});
+ await live.evaluate(()=>{Object.assign(window.testBackend.samples.today.sleepPlan,{bedtimeStart:null,bedtimeStartAt:null,bedtimeSource:'wakeHistory',source:'latest',reason:null})});
  await live.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();
  await live.locator('.sleep-plan').waitFor();
- assert.ok((await live.locator('.sleep-plan').textContent()).includes('Usual wake'),'without Garmin\'s window the plan falls back to wake history');
+ const fallback=await live.locator('.sleep-plan').textContent();
+ assert.ok(fallback.includes('Usual wake') && fallback.includes('Raring estimate') && fallback.includes('Asleep by23:06'),'without Garmin\'s window the plan falls back to wake history');
  await live.evaluate(()=>{window.testBackend.samples.today.sleepPlan=null;window.testBackend.samples.sleep.sleepPlan=null});
  await live.getByRole('navigation').getByRole('button',{name:'Sleep',exact:true}).click();
  await live.locator('.sleep-hero').waitFor();

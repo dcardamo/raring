@@ -355,23 +355,129 @@ pub enum SleepNeedSource {
     Average,
 }
 
+/// Who chose tonight's bedtime: Garmin's recommended window, or Raring's
+/// fallback from wake history and the need.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum BedtimeSource {
+    Garmin,
+    WakeHistory,
+}
+
+/// One of Garmin's reasons for changing tonight's sleep need.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct NeedAdjustment {
+    /// Training, Sleep history, HRV or Naps.
+    pub factor: String,
+    /// Garmin's code in a few words: "high training load".
+    pub detail: String,
+}
+
 /// Garmin's sleep need for tonight, with Garmin's bedtime window when it sends
-/// one, otherwise a bedtime derived from the last 14 nights' wake times.
+/// one, otherwise a bedtime derived from the last 14 nights' wake times. The
+/// one plan behind Today, Sleep and the bedtime reminder.
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct SleepPlan {
+    /// The morning this night ends, YYYY-MM-DD; one reminder per night.
+    pub night: String,
     /// Suggested time to be asleep tonight, HH:MM: the end of Garmin's window,
     /// or the median wake time minus the need.
     pub bedtime: String,
     /// Start of Garmin's recommended bedtime window, HH:MM, when Garmin sends one.
     pub bedtime_start: Option<String>,
+    pub bedtime_source: BedtimeSource,
+    /// Time to start winding down, HH:MM: the lead before the window starts
+    /// (or before the asleep-by time without Garmin's window).
+    pub wind_down: String,
+    pub wind_down_lead_min: u32,
+    /// Local wall-clock times, ISO 8601 without offset, so screens and
+    /// reminders agree on the date across midnight.
+    pub wind_down_at: String,
+    pub bedtime_start_at: Option<String>,
+    pub bedtime_at: String,
     /// Median local wake time, HH:MM, when any wake time is recorded.
     pub wake_time: Option<String>,
     pub need_min: f64,
     pub source: SleepNeedSource,
+    /// Garmin's unadjusted need, minutes, sent with tonight's need.
+    pub baseline_min: Option<f64>,
+    /// Garmin's reasons for tonight's need; empty when unchanged or unknown.
+    pub adjustments: Vec<NeedAdjustment>,
+    /// One line on why the need is what it is, from Garmin's feedback.
+    pub reason: Option<String>,
+    /// One line toward steadier timing, from Garmin's alignment status when
+    /// current, otherwise from wake history.
+    pub tip: Option<String>,
     /// Recorded wake times in the 14-day window; sparse history stays explicit.
     pub wake_nights: u32,
+    /// No recorded sleep has synced for the current day, so the plan rests
+    /// on older nights; reminders skip it.
+    pub stale: bool,
+}
+
+/// Where Garmin's Sleep Alignment stands for the latest night.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum AlignmentState {
+    /// Garmin rated last night.
+    Current,
+    /// Last night has no rating; the latest earlier one is shown.
+    Stale,
+    /// Garmin says it is still learning the rhythm.
+    Calibrating,
+    /// Garmin sent no alignment for recent nights.
+    Unavailable,
+}
+
+/// One night against Garmin's optimal sleep window. Minutes count from local
+/// midnight of the morning the night ends; negative is the evening before.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct AlignmentNight {
+    pub date: String,
+    /// Garmin's status in a word: Aligned, Ahead, Behind, Jet lag.
+    pub status: Option<String>,
+    pub tone: Tone,
+    /// Garmin's optimal sleep window.
+    pub window: Option<[f64; 2]>,
+    /// Recorded sleep that night.
+    pub sleep: Option<[f64; 2]>,
+}
+
+/// Garmin's Sleep Alignment: sleep timing against the window its rhythm
+/// model suggests. Not tonight's recommended bedtime, and not Raring's usual
+/// windows.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SleepAlignment {
+    pub state: AlignmentState,
+    /// The night shown in detail; None when unavailable.
+    pub latest: Option<AlignmentNight>,
+    /// One sentence for the status or state.
+    pub detail: String,
+    /// The last 7 nights, oldest first, including nights without a rating.
+    pub history: Vec<AlignmentNight>,
+}
+
+/// Garmin's own averages over the last seven days (Sleep Consistency).
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SleepAverages {
+    /// HH:MM.
+    pub bedtime: String,
+    pub wake_time: String,
+    pub nights: u32,
+    /// The newest night included, YYYY-MM-DD.
+    pub through: String,
 }
 
 /// One night's bed and wake time, as hours on a 24h clock (23.5 = 23:30).
@@ -406,6 +512,10 @@ pub struct SleepView {
     pub consistency_spread_min: Option<f64>,
     pub bed_window: Option<[f64; 2]>,
     pub wake_window: Option<[f64; 2]>,
+    /// Garmin's seven-day average bed and wake times, when synced.
+    pub garmin_averages: Option<SleepAverages>,
+    /// Garmin's Sleep Alignment; None without any recent sleep.
+    pub alignment: Option<SleepAlignment>,
     pub sleep_plan: Option<SleepPlan>,
 }
 
@@ -575,6 +685,26 @@ pub struct CheckinCard {
     pub series: Vec<Option<f64>>,
 }
 
+/// The week's sleep timing: what happened, with one focus. Descriptive only.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct TimingReview {
+    /// Recorded nights of the week, oldest first.
+    pub nights: Vec<NightWindow>,
+    /// Earliest and latest bedtime, HH:MM.
+    pub bed_range: Option<[String; 2]>,
+    pub wake_range: Option<[String; 2]>,
+    /// Latest minus earliest wake time, minutes.
+    pub wake_spread_min: Option<f64>,
+    pub previous_wake_spread_min: Option<f64>,
+    /// Nights Garmin rated against its optimal window.
+    pub aligned: u32,
+    pub ahead: u32,
+    pub behind: u32,
+    pub focus: String,
+}
+
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -582,6 +712,7 @@ pub struct CheckinView {
     /// Monday, YYYY-MM-DD.
     pub week_start: String,
     pub cards: Vec<CheckinCard>,
+    pub timing: Option<TimingReview>,
     pub vo2max_change: Option<f64>,
     pub fitness_age_change: Option<f64>,
     pub win: Option<String>,
@@ -601,6 +732,13 @@ pub struct Settings {
     pub notify_vitals: bool,
     pub notify_training_status: bool,
     pub notify_bedtime: bool,
+    /// Minutes between the wind-down reminder and the bedtime window.
+    #[serde(default = "default_bedtime_lead")]
+    pub bedtime_lead_min: u32,
+}
+
+fn default_bedtime_lead() -> u32 {
+    30
 }
 
 impl Default for Settings {
@@ -612,6 +750,7 @@ impl Default for Settings {
             notify_vitals: true,
             notify_training_status: false,
             notify_bedtime: false,
+            bedtime_lead_min: default_bedtime_lead(),
         }
     }
 }

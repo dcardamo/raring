@@ -144,7 +144,10 @@ fn bedtime_notification_uses_shared_plan() {
         .into_iter()
         .find(|item| item.kind == "bedtime")
         .unwrap();
-    assert_eq!(bedtime.body, "Aim to be asleep by 23:15.");
+    assert_eq!(
+        bedtime.body,
+        "Aim to be asleep by 23:15 (Raring's estimate) · need 8h 00m"
+    );
 }
 
 #[test]

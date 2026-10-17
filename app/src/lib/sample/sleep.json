@@ -298,12 +298,145 @@
     6.5,
     7
   ],
+  "garminAverages": {
+    "bedtime": "22:55",
+    "wakeTime": "06:42",
+    "nights": 7,
+    "through": "2025-10-16"
+  },
+  "alignment": {
+    "state": "current",
+    "latest": {
+      "date": "2025-10-16",
+      "status": "Aligned",
+      "tone": "good",
+      "window": [
+        -75,
+        375
+      ],
+      "sleep": [
+        -89,
+        399
+      ]
+    },
+    "detail": "Last night lined up with Garmin's optimal window.",
+    "history": [
+      {
+        "date": "2025-10-10",
+        "status": "Aligned",
+        "tone": "good",
+        "window": [
+          -75,
+          375
+        ],
+        "sleep": [
+          -78,
+          390
+        ]
+      },
+      {
+        "date": "2025-10-11",
+        "status": "Aligned",
+        "tone": "good",
+        "window": [
+          -75,
+          375
+        ],
+        "sleep": [
+          -60,
+          402
+        ]
+      },
+      {
+        "date": "2025-10-12",
+        "status": "Behind",
+        "tone": "fair",
+        "window": [
+          -75,
+          375
+        ],
+        "sleep": [
+          0,
+          426
+        ]
+      },
+      {
+        "date": "2025-10-13",
+        "status": "Aligned",
+        "tone": "good",
+        "window": [
+          -75,
+          375
+        ],
+        "sleep": [
+          -84,
+          390
+        ]
+      },
+      {
+        "date": "2025-10-14",
+        "status": "Aligned",
+        "tone": "good",
+        "window": [
+          -75,
+          375
+        ],
+        "sleep": [
+          -66,
+          408
+        ]
+      },
+      {
+        "date": "2025-10-15",
+        "status": "Aligned",
+        "tone": "good",
+        "window": [
+          -75,
+          375
+        ],
+        "sleep": [
+          -78,
+          396
+        ]
+      },
+      {
+        "date": "2025-10-16",
+        "status": "Aligned",
+        "tone": "good",
+        "window": [
+          -75,
+          375
+        ],
+        "sleep": [
+          -89,
+          399
+        ]
+      }
+    ]
+  },
   "sleepPlan": {
+    "night": "2025-10-17",
     "bedtime": "23:06",
     "bedtimeStart": "22:30",
+    "bedtimeSource": "garmin",
+    "windDown": "22:00",
+    "windDownLeadMin": 30,
+    "windDownAt": "2025-10-16T22:00:00",
+    "bedtimeStartAt": "2025-10-16T22:30:00",
+    "bedtimeAt": "2025-10-16T23:06:00",
     "wakeTime": "06:36",
-    "needMin": 450,
+    "needMin": 470,
     "source": "tonight",
-    "wakeNights": 14
+    "baselineMin": 450,
+    "adjustments": [
+      {
+        "factor": "Training",
+        "detail": "today's activity and load"
+      }
+    ],
+    "reason": "Garmin added 20 min for today's activity and load.",
+    "tip": "Your sleep lines up with Garmin's optimal window. Keep waking near 06:36.",
+    "wakeNights": 14,
+    "stale": false
   }
 }

@@ -4,12 +4,29 @@
   "watchSleepUploadStale": false,
   "missingMetricReasons": {},
   "sleepPlan": {
+    "night": "2025-10-17",
     "bedtime": "23:06",
     "bedtimeStart": "22:30",
+    "bedtimeSource": "garmin",
+    "windDown": "22:00",
+    "windDownLeadMin": 30,
+    "windDownAt": "2025-10-16T22:00:00",
+    "bedtimeStartAt": "2025-10-16T22:30:00",
+    "bedtimeAt": "2025-10-16T23:06:00",
     "wakeTime": "06:36",
-    "needMin": 450,
+    "needMin": 470,
     "source": "tonight",
-    "wakeNights": 14
+    "baselineMin": 450,
+    "adjustments": [
+      {
+        "factor": "Training",
+        "detail": "today's activity and load"
+      }
+    ],
+    "reason": "Garmin added 20 min for today's activity and load.",
+    "tip": "Your sleep lines up with Garmin's optimal window. Keep waking near 06:36.",
+    "wakeNights": 14,
+    "stale": false
   },
   "readiness": {
     "value": 82,

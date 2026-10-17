@@ -1,4 +1,4 @@
-use chrono::{DateTime, Duration, Local, Utc};
+use chrono::{DateTime, Duration, Local, NaiveDateTime, Utc};
 use jni::{
     objects::{JClass, JString},
     JNIEnv,
@@ -92,9 +92,11 @@ fn run_background_sync(db_path: &str, tokens_json: &str, now_iso: &str) -> SyncR
             result.tokens_json = serde_json::to_string(&outcome.tokens).unwrap_or_default();
             result.readiness_missing = !outcome.report.readiness_present;
             result.auth_failed = outcome.report.auth_failed;
+            // Kotlin's bedtime check posts reminders under one lock after every sync.
             result.notifications = outcome
                 .notifications
                 .into_iter()
+                .filter(|item| item.kind != "bedtime")
                 .map(|item| Notification {
                     id: format!("{}:{}", item.kind, item.tag),
                     title: item.title,
@@ -198,6 +200,77 @@ pub extern "system" fn Java_app_raring_NativeBridge_sync(
     }
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BedtimeResult {
+    due: Option<Notification>,
+    /// Local wall-clock time for the next reminder; Kotlin maps it to an instant.
+    next_at: Option<String>,
+    error: Option<String>,
+}
+
+fn bedtime(db_path: &str, now_local: &str) -> BedtimeResult {
+    let mut result = BedtimeResult {
+        due: None,
+        next_at: None,
+        error: None,
+    };
+    let now = match NaiveDateTime::parse_from_str(now_local, "%Y-%m-%dT%H:%M:%S%.f") {
+        Ok(t) => t,
+        Err(_) => {
+            result.error = Some("invalid local time".into());
+            return result;
+        }
+    };
+    let reminder = match Raring::open(db_path) {
+        Ok(core) => core.bedtime_reminder(now),
+        Err(e) => {
+            result.error = Some(e.to_string());
+            return result;
+        }
+    };
+    if let Some(r) = reminder {
+        if r.at <= now {
+            result.due = Some(Notification {
+                id: format!("bedtime:{}", r.night),
+                title: r.title,
+                body: r.body,
+                target: notification_target("bedtime"),
+                kind: "bedtime".into(),
+                tag: r.night,
+            });
+        } else {
+            result.next_at = Some(r.at.format("%Y-%m-%dT%H:%M:%S").to_string());
+        }
+    }
+    result
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_app_raring_NativeBridge_bedtime(
+    mut env: JNIEnv<'_>,
+    _class: JClass<'_>,
+    db_path: JString<'_>,
+    now_local: JString<'_>,
+) -> jni::sys::jstring {
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(
+        || -> jni::errors::Result<String> {
+            let db = env.get_string(&db_path)?.to_string_lossy().into_owned();
+            let now = env.get_string(&now_local)?.to_string_lossy().into_owned();
+            Ok(serde_json::to_string(&bedtime(&db, &now)).unwrap_or_default())
+        },
+    ));
+    let json = result
+        .ok()
+        .and_then(Result::ok)
+        .unwrap_or_else(|| "{\"error\":\"native bedtime failed\"}".into());
+    match env.new_string(json) {
+        Ok(value) => value.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "system" fn Java_app_raring_NativeBridge_markSent(
@@ -254,5 +327,11 @@ mod tests {
         assert!(r.auth_failed);
         assert!(r.notifications.is_empty());
         assert_eq!(notification_target("weekly"), "checkin");
+    }
+    #[test]
+    fn bedtime_without_a_plan_schedules_nothing() {
+        let r = bedtime(":memory:", "2025-01-02T21:00:00.123");
+        assert!(r.due.is_none() && r.next_at.is_none() && r.error.is_none());
+        assert!(bedtime(":memory:", "not a time").error.is_some());
     }
 }

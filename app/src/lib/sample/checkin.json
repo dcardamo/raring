@@ -1,5 +1,58 @@
 {
   "weekStart": "2025-10-13",
+  "timing": {
+    "nights": [
+      {
+        "date": "2025-10-13",
+        "bedHour": 22.6,
+        "wakeHour": 6.5
+      },
+      {
+        "date": "2025-10-14",
+        "bedHour": 22.9,
+        "wakeHour": 6.8
+      },
+      {
+        "date": "2025-10-15",
+        "bedHour": 22.7,
+        "wakeHour": 6.6
+      },
+      {
+        "date": "2025-10-16",
+        "bedHour": 22.52,
+        "wakeHour": 6.65
+      },
+      {
+        "date": "2025-10-17",
+        "bedHour": 23.4,
+        "wakeHour": 7.2
+      },
+      {
+        "date": "2025-10-18",
+        "bedHour": 0.5,
+        "wakeHour": 8.4
+      },
+      {
+        "date": "2025-10-19",
+        "bedHour": 23.1,
+        "wakeHour": 7
+      }
+    ],
+    "bedRange": [
+      "22:31",
+      "00:30"
+    ],
+    "wakeRange": [
+      "06:30",
+      "08:24"
+    ],
+    "wakeSpreadMin": 114,
+    "previousWakeSpreadMin": 52,
+    "aligned": 5,
+    "ahead": 0,
+    "behind": 2,
+    "focus": "Garmin rated most nights aligned. Keep waking near 06:48."
+  },
   "cards": [
     {
       "area": "readiness",

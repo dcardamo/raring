@@ -23,3 +23,10 @@ export function historyScale(values: (number | null)[], band: [number, number] |
 
 // Same levels as Garmin Training Readiness; not Sleep Score thresholds.
 export const readinessTone = (value: number): Tone => value >= 75 ? 'good' : value >= 50 ? 'fair' : 'poor';
+
+// Calendar days after `date`, in UTC like historyPoints.
+export function addDays(date: string, days: number): string {
+  const day = new Date(date + 'T12:00:00Z');
+  day.setUTCDate(day.getUTCDate() + days);
+  return day.toISOString().slice(0, 10);
+}

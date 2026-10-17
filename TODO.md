@@ -15,56 +15,6 @@ availability on every account or watch.
 
 ## Now
 
-### 3. Sleep rhythm and bedtime coaching
-
-Extend Sleep and the shared Tonight's sleep card, not a new screen. The
-14-night consistency chart, Garmin sleep need and recommended bedtime window
-(with a labeled wake-history fallback) already exist.
-
-- Keep three ideas separate: Garmin's **Sleep Alignment** (sleep relative to
-  circadian rhythm), **Sleep Consistency** (including Garmin's seven-day
-  average bedtime), and **Sleep Coach** (how much sleep is needed). A regular
-  schedule is not necessarily an aligned one; tonight's recommendation is
-  not the same as the longer-term optimal sleep window.
-  [Garmin's feature descriptions][garmin-sleep-rhythm].
-- Data gate: inspect the existing
-  `/wellness-service/wellness/dailySleepData/{displayName}?date=…&nonSleepBufferMinutes=60`
-  response first. Raring already reads `dailySleepDTO.nextSleepNeed`,
-  including `recommendedBedtimeStartMins/EndMins`.
-  [Public client code][garmin-alignment-fields] also reads
-  `dailySleepDTO.sleepAlignment.optimalSleepWindowStartMins/EndMins`;
-  these alignment fields are **unverified on our account**. Check their
-  units, date/timezone meaning, Garmin feedback/status and calibration
-  states against Connect and the watch; record supported-device limitations
-  and scrubbed fixtures before promising alignment coaching.
-- Show actual sleep against Garmin's optimal window on a simple overnight
-  timeline, with recent bed/wake history below. Keep Garmin's target distinct
-  from Raring's existing shaded *usual* windows. Use Garmin's consistency
-  summary if supplied; otherwise retain the descriptive chart, not a new
-  rhythm score or inferred chronotype.
-- Turn the plan into one useful next step: a wind-down time, the bedtime
-  window, sleep need and a short reason, with evidence behind a tap. Prefer
-  Garmin's feedback; explain whether a time is Garmin's recommendation or
-  Raring's fallback. Coach toward steadier bed/wake timing, not simply an
-  earlier bedtime. Add a timing review and one focus to the existing weekly
-  check-in; no new adherence score, failure badges, streak pressure,
-  sleep-stage promises or claims that timing caused a score change.
-- When alignment is unavailable, keep the existing plan/history usable.
-  Distinguish unsupported, still calibrating, missing and stale data where
-  Garmin supplies enough information; otherwise say unavailable. Do not
-  label ordinary averages as a circadian recommendation.
-- Extend the existing off-by-default bedtime reminder, not a second alert:
-  configurable wind-down lead, initially 30 minutes before the window
-  starts (or the fallback asleep-by time). Schedule from the cached plan,
-  suppress stale plans, deduplicate per sleep episode, and reschedule/cancel
-  when the plan or timezone changes. Coaching does not write Garmin's sleep
-  schedule.
-- Spec: update Sleep, Tonight's sleep, weekly focus and Bedtime notifications;
-  document advice precedence and source labels. Check synthetic fixtures
-  for alignment present/absent/calibrating, conflicting target and tonight
-  windows, irregular schedules, stale plans, midnight and DST; compare a
-  supported real-account result with Garmin before release.
-
 ### 4. Today that fits the time of day
 
 Change emphasis, not navigation. Put one timely action first while keeping
@@ -103,9 +53,6 @@ Today · Sleep · Training · Health and metric access predictable.
   data, post-workout updates, shift work, travel, DST and overnight dates.
   Confirm fast offline rendering and unchanged access to all metrics.
 
-[garmin-sleep-rhythm]: https://www.garmin.com/en-US/blog/fitness/the-difference-between-garmin-venu-3-and-venu-4/
-[garmin-alignment-fields]: https://github.com/cyberjunky/ha-garmin/blob/main/src/ha_garmin/client.py
-
 ### 6. Explain the numbers
 
 Users' most common complaint after clutter: scores without a why, and
@@ -118,6 +65,28 @@ scores that seem to disagree.
 - When two scores point different ways, a one-line reconciliation on Today,
   behind a tap.
 - Spec: list any new wording rules under Rules.
+
+### Sleep rhythm follow-ups
+
+From item 3, in priority order.
+
+- Compare a real night with Garmin Connect and the watch (see the item 3
+  entry under Done) before release.
+- Check the first daylight-saving night (2026-11-01 for the maintainer):
+  whether Garmin's window and bedtime minutes stay wall-clock times, and
+  that the Android reminder still fires at the wind-down time.
+- Check the reminder on a real phone overnight. A ten-minute alarm window can
+  be deferred in Doze; if reminders arrive late, offer exact alarms behind
+  Android's alarms-and-reminders permission.
+- Sleep alignment on other watches and while Garmin calibrates is unverified;
+  Raring treats status codes containing CALIBRAT, NOT_ENOUGH, INSUFFICIENT or
+  LEARNING as calibrating. Record real codes when seen.
+- Desktop has no bedtime reminder: its sync marks notifications as sent
+  without showing them. Deliver them (or stop marking them) before calling
+  reminders cross-platform.
+- Garmin's average bedtime before midnight: confirm whether
+  `averageLocalSleepStartTime` comes back negative or wrapped (Raring accepts
+  both).
 
 ## Next
 
@@ -373,6 +342,49 @@ faces, screens, sensors and audio prompts stay in Connect.
   responses and Today showed a watch upload time. Across 32 reads there were
   no 429 or auth failures. Phone/watch Connect launch with the real installed
   app remains to verify.
+- **3. Sleep rhythm and bedtime coaching** (commit "Add sleep rhythm and
+  bedtime coaching"). Sleep shows Garmin's Sleep Alignment against its
+  optimal window with the last seven nights, and Garmin's seven-day average
+  bed and wake times on Consistency. The shared plan (Today, Sleep and the
+  reminder) gains a wind-down time, Garmin's reasons for the need, a
+  steady-timing tip and evidence behind a tap. The weekly check-in gains a
+  timing review with one focus. The off-by-default bedtime reminder fires at
+  a configurable lead (30 min) from an Android alarm, once per night,
+  rescheduled on sync, settings, timezone, reboot and app-update events. Verified on the
+  maintainer's Forerunner 970 from 18 stored nights (2026-09-29 to
+  2026-10-16) plus two direct reads and a 20-request sync on 2026-10-17, no
+  429s:
+  - `dailySleepDTO.sleepAlignment` came back every night: `status`
+    (`ALIGNED`, `AHEAD`, `BEHIND`, and `JET_LAG` with a null window on a night
+    with no recorded sleep), `optimalSleepWindowStartMins`/`EndMins`/
+    `MidpointMins` in minutes from local midnight of the morning the night
+    ends (negative is the evening before; the window is
+    `sleepNeedBaselineMins` long), `lastSleepMidpointMins` (the recorded
+    sleep's midpoint, to the minute), `deviceId` and
+    `isPreferredActivityTracker`. The window moved 10 min a night during the
+    first week, then held. No calibrating status, feedback text or
+    supported-device flag appeared.
+  - `nextSleepNeed` is filed under the next day's `calendarDate`; its
+    `recommendedBedtimeStartMins`/`EndMins` count from the evening's
+    midnight. It carries `baseline`, `actual`, `feedback` (`INCREASED`,
+    `NO_CHANGE_NO_ADJUSTMENTS`) and adjustment codes: `trainingFeedback`
+    (`HIGH_ACWR`, `DAILY_ACTIVITY_AND_TODAYS_LOAD`), `sleepHistoryAdjustment`
+    (`INCREASING_LOW_QUALITY`), `hrvAdjustment`, `napAdjustment`
+    (`NO_CHANGE`). `displayedForTheDay` was false on a morning read, true on
+    older ones; the hourly sync refetches today's sleep, so the plan follows
+    any update.
+  - `/sleep-service/stats/sleep/daily/{start}/{end}` returns
+    `overallStats.averageLocalSleepStartTime`/`EndTime` (seconds from local
+    midnight; the bedtime mean is signed across midnight) and per-night
+    `individualStats[].values` including `sleepAlignmentStatus` and
+    `sleepAlignmentOswStart`/`End`; nights without sleep are left out.
+    Raring stores seven days ending today as `sleep_stats`, refetched until
+    it includes last night.
+  - No Sleep Consistency score or status appears in either response, so the
+    descriptive chart stays.
+  - The emulator scheduled the alarm, remapped it after a timezone change,
+    and posted the reminder once. Not yet checked on a phone, on other
+    watches or across a daylight-saving night (see follow-ups).
 
 - **1. Full history backfill** (commit "Download the whole Garmin history
   in the background"). After the per-day sync of the last 90 days, each run

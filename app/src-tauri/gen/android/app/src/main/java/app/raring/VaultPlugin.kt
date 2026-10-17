@@ -60,6 +60,7 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 SyncScheduler.cancel(activity)
+                BedtimeScheduler.cancel(activity)
                 SyncGate.mutex.withLock { TokenVault.clear(activity) }
                 CookieManager.getInstance().removeAllCookies(null)
                 WebStorage.getInstance().deleteAllData()
@@ -70,6 +71,7 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
     @Command fun schedule(invoke: Invoke) {
         CoroutineScope(Dispatchers.IO).launch {
             if (TokenVault.loadOrClear(activity) != null) SyncScheduler.start(activity)
+            BedtimeScheduler.run(activity)
             invoke.resolve(JSObject())
         }
     }

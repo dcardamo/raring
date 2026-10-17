@@ -49,7 +49,9 @@ pub fn normal(values: &[f64]) -> Option<[f64; 2]> {
     };
     Some([quantile(0.1), quantile(0.9)])
 }
-pub fn bedtime(wakes: &[f64], need: f64) -> Option<String> {
+/// Minutes from the wake day's midnight to the median wake time minus the
+/// need; negative is the evening before.
+pub fn bedtime_minutes(wakes: &[f64], need: f64) -> Option<i64> {
     if wakes.is_empty() || !need.is_finite() {
         return None;
     }
@@ -59,8 +61,67 @@ pub fn bedtime(wakes: &[f64], need: f64) -> Option<String> {
     }
     v.sort_by(f64::total_cmp);
     let middle = (v[(v.len() - 1) / 2] + v[v.len() / 2]) / 2.0;
-    let minute = ((middle * 60.0 - need).round() as i64).rem_euclid(1440);
-    Some(format!("{:02}:{:02}", minute / 60, minute % 60))
+    Some((middle * 60.0 - need).round() as i64)
+}
+pub fn clock(minutes: i64) -> String {
+    let minute = minutes.rem_euclid(1440);
+    format!("{:02}:{:02}", minute / 60, minute % 60)
+}
+pub fn bedtime(wakes: &[f64], need: f64) -> Option<String> {
+    bedtime_minutes(wakes, need).map(clock)
+}
+fn near(wake: Option<&str>) -> String {
+    wake.map(|w| format!(" near {w}")).unwrap_or_default()
+}
+/// One line toward steadier timing for tonight's plan. Garmin's alignment
+/// status leads; without it, the usual wake time does. Never just "go to bed
+/// earlier".
+pub fn steady_tip(status: Option<&str>, wake: Option<&str>) -> Option<String> {
+    let near = near(wake);
+    match status {
+        Some("ALIGNED") => Some(format!(
+            "Your sleep lines up with Garmin's optimal window. Keep waking{near}."
+        )),
+        Some("BEHIND") => Some(format!(
+            "Sleep has run later than Garmin's optimal window. Shift gradually: keep waking{near} rather than forcing one early night."
+        )),
+        Some("AHEAD") => Some(format!(
+            "Sleep has run earlier than Garmin's optimal window. Keep waking{near}."
+        )),
+        _ => wake.map(|_| format!("Keep waking{near}, weekends included.")),
+    }
+}
+/// The weekly check-in's one timing focus: Garmin's alignment ratings when at
+/// least three nights have one, otherwise how much wake times varied.
+pub fn timing_focus(
+    aligned: u32,
+    ahead: u32,
+    behind: u32,
+    wake_spread_min: Option<f64>,
+    wake: Option<&str>,
+) -> Option<String> {
+    let near = near(wake);
+    let rated = aligned + ahead + behind;
+    if rated >= 3 {
+        return Some(if aligned * 2 >= rated {
+            format!("Garmin rated most nights aligned. Keep waking{near}.")
+        } else if behind >= ahead {
+            format!("Most nights ran later than Garmin's optimal window. Keep a steady wake time{near}, weekends included, and let bedtime follow.")
+        } else {
+            format!("Most nights ran earlier than Garmin's optimal window. Keep a steady wake time{near}.")
+        });
+    }
+    let spread = wake_spread_min?;
+    Some(if spread >= 60. {
+        let spread = spread.round() as i64;
+        format!(
+            "Wake times varied by {}h {:02}m. Aim for a steady wake{near}.",
+            spread / 60,
+            spread % 60
+        )
+    } else {
+        format!("Wake times held steady. Keep them{near}.")
+    })
 }
 pub fn biggest_drag<'a>(factors: &'a [(&'a str, f64)]) -> Option<&'a str> {
     factors
@@ -113,6 +174,51 @@ mod tests {
         );
         assert_eq!(bedtime(&[7., 8., 9.], 480.), Some("00:00".into()));
         assert_eq!(bedtime(&[7., 8.], 450.), Some("00:00".into()));
+        assert_eq!(bedtime_minutes(&[7.25], 480.), Some(-45));
+        assert_eq!(bedtime_minutes(&[10.5], 440.), Some(190));
+        assert_eq!(clock(-45), "23:15");
+        assert_eq!(clock(1450), "00:10");
+    }
+    #[test]
+    fn timing_coaching_prefers_steady_wake() {
+        assert_eq!(
+            steady_tip(Some("BEHIND"), Some("07:00")).unwrap(),
+            "Sleep has run later than Garmin's optimal window. Shift gradually: keep waking near 07:00 rather than forcing one early night."
+        );
+        assert_eq!(
+            steady_tip(Some("ALIGNED"), None).unwrap(),
+            "Your sleep lines up with Garmin's optimal window. Keep waking."
+        );
+        assert_eq!(
+            steady_tip(None, Some("06:30")).unwrap(),
+            "Keep waking near 06:30, weekends included."
+        );
+        assert_eq!(
+            steady_tip(Some("JET_LAG"), Some("06:30")).unwrap(),
+            "Keep waking near 06:30, weekends included."
+        );
+        assert_eq!(steady_tip(Some("JET_LAG"), None), None);
+        assert_eq!(steady_tip(None, None), None);
+
+        assert!(timing_focus(5, 0, 2, Some(200.), Some("07:00"))
+            .unwrap()
+            .starts_with("Garmin rated most nights aligned"));
+        assert!(timing_focus(1, 1, 4, None, None)
+            .unwrap()
+            .starts_with("Most nights ran later"));
+        assert!(timing_focus(1, 3, 0, None, None)
+            .unwrap()
+            .starts_with("Most nights ran earlier"));
+        // Fewer than three rated nights fall back to wake-time spread.
+        assert_eq!(
+            timing_focus(1, 0, 1, Some(130.), Some("07:00")).unwrap(),
+            "Wake times varied by 2h 10m. Aim for a steady wake near 07:00."
+        );
+        assert_eq!(
+            timing_focus(0, 0, 0, Some(20.), Some("07:00")).unwrap(),
+            "Wake times held steady. Keep them near 07:00."
+        );
+        assert_eq!(timing_focus(0, 0, 0, None, None), None);
     }
     #[test]
     fn decisions() {
