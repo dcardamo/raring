@@ -5,6 +5,10 @@ Tauri 2 app with a Svelte + TypeScript UI. Android first; web and iOS later.
 
 - Spec: `docs/spec.md`. Visual reference: `design/mockup/` (open
   `index.html`; narrow windows behave like the phone).
+- Backlog: `TODO.md`, in priority order. Read it before feature work. In the
+  same change that ships, starts or reshapes an item, update it: move
+  finished items to Done with the commit, record verified endpoint facts,
+  and add follow-ups you discover in priority order.
 - The UI contract is `crates/core/src/view.rs`. Its TypeScript twins in
   `app/src/lib/generated/` are generated; never edit them by hand.
 
