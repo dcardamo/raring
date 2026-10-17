@@ -8,7 +8,7 @@ you're doing, why, and what to do today, from Garmin's own metrics.
 Status: first test build (Android). See [docs/spec.md](docs/spec.md) and the
 [mockup](design/mockup/) (sample data).
 
-![Raring mockup: Today, Sleep, Training, Workout and Health screens](design/mockup/screens.png)
+![Raring app with synthetic readings: Today, Sleep, Training, Workout and Health](site/assets/screens.png)
 
 ## Install
 
@@ -45,8 +45,9 @@ Local check: `nix develop -c bash -c 'cd app && npm run test:site'`.
 Preview: `nix develop -c python3 -m http.server 4174 --bind 0.0.0.0 --directory site`,
 then open `http://neptune:4174` from the tailnet.
 The app screenshots come from `cd app && npm run screenshots` inside the
-dev shell (`.data/screens/`). Copy only those synthetic images into `site/assets/`;
-never replace them with personal Garmin data.
+dev shell (`.data/screens/`). Run `cd app && node src/scripts/publish-screens.mjs`
+to publish the synthetic site images, README montage and social preview. Never
+replace them with personal Garmin data.
 Fonts and their licenses are copied from `app/src/assets/fonts/`.
 
 The site has no analytics, but GitHub processes ordinary hosting and download

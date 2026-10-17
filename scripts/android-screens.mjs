@@ -16,8 +16,10 @@ let id=0;const waiters=new Map();
 ws.onmessage=({data})=>{let m=JSON.parse(data);if(waiters.has(m.id)){waiters.get(m.id)(m);waiters.delete(m.id)}};
 function c(method,params){return new Promise(ok=>{const n=++id;waiters.set(n,ok);ws.send(JSON.stringify({id:n,method,params}))})}
 async function evaluate(expression){const response=await c('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(response.result?.exceptionDetails)throw Error(JSON.stringify(response.result.exceptionDetails));return response.result?.result?.value}
+const status=await evaluate("window.__TAURI_INTERNALS__.invoke('app_status')");
+if(status.signedIn)throw Error('Refusing to seed demo data in a signed-in app');
 const demo=await evaluate("window.__TAURI_INTERNALS__.invoke('load_demo_data')");console.log('DEMO',demo);
-const status=await evaluate("window.__TAURI_INTERNALS__.invoke('app_status')");console.log('STATUS',status);
+console.log('STATUS',status);
 const syncStatus=await evaluate("window.__TAURI_INTERNALS__.invoke('sync_now').then(x=>x, e=>({error:String(e)}))");console.log('FOREGROUND_SYNC_NO_TOKENS',syncStatus);
 const [date,workout]=demo.split(':');
 await evaluate("location.href='http://tauri.localhost/?fixture=demo#today'");
@@ -27,6 +29,7 @@ for(const route of ['today','sleep','training',`workout/${workout}`,'health','re
  await evaluate(`location.hash=${JSON.stringify(route)}`);
  await new Promise(ok=>setTimeout(ok,1100));
  const state=await evaluate("({hash:location.hash,title:document.querySelector('main')?.innerText.slice(0,250),bodyWidth:document.body.scrollWidth,viewport:window.innerWidth,firstCard:document.querySelector('.card')?.innerText.slice(0,150),scrollTop:document.querySelector('main')?.scrollTop})");
+ if(route==='health' && !await evaluate("[...document.querySelectorAll('.signal-tile .rb')].every(bar=>bar.getBoundingClientRect().width>20)"))throw Error('Android health range tracks collapsed');
  const name=route.replace('/','-');
  writeFileSync(`.data/emulator-screens/${name}.png`,execFileSync('adb',['exec-out','screencap','-p']));
  console.log('SCREEN',name,JSON.stringify(state));
