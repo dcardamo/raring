@@ -182,7 +182,17 @@ faces, screens, sensors and audio prompts stay in Connect.
     Connect; confirm the watch changed; read the value back. Record which
     writes reach the watch and how long it takes. Nothing below ships until
     its write passed.
-    - Device settings (verified readable, write unverified):
+    - Results on a Forerunner 970 (2026-10-17): an alarm time edit (full
+      settings object PUT, 200) and the floors goal (200) both showed on the
+      watch after one ordinary Connect sync. The sleep schedule PUT (204)
+      reads back correctly; whether the watch picks it up is unconfirmed.
+      The alarm's `changeState` stayed `UNCHANGED` and the write still
+      reached the watch. `lastDownloadTimestamp` on
+      `/device-service/deviceservice/user-device/{id}` moves when the watch
+      syncs, so the app can say "waiting for watch sync" until it does.
+      Re-sending the whole user settings object reorders
+      `availableTrainingDays` but keeps its values.
+    - Device settings (alarms verified writable):
       `GET/PUT /device-service/deviceservice/device-info/settings/{deviceId}`
       holds `alarms` (each with a `changeState`), `dndEnabled`, `sleep`
       and `activityTracking`. PUT a partial object built from a fresh GET.
