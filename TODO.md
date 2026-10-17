@@ -372,8 +372,15 @@ faces, screens, sensors and audio prompts stay in Connect.
   (`history:<series>:lo/hi`). Verified on a real account: about 260 requests
   covered activities back to 2011 and daily summaries back to 2014, with no
   429s at the client's 300 ms pacing; a normal sync afterwards made no
-  history requests. Checked from the CLI only; the Android background
-  job running it is still to check on the emulator and a phone. Range limits and shapes, all verified:
+  history requests. On the emulator, against a synthetic stand-in server,
+  the Android background job signed in, downloaded the whole history over
+  its first run and one hourly run, Settings went from "Downloading" to
+  "All of your Garmin history", and a later run made no history requests.
+  Still to check on a phone. Open: the first background run (budget 1400)
+  takes about 7 minutes at real pacing, close to WorkManager's 10-minute
+  stop; the emulator, slower per request, ran 22 minutes in the foreground
+  without being stopped. Consider shorter chained runs if phones stop it.
+  Range limits and shapes, all verified:
   - `/usersummary-service/v2/dailysummaries?startDate&endDate`, at most a
     year (`P1Y`); a nested summary, not the per-day shape. Stored as
     `daily_summary`.
