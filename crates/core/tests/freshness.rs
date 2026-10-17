@@ -159,3 +159,45 @@ fn body_battery_accepts_zero_and_skips_malformed_samples() {
         Some(0.)
     );
 }
+
+#[test]
+fn after_midnight_the_last_garmin_night_stays_current_until_the_next_arrives() {
+    let store = Store::open(":memory:").unwrap();
+    let at = |time: &str| {
+        chrono::NaiveDateTime::parse_from_str(&format!("2025-01-03T{time}"), "%Y-%m-%dT%H:%M")
+            .unwrap()
+    };
+    let current = |store: &Store, time| screens::current_date(store, at(time)).to_string();
+    // Nothing recorded yet: the calendar day.
+    assert_eq!(current(&store, "00:30"), "2025-01-03");
+
+    store
+        .put("readiness", "2025-01-02", "now", &json!([{"score": 70}]))
+        .unwrap();
+    // An empty shell for the new day is not a night.
+    store
+        .put(
+            "sleep",
+            "2025-01-03",
+            "now",
+            &json!({"dailySleepDTO": {"sleepTimeSeconds": null}}),
+        )
+        .unwrap();
+    store
+        .put("readiness", "2025-01-03", "now", &json!([]))
+        .unwrap();
+    assert_eq!(current(&store, "00:30"), "2025-01-02");
+    assert_eq!(current(&store, "11:59"), "2025-01-02");
+    // Without a night by noon, the calendar day takes over anyway.
+    assert_eq!(current(&store, "12:00"), "2025-01-03");
+
+    store
+        .put(
+            "sleep",
+            "2025-01-03",
+            "now",
+            &json!({"dailySleepDTO": {"sleepTimeSeconds": 25200}}),
+        )
+        .unwrap();
+    assert_eq!(current(&store, "07:30"), "2025-01-03");
+}

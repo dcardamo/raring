@@ -16,10 +16,6 @@ fn core(app: &tauri::AppHandle) -> Result<Raring, String> {
     Raring::open(database_path(app)?).map_err(|e| e.to_string())
 }
 
-fn today_date() -> String {
-    Local::now().date_naive().to_string()
-}
-
 fn monday() -> String {
     let date = Local::now().date_naive();
     (date - chrono::Duration::days(date.weekday().num_days_from_monday() as i64)).to_string()
@@ -148,15 +144,18 @@ fn app_status(app: tauri::AppHandle) -> Result<AppStatus, String> {
 
 #[tauri::command]
 fn today(app: tauri::AppHandle, date: Option<String>) -> Result<TodayView, String> {
-    Ok(core(&app)?.today(&date.unwrap_or_else(today_date)))
+    let core = core(&app)?;
+    Ok(core.today(&date.unwrap_or_else(|| core.current_date(Local::now()))))
 }
 #[tauri::command]
 fn sleep(app: tauri::AppHandle, date: Option<String>) -> Result<SleepView, String> {
-    Ok(core(&app)?.sleep(&date.unwrap_or_else(today_date)))
+    let core = core(&app)?;
+    Ok(core.sleep(&date.unwrap_or_else(|| core.current_date(Local::now()))))
 }
 #[tauri::command]
 fn training(app: tauri::AppHandle, date: Option<String>) -> Result<TrainingView, String> {
-    Ok(core(&app)?.training(&date.unwrap_or_else(today_date)))
+    let core = core(&app)?;
+    Ok(core.training(&date.unwrap_or_else(|| core.current_date(Local::now()))))
 }
 #[tauri::command]
 fn workout(app: tauri::AppHandle, id: String) -> Result<WorkoutView, String> {
@@ -164,7 +163,8 @@ fn workout(app: tauri::AppHandle, id: String) -> Result<WorkoutView, String> {
 }
 #[tauri::command]
 fn health(app: tauri::AppHandle, date: Option<String>) -> Result<HealthView, String> {
-    Ok(core(&app)?.health(&date.unwrap_or_else(today_date)))
+    let core = core(&app)?;
+    Ok(core.health(&date.unwrap_or_else(|| core.current_date(Local::now()))))
 }
 #[tauri::command]
 fn checkin(app: tauri::AppHandle, week_start: Option<String>) -> Result<CheckinView, String> {
@@ -293,7 +293,7 @@ fn set_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String>
 #[cfg(debug_assertions)]
 #[tauri::command]
 fn load_demo_data(app: tauri::AppHandle) -> Result<String, String> {
-    let date = today_date();
+    let date = Local::now().date_naive().to_string();
     let store =
         raring_core::store::Store::open(database_path(&app)?).map_err(|e| e.to_string())?;
     raring_core::demo::seed(&store, Local::now().date_naive()).map_err(|e| e.to_string())?;

@@ -1,6 +1,6 @@
 //! Tolerant projections of raw Garmin responses. Unknown and absent fields stay absent.
 use crate::{rules, store::Store, view::*};
-use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime};
+use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, Timelike};
 use serde_json::Value;
 
 fn at<'a>(v: &'a Value, keys: &[&str]) -> &'a Value {
@@ -797,6 +797,29 @@ pub fn stress(store: &Store, date: &str) -> StressCard {
             .rev()
             .map(|i| stress_average(store, &date_sub(date, i)))
             .collect(),
+    }
+}
+fn has_night(store: &Store, date: &str) -> bool {
+    store
+        .get("readiness", date)
+        .is_some_and(|r| current_rscore(&r).is_some())
+        || store
+            .get("sleep", date)
+            .is_some_and(|s| num(sleep(&s), &[&["sleepTimeSeconds"]]).is_some_and(|t| t > 0.))
+}
+/// The day the screens show. Garmin files a night under the day you wake, so
+/// after midnight the calendar day is empty until you wake and the watch syncs;
+/// until then (or noon) the previous day stays current.
+pub fn current_date(store: &Store, now: NaiveDateTime) -> NaiveDate {
+    let today = now.date();
+    let yesterday = today - Duration::days(1);
+    if now.hour() < 12
+        && !has_night(store, &today.to_string())
+        && has_night(store, &yesterday.to_string())
+    {
+        yesterday
+    } else {
+        today
     }
 }
 pub fn today(store: &Store, date: &str) -> TodayView {
