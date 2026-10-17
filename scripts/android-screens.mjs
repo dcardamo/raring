@@ -16,6 +16,15 @@ let id=0;const waiters=new Map();
 ws.onmessage=({data})=>{let m=JSON.parse(data);if(waiters.has(m.id)){waiters.get(m.id)(m);waiters.delete(m.id)}};
 function c(method,params){return new Promise(ok=>{const n=++id;waiters.set(n,ok);ws.send(JSON.stringify({id:n,method,params}))})}
 async function evaluate(expression){const response=await c('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(response.result?.exceptionDetails)throw Error(JSON.stringify(response.result.exceptionDetails));return response.result?.result?.value}
+// The DevTools socket can appear before the page has installed Tauri's IPC bridge.
+const readyBy=Date.now()+20_000;
+let ready=false;
+while(Date.now()<readyBy){
+ try{ready=await evaluate("typeof window.__TAURI_INTERNALS__?.invoke==='function'")}catch{}
+ if(ready)break;
+ await new Promise(resolve=>setTimeout(resolve,100));
+}
+if(!ready)throw Error('Tauri IPC bridge did not become ready');
 const status=await evaluate("window.__TAURI_INTERNALS__.invoke('app_status')");
 if(status.signedIn)throw Error('Refusing to seed demo data in a signed-in app');
 const demo=await evaluate("window.__TAURI_INTERNALS__.invoke('load_demo_data')");console.log('DEMO',demo);
