@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {historyPoints,historyScale,readinessTone} from './history';
+import {addDays,historyPoints,historyScale,readinessTone} from './history';
 
 describe('dated metric history',()=>{
  it('ends on the Garmin data date rather than the phone date',()=>{
@@ -31,4 +31,11 @@ describe('dated metric history',()=>{
   expect([24,25,49,50,69,70,74,75,94,95,100].map(readinessTone))
    .toEqual(['poor','poor','poor','fair','fair','fair','fair','good','good','good','good']);
  });
+});
+
+describe('addDays', () => {
+  it('crosses months and daylight-saving changes by calendar day', () => {
+    expect(addDays('2025-10-27', 6)).toBe('2025-11-02');
+    expect(addDays('2025-03-08', 1)).toBe('2025-03-09');
+  });
 });

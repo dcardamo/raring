@@ -15,70 +15,6 @@ availability on every account or watch.
 
 ## Now
 
-### 2. Watch sync freshness
-
-Raring is only as fresh as Garmin Connect's last upload from the watch.
-
-- Verified: `/device-service/deviceregistration/devices` lists devices and
-  `/device-service/deviceservice/user-device/{deviceId}` returns
-  `lastUploadTimestamp`.
-- Show "Watch synced 2 h ago" quietly in the Today header. When it's stale
-  (for example older than 6 h while awake, or no sleep upload by mid-morning),
-  show a gentle card: "Open Garmin Connect to sync your watch", which
-  deep-links to Connect when installed.
-- Use the device's capabilities to explain missing metrics ("Your watch
-  doesn't record skin temperature") instead of empty tiles.
-
-### 3. Sleep rhythm and bedtime coaching
-
-Extend Sleep and the shared Tonight's sleep card, not a new screen. The
-14-night consistency chart, Garmin sleep need and recommended bedtime window
-(with a labeled wake-history fallback) already exist.
-
-- Keep three ideas separate: Garmin's **Sleep Alignment** (sleep relative to
-  circadian rhythm), **Sleep Consistency** (including Garmin's seven-day
-  average bedtime), and **Sleep Coach** (how much sleep is needed). A regular
-  schedule is not necessarily an aligned one; tonight's recommendation is
-  not the same as the longer-term optimal sleep window.
-  [Garmin's feature descriptions][garmin-sleep-rhythm].
-- Data gate: inspect the existing
-  `/wellness-service/wellness/dailySleepData/{displayName}?date=…&nonSleepBufferMinutes=60`
-  response first. Raring already reads `dailySleepDTO.nextSleepNeed`,
-  including `recommendedBedtimeStartMins/EndMins`.
-  [Public client code][garmin-alignment-fields] also reads
-  `dailySleepDTO.sleepAlignment.optimalSleepWindowStartMins/EndMins`;
-  these alignment fields are **unverified on our account**. Check their
-  units, date/timezone meaning, Garmin feedback/status and calibration
-  states against Connect and the watch; record supported-device limitations
-  and scrubbed fixtures before promising alignment coaching.
-- Show actual sleep against Garmin's optimal window on a simple overnight
-  timeline, with recent bed/wake history below. Keep Garmin's target distinct
-  from Raring's existing shaded *usual* windows. Use Garmin's consistency
-  summary if supplied; otherwise retain the descriptive chart, not a new
-  rhythm score or inferred chronotype.
-- Turn the plan into one useful next step: a wind-down time, the bedtime
-  window, sleep need and a short reason, with evidence behind a tap. Prefer
-  Garmin's feedback; explain whether a time is Garmin's recommendation or
-  Raring's fallback. Coach toward steadier bed/wake timing, not simply an
-  earlier bedtime. Add a timing review and one focus to the existing weekly
-  check-in; no new adherence score, failure badges, streak pressure,
-  sleep-stage promises or claims that timing caused a score change.
-- When alignment is unavailable, keep the existing plan/history usable.
-  Distinguish unsupported, still calibrating, missing and stale data where
-  Garmin supplies enough information; otherwise say unavailable. Do not
-  label ordinary averages as a circadian recommendation.
-- Extend the existing off-by-default bedtime reminder, not a second alert:
-  configurable wind-down lead, initially 30 minutes before the window
-  starts (or the fallback asleep-by time). Schedule from the cached plan,
-  suppress stale plans, deduplicate per sleep episode, and reschedule/cancel
-  when the plan or timezone changes. Coaching does not write Garmin's sleep
-  schedule.
-- Spec: update Sleep, Tonight's sleep, weekly focus and Bedtime notifications;
-  document advice precedence and source labels. Check synthetic fixtures
-  for alignment present/absent/calibrating, conflicting target and tonight
-  windows, irregular schedules, stale plans, midnight and DST; compare a
-  supported real-account result with Garmin before release.
-
 ### 4. Today that fits the time of day
 
 Change emphasis, not navigation. Put one timely action first while keeping
@@ -117,21 +53,27 @@ Today · Sleep · Training · Health and metric access predictable.
   data, post-workout updates, shift work, travel, DST and overnight dates.
   Confirm fast offline rendering and unchanged access to all metrics.
 
-[garmin-sleep-rhythm]: https://www.garmin.com/en-US/blog/fitness/the-difference-between-garmin-venu-3-and-venu-4/
-[garmin-alignment-fields]: https://github.com/cyberjunky/ha-garmin/blob/main/src/ha_garmin/client.py
+### Sleep rhythm follow-ups
 
-### 5. Garmin's Health Status
+From item 3, in priority order.
 
-- Verified: `POST /graphql-gateway/graphql` with
-  `query { healthStatusSummary(calendarDate:"YYYY-MM-DD") { calendarDate outliersCount metrics { value baselineUpperLimit baselineLowerLimit status percentage feedbackKey type } } }`
-  returns HRV, HR, SPO2, SKIN_TEMP_C/F and RESPIRATION, each with Garmin's
-  baseline bounds and status (`IN_RANGE`, …).
-- Use Garmin's baseline and status for the Health vitals and the "vitals
-  off" rule. Keep Raring's 80% range only where Garmin returns none, and
-  label which is which.
-- The web app's other GraphQL queries are worth checking for range sync
-  (item 1).
-- Spec: update the Rules section's normal range and the Health vitals copy.
+- Compare a real night with Garmin Connect and the watch (see the item 3
+  entry under Done) before release.
+- Check the first daylight-saving night (2026-11-01 for the maintainer):
+  whether Garmin's window and bedtime minutes stay wall-clock times, and
+  that the Android reminder still fires at the wind-down time.
+- Check the reminder on a real phone overnight. A ten-minute alarm window can
+  be deferred in Doze; if reminders arrive late, offer exact alarms behind
+  Android's alarms-and-reminders permission.
+- Sleep alignment on other watches and while Garmin calibrates is unverified;
+  Raring treats status codes containing CALIBRAT, NOT_ENOUGH, INSUFFICIENT or
+  LEARNING as calibrating. Record real codes when seen.
+- Desktop has no bedtime reminder: its sync marks notifications as sent
+  without showing them. Deliver them (or stop marking them) before calling
+  reminders cross-platform.
+- Garmin's average bedtime before midnight: confirm whether
+  `averageLocalSleepStartTime` comes back negative or wrapped (Raring accepts
+  both).
 
 ## Next
 
@@ -210,7 +152,9 @@ Depends on item 1. The analysis Garmin's subscription charges for, free.
 - Display only: averages and overlays, no new scores. Spec: add the
   averaging to Rules.
 - Older days live in the history rows listed under Done (item 1), next to
-  the per-day rows of the last 90 days; each chart reads both.
+  the per-day rows of the last 90 days; each chart reads both. Check the web
+  app's other GraphQL queries for a Health Status range read before adding
+  per-day requests to long-range trends.
 - Opening an old day or workout should fetch its per-day detail (sleep
   stages, stress readings, charts, route) on demand and keep it. Not built.
 
@@ -360,6 +304,107 @@ faces, screens, sensors and audio prompts stay in Connect.
     so the sheet shows the 30-day VO2max change instead; the end-of-day
     Body Battery feedback event can carry the previous evening's event, so
     only the live one is used; sheets for past days wait for item 11.
+- **Instant view switching** (commit "Switch cached views immediately").
+  Tab views are prefetched after the first render and cached by route for the
+  current day; navigation displays cached data before a background refresh,
+  without a status IPC. Successful syncs, changed last-sync timestamps and
+  local day rollover invalidate in-flight reads and cached tabs while keeping
+  the visible view until fresh data arrives. Scroll position is restored on
+  the cached render; touch cancellation and backgrounding flush deferred
+  updates. Status refreshes on start, resume and sync, independently of
+  navigation so a concurrent tab switch cannot discard a newer sync or
+  sign-out result. Rust view and status commands read SQLite off the WebView
+  thread. On emulator-5572
+  with a 37 MB full-history database (debug APK, 10 warm tab activations):
+  tab activation-to-first-paint was 87–521 ms before, with the full-screen
+  loading state on every switch; after cache-invalidation fixes it was
+  8–53 ms, with no full-screen loading state.
+  Direct Today IPC still took ~480–500 ms on Android debug, but animation
+  frames continued (~29–30 frames instead of 0–1); no persistent connection
+  was needed. No Garmin endpoints or account requests were involved.
+- **5. Garmin's Health Status** (commit "Use Garmin Health Status for vitals").
+  `POST /graphql-gateway/graphql` with `healthStatusSummary(calendarDate)`
+  returns six metric entries: HRV, HR, SPO2, SKIN_TEMP_C/F and RESPIRATION,
+  with `value`, baseline limits, `status`, `percentage` and `feedbackKey`.
+  Seven real read-only dates: a recent day returned all six `IN_RANGE`, an
+  early-watch day returned all six `ONBOARDING` with provisional numeric
+  limits, and an older day returned a null summary. The GraphQL `HR` value
+  matched sleep's `dailySleepDTO.avgHeartRate`, **not** resting heart rate;
+  SpO2 matched the overnight value. Raring uses the Celsius entry and Garmin's
+  status for comparable readings, including the two-vitals rule; unknown or
+  onboarding statuses remain neutral. The existing 30-night range is labeled
+  as Raring's fallback where Health Status has no metric. Synthetic fixtures
+  cover in-range, outliers, onboarding and missing data. Real outside-range
+  statuses and visual agreement with Connect/watch still need a phone check.
+  Health Status costs one extra request on an ordinary sync, two during the
+  morning two-day refresh, and up to 30 for the first 30-night download on a
+  new install; older days are skipped so history range requests retain budget.
+  Other web GraphQL range queries remain a possible future optimization.
+- **2. Watch sync freshness** (commit "Show watch upload freshness and missing
+  capabilities"). Verified read-only on a real account:
+  `/device-service/deviceregistration/devices` returned an array of five
+  registrations; exactly one had `primaryActivityTrackerIndicator: true`, with
+  explicit `sleepSkinTemperatureCapable`, `hrvStatusCapable`,
+  `sleepScoreCapable` and `trainingReadinessCapable` booleans.
+  `/device-service/deviceservice/user-device/{deviceId}` returned an object
+  with numeric epoch-millisecond `lastUploadTimestamp` and
+  `lastDownloadTimestamp` (some registrations had null upload), plus `deviceId`,
+  `userId`, `deviceStatus`, `applicationId` and `applicationVersionId`.
+  Scrubbed, synthetic-valued response-shape fixtures are in
+  `crates/core/tests/fixtures/`. Today distinguishes watch upload from Raring's
+  own fetch, offers an Android Connect launch with plain-guidance fallback, and
+  explains unsupported missing metrics only for explicit false capabilities.
+  A 404 device list is checked again after an hour, not on every morning sync;
+  without a primary tracker, ambiguous registrations produce no watch or
+  capability claim. An overdue sleep upload appears only in the upload card.
+  Capture used 30 requests (profile, 19 daily/activity kinds, four activity
+  details, list and five details); a budget-2 live sync stored both device
+  responses and Today showed a watch upload time. Across 32 reads there were
+  no 429 or auth failures. Phone/watch Connect launch with the real installed
+  app remains to verify.
+- **3. Sleep rhythm and bedtime coaching** (commit "Add sleep rhythm and
+  bedtime coaching"). Sleep shows Garmin's Sleep Alignment against its
+  optimal window with the last seven nights, and Garmin's seven-day average
+  bed and wake times on Consistency. The shared plan (Today, Sleep and the
+  reminder) gains a wind-down time, Garmin's reasons for the need, a
+  steady-timing tip and evidence behind a tap. The weekly check-in gains a
+  timing review with one focus. The off-by-default bedtime reminder fires at
+  a configurable lead (30 min) from an Android alarm, once per night,
+  rescheduled on sync, settings, timezone, reboot and app-update events. Verified on the
+  maintainer's Forerunner 970 from 18 stored nights (2026-09-29 to
+  2026-10-16) plus two direct reads and a 20-request sync on 2026-10-17, no
+  429s:
+  - `dailySleepDTO.sleepAlignment` came back every night: `status`
+    (`ALIGNED`, `AHEAD`, `BEHIND`, and `JET_LAG` with a null window on a night
+    with no recorded sleep), `optimalSleepWindowStartMins`/`EndMins`/
+    `MidpointMins` in minutes from local midnight of the morning the night
+    ends (negative is the evening before; the window is
+    `sleepNeedBaselineMins` long), `lastSleepMidpointMins` (the recorded
+    sleep's midpoint, to the minute), `deviceId` and
+    `isPreferredActivityTracker`. The window moved 10 min a night during the
+    first week, then held. No calibrating status, feedback text or
+    supported-device flag appeared.
+  - `nextSleepNeed` is filed under the next day's `calendarDate`; its
+    `recommendedBedtimeStartMins`/`EndMins` count from the evening's
+    midnight. It carries `baseline`, `actual`, `feedback` (`INCREASED`,
+    `NO_CHANGE_NO_ADJUSTMENTS`) and adjustment codes: `trainingFeedback`
+    (`HIGH_ACWR`, `DAILY_ACTIVITY_AND_TODAYS_LOAD`), `sleepHistoryAdjustment`
+    (`INCREASING_LOW_QUALITY`), `hrvAdjustment`, `napAdjustment`
+    (`NO_CHANGE`). `displayedForTheDay` was false on a morning read, true on
+    older ones; the hourly sync refetches today's sleep, so the plan follows
+    any update.
+  - `/sleep-service/stats/sleep/daily/{start}/{end}` returns
+    `overallStats.averageLocalSleepStartTime`/`EndTime` (seconds from local
+    midnight; the bedtime mean is signed across midnight) and per-night
+    `individualStats[].values` including `sleepAlignmentStatus` and
+    `sleepAlignmentOswStart`/`End`; nights without sleep are left out.
+    Raring stores seven days ending today as `sleep_stats`, refetched until
+    it includes last night.
+  - No Sleep Consistency score or status appears in either response, so the
+    descriptive chart stays.
+  - The emulator scheduled the alarm, remapped it after a timezone change,
+    and posted the reminder once. Not yet checked on a phone, on other
+    watches or across a daylight-saving night (see follow-ups).
 
 - **1. Full history backfill** (commit "Download the whole Garmin history
   in the background"). After the per-day sync of the last 90 days, each run
@@ -367,8 +412,15 @@ faces, screens, sensors and audio prompts stay in Connect.
   (`history:<series>:lo/hi`). Verified on a real account: about 260 requests
   covered activities back to 2011 and daily summaries back to 2014, with no
   429s at the client's 300 ms pacing; a normal sync afterwards made no
-  history requests. Checked from the CLI only; the Android background
-  job running it is still to check on the emulator and a phone. Range limits and shapes, all verified:
+  history requests. On the emulator, against a synthetic stand-in server,
+  the Android background job signed in, downloaded the whole history over
+  its first run and one hourly run, Settings went from "Downloading" to
+  "All of your Garmin history", and a later run made no history requests.
+  Still to check on a phone. Open: the first background run (budget 1400)
+  takes about 7 minutes at real pacing, close to WorkManager's 10-minute
+  stop; the emulator, slower per request, ran 22 minutes in the foreground
+  without being stopped. Consider shorter chained runs if phones stop it.
+  Range limits and shapes, all verified:
   - `/usersummary-service/v2/dailysummaries?startDate&endDate`, at most a
     year (`P1Y`); a nested summary, not the per-day shape. Stored as
     `daily_summary`.

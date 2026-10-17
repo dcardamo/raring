@@ -84,6 +84,19 @@ pub fn seed(store: &Store, day: NaiveDate) -> rusqlite::Result<()> {
             26400 + ((days_ago * 317) % 4200)
         });
         sleep["dailySleepDTO"]["sleepNeed"]["totalSleepNeedInSeconds"] = json!(27000);
+        sleep["dailySleepDTO"]["sleepAlignment"] = json!({
+            "status": if shift > 18 { "BEHIND" } else { "ALIGNED" },
+            "optimalSleepWindowStartMins": -75,
+            "optimalSleepWindowEndMins": 375,
+        });
+        sleep["dailySleepDTO"]["nextSleepNeed"] = json!({
+            "calendarDate": (date + Duration::days(1)).to_string(),
+            "actual": 470,
+            "baseline": 450,
+            "recommendedBedtimeStartMins": 1350,
+            "recommendedBedtimeEndMins": 1386,
+            "trainingFeedback": "DAILY_ACTIVITY_AND_TODAYS_LOAD",
+        });
         sleep["dailySleepDTO"]["sleepScores"]["overall"]["value"] = json!(if days_ago == 0 {
             84
         } else {
@@ -309,6 +322,25 @@ pub fn seed(store: &Store, day: NaiveDate) -> rusqlite::Result<()> {
         "me",
         &format!("{day}T09:00:00Z"),
         &fixture["profile"],
+    )?;
+    store.put(
+        "devices",
+        "me",
+        "synthetic",
+        &json!([
+            {"deviceId": 1001, "primaryActivityTrackerIndicator": true,
+             "sleepSkinTemperatureCapable": true, "hrvStatusCapable": true,
+             "trainingReadinessCapable": true, "sleepScoreCapable": true}
+        ]),
+    )?;
+    store.put(
+        "device_detail",
+        "selected",
+        "synthetic",
+        &json!({
+            "deviceId": 1001,
+            "lastUploadTimestamp": day.and_hms_opt(9, 0, 0).unwrap().and_utc().timestamp_millis()
+        }),
     )?;
     for (id, name, kind, when, distance, seconds, load, zones) in [
         (

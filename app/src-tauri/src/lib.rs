@@ -130,8 +130,7 @@ fn clear_tokens(app: &tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-#[tauri::command]
-fn app_status(app: tauri::AppHandle) -> Result<AppStatus, String> {
+fn status_read(app: tauri::AppHandle) -> Result<AppStatus, String> {
     let mut status = core(&app)?.status();
     status.signed_in = load_tokens(&app)?.is_some();
     if let Ok(error) = app.state::<SignInState>().0.lock() {
@@ -143,32 +142,63 @@ fn app_status(app: tauri::AppHandle) -> Result<AppStatus, String> {
 }
 
 #[tauri::command]
-fn today(app: tauri::AppHandle, date: Option<String>) -> Result<TodayView, String> {
-    let core = core(&app)?;
-    Ok(core.today(&date.unwrap_or_else(|| core.current_date(Local::now()))))
+async fn app_status(app: tauri::AppHandle) -> Result<AppStatus, String> {
+    tauri::async_runtime::spawn_blocking(move || status_read(app))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+// View construction reads many SQLite rows; synchronous commands block Android's WebView.
+async fn read_view<T: Send + 'static>(
+    app: tauri::AppHandle,
+    read: impl FnOnce(Raring) -> Result<T, String> + Send + 'static,
+) -> Result<T, String> {
+    tauri::async_runtime::spawn_blocking(move || read(core(&app)?))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn today(app: tauri::AppHandle, date: Option<String>) -> Result<TodayView, String> {
+    read_view(app, move |core| {
+        Ok(core.today(&date.unwrap_or_else(|| core.current_date(Local::now()))))
+    })
+    .await
 }
 #[tauri::command]
-fn sleep(app: tauri::AppHandle, date: Option<String>) -> Result<SleepView, String> {
-    let core = core(&app)?;
-    Ok(core.sleep(&date.unwrap_or_else(|| core.current_date(Local::now()))))
+async fn sleep(app: tauri::AppHandle, date: Option<String>) -> Result<SleepView, String> {
+    read_view(app, move |core| {
+        Ok(core.sleep(&date.unwrap_or_else(|| core.current_date(Local::now()))))
+    })
+    .await
 }
 #[tauri::command]
-fn training(app: tauri::AppHandle, date: Option<String>) -> Result<TrainingView, String> {
-    let core = core(&app)?;
-    Ok(core.training(&date.unwrap_or_else(|| core.current_date(Local::now()))))
+async fn training(app: tauri::AppHandle, date: Option<String>) -> Result<TrainingView, String> {
+    read_view(app, move |core| {
+        Ok(core.training(&date.unwrap_or_else(|| core.current_date(Local::now()))))
+    })
+    .await
 }
 #[tauri::command]
-fn workout(app: tauri::AppHandle, id: String) -> Result<WorkoutView, String> {
-    core(&app)?.workout(&id).ok_or_else(|| "not_found".into())
+async fn workout(app: tauri::AppHandle, id: String) -> Result<WorkoutView, String> {
+    read_view(app, move |core| {
+        core.workout(&id).ok_or_else(|| "not_found".into())
+    })
+    .await
 }
 #[tauri::command]
-fn health(app: tauri::AppHandle, date: Option<String>) -> Result<HealthView, String> {
-    let core = core(&app)?;
-    Ok(core.health(&date.unwrap_or_else(|| core.current_date(Local::now()))))
+async fn health(app: tauri::AppHandle, date: Option<String>) -> Result<HealthView, String> {
+    read_view(app, move |core| {
+        Ok(core.health(&date.unwrap_or_else(|| core.current_date(Local::now()))))
+    })
+    .await
 }
 #[tauri::command]
-fn checkin(app: tauri::AppHandle, week_start: Option<String>) -> Result<CheckinView, String> {
-    Ok(core(&app)?.checkin(&week_start.unwrap_or_else(monday)))
+async fn checkin(app: tauri::AppHandle, week_start: Option<String>) -> Result<CheckinView, String> {
+    read_view(app, move |core| {
+        Ok(core.checkin(&week_start.unwrap_or_else(monday)))
+    })
+    .await
 }
 
 #[tauri::command]
@@ -196,7 +226,7 @@ fn exchange_ticket_and_store(app: &tauri::AppHandle, ticket: String) {
     if let Ok(mut error) = app.state::<SignInState>().0.lock() {
         *error = outcome.as_ref().err().cloned();
     }
-    if let Ok(status) = app_status(app.clone()) {
+    if let Ok(status) = status_read(app.clone()) {
         let _ = app.emit("status-changed", status);
     }
     if outcome.is_ok() {
@@ -216,7 +246,7 @@ fn sign_out(app: tauri::AppHandle) -> Result<(), String> {
     if let Ok(mut error) = app.state::<SignInState>().0.lock() {
         *error = None;
     }
-    let _ = app.emit("status-changed", app_status(app.clone())?);
+    let _ = app.emit("status-changed", status_read(app.clone())?);
     Ok(())
 }
 
@@ -243,9 +273,29 @@ async fn sync_now(app: tauri::AppHandle) -> Result<AppStatus, String> {
             .mark_notifications_sent(&outcome.notifications, Local::now())
             .map_err(|e| e.to_string())?;
     }
-    let status = app_status(app.clone())?;
+    let status = app_status(app.clone()).await?;
     let _ = app.emit("status-changed", &status);
     Ok(status)
+}
+
+#[tauri::command]
+fn open_garmin_connect(app: tauri::AppHandle) -> bool {
+    #[cfg(target_os = "android")]
+    {
+        #[derive(Deserialize)]
+        struct Response {
+            launched: bool,
+        }
+        return vault(&app)
+            .0
+            .run_mobile_plugin::<Response>("openGarminConnect", serde_json::json!({}))
+            .is_ok_and(|r| r.launched);
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = app;
+        false
+    }
 }
 
 #[tauri::command]
@@ -287,7 +337,15 @@ fn get_settings(app: tauri::AppHandle) -> Result<Settings, String> {
 fn set_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String> {
     core(&app)?
         .set_settings(settings)
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    // The bedtime switch and wind-down lead move tonight's reminder.
+    #[cfg(target_os = "android")]
+    std::thread::spawn(move || {
+        let _ = vault(&app)
+            .0
+            .run_mobile_plugin::<serde_json::Value>("schedule", serde_json::json!({}));
+    });
+    Ok(())
 }
 
 #[cfg(debug_assertions)]
@@ -297,7 +355,7 @@ fn load_demo_data(app: tauri::AppHandle) -> Result<String, String> {
     let store =
         raring_core::store::Store::open(database_path(&app)?).map_err(|e| e.to_string())?;
     raring_core::demo::seed(&store, Local::now().date_naive()).map_err(|e| e.to_string())?;
-    let _ = app.emit("status-changed", app_status(app.clone())?);
+    let _ = app.emit("status-changed", status_read(app.clone())?);
     Ok(format!("{}:{}", date, raring_core::demo::WORKOUT_ID))
 }
 
@@ -367,6 +425,7 @@ pub fn run() {
                     sync_now,
                     begin_sign_in,
                     sign_out,
+                    open_garmin_connect,
                     request_notification_permission,
                     get_settings,
                     set_settings,
@@ -386,6 +445,7 @@ pub fn run() {
                     sync_now,
                     begin_sign_in,
                     sign_out,
+                    open_garmin_connect,
                     request_notification_permission,
                     get_settings,
                     set_settings

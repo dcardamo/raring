@@ -16,6 +16,29 @@ try {
  const page=await browser.newPage({viewport:{width:390,height:844},hasTouch:true,isMobile:true});
  const errors=[];
  page.on('pageerror',e=>errors.push(e.message));
+ for(const width of [390,700,1100]){
+  const watch=await browser.newPage({viewport:{width,height:844}});
+  await watch.goto(`${url}/?fixture=stale#today`);
+  await watch.getByText('Open Garmin Connect to sync your watch',{exact:true}).waitFor();
+  await watch.getByText("Your watch doesn't record skin temperature",{exact:true}).waitFor();
+  await watch.screenshot({path:resolve(output,`watch-stale-${width}.png`)});
+  await watch.getByRole('button',{name:'Open Garmin Connect'}).click();
+  await watch.getByText('Open Garmin Connect on your phone, then sync your watch there.',{exact:true}).waitFor();
+  await watch.close();
+ }
+ const fresh=await browser.newPage({viewport:{width:390,height:844}});
+ await fresh.goto(`${url}/?fixture=fresh#today`);
+ await fresh.getByText('Watch synced 2 h ago',{exact:true}).waitFor();
+ assert.equal(await fresh.getByText('Open Garmin Connect to sync your watch',{exact:true}).count(),0);
+ await fresh.screenshot({path:resolve(output,'watch-fresh-390.png')});
+ await fresh.close();
+ const sleepUpload=await browser.newPage({viewport:{width:390,height:844}});
+ await sleepUpload.goto(`${url}/?fixture=stale-sleep#today`);
+ await sleepUpload.getByText("Last night's sleep hasn't uploaded yet.",{exact:true}).waitFor();
+ assert.equal(await sleepUpload.getByText('Open Garmin Connect to sync your watch',{exact:true}).count(),1,'missing sleep gives one sync prompt in the upload card');
+ assert.equal(await sleepUpload.getByText('About missing readings',{exact:true}).count(),0,'upload delays are not unsupported capabilities');
+ await sleepUpload.close();
+ console.log('Watch freshness, missing capability, Connect fallback at 390/700/1100: passed');
  const waitRoute=async(route)=>{
   await page.waitForURL(`${url}/#${route}`);
   await page.locator('h1').waitFor();
@@ -74,6 +97,19 @@ try {
  await page.getByRole('button',{name:/^Tonight's sleep/}).click();await waitRoute('sleep');
  assert.ok((await page.locator('.sleep-plan').textContent()).includes('23:06'));
  assert.ok((await page.locator('.sleep-plan').textContent()).includes('22:30–23:06'));
+ const plan=page.locator('.sleep-plan');
+ assert.ok((await plan.textContent()).includes('Wind down22:00'),'the plan leads with the wind-down time');
+ assert.ok((await plan.textContent()).includes('Garmin plan'));
+ assert.ok((await plan.textContent()).includes("Garmin added 20 min for today's activity and load."));
+ await plan.getByRole('button',{name:'Why this plan'}).click();
+ const evidence=await plan.locator('.evidence').textContent();
+ assert.ok(evidence.includes("Garmin's recommendation for tonight.") && evidence.includes("Training: today's activity and load") && evidence.includes('30 min before the window starts'),evidence);
+ const alignment=page.locator('.alignment');
+ assert.equal(await alignment.locator('h3 .pill').textContent(),'Aligned');
+ assert.equal(await alignment.locator('.night').count(),7,'a week of nights against Garmin\'s optimal window');
+ assert.equal(await alignment.locator('rect.optimal').getAttribute('stroke-dasharray'),'4 3','Garmin\'s target is outlined, never shaded like usual windows');
+ assert.ok((await alignment.textContent()).includes('Optimal 22:45–06:15'));
+ assert.ok((await page.locator('.consistency .averages').textContent()).includes('22:55'));
  await tab('Health');
  assert.equal(await page.locator('.dashboard>.card').first().locator('h3>span').first().textContent(),'Vitals');
  assert.equal(await page.locator('.signal-tile').count(),5);
@@ -96,11 +132,28 @@ try {
  const chart=await history.locator('.chart-surface').boundingBox();
  await history.locator('.chart-surface').click({position:{x:chart.width*.55,y:chart.height*.5}});
  assert.notEqual(await slider.inputValue(),'29','chart taps select a reading');
- console.log('Daily focus, sleep plan and keyboard/touch history: passed');
+ await page.goto(`${url}/#checkin`);await waitRoute('checkin');
+ for(let i=0;i<4;i++)await page.getByRole('button',{name:'Next'}).click();
+ const timing=page.locator('.timing-review');
+ await timing.waitFor();
+ assert.equal(await page.locator('.checkin-controls span').textContent(),'5 / 6','the timing review sits before the summary');
+ const review=await timing.textContent();
+ assert.ok(review.includes('Bedtimes22:31–00:30') && review.includes('Garmin: 5 aligned · 2 behind') && review.includes('Keep waking near 06:48.'),review);
+ assert.equal(await timing.locator('rect.night').count(),7);
+ await page.getByRole('button',{name:'Next'}).click();
+ await page.getByText('THE FOCUS',{exact:true}).waitFor();
+ await page.goto(`${url}/#settings`);await waitRoute('settings');
+ assert.equal(await page.locator('.setting.lead').count(),0,'the lead appears with the bedtime reminder');
+ await page.locator('label.setting',{hasText:'Bedtime'}).locator('input').check();
+ await page.locator('.setting.lead select').selectOption('45');
+ await tab('Today');
+ await page.getByRole('button',{name:'Settings',exact:true}).click();await waitRoute('settings');
+ assert.equal(await page.locator('.setting.lead select').inputValue(),'45');
+ console.log('Daily focus, sleep plan, rhythm, timing review, reminder lead and keyboard/touch history: passed');
 
  for(const width of [344,360,390,660,707,840,1024]) {
   await page.setViewportSize({width,height:900});
-  for(const route of ['today','sleep','training','health','readiness','workout/9000000000001','metric/hrv','metric/bodyBattery','metric/stress','settings','checkin','onboarding']) {
+  for(const route of ['today','sleep','training','health','readiness','workout/9000000000001','metric/hrv','metric/restingHr','metric/bodyBattery','metric/stress','settings','checkin','onboarding']) {
    await page.goto(`${url}/#${route}`);await waitRoute(route);
    const layout=await page.evaluate(()=>{
     // Largest vertical gap between cards stacked in the same grid column.
@@ -125,7 +178,7 @@ try {
     const failures=await contrastFailures(page);
     assert.deepEqual(failures,[],`${width}/${route}: text contrast`);
    }
-   if(width===840 || (width===390 && ['today','sleep','training','workout/9000000000001','health','onboarding','settings'].includes(route)))await page.screenshot({path:resolve(output,`${width}-${route.replace('/','-')}.png`)});
+   if(width===840 || (width===390 && ['today','sleep','training','workout/9000000000001','health','metric/restingHr','onboarding','settings'].includes(route)) || (width===1024 && ['today','sleep','health','metric/restingHr'].includes(route)) || (width===660 && ['health','metric/restingHr'].includes(route)))await page.screenshot({path:resolve(output,`${width}-${route.replace('/','-')}.png`)});
   }
  }
  console.log('Today, Sleep, Training, Workout and Health text contrast at 390/840: passed');
@@ -220,7 +273,7 @@ try {
     if(command==='request_notification_permission'){state.permissions++;return true}
     if(command==='sign_out'){state.signedIn=false;return}
     if(command==='sync_now')return;
-    if(command==='get_settings')return {notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false};
+    if(command==='get_settings')return {notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,bedtimeLeadMin:30};
     if(command.startsWith('plugin:event|'))return 1;
     if(command in samples)return structuredClone(samples[command]);
     throw Error('Unexpected onboarding command '+command);
@@ -317,29 +370,29 @@ try {
  await live.clock.fastForward(30_000);
  assert.equal(await live.evaluate(()=>window.testBackend.syncs),3,'failed syncs do not retry every poll');
  await live.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();
- await live.locator('.sync-indicator').getByText('Sync delayed · Error: Synthetic offline error',{exact:true}).waitFor();
+ await live.locator('.sync-indicator').getByText('Raring sync delayed · Error: Synthetic offline error').waitFor();
  await live.clock.fastForward(30_000);
- assert.ok((await live.locator('.sync-indicator').textContent()).includes('Sync delayed'),'an unchanged cached success must not clear a newer failure');
+ assert.ok((await live.locator('.sync-indicator').textContent()).includes('Raring sync delayed'),'an unchanged cached success must not clear a newer failure');
  await live.evaluate(()=>{
   const s=window.testBackend;
   s.samples.status.lastSync=new Date(s.lastAttempt-1000).toISOString();
   window.dispatchEvent(new Event('raring:resume'));
  });
  await live.clock.fastForward(30_000);
- assert.ok((await live.locator('.sync-indicator').textContent()).includes('Sync delayed'),'a previously unseen success before the failed attempt must not clear its warning');
+ assert.ok((await live.locator('.sync-indicator').textContent()).includes('Raring sync delayed'),'a previously unseen success before the failed attempt must not clear its warning');
  await live.evaluate(()=>{
   const s=window.testBackend.samples.status;
   s.lastSync=new Date().toISOString();s.lastError='Synthetic partial sync error';
   window.dispatchEvent(new Event('raring:resume'));
  });
  await live.clock.fastForward(30_000);
- assert.ok((await live.locator('.sync-indicator').textContent()).includes('Sync delayed'),'partial syncs still show an error');
+ assert.ok((await live.locator('.sync-indicator').textContent()).includes('Raring sync delayed'),'partial syncs still show an error');
  await live.evaluate(()=>{
   const s=window.testBackend.samples.status;
   s.lastSync=new Date().toISOString();s.lastError=null;
   window.dispatchEvent(new Event('raring:resume'));
  });
- await live.locator('.sync-indicator').getByText(/^Last synced/).waitFor({timeout:5_000});
+ await live.locator('.sync-indicator').getByText('Watch upload time unavailable',{exact:true}).waitFor({timeout:5_000});
  assert.equal(await live.evaluate(()=>window.testBackend.syncs),3,'background recovery clears the warning without another foreground sync');
  // A late Today response must not overwrite the newly opened Sleep page.
  await live.evaluate(()=>{window.testBackend.holdToday=true;window.dispatchEvent(new Event('raring:resume'))});
@@ -355,7 +408,7 @@ try {
  // A partially calibrated monitor must not turn missing readings into an all-clear.
  await live.evaluate(()=>{
   const s=window.testBackend;s.failSync=false;
-  for(const v of s.samples.health.vitals.readings){v.value=null;v.normal=null;v.trend=Array(30).fill(null);v.tone='neutral'}
+  for(const v of s.samples.health.vitals.readings){v.value=null;v.normal=null;v.trend=Array(30).fill(null);v.tone='neutral';v.status=null;v.rangeSource='none'}
   Object.assign(s.samples.health.vitals.readings[0],{value:48,normal:[44,52],scale:[30,90],tone:'good'});
   Object.assign(s.samples.health.vitals.readings[1],{value:58});
   s.samples.health.vitals.baselineReady=true;
@@ -363,7 +416,7 @@ try {
  await live.setViewportSize({width:390,height:844});
  await live.getByRole('navigation').getByRole('button',{name:'Health',exact:true}).click();
  await live.getByText('1 reading in range',{exact:true}).waitFor();
- assert.equal(await live.getByText('Within your usual ranges',{exact:true}).count(),0);
+ assert.equal(await live.getByText('Within your ranges',{exact:true}).count(),0);
  assert.equal(await live.getByText('Not recorded',{exact:true}).count(),3);
  await live.screenshot({path:resolve(output,'health-partial.png')});
  await live.evaluate(()=>{
@@ -373,7 +426,7 @@ try {
   v[1].trend[29]=28;
   window.dispatchEvent(new Event('raring:resume'));
  });
- await live.getByText('2 outside your usual range',{exact:true}).waitFor();
+ await live.getByText('2 outside your ranges',{exact:true}).waitFor();
  await live.getByText('Above usual',{exact:true}).waitFor();
  await live.getByText('Below baseline',{exact:true}).waitFor();
  await live.screenshot({path:resolve(output,'health-outliers.png')});
@@ -382,10 +435,11 @@ try {
  assert.equal(await live.locator('.history .history-bar').count(),0);
  assert.equal(await live.locator('.history input').getAttribute('aria-valuetext'),'Thu 16 Oct: Not recorded','history is anchored to stored data, not the system clock');
  await live.screenshot({path:resolve(output,'history-missing.png')});
- await live.evaluate(()=>{window.testBackend.samples.today.sleepPlan.bedtimeStart=null});
+ await live.evaluate(()=>{Object.assign(window.testBackend.samples.today.sleepPlan,{bedtimeStart:null,bedtimeStartAt:null,bedtimeSource:'wakeHistory',source:'latest',reason:null})});
  await live.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();
  await live.locator('.sleep-plan').waitFor();
- assert.ok((await live.locator('.sleep-plan').textContent()).includes('Usual wake'),'without Garmin\'s window the plan falls back to wake history');
+ const fallback=await live.locator('.sleep-plan').textContent();
+ assert.ok(fallback.includes('Usual wake') && fallback.includes('Raring estimate') && fallback.includes('Asleep by23:06'),'without Garmin\'s window the plan falls back to wake history');
  await live.evaluate(()=>{window.testBackend.samples.today.sleepPlan=null;window.testBackend.samples.sleep.sleepPlan=null});
  await live.getByRole('navigation').getByRole('button',{name:'Sleep',exact:true}).click();
  await live.locator('.sleep-hero').waitFor();
@@ -441,15 +495,175 @@ try {
  await live.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();
  await live.locator('.sync-indicator').waitFor();
  await live.getByRole('button',{name:'Refresh',exact:true}).click();
- await live.locator('.sync-indicator').getByText(/^Last synced/).waitFor();
- const synced=await live.evaluate(()=>new Date(window.testBackend.samples.status.lastSync).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
- assert.ok((await live.locator('.sync-indicator').textContent()).includes('Last synced '+synced),'UTC sync instants render in the device timezone');
+ await live.locator('.sync-indicator').getByText('Watch upload time unavailable',{exact:true}).waitFor();
+ assert.ok(await live.evaluate(()=>window.testBackend.samples.status.lastSync!==null),'Raring refresh does not invent a watch upload time');
  await live.evaluate(()=>{window.testBackend.samples.health.lever.ageIfMet=36.23456789});
  await live.getByRole('navigation').getByRole('button',{name:'Health',exact:true}).click();
  await live.locator('.lever').waitFor();
  assert.ok((await live.locator('.lever').textContent()).includes('age 36.2'),'Garmin fractional target ages are formatted for display');
  assert.ok(!(await live.locator('.lever').textContent()).includes('36.23456789'));
  console.log('Workout dates, partial zones, real chart axes, mixed-sport splits, sleep gaps and target formatting: passed');
+
+ const cached=await browser.newPage({viewport:{width:390,height:844}});
+ cached.on('pageerror',e=>errors.push(e.message));
+ await cached.clock.install({time:new Date('2026-10-16T14:00:00Z')});
+ await cached.addInitScript(samples=>{
+  localStorage.setItem('notifications-step-done','1');
+  const state=window.testViews={samples,reads:{},completed:{},pending:{},holdNext:{},statusReads:0,statusCompleted:0,syncCalls:0};
+  samples.status.lastSync=new Date().toISOString();
+  window.isTauri=true;
+  window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command)=>{
+   if(command.startsWith('plugin:event|'))return 1;
+   if(command==='app_status'){
+    state.statusReads++;
+    const snapshot=structuredClone(samples.status);
+    if(state.holdNext.app_status){
+     state.holdNext.app_status--;
+     await new Promise(resolve=>{(state.pending.app_status??=[]).push(resolve)});
+    }
+    state.statusCompleted++;
+    return snapshot;
+   }
+   if(command==='sync_now'){state.syncCalls++;return;}
+   if(command in samples){
+    state.reads[command]=(state.reads[command]??0)+1;
+    const snapshot=structuredClone(samples[command]);
+    if(state.holdNext[command]){
+     state.holdNext[command]--;
+     await new Promise(resolve=>{(state.pending[command]??=[]).push(resolve)});
+    }
+    state.completed[command]=(state.completed[command]??0)+1;
+    return snapshot;
+   }
+   throw Error('Unexpected view command '+command);
+  }};
+ },samples);
+ const tabCached=async name=>cached.getByRole('navigation').getByRole('button',{name,exact:true}).click();
+ const hold=command=>cached.evaluate(command=>{window.testViews.holdNext[command]=(window.testViews.holdNext[command]??0)+1},command);
+ const release=command=>cached.evaluate(command=>window.testViews.pending[command].shift()(),command);
+ const pending=command=>cached.waitForFunction(command=>window.testViews.pending[command]?.length,command);
+ await cached.goto(`${url}/#today`);
+ await cached.locator('.dials').waitFor();
+ await cached.waitForFunction(()=>['sleep','training','health'].every(key=>window.testViews.completed[key]>=1));
+ const statusReads=await cached.evaluate(()=>window.testViews.statusReads);
+ const todayOffset=await cached.locator('.scroll').evaluate(el=>{el.scrollTop=350;return el.scrollTop});
+ assert.ok(todayOffset>100,'Today can be scrolled for restoration');
+ await hold('sleep');
+ await tabCached('Sleep');
+ await pending('sleep');
+ assert.equal(await cached.locator('.sleep-hero').isVisible(),true,'prefetched Sleep appears before navigation read finishes');
+ assert.equal(await cached.locator('.empty').count(),0,'cached tab switches without loading state');
+ assert.equal(await cached.evaluate(()=>window.testViews.statusReads),statusReads,'navigation does not query app status');
+ await release('sleep');
+ await cached.locator('.scroll').evaluate(el=>{el.scrollTop=120});
+ await hold('today');
+ await tabCached('Today');
+ await pending('today');
+ assert.equal(await cached.locator('.dials').isVisible(),true,'cached Today is visible before its read finishes');
+ await cached.waitForFunction(expected=>document.querySelector('.scroll').scrollTop===expected,todayOffset);
+ await release('today');
+
+ const touch=()=>cached.evaluate(()=>{
+  const main=document.querySelector('main');
+  const point=new Touch({identifier:1,target:main,clientY:100});
+  main.dispatchEvent(new TouchEvent('touchstart',{bubbles:true,touches:[point]}));
+ });
+ await cached.evaluate(()=>{window.testViews.samples.today.headline='After touch cancel'});
+ await hold('today');await touch();
+ await cached.evaluate(()=>window.dispatchEvent(new Event('raring:resume')));
+ await pending('today');await release('today');
+ await cached.waitForFunction(()=>window.testViews.completed.today>=3);
+ assert.notEqual(await cached.locator('.headline h2').textContent(),'After touch cancel','view swap is deferred while touching');
+ await cached.locator('main').evaluate(el=>el.dispatchEvent(new TouchEvent('touchcancel',{bubbles:true})));
+ await cached.getByRole('heading',{name:'After touch cancel'}).waitFor();
+ await cached.evaluate(()=>{window.testViews.samples.today.headline='After hide'});
+ await hold('today');await touch();
+ await cached.evaluate(()=>window.dispatchEvent(new Event('raring:resume')));
+ await pending('today');await release('today');
+ await cached.waitForFunction(()=>window.testViews.completed.today>=4);
+ assert.notEqual(await cached.locator('.headline h2').textContent(),'After hide','hidden-page swap is deferred while touching');
+ await cached.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});document.dispatchEvent(new Event('visibilitychange'));delete document.visibilityState});
+ await cached.getByRole('heading',{name:'After hide'}).waitFor();
+
+ // A pre-sync request must neither be reused nor overwrite a post-sync reading.
+ await hold('today');
+ await cached.evaluate(()=>window.dispatchEvent(new Event('raring:resume')));
+ await pending('today');
+ await cached.evaluate(()=>{const s=window.testViews.samples;s.today.headline='After sync';s.status.lastSync='2026-10-16T14:01:00Z'});
+ await cached.getByRole('button',{name:'Refresh',exact:true}).click();
+ await cached.getByRole('heading',{name:'After sync'}).waitFor();
+ const completedBeforeOld=await cached.evaluate(()=>window.testViews.completed.today);
+ await release('today');
+ await cached.waitForFunction(previous=>window.testViews.completed.today>previous,completedBeforeOld);
+ assert.equal(await cached.locator('.headline h2').textContent(),'After sync','old in-flight result cannot replace synced view');
+ const previousSleep=await cached.evaluate(()=>window.testViews.completed.sleep);
+ await cached.evaluate(()=>{const s=window.testViews.samples;s.today.headline='Background sync';s.sleep.score.value=51;s.status.lastSync='2026-10-16T14:02:00Z';window.dispatchEvent(new Event('raring:resume'))});
+ await cached.getByRole('heading',{name:'Background sync'}).waitFor();
+ await cached.waitForFunction(previous=>window.testViews.completed.sleep>previous,previousSleep);
+ await hold('sleep');await tabCached('Sleep');await pending('sleep');
+ assert.equal(await cached.locator('.sleep-hero .gauge-center b').textContent(),'51','changed lastSync refreshes cached tabs');
+ await release('sleep');await tabCached('Today');
+ await cached.getByRole('heading',{name:'Background sync'}).waitFor();
+
+ // Midnight on resume invalidates both current data and in-flight reads; prefetch runs again.
+ await hold('today');
+ await cached.evaluate(()=>window.dispatchEvent(new Event('raring:resume')));
+ await pending('today');
+ const sleepReads=await cached.evaluate(()=>window.testViews.completed.sleep);
+ await cached.clock.setFixedTime(new Date('2026-10-17T14:00:00Z'));
+ await cached.evaluate(()=>{const s=window.testViews.samples;s.status.syncing=true;s.today.headline='Next day';s.sleep.score.value=42;window.dispatchEvent(new Event('raring:resume'))});
+ await cached.getByRole('heading',{name:'Next day'}).waitFor();
+ await cached.waitForFunction(previous=>window.testViews.completed.sleep>previous,sleepReads);
+ await release('today');
+ await cached.waitForFunction(()=>window.testViews.pending.today?.length===0);
+ assert.equal(await cached.locator('.headline h2').textContent(),'Next day','previous-day result cannot replace next day');
+ await hold('sleep');await tabCached('Sleep');await pending('sleep');
+ assert.equal(await cached.locator('.sleep-hero .gauge-center b').textContent(),'42','next-day prefetch is visible before navigation read');
+ await release('sleep');
+ await tabCached('Today');
+ await cached.locator('.dials').waitFor();
+ const pollReads=await cached.evaluate(()=>window.testViews.completed.sleep);
+ await cached.clock.setFixedTime(new Date('2026-10-18T14:00:00Z'));
+ await cached.evaluate(()=>{const s=window.testViews.samples;s.today.headline='Poll rollover';s.sleep.score.value=43});
+ await cached.clock.fastForward(30_000);
+ await cached.getByRole('heading',{name:'Poll rollover'}).waitFor();
+ await cached.waitForFunction(previous=>window.testViews.completed.sleep>previous,pollReads);
+ assert.equal(await cached.evaluate(()=>window.testViews.syncCalls),1,'day rollover never needs a Garmin sync');
+
+ // Navigation must not discard a concurrent status read or its sign-in gate.
+ const healthReads=await cached.evaluate(()=>window.testViews.completed.health);
+ await cached.evaluate(()=>{const s=window.testViews.samples;s.health.fitnessAge.fitnessAge=37;s.status.lastSync='2026-10-18T14:01:00Z'});
+ await hold('app_status');
+ await cached.evaluate(()=>window.dispatchEvent(new Event('raring:resume')));
+ await pending('app_status');
+ await tabCached('Sleep');
+ await cached.locator('.sleep-hero').waitFor();
+ await release('app_status');
+ await cached.waitForFunction(previous=>window.testViews.completed.health>previous,healthReads);
+ await hold('health');await tabCached('Health');await pending('health');
+ assert.equal(await cached.locator('.age-number').textContent(),'37','in-flight status invalidates other tabs after navigation');
+ await release('health');
+ await cached.evaluate(()=>{window.testViews.samples.status.signedIn=false});
+ await hold('app_status');
+ await cached.evaluate(()=>window.dispatchEvent(new Event('raring:resume')));
+ await pending('app_status');
+ await tabCached('Today');
+ await cached.locator('.dials').waitFor();
+ await release('app_status');
+ await cached.waitForURL('**/#onboarding');
+ assert.equal(await cached.getByRole('navigation').count(),0,'in-flight sign-out status gates navigation');
+ await cached.evaluate(()=>{window.testViews.samples.status.signedIn=true});
+ await hold('app_status');
+ await cached.evaluate(()=>window.dispatchEvent(new Event('raring:resume')));
+ await pending('app_status');
+ const statuses=await cached.evaluate(()=>window.testViews.statusCompleted);
+ await cached.evaluate(()=>{window.testViews.samples.status.signedIn=false;window.dispatchEvent(new Event('raring:resume'))});
+ await cached.waitForFunction(previous=>window.testViews.statusCompleted>previous,statuses);
+ await release('app_status');
+ await cached.waitForFunction(()=>window.testViews.pending.app_status?.length===0);
+ assert.equal(new URL(cached.url()).hash,'#onboarding','older signed-in status cannot undo a newer sign-out');
+ await cached.close();
+ console.log('Cached switching, sync/rollover invalidation, scroll, touch cancellation and status races: passed');
  assert.deepEqual(errors,[],'no browser errors');
 } finally {
  await browser?.close();

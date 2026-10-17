@@ -1,10 +1,10 @@
 import {describe,it,expect} from 'vitest';
-import {rangeStatus,vitalSummary,limitingFactor} from './signals';
+import {rangeStatus,vitalStatus,vitalSummary,limitingFactor} from './signals';
 import type {VitalsCard} from './generated/VitalsCard';
 import type {VitalReading} from './generated/VitalReading';
 
 const vital = (value:number|null,normal:[number,number]|null):VitalReading => ({
-  kind:'restingHr',value,normal,unit:'bpm',scale:[30,90],trend:[],tone:'neutral',
+  kind:'restingHr',value,normal,unit:'bpm',scale:[30,90],trend:[],tone:'neutral',status:null,rangeSource:normal?'raring':'none',
 });
 const card = (...readings:VitalReading[]):VitalsCard => ({readings,offCount:0,baselineReady:true});
 
@@ -12,7 +12,7 @@ describe('personal range presentation',()=>{
  it('does not call missing readings normal, even when a baseline exists',()=>{
   expect(rangeStatus(null,[44,52])).toEqual({label:'Not recorded',tone:'neutral'});
   expect(vitalSummary(card(vital(48,[44,52]),vital(null,[44,52])))).toMatchObject({
-   headline:'1 reading in range',detail:'1 of 2 recorded · 1 with a range',tone:'neutral',
+   headline:'1 reading in range',detail:'1 of 2 recorded · 1 comparable',tone:'neutral',
   });
  });
  it('keeps uncalibrated readings neutral',()=>{
@@ -32,11 +32,18 @@ describe('personal range presentation',()=>{
   expect(rangeStatus(40,[48,62],'hrv').label).toBe('Below baseline');
   expect(rangeStatus(70,[48,62],'hrv').label).toBe('Above baseline');
  });
+ it('uses Garmin status instead of reclassifying by its displayed bounds',()=>{
+  expect(vitalStatus({...vital(60,[44,52]),status:'IN_RANGE',tone:'good',rangeSource:'garmin'}))
+    .toEqual({label:'Within Garmin range',tone:'good'});
+  expect(vitalStatus({...vital(48,[44,52]),status:'ABOVE_RANGE',tone:'poor',rangeSource:'garmin'}).tone).toBe('poor');
+  expect(vitalStatus({...vital(48,[44,52]),status:'ONBOARDING',rangeSource:'none'}).tone).toBe('neutral');
+  expect(vitalStatus({...vital(48,[44,52]),status:'NEW_STATUS',rangeSource:'garmin'}).tone).toBe('neutral');
+ });
  it('counts only comparable readings without hiding an outlier behind incomplete baselines',()=>{
   expect(vitalSummary(card(vital(60,[44,52]),vital(48,null),vital(null,[44,52])))).toMatchObject({
-   headline:'1 outside your usual range',outside:1,tone:'fair',
+   headline:'1 outside your ranges',outside:1,tone:'fair',
   });
-  expect(vitalSummary(card(vital(48,[44,52]))).headline).toBe('Within your usual ranges');
+  expect(vitalSummary(card(vital(48,[44,52]))).headline).toBe('Within your ranges');
  });
 });
 

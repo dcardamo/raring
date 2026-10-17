@@ -1,0 +1,26 @@
+[
+  {
+    "listIndex": 0,
+    "detail": {
+      "applicationId": 100,
+      "applicationVersionId": 1,
+      "deviceId": 1001,
+      "deviceStatus": null,
+      "lastDownloadTimestamp": 1738656000000,
+      "lastUploadTimestamp": null,
+      "userId": 999
+    }
+  },
+  {
+    "listIndex": 1,
+    "detail": {
+      "applicationId": 100,
+      "applicationVersionId": 1,
+      "deviceId": 1002,
+      "deviceStatus": null,
+      "lastDownloadTimestamp": 1738656000000,
+      "lastUploadTimestamp": 1738659600000,
+      "userId": 999
+    }
+  }
+]

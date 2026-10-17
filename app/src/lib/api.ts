@@ -18,7 +18,7 @@ import type { CheckinView } from './generated/CheckinView';
 import type { Settings } from './generated/Settings';
 
 export type { Settings } from './generated/Settings';
-export const defaultSettings = {notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false} satisfies Settings;
+export const defaultSettings = {notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,bedtimeLeadMin:30} satisfies Settings;
 let previewSettings:Settings = {...defaultSettings};
 const copy = <T>(value:T):T => structuredClone(value);
 const call = <T>(name:string,args:Record<string,unknown>|undefined,fallback:T):Promise<T> => isTauri()?invoke<T>(name,args):Promise.resolve(copy(fallback));
@@ -30,6 +30,7 @@ export const workout = (id:string):Promise<WorkoutView> => call('workout',{id},s
 export const health = (date?:string):Promise<HealthView> => call('health',{date},sampleHealth as unknown as HealthView);
 export const checkin = (weekStart?:string):Promise<CheckinView> => call('checkin',{weekStart},sampleCheckin as unknown as CheckinView);
 export const sync_now = ():Promise<void> => call('sync_now',undefined,undefined);
+export const open_garmin_connect = ():Promise<boolean> => call('open_garmin_connect',undefined,false);
 export const begin_sign_in = ():Promise<void> => call('begin_sign_in',undefined,undefined);
 export const sign_out = ():Promise<void> => call('sign_out',undefined,undefined);
 export const request_notification_permission = ():Promise<boolean> => call('request_notification_permission',undefined,true);

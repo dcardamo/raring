@@ -34,7 +34,7 @@ try{
    console.log(`readiness-trend: ${resolve(output,'readiness-trend.png')}`);
   }
   if(name==='checkin'){
-   for(const area of ['sleep','training','health','summary']){
+   for(const area of ['sleep','training','health','timing','summary']){
     await page.getByRole('button',{name:'Next'}).click();
     await page.screenshot({path:resolve(output,`checkin-${area}.png`)});
     console.log(`checkin-${area}: ${resolve(output,`checkin-${area}.png`)}`);

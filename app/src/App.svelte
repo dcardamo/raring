@@ -3,12 +3,15 @@
  import {isTauri} from '@tauri-apps/api/core';
  import {createNavigation,tabs} from './lib/navigation';
  import {shouldSync,CACHE_POLL_MS} from './lib/freshness';
+ import {watchLabel,watchNeedsSync} from './lib/watch';
  import {masonry} from './lib/masonry';
+ import {addDays} from './lib/history';
  import {metricSource,metricNames} from './lib/metrics';
  import MetricDetail from './lib/components/MetricDetail.svelte';
  import DailyFocus from './lib/components/DailyFocus.svelte';
  import AboutRaring from './lib/components/AboutRaring.svelte';
  import SleepPlanCard from './lib/components/SleepPlanCard.svelte';
+ import AlignmentCard from './lib/components/AlignmentCard.svelte';
  import WorkoutSplits from './lib/components/WorkoutSplits.svelte';
  import VitalsMonitor from './lib/components/VitalsMonitor.svelte';
  import StressTimeline from './lib/components/StressTimeline.svelte';
@@ -21,10 +24,47 @@
  import Gauge from './lib/components/Gauge.svelte';import Sparkline from './lib/components/Sparkline.svelte';import RangeBar from './lib/components/RangeBar.svelte';import ZoneStrip from './lib/components/ZoneStrip.svelte';import Hypnogram from './lib/components/Hypnogram.svelte';import ConsistencyChart from './lib/components/ConsistencyChart.svelte';import WeekBars from './lib/components/WeekBars.svelte';import LoadFocus from './lib/components/LoadFocus.svelte';import RouteMap from './lib/components/RouteMap.svelte';import HrChart from './lib/components/HrChart.svelte';import Card from './lib/components/Card.svelte';import Chip from './lib/components/Chip.svelte';import Header from './lib/components/Header.svelte';import TabBar from './lib/components/TabBar.svelte';import ActivityRow from './lib/components/ActivityRow.svelte';
  import {colors,toneColor,batteryColor,stressColors,stressNames} from './lib/charts';import {duration,elapsed,pace,clock,dateLabel,monthLabel,signed,num} from './lib/format';
  type PageData=TodayView|SleepView|TrainingView|WorkoutView|HealthView|CheckinView;
+ let now=$state(new Date()),connectUnavailable=$state(false);
  let route=$state('today'),trail=$state<string[]>(['today']),data=$state<PageData|null>(null),status=$state<AppStatus|null>(null),settings=$state<api.Settings>({...api.defaultSettings}),loading=$state(true),error=$state(''),syncError=$state(''),syncing=$state(false),selectedFactor=$state(''),checkinIndex=$state(0),onboardStep=$state(0),startY=0,startedAtTop=false,swipeX=0;
  let navigation:ReturnType<typeof createNavigation>,scroll:HTMLElement;
- let requestId=0,refreshing=false,lastSyncAttempt:number|null=null;
+ let requestId=0,statusReadId=0,appliedStatusReadId=0,lastSyncAttempt:number|null=null,prefetched=false,cacheGeneration=0;
+ let hasRendered=$state(false);
+ let touching=false,pendingSwap:{route:string;data:PageData}|null=null;
+ const views=new Map<string,PageData>();
+ const pendingViews=new Map<string,Promise<PageData>>();
+ let cacheDay=new Date().toDateString();
+ function clearViews(){views.clear();pendingViews.clear();pendingSwap=null;prefetched=false;cacheGeneration++}
  const scrollPositions=new Map<string,number>();
+ function checkDay(){
+  const day=new Date().toDateString();
+  if(day!==cacheDay){clearViews();cacheDay=day}
+ }
+ function cached(current:string){checkDay();return views.get(current)??null}
+ async function readView(current:string):Promise<PageData>{
+  for(;;){
+   checkDay();
+   const generation=cacheGeneration;
+   let read=pendingViews.get(current);
+   if(!read){
+    read=loadView(current).then(next=>{if(generation===cacheGeneration)views.set(current,next);return next})
+     .finally(()=>{if(pendingViews.get(current)===read)pendingViews.delete(current)});
+    pendingViews.set(current,read);
+   }
+   try{
+    const next=await read;
+    checkDay();
+    if(generation===cacheGeneration)return next;
+   }catch(e){
+    if(generation===cacheGeneration)throw e;
+   }
+  }
+ }
+ function prefetchTabs(){
+  if(prefetched)return;
+  prefetched=true;
+  const generation=cacheGeneration;
+  void tick().then(()=>{if(generation===cacheGeneration)return Promise.allSettled(tabs.filter(tab=>tab!==route).map(tab=>readView(tab)))});
+ }
  const fixture=new URLSearchParams(location.search).get('fixture');
  const live=isTauri() && fixture===null;
  let syncBusy=$derived(syncing || status?.syncing===true);
@@ -44,78 +84,113 @@
    default:return api.today();
   }
  }
- async function refresh(silent=false){
-  if(silent && refreshing)return;
+ async function refresh(silent=false,withStatus=false){
+  checkDay();
   const current=route,request=++requestId;
-  refreshing=true;
-  if(!silent)loading=true;
+  if(!silent)loading=!data;
   try {
-   const nextStatus=await api.app_status();
-   if(request!==requestId)return;
-   // A queued or slow Android sync can succeed after the foreground wait ends.
-   if(lastSyncAttempt!==null && nextStatus.lastSync && Date.parse(nextStatus.lastSync)>=lastSyncAttempt && !nextStatus.lastError)syncError='';
-   status=nextStatus;
-   if(live){
-    if(!status.signedIn){onboardStep=0;if(current!=='onboarding')navigate('onboarding');return}
-    if(localStorage.getItem('notifications-step-done')!=='1'){onboardStep=1;if(current!=='onboarding')navigate('onboarding');return}
-    if(current==='onboarding'){navigate('today');return}
+   if(withStatus){
+    const statusRead=++statusReadId;
+    const nextStatus=await api.app_status();
+    if(statusRead>appliedStatusReadId){
+     appliedStatusReadId=statusRead;
+     // A queued or slow Android sync can succeed after the foreground wait ends.
+     if(lastSyncAttempt!==null && nextStatus.lastSync && Date.parse(nextStatus.lastSync)>=lastSyncAttempt && !nextStatus.lastError)syncError='';
+     const changedSync=status!==null && status.lastSync!==nextStatus.lastSync;
+     if(changedSync)clearViews();
+     status=nextStatus;
+     checkDay();
+     if(live){
+      if(!status.signedIn){onboardStep=0;clearViews();data=null;if(route!=='onboarding')navigate('onboarding');return}
+      if(localStorage.getItem('notifications-step-done')!=='1'){onboardStep=1;if(route!=='onboarding')navigate('onboarding');return}
+      if(route==='onboarding'){navigate('today');return}
+     }
+     if(changedSync && request!==requestId)void refresh(true);
+    }
+    if(request!==requestId)return;
    }
    if(current==='settings'){
     const nextSettings=await api.get_settings();
     if(request===requestId)settings=nextSettings;
    }else if(current!=='onboarding'){
-    let next=await loadView(current);
+    let next=await readView(current);
     if(request!==requestId)return;
     if(fixture==='missing' && current==='today'){
      next={...(next as TodayView),readiness:null,readinessTrend:[],sleep:null,sleepPlan:null,load:null,chips:[],factors:[],readinessWhy:null,bodyBatteryWhy:null,reconcile:null,call:null,callNote:null,bodyBattery:{now:null,charged:null,drained:null},stress:{average:null,max:null,level:null,qualifier:null,tone:'neutral',timeline:[],active:[],sleep:null,time:[],activeS:null,trend:[]},hrv:{lastNight:null,status:null,tone:'neutral',baseline:null,week:[]},vitals:{readings:[],offCount:0,baselineReady:false},activities:[],fitnessAge:{fitnessAge:null,chronologicalAge:null,trend:[],change12m:null},headline:''};
     }
-    data=fixture==='empty' && current==='today'?null:next;
+    if(fixture==='stale' && current==='today')next={...(next as TodayView),watchLastUpload:new Date(Date.now()-7*3600_000).toISOString(),missingMetricReasons:{skinTemp:"Your watch doesn't record skin temperature"}};
+    if(fixture==='fresh' && current==='today')next={...(next as TodayView),watchLastUpload:new Date(Date.now()-2*3600_000-120_000).toISOString()};
+    if(fixture==='stale-sleep' && current==='today')next={...(next as TodayView),watchLastUpload:null,watchSleepUploadStale:true,missingMetricReasons:{}};
+    const updated=fixture==='empty' && current==='today'?null:next;
+    if(touching && data && updated)pendingSwap={route:current,data:updated};
+    else data=updated;
+    if(data){hasRendered=true;prefetchTabs()}
    }
+   if(hasRendered && !prefetched && current!=='onboarding')prefetchTabs();
    if(request===requestId)error='';
   }catch(e){
-   if(request===requestId){if(!silent)data=null;error=String(e)}
+   if(request===requestId){error=String(e)}
   }finally{
-   if(request===requestId){loading=false;refreshing=false}
+   if(request===requestId)loading=false;
   }
-  if(request===requestId && live && route!=='onboarding' && document.visibilityState==='visible' && shouldSync(status,lastSyncAttempt))void syncNow();
+  if(request===requestId && withStatus && live && route!=='onboarding' && document.visibilityState==='visible' && shouldSync(status,lastSyncAttempt))void syncNow();
  }
  async function syncNow(){
   if(syncing || status?.syncing)return;
   syncing=true;syncError='';lastSyncAttempt=Date.now();
-  try{await api.sync_now();await refresh(true)}catch(e){syncError=String(e)}
+  try{await api.sync_now();clearViews();await refresh(true,true)}catch(e){syncError=String(e)}
   finally{syncing=false}
  }
  onMount(()=>{
   let disposed=false,unlisten=()=>{};
   navigation=createNavigation(next=>{
+   const from=route;
    const changed=next[next.length-1]!==route;
-   if(changed){scrollPositions.set(route,scroll?.scrollTop??0);data=null;selectedFactor='';checkinIndex=0}
+   if(changed){scrollPositions.set(route,scroll?.scrollTop??0);pendingSwap=null;selectedFactor='';checkinIndex=0}
    trail=next;route=next[next.length-1];
-   void refresh().then(async()=>{
-    await tick();
-    if(changed && route===next[next.length-1] && scroll)scroll.scrollTop=scrollPositions.get(route)??0;
+   const available=changed?cached(route):null;
+   if(changed){
+    data=available;
+    if(available)void tick().then(()=>restoreScroll(next));
+   }
+   void refresh(false,status===null || from==='onboarding' && route!=='onboarding').then(async()=>{
+    if(changed && !available){await tick();restoreScroll(next)}
    });
   });
   navigation.start();
   const nativeWindow=window as Window & {__raringBack?:()=>boolean};
   nativeWindow.__raringBack=back;
-  const resume=()=>{if(document.visibilityState==='visible')void refresh(true)};
+  const resume=()=>{if(document.visibilityState==='visible')void refresh(true,true);else finishTouch()};
   document.addEventListener('visibilitychange',resume);
   window.addEventListener('raring:resume',resume);
   void api.onStatusChanged(resume).then(fn=>{if(disposed)fn();else unlisten=fn});
   const poll=window.setInterval(resume,CACHE_POLL_MS);
-  return()=>{disposed=true;requestId++;navigation.destroy();delete nativeWindow.__raringBack;window.clearInterval(poll);document.removeEventListener('visibilitychange',resume);window.removeEventListener('raring:resume',resume);unlisten()};
+  const clockTick=window.setInterval(()=>now=new Date(),60_000);
+  return()=>{disposed=true;requestId++;navigation.destroy();delete nativeWindow.__raringBack;window.clearInterval(poll);window.clearInterval(clockTick);document.removeEventListener('visibilitychange',resume);window.removeEventListener('raring:resume',resume);unlisten()};
  });
- async function pullEnd(e:TouchEvent){if(route==='today' && startedAtTop && e.changedTouches[0].clientY-startY>75)await syncNow()}
- async function saveSettings(){try{await api.set_settings(settings)}catch(e){error=String(e)}}
+ function restoreScroll(next:string[]){
+  if(route===next[next.length-1] && scroll)scroll.scrollTop=scrollPositions.get(route)??0;
+ }
+ function finishTouch(){
+  touching=false;
+  if(pendingSwap?.route===route)data=pendingSwap.data;
+  pendingSwap=null;
+ }
+ async function pullEnd(e:TouchEvent){
+  finishTouch();
+  if(route==='today' && startedAtTop && e.changedTouches[0].clientY-startY>75)await syncNow();
+ }
+ async function saveSettings(){try{await api.set_settings($state.snapshot(settings))}catch(e){error=String(e)}}
+ async function openConnect(){try{connectUnavailable=!(await api.open_garmin_connect())}catch{connectUnavailable=true}}
 
  const driverScale=(key:string):[number,number]=>({vo2max:[20,70],restingHr:[35,85],bmi:[15,35],bodyFat:[5,40],vigorousMinutes:[0,200],vigorousDays:[0,7]} as Record<string,[number,number]>)[key]??[0,100];
  const driverRange=(key:string,target:number|null):[number,number]|null=>target==null?null:key==='bmi'?[18.5,target]:['restingHr','bodyFat'].includes(key)?[driverScale(key)[0],target]:[target,driverScale(key)[1]];
  let todayData=$derived(route==='today'||route==='readiness'?data as TodayView|null:null),sleepData=$derived(route==='sleep'?data as SleepView|null:null),trainingData=$derived(route==='training'?data as TrainingView|null:null),workoutData=$derived(route.startsWith('workout/')?data as WorkoutView|null:null),healthData=$derived(route==='health'?data as HealthView|null:null),checkinData=$derived(route==='checkin'?data as CheckinView|null:null);
+ let checkinPages=$derived(checkinData?checkinData.cards.length+(checkinData.timing?1:0):0);
  const fitnessAgeColor=(age:number,actual:number|null)=>actual==null?colors.ink:age<actual?colors.good:age===actual?colors.fair:colors.poor;
  let glow=$derived(route==='today' && todayData?.readiness?toneColor(todayData.readiness.tone):route==='sleep' && sleepData?.score?toneColor(sleepData.score.tone):route==='training' && trainingData?.acute?toneColor(trainingData.acute.tone):route==='health' && healthData?.fitnessAge.fitnessAge!=null && healthData.fitnessAge.chronologicalAge!=null?fitnessAgeColor(healthData.fitnessAge.fitnessAge,healthData.fitnessAge.chronologicalAge):null);
 </script>
-<div class="phone"><div class="glow" style:--glow={glow?`color-mix(in srgb, ${glow} 12%, transparent)`:'transparent'}></div><main class="scroll" bind:this={scroll} ontouchstart={(e)=>{startY=e.touches[0].clientY;startedAtTop=e.currentTarget.scrollTop===0}} ontouchend={pullEnd}><div class="page" class:reading={route==='checkin'||route==='onboarding'}>
+<div class="phone"><div class="glow" style:--glow={glow?`color-mix(in srgb, ${glow} 12%, transparent)`:'transparent'}></div><main class="scroll" bind:this={scroll} ontouchstart={(e)=>{touching=true;startY=e.touches[0].clientY;startedAtTop=e.currentTarget.scrollTop===0}} ontouchend={pullEnd} ontouchcancel={finishTouch}><div class="page" class:reading={route==='checkin'||route==='onboarding'}>
 {#if error && (data || route==='settings')}<p class="warning" role="status">{error}</p>{/if}
 {#if route==='onboarding'}
  <section class="welcome" class:intro={onboardStep===0}>
@@ -132,14 +207,17 @@
   {#if error || status?.lastError}<p class="small" role="alert">{error || status?.lastError}</p>{/if}
  </section>
 {:else if route==='settings'}
- <Header title="Settings" eyebrow="RARING" back={back} backLabel={parentLabel}/><div class="dashboard" {@attach masonry}><Card title="Notifications">{#each Object.keys(settings) as key}<label class="setting"><span>{({notifyMorningReadiness:'Morning readiness',notifyWeeklyCheckin:'Weekly check-in',notifyMetricChanges:'VO₂ max or Fitness Age changed',notifyVitals:'Vitals off',notifyTrainingStatus:'Training status changed',notifyBedtime:'Bedtime'} as Record<string,string>)[key]}</span><input type="checkbox" checked={settings[key as keyof api.Settings]} onchange={(e)=>{settings={...settings,[key]:e.currentTarget.checked};void saveSettings()}}/></label>{/each}</Card><Card title="Permission"><button class="secondary" onclick={async()=>{try{await api.request_notification_permission()}catch(e){error=String(e)}}}>Enable notifications</button></Card><Card title="Garmin history"><div class="big n">{status?.historyFrom?`Since ${monthLabel(status.historyFrom)}`:'—'}</div><p class="small">{status?.historyComplete?'All of your Garmin history is on this phone.':'Downloading older history in the background.'}</p></Card><Card title="Account"><button class="signout" onclick={async()=>{if(confirm('Sign out and erase all local Garmin history?')){try{await api.sign_out();localStorage.removeItem('notifications-step-done');onboardStep=0;navigate('onboarding')}catch(e){error=String(e)}}}}>Sign out</button></Card><Card title="How Raring works"><AboutRaring/></Card></div>
-{:else if loading}<div class="empty"><BrandMark/><h2>{status?.lastSync?'Loading your day…':'Syncing your Garmin data…'}</h2></div>
+ <Header title="Settings" eyebrow="RARING" back={back} backLabel={parentLabel}/><div class="dashboard" {@attach masonry}><Card title="Notifications">{#each (Object.keys(settings) as (keyof api.Settings)[]).filter(key=>typeof settings[key]==='boolean') as key}<label class="setting"><span>{({notifyMorningReadiness:'Morning readiness',notifyWeeklyCheckin:'Weekly check-in',notifyMetricChanges:'VO₂ max or Fitness Age changed',notifyVitals:'Vitals off',notifyTrainingStatus:'Training status changed',notifyBedtime:'Bedtime'} as Record<string,string>)[key]}</span><input type="checkbox" checked={settings[key]===true} onchange={(e)=>{settings={...settings,[key]:e.currentTarget.checked};void saveSettings()}}/></label>{#if key==='notifyBedtime' && settings.notifyBedtime}<label class="setting lead"><span>Wind-down reminder</span><select value={settings.bedtimeLeadMin} onchange={(e)=>{settings={...settings,bedtimeLeadMin:Number(e.currentTarget.value)};void saveSettings()}}>{#each [15,30,45,60,90] as lead}<option value={lead}>{lead} min before</option>{/each}</select></label>{/if}{/each}</Card><Card title="Permission"><button class="secondary" onclick={async()=>{try{await api.request_notification_permission()}catch(e){error=String(e)}}}>Enable notifications</button></Card><Card title="Garmin history"><div class="big n">{status?.historyFrom?`Since ${monthLabel(status.historyFrom)}`:'—'}</div><p class="small">{status?.historyComplete?'All of your Garmin history is on this phone.':'Downloading older history in the background.'}</p></Card><Card title="Account"><button class="signout" onclick={async()=>{if(confirm('Sign out and erase all local Garmin history?')){try{await api.sign_out();clearViews();data=null;localStorage.removeItem('notifications-step-done');onboardStep=0;navigate('onboarding')}catch(e){error=String(e)}}}}>Sign out</button></Card><Card title="How Raring works"><AboutRaring/></Card></div>
+{:else if loading && !hasRendered}<div class="empty"><BrandMark/><h2>{status?.lastSync?'Loading your day…':'Syncing your Garmin data…'}</h2></div>
+{:else if !data && hasRendered}<Header title={route[0].toUpperCase()+route.slice(1)} eyebrow="RARING"/><p class="small">{error || (loading?'Preparing this view…':'No data for this view yet.')}</p>
 {:else if !data}<div class="empty"><BrandMark/><h2>Syncing your Garmin data…</h2><p>{error && !error.includes('not_ready')?error:'Your day will appear here soon.'}</p><button class="secondary" disabled={syncBusy} onclick={syncNow}>{syncBusy?'Syncing…':'Sync now'}</button>{#if syncError}<p>{syncError}</p>{/if}</div>
 {:else if todayData && route==='today'}
  <div class="page-hero today-hero"><Header title="Today" eyebrow={dateLabel(todayData.date)} onSettings={()=>navigate('settings')}/>
- <div class="sync-indicator"><span class="small" aria-live="polite">{#if syncBusy}Syncing with Garmin…{:else if syncError || status?.lastError}Sync delayed · {syncError || status?.lastError}{:else if status?.lastSync}Last synced {clock(status.lastSync)}{:else}Waiting for first sync{/if}</span><button class="sync-button" disabled={syncBusy} onclick={syncNow}>Refresh</button></div>
+ <div class="sync-indicator"><span class="small" aria-live="polite">{#if todayData.watchLastUpload}{watchLabel(todayData.watchLastUpload,now)}{:else}Watch upload time unavailable{/if}{#if syncBusy} · Refreshing…{:else if syncError || status?.lastError} · Raring sync delayed · {syncError || status?.lastError}{/if}</span><button class="sync-button" disabled={syncBusy} onclick={syncNow}>Refresh</button></div>
  <section class="dials"><button class="dial-button" onclick={()=>navigate('sleep')}>{#if todayData.sleep}<Gauge size={100} value={todayData.sleep.value} max={todayData.sleep.max} color={toneColor(todayData.sleep.tone)} caption="Sleep"/>{:else}<Gauge size={100} value={null} caption="Sleep"/>{/if}</button><button class="dial-button large" onclick={()=>navigate('readiness')}>{#if todayData.readiness}<Gauge size={156} stroke={13} value={todayData.readiness.value} max={todayData.readiness.max} color={toneColor(todayData.readiness.tone)} caption="Readiness" label={todayData.readiness.label}/>{:else}<Gauge size={156} stroke={13} value={null} caption="Readiness"/>{/if}</button><button class="dial-button" onclick={()=>navigate('training')}>{#if todayData.load}<Gauge size={100} value={todayData.load.value} max={todayData.load.max} color={toneColor(todayData.load.tone)} caption="Load" band={todayData.load.band} marker/>{:else}<Gauge size={100} value={null} caption="Load"/>{/if}</button></section>
  <div class="headline"><h2>{todayData.headline||'Your day is taking shape'}</h2><div class="chips">{#each todayData.chips as chip}<Chip {chip} label={chip.icon==='moon'?'View sleep':chip.icon==='hrv'?'View HRV':'View training'} onclick={()=>navigate(chip.icon==='moon'?'sleep':chip.icon==='hrv'?'metric/hrv':'training')}/>{/each}</div>{#if todayData.reconcile}<Reconcile reconcile={todayData.reconcile}/>{/if}</div></div><div class="dashboard" {@attach masonry}>
+ {#if watchNeedsSync(todayData,now)}<Card title="Watch upload" extra="watch-notice"><p>Open Garmin Connect to sync your watch</p>{#if todayData.watchSleepUploadStale}<p class="small">Last night's sleep hasn't uploaded yet.</p>{/if}{#if connectUnavailable}<p class="small" role="status">Open Garmin Connect on your phone, then sync your watch there.</p>{:else}<button class="watch-open" onclick={openConnect}>Open Garmin Connect <Icon name="arrow-right" size={16}/></button>{/if}</Card>{/if}
+ {#if Object.keys(todayData.missingMetricReasons).length}<Card title="About missing readings" extra="watch-notice"><div class="missing-reasons">{#each Object.values(todayData.missingMetricReasons) as reason}<p>{reason}</p>{/each}</div></Card>{/if}
  {#if todayData.call || todayData.factors.length}<DailyFocus today={todayData} open={()=>navigate('readiness')}/>{/if}
  {#if todayData.sleepPlan}<SleepPlanCard plan={todayData.sleepPlan} open={()=>navigate('sleep')}/>{/if}
 
@@ -160,8 +238,9 @@
  <div class="page-hero"><Header title="Sleep" eyebrow={sleepData.startLocal?`${clock(sleepData.startLocal)} – ${clock(sleepData.endLocal)}`:dateLabel(sleepData.date)} onSettings={()=>navigate('settings')}/><section class="sleep-hero">{#if sleepData.score}<Gauge size={150} stroke={12} value={sleepData.score.value} max={sleepData.score.max} caption="Score" label={sleepData.score.label} color={toneColor(sleepData.score.tone)}/>{/if}<div class="need"><div class="eyebrow">Asleep</div><div class="big n">{duration(sleepData.asleepMin)}</div><div class="needbar"><i style:width={Math.min(100,(sleepData.asleepMin??0)/Math.max(540,sleepData.needMin??0)*100)+'%'}></i>{#if sleepData.needMin!=null}<u style:left={sleepData.needMin/Math.max(540,sleepData.needMin)*100+'%'}></u>{/if}</div><div class="need-sub">{#if sleepData.needMin!=null}Last night's need <b>{duration(sleepData.needMin)}</b>{#if sleepData.asleepMin!=null && Math.abs(sleepData.asleepMin-sleepData.needMin)>=1} <span class="nowrap">&nbsp;· <strong style:color={sleepData.asleepMin<sleepData.needMin?colors.poor:colors.good}>{signed(sleepData.asleepMin-sleepData.needMin)} min</strong></span>{/if}{:else}Sleep need unavailable{/if}</div></div></section></div><div class="dashboard" {@attach masonry}>
  {#if sleepData.stages.length}<Card title="Stages"><Hypnogram segments={sleepData.stages} startLocal={sleepData.startLocal}/></Card>{/if}{#if sleepData.totals.length}<Card><div class="stage-stack">{#each sleepData.totals as s}<i style:width={s.minutes/sleepData.totals.reduce((a,b)=>a+b.minutes,0)*100+'%'} style:background={({deep:colors.deep,light:colors.light,rem:colors.rem,awake:colors.awake} as Record<string,string>)[s.stage]}></i>{/each}</div><div class="stage-legend">{#each sleepData.totals as s}<div><i style:background={({deep:colors.deep,light:colors.light,rem:colors.rem,awake:colors.awake} as Record<string,string>)[s.stage]}></i><span>{s.stage==='rem'?'REM':s.stage}</span><b class="n">{duration(s.minutes)}</b>{#if s.usualDeltaMin!=null && Math.abs(s.usualDeltaMin)>=1}<em style:color={s.stage==='light'?colors.secondary:s.stage==='awake'?(s.usualDeltaMin<0?colors.good:colors.poor):(s.usualDeltaMin>0?colors.good:colors.poor)}>{signed(Math.round(s.usualDeltaMin),'m')}</em>{/if}</div>{/each}</div></Card>{/if}
  {#if sleepData.overnight.length}<Card title="Overnight"><div class="tiles">{#each sleepData.overnight as tile}<div class="tile"><span><Icon name={tile.kind==='heartRate'?'heart':tile.kind==='spo2'?'drop':tile.kind==='respiration'?'lungs':'hrv'} size={14}/><span class="muted">{({heartRate:'Heart rate',hrv:'HRV',respiration:'Respiration',spo2:'SpO₂'} as Record<string,string>)[tile.kind]}</span></span><b class="n">{num(tile.value,tile.kind==='respiration'?1:0)}<small>{tile.unit}</small></b><Sparkline values={tile.series} w={128} h={30} color={colors.ink} fill={false}/></div>{/each}</div></Card>{/if}
- {#if sleepData.consistency.length}<Card title="Consistency">{#snippet aside()}{#if sleepData.consistencySpreadMin!=null && sleepData.consistencySpreadMin>=1}<span class="pill">±{Math.round(sleepData.consistencySpreadMin)} min</span>{/if}{/snippet}<ConsistencyChart nights={sleepData.consistency} date={sleepData.date} bedWindow={sleepData.bedWindow} wakeWindow={sleepData.wakeWindow}/></Card>{/if}
- {#if sleepData.sleepPlan}<SleepPlanCard plan={sleepData.sleepPlan}/>{/if}
+ {#if sleepData.consistency.length}<Card title="Consistency" extra="consistency">{#snippet aside()}{#if sleepData.consistencySpreadMin!=null && sleepData.consistencySpreadMin>=1}<span class="pill">±{Math.round(sleepData.consistencySpreadMin)} min</span>{/if}{/snippet}{#if sleepData.garminAverages}{@const avg=sleepData.garminAverages}<div class="averages"><div><span>Avg bedtime</span><b class="n">{avg.bedtime}</b></div><div><span>Avg wake</span><b class="n">{avg.wakeTime}</b></div><small>Garmin · last {avg.nights} {avg.nights===1?'night':'nights'}</small></div>{/if}<ConsistencyChart nights={sleepData.consistency} date={sleepData.date} bedWindow={sleepData.bedWindow} wakeWindow={sleepData.wakeWindow}/>{#if sleepData.bedWindow || sleepData.wakeWindow}<p class="small">Shaded: your usual bed and wake times.</p>{/if}</Card>{/if}
+ {#if sleepData.alignment}<AlignmentCard alignment={sleepData.alignment}/>{/if}
+ {#if sleepData.sleepPlan}<SleepPlanCard plan={sleepData.sleepPlan} evidence/>{/if}
 </div>
 {:else if trainingData}
  <div class="page-hero"><Header title="Training" eyebrow="Last 7 days" onSettings={()=>navigate('settings')}/>{#if trainingData.status}<span class="status-pill pill" style:color={toneColor(trainingData.statusTone)}>{trainingData.status}</span>{/if}
@@ -188,8 +267,8 @@
 
 </div>
 {:else if route.startsWith('metric/')}
- <Header title={metricNames[route.split('/')[1]]} eyebrow="GARMIN METRIC" back={back} backLabel={parentLabel}/><MetricDetail metric={route.split('/')[1]} data={data as TodayView|HealthView|TrainingView}/>
+ <Header title={route.split('/')[1]==='restingHr' && (data as HealthView).vitals?.readings.some(v=>v.kind==='restingHr' && (v.status || v.rangeSource==='garmin')) ? 'Sleep HR' : metricNames[route.split('/')[1]]} eyebrow="GARMIN METRIC" back={back} backLabel={parentLabel}/><MetricDetail metric={route.split('/')[1]} data={data as TodayView|HealthView|TrainingView}/>
 {:else if checkinData}
- <Header title="Weekly check-in" eyebrow={'Week of '+dateLabel(checkinData.weekStart)} back={back} backLabel="Today"/><div class="checkin-progress">{#each [...checkinData.cards, null] as _,i}<span class:on={i===checkinIndex}></span>{/each}</div><div class="checkin-swiper" role="group" aria-label="Weekly check-in cards" ontouchstart={(e)=>swipeX=e.touches[0].clientX} ontouchend={(e)=>{let dx=e.changedTouches[0].clientX-swipeX;if(Math.abs(dx)>50)checkinIndex=Math.max(0,Math.min(checkinData.cards.length,checkinIndex+(dx<0?1:-1)))}}>{#if checkinIndex<checkinData.cards.length}{@const c=checkinData.cards[checkinIndex]}<Card title={c.area}><div class="checkin-content"><div class="eyebrow">YOUR WEEK IN {c.area.toUpperCase()}</div>{#if c.value!=null}<Gauge size={210} stroke={15} value={c.value} max={c.area==='training'?1000:c.area==='health'?50:100} color={toneColor(c.tone)} caption={c.unit}/>{/if}<h2>{c.headline}</h2><span class="pill" class:ok={c.previous!=null && c.value!=null && (c.area==='health'?c.value<=c.previous:c.value>=c.previous)}>{#if c.previous!=null && c.value!=null && Math.abs(c.value-c.previous)>=1}<Icon name={c.value<c.previous?'trend-down':'trend-up'} size={14}/>{signed(c.value-c.previous)} vs last week{:else if c.value==null}No readings this week{:else if c.previous!=null}Steady vs last week{:else}No previous week to compare{/if}</span><Sparkline values={c.series} w={240} h={60} color={colors.ink}/></div></Card>{:else}<Card title="Your week ahead"><div class="checkin-summary"><div class="brand-mark"><Icon name="sparkle" size={70}/></div><h2>Keep the momentum</h2>{#if checkinData.vo2maxChange!=null && Math.abs(checkinData.vo2maxChange)>=1}<span class="pill ok">VO₂ max {signed(checkinData.vo2maxChange)}</span>{/if}{#if checkinData.fitnessAgeChange!=null && Math.abs(checkinData.fitnessAgeChange)>=1}<span class="pill ok">Fitness Age {signed(checkinData.fitnessAgeChange)}</span>{/if}{#if checkinData.win}<h3>THE WIN</h3><p>{checkinData.win}</p>{/if}{#if checkinData.focus}<h3>THE FOCUS</h3><p>{checkinData.focus}</p>{/if}</div></Card>{/if}</div><div class="checkin-controls"><button disabled={checkinIndex===0} onclick={()=>checkinIndex--}><Icon name="arrow-left" size={16}/> Previous</button><span>{checkinIndex+1} / {checkinData.cards.length+1}</span><button disabled={checkinIndex===checkinData.cards.length} onclick={()=>checkinIndex++}>Next <Icon name="arrow-right" size={16}/></button></div>
+ <Header title="Weekly check-in" eyebrow={'Week of '+dateLabel(checkinData.weekStart)} back={back} backLabel="Today"/><div class="checkin-progress">{#each Array(checkinPages+1) as _,i}<span class:on={i===checkinIndex}></span>{/each}</div><div class="checkin-swiper" role="group" aria-label="Weekly check-in cards" ontouchstart={(e)=>swipeX=e.touches[0].clientX} ontouchend={(e)=>{let dx=e.changedTouches[0].clientX-swipeX;if(Math.abs(dx)>50)checkinIndex=Math.max(0,Math.min(checkinPages,checkinIndex+(dx<0?1:-1)))}}>{#if checkinIndex<checkinData.cards.length}{@const c=checkinData.cards[checkinIndex]}<Card title={c.area}><div class="checkin-content"><div class="eyebrow">YOUR WEEK IN {c.area.toUpperCase()}</div>{#if c.value!=null}<Gauge size={210} stroke={15} value={c.value} max={c.area==='training'?1000:c.area==='health'?50:100} color={toneColor(c.tone)} caption={c.unit}/>{/if}<h2>{c.headline}</h2><span class="pill" class:ok={c.previous!=null && c.value!=null && (c.area==='health'?c.value<=c.previous:c.value>=c.previous)}>{#if c.previous!=null && c.value!=null && Math.abs(c.value-c.previous)>=1}<Icon name={c.value<c.previous?'trend-down':'trend-up'} size={14}/>{signed(c.value-c.previous)} vs last week{:else if c.value==null}No readings this week{:else if c.previous!=null}Steady vs last week{:else}No previous week to compare{/if}</span><Sparkline values={c.series} w={240} h={60} color={colors.ink}/></div></Card>{:else if checkinData.timing && checkinIndex===checkinData.cards.length}{@const t=checkinData.timing}<Card title="Timing" extra="timing-review"><div class="checkin-content"><div class="eyebrow">YOUR WEEK IN SLEEP TIMING</div><ConsistencyChart nights={t.nights} date={addDays(checkinData.weekStart,6)} days={7}/><div class="timing-ranges">{#if t.bedRange}<div><span>Bedtimes</span><b class="n">{t.bedRange[0]}–{t.bedRange[1]}</b></div>{/if}{#if t.wakeRange}<div><span>Wake times</span><b class="n">{t.wakeRange[0]}–{t.wakeRange[1]}</b></div>{/if}</div>{#if t.aligned+t.ahead+t.behind>0}<span class="pill">Garmin: {[[t.aligned,'aligned'],[t.behind,'behind'],[t.ahead,'ahead']].filter(([n])=>Number(n)>0).map(([n,w])=>`${n} ${w}`).join(' · ')}</span>{/if}<h3>THE TIMING FOCUS</h3><p>{t.focus}</p></div></Card>{:else}<Card title="Your week ahead"><div class="checkin-summary"><div class="brand-mark"><Icon name="sparkle" size={70}/></div><h2>Keep the momentum</h2>{#if checkinData.vo2maxChange!=null && Math.abs(checkinData.vo2maxChange)>=1}<span class="pill ok">VO₂ max {signed(checkinData.vo2maxChange)}</span>{/if}{#if checkinData.fitnessAgeChange!=null && Math.abs(checkinData.fitnessAgeChange)>=1}<span class="pill ok">Fitness Age {signed(checkinData.fitnessAgeChange)}</span>{/if}{#if checkinData.win}<h3>THE WIN</h3><p>{checkinData.win}</p>{/if}{#if checkinData.focus}<h3>THE FOCUS</h3><p>{checkinData.focus}</p>{/if}</div></Card>{/if}</div><div class="checkin-controls"><button disabled={checkinIndex===0} onclick={()=>checkinIndex--}><Icon name="arrow-left" size={16}/> Previous</button><span>{checkinIndex+1} / {checkinPages+1}</span><button disabled={checkinIndex===checkinPages} onclick={()=>checkinIndex++}>Next <Icon name="arrow-right" size={16}/></button></div>
 {/if}
 </div></main>{#if route!=='onboarding'}<TabBar active={activeTab} {navigate}/>{/if}</div>

@@ -2,6 +2,7 @@ package app.raring
 
 import android.Manifest
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.os.Build
 import android.content.Intent
 import android.webkit.WebView
@@ -59,6 +60,7 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 SyncScheduler.cancel(activity)
+                BedtimeScheduler.cancel(activity)
                 SyncGate.mutex.withLock { TokenVault.clear(activity) }
                 CookieManager.getInstance().removeAllCookies(null)
                 WebStorage.getInstance().deleteAllData()
@@ -69,6 +71,7 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
     @Command fun schedule(invoke: Invoke) {
         CoroutineScope(Dispatchers.IO).launch {
             if (TokenVault.loadOrClear(activity) != null) SyncScheduler.start(activity)
+            BedtimeScheduler.run(activity)
             invoke.resolve(JSObject())
         }
     }
@@ -84,6 +87,16 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
                 else invoke.reject("sync pending — try again later")
             } catch (e: Exception) { invoke.reject("sync failed — try again", e) }
         }
+    }
+    @Command fun openGarminConnect(invoke: Invoke) {
+        val intent = activity.packageManager.getLaunchIntentForPackage("com.garmin.android.apps.connectmobile")
+        val launched = if (intent == null) false else try {
+            activity.startActivity(intent)
+            true
+        } catch (_: ActivityNotFoundException) {
+            false
+        }
+        invoke.resolve(JSObject().apply { put("launched", launched) })
     }
     @Command fun requestNotificationPermission(invoke: Invoke) {
         if (Build.VERSION.SDK_INT < 33 || getPermissionState("notifications") == PermissionState.GRANTED) {

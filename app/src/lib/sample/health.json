@@ -409,49 +409,51 @@
     "readings": [
       {
         "kind": "restingHr",
-        "value": 46,
+        "value": 58,
         "unit": "bpm",
         "scale": [
-          40,
-          54
+          48,
+          68
         ],
         "normal": [
-          44,
-          49
+          52,
+          62
         ],
         "trend": [
-          47,
-          46,
-          47,
-          45,
-          46,
-          46,
-          47,
-          46,
-          47,
+          57,
+          56,
+          58,
+          55,
+          56,
+          58,
+          57,
+          58,
+          57,
           null,
-          47,
-          45,
-          46,
-          46,
-          47,
-          46,
-          47,
+          58,
+          55,
+          56,
+          58,
+          57,
+          58,
+          57,
           null,
-          47,
-          45,
-          46,
-          46,
-          47,
-          46,
-          47,
-          46,
-          47,
-          45,
-          46,
-          46
+          58,
+          55,
+          56,
+          58,
+          57,
+          58,
+          57,
+          56,
+          58,
+          55,
+          56,
+          58
         ],
-        "tone": "good"
+        "tone": "good",
+        "status": "IN_RANGE",
+        "rangeSource": "garmin"
       },
       {
         "kind": "hrv",
@@ -497,7 +499,9 @@
           56,
           58
         ],
-        "tone": "good"
+        "tone": "good",
+        "status": "IN_RANGE",
+        "rangeSource": "garmin"
       },
       {
         "kind": "respiration",
@@ -543,7 +547,9 @@
           14,
           14.1
         ],
-        "tone": "good"
+        "tone": "good",
+        "status": "IN_RANGE",
+        "rangeSource": "garmin"
       },
       {
         "kind": "spo2",
@@ -589,7 +595,9 @@
           96,
           96
         ],
-        "tone": "good"
+        "tone": "good",
+        "status": "IN_RANGE",
+        "rangeSource": "garmin"
       },
       {
         "kind": "skinTemp",
@@ -635,7 +643,9 @@
           0,
           0.1
         ],
-        "tone": "good"
+        "tone": "good",
+        "status": "IN_RANGE",
+        "rangeSource": "garmin"
       }
     ],
     "offCount": 0,

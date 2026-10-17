@@ -37,6 +37,7 @@ object NativeBridge {
     @JvmStatic external fun prepareTokens(tokensJson: String): String
     @JvmStatic external fun sync(dbPath: String, tokensJson: String, nowIso: String): String
     @JvmStatic external fun markSent(dbPath: String, tagsJson: String, nowIso: String): String
+    @JvmStatic external fun bedtime(dbPath: String, nowLocal: String): String
 }
 
 // The vault read, JNI refresh and vault write must share one lock across every work request.
@@ -100,6 +101,14 @@ class SyncWorker(context: Context, params: WorkerParameters): CoroutineWorker(co
     }
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         try {
+            syncLocked()
+        } finally {
+            // Each sync can move tonight's plan; the reminder follows it.
+            BedtimeScheduler.run(applicationContext)
+        }
+    }
+    private suspend fun syncLocked(): Result {
+        return try {
             SyncGate.mutex.withLock {
                 val tokens = TokenVault.loadOrClear(applicationContext)
                 if (tokens == null) {

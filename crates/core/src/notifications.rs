@@ -1,9 +1,9 @@
 use crate::{
     screens,
     store::Store,
-    view::{Settings, SleepView, TodayView, VitalKind},
+    view::{Settings, SleepView, TodayView, Tone, VitalKind, VitalRangeSource},
 };
-use chrono::{DateTime, Datelike, Local, Timelike};
+use chrono::{DateTime, Datelike, Local, NaiveDateTime, Timelike};
 use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Notification {
@@ -54,14 +54,20 @@ fn morning_body(view: &TodayView, sleep: &SleepView) -> String {
             None => format!("HRV {hrv:.0} ms"),
         });
     }
-    if let Some(rhr) = view
+    if let Some(reading) = view
         .vitals
         .readings
         .iter()
-        .find(|r| r.kind == VitalKind::RestingHr)
-        .and_then(|r| r.value)
+        .find(|r| r.kind == VitalKind::RestingHr && r.value.is_some())
     {
-        recovery.push(format!("resting HR {rhr:.0}"));
+        let name = if reading.status.is_some() || reading.range_source == VitalRangeSource::Garmin {
+            "Sleep HR"
+        } else {
+            "resting HR"
+        };
+        if let Some(hr) = reading.value {
+            recovery.push(format!("{name} {hr:.0}"));
+        }
     }
     if let Some(battery) = view.body_battery.now {
         recovery.push(format!("Body Battery {battery:.0}"));
@@ -116,10 +122,21 @@ pub fn notifications(store: &Store, now: DateTime<Local>) -> Vec<Notification> {
         );
     }
     if view.vitals.off_count >= 2 {
+        let mut outliers = view.vitals.readings.iter().filter(|r| r.tone == Tone::Poor);
+        let garmin = outliers.clone().any(|r| {
+            r.status.is_some() || r.range_source == VitalRangeSource::Garmin
+        });
+        let raring = outliers.any(|r| r.range_source == VitalRangeSource::Raring);
+        let source = match (garmin, raring) {
+            (true, true) => "Garmin's baselines or Raring's usual ranges",
+            (true, false) => "Garmin's baselines",
+            (false, true) => "Raring's usual ranges",
+            (false, false) => "personal ranges",
+        };
         add(
             "vitals",
             "Vitals outside range",
-            "Several readings are outside your usual range. Take it easy and check how you feel.".into(),
+            format!("Several readings are outside {source}. Take it easy and check how you feel."),
             day.clone(),
         );
     }
@@ -171,24 +188,58 @@ pub fn notifications(store: &Store, now: DateTime<Local>) -> Vec<Notification> {
             );
         }
     }
-    if let Some(bed) = view.sleep_plan.as_ref().map(|plan| &plan.bedtime) {
-        if let Some((h, m)) = bed
-            .split_once(':')
-            .and_then(|(h, m)| Some((h.parse::<i64>().ok()?, m.parse::<i64>().ok()?)))
-        {
-            let delta =
-                (h * 60 + m - now.hour() as i64 * 60 - now.minute() as i64).rem_euclid(1440);
-            if delta <= 30 {
-                add(
-                    "bedtime",
-                    "Time to wind down",
-                    format!("Aim to be asleep by {bed}."),
-                    day,
-                );
-            }
+    if let Some(reminder) = bedtime(store, now.naive_local()) {
+        if reminder.at <= now.naive_local() {
+            add("bedtime", &reminder.title, reminder.body, reminder.night);
         }
     }
     result
+}
+/// Tonight's wind-down reminder from the shared sleep plan, in local
+/// wall-clock time. The platform maps `at` to its own clock, so timezone and
+/// daylight-saving changes only need a reschedule.
+#[derive(Debug, Clone, PartialEq)]
+pub struct BedtimeReminder {
+    pub at: NaiveDateTime,
+    /// The reminder is pointless once the asleep-by time has passed.
+    pub until: NaiveDateTime,
+    /// One reminder per sleep episode, keyed by the morning it ends.
+    pub night: String,
+    pub title: String,
+    pub body: String,
+}
+/// The pending reminder for the current plan, or None when reminders are off,
+/// the plan is stale, its night was already reminded or its time has passed.
+pub fn bedtime(store: &Store, now: NaiveDateTime) -> Option<BedtimeReminder> {
+    if !store.settings().notify_bedtime {
+        return None;
+    }
+    let date = screens::current_date(store, now).to_string();
+    let plan = screens::sleep_plan(store, &date)?;
+    let parse = |s: &str| NaiveDateTime::parse_from_str(s, "%Y-%m-%dT%H:%M:%S").ok();
+    let at = parse(&plan.wind_down_at)?;
+    let until = parse(&plan.bedtime_at)?;
+    if plan.stale || now >= until || store.notified("bedtime", &plan.night) {
+        return None;
+    }
+    let need = duration(plan.need_min);
+    let body = match &plan.bedtime_start {
+        Some(start) => format!(
+            "Garmin's bedtime window: {start}–{} · need {need}",
+            plan.bedtime
+        ),
+        None => format!(
+            "Aim to be asleep by {} (Raring's estimate) · need {need}",
+            plan.bedtime
+        ),
+    };
+    Some(BedtimeReminder {
+        at,
+        until,
+        night: plan.night,
+        title: "Time to wind down".into(),
+        body,
+    })
 }
 pub fn mark_sent(
     store: &Store,

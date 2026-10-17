@@ -302,6 +302,44 @@ impl Client {
         }
         Err(Error::NeedsSignIn)
     }
+    /// Execute a read-only GraphQL query through Garmin's gateway. Errors in a 200
+    /// response are failures, not a missing metric to cache as an empty day.
+    pub async fn graphql(&self, query: &str, variables: Value) -> Result<Value> {
+        let mut guard = self.state.lock().await;
+        if guard.0.is_expiring(Utc::now(), Duration::minutes(5)) {
+            guard.0 = refresh_at(&self.http, &self.auth, &guard.0).await?;
+        }
+        for attempt in 0..2 {
+            if let Some(last) = guard.1 {
+                if let Some(wait) = self.interval.checked_sub(last.elapsed()) {
+                    tokio::time::sleep(wait).await;
+                }
+            }
+            guard.1 = Some(Instant::now());
+            let r = native(
+                self.http
+                    .post(format!("{}/graphql-gateway/graphql", self.api)),
+            )
+            .bearer_auth(&guard.0.access_token)
+            .json(&serde_json::json!({"query": query, "variables": variables}))
+            .send()
+            .await
+            .map_err(map_network)?;
+            if r.status() == StatusCode::UNAUTHORIZED && attempt == 0 {
+                guard.0 = refresh_at(&self.http, &self.auth, &guard.0).await?;
+                continue;
+            }
+            if !r.status().is_success() {
+                return Err(http_error(&r));
+            }
+            let value: Value = r.json().await.map_err(|_| Error::Decode)?;
+            if value.get("errors").is_some() || !value["data"].is_object() {
+                return Err(Error::Decode);
+            }
+            return Ok(value["data"].clone());
+        }
+        Err(Error::NeedsSignIn)
+    }
     pub async fn endpoint(&self, kind: &str, key: &str, display: Option<&str>) -> Result<Value> {
         let d = display.unwrap_or("");
         // display names are URL path segments; never allow them to alter the route.
@@ -310,6 +348,8 @@ impl Client {
             .replace('+', "%20");
         let (path, params): (String, Vec<(&str, &str)>) = match kind {
             "profile" => ("/userprofile-service/socialProfile".into(), vec![]),
+            "devices" => ("/device-service/deviceregistration/devices".into(), vec![]),
+            "device_detail" => (device_detail_path(key)?, vec![]),
             "summary" => (
                 format!("/usersummary-service/usersummary/daily/{d}"),
                 vec![("calendarDate", key)],
@@ -355,6 +395,15 @@ impl Client {
                 format!("/metrics-service/metrics/maxmet/daily/{key}/{key}"),
                 vec![],
             ),
+            // Seven days ending on `key`; overallStats holds Garmin's average bed and wake times.
+            "sleep_stats" => {
+                let end = NaiveDate::parse_from_str(key, "%Y-%m-%d").map_err(|_| Error::Decode)?;
+                let start = end - chrono::Duration::days(6);
+                (
+                    format!("/sleep-service/stats/sleep/daily/{start}/{end}"),
+                    vec![],
+                )
+            }
             "fitness_age" => (format!("/fitnessage-service/fitnessage/{key}"), vec![]),
             "endurance" => (
                 "/metrics-service/metrics/endurancescore".into(),
@@ -456,6 +505,21 @@ impl Client {
     }
 }
 
+fn device_detail_path(id: &str) -> Result<String> {
+    // Device IDs may be alphanumeric. Reject route separators and traversal before encoding.
+    if id.is_empty()
+        || !id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b':'))
+    {
+        return Err(Error::Decode);
+    }
+    let segment = url::form_urlencoded::byte_serialize(id.as_bytes()).collect::<String>();
+    Ok(format!(
+        "/device-service/deviceservice/user-device/{segment}"
+    ))
+}
+
 /// CLI-only sign-in; the app uses the SSO webview instead.
 pub async fn mobile_login<F>(email: &str, password: &str, mut mfa: F) -> Result<Tokens>
 where
@@ -498,4 +562,20 @@ where
         IOS_SERVICE_URL,
     )
     .await
+}
+
+#[cfg(test)]
+mod device_tests {
+    use super::*;
+
+    #[test]
+    fn detail_ids_are_validated_and_encoded_as_one_path_segment() {
+        assert_eq!(
+            device_detail_path("AB-12_3:4").unwrap(),
+            "/device-service/deviceservice/user-device/AB-12_3%3A4"
+        );
+        for id in ["", "../other", "a/b", "a?b", "a#b", "a\\b", "a b", "a%2Fb"] {
+            assert!(matches!(device_detail_path(id), Err(Error::Decode)));
+        }
+    }
 }

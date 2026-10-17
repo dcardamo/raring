@@ -1,0 +1,22 @@
+[
+  {
+    "deviceId": 1001,
+    "serialNumber": "REDACTED",
+    "primaryActivityTrackerIndicator": false,
+    "sleepSkinTemperatureCapable": false,
+    "hrvStatusCapable": false,
+    "trainingReadinessCapable": false,
+    "sleepScoreCapable": false,
+    "capabilities": []
+  },
+  {
+    "deviceId": 1002,
+    "serialNumber": "REDACTED",
+    "primaryActivityTrackerIndicator": true,
+    "sleepSkinTemperatureCapable": true,
+    "hrvStatusCapable": true,
+    "trainingReadinessCapable": true,
+    "sleepScoreCapable": true,
+    "capabilities": []
+  }
+]

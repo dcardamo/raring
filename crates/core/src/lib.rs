@@ -8,7 +8,7 @@ pub mod store;
 pub mod sync;
 pub mod view;
 
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, NaiveDateTime};
 pub use garmin::Tokens;
 pub use notifications::Notification;
 use std::{path::Path, sync::Arc};
@@ -135,6 +135,10 @@ impl Raring {
             _ => return Err(Error::InvalidSetting),
         }
         self.set_settings(s)
+    }
+    /// Tonight's pending wind-down reminder, for the platform to schedule.
+    pub fn bedtime_reminder(&self, now: NaiveDateTime) -> Option<notifications::BedtimeReminder> {
+        notifications::bedtime(&self.store, now)
     }
     pub fn notifications(&self, now: DateTime<Local>) -> Vec<Notification> {
         notifications::notifications(&self.store, now)

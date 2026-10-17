@@ -17,7 +17,20 @@ export type TodayView = {
 /**
  * Local date, YYYY-MM-DD.
  */
-date: string, readiness: Gauge | null, 
+date: string, 
+/**
+ * Selected watch's last Garmin Connect upload, UTC ISO 8601.
+ */
+watchLastUpload: string | null, 
+/**
+ * True only when today's sleep is absent after a known wake time and
+ * the watch has not uploaded since that expected wake.
+ */
+watchSleepUploadStale: boolean, 
+/**
+ * Missing metric keys and explanations; absent means capability unknown.
+ */
+missingMetricReasons: { [key in string]: string }, readiness: Gauge | null, 
 /**
  * Readiness scores for the last 30 days, oldest first (the Readiness
  * detail chart).
