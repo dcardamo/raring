@@ -1085,13 +1085,15 @@ pub fn today(store: &Store, date: &str) -> TodayView {
             .is_ok_and(|d| d.weekday() == chrono::Weekday::Mon)
             && store.get("summary", &date_sub(date, 1)).is_some(),
     };
-    view.readiness_why = explain::readiness_why(&r, &view.factors, rl.as_deref());
+    // The Why sheet and reconciliation judge factors by Garmin's rating alone.
+    let rated = explain::garmin_rated(&r, &view.factors);
+    view.readiness_why = explain::readiness_why(&r, &rated, rl.as_deref());
     view.body_battery_why =
         explain::body_battery_why(b, &summary, view.body_battery.now, &view.stress);
     view.reconcile = explain::reconcile(explain::Scores {
         readiness: view.readiness.as_ref(),
         level: rl.as_deref(),
-        factors: &view.factors,
+        factors: &rated,
         sleep: view.sleep.as_ref(),
         battery_at_wake: num(&summary, &[&["bodyBatteryAtWakeTime"]])
             .filter(|v| (0. ..=100.).contains(v)),

@@ -1,7 +1,9 @@
 //! The "Why" sheets and Today's reconciliation line, built only from Garmin's
 //! own factors, events and feedback. docs/spec.md lists the wording rules
 //! under Rules ("Why sheets" and "Scores that differ").
-use super::{hrv, humanize_code, label, load_device, num, readiness, string, training_device};
+use super::{
+    factor_tone, hrv, humanize_code, label, load_device, num, readiness, string, training_device,
+};
 use crate::{rules, view::*};
 use chrono::{Duration, NaiveDateTime};
 use serde_json::Value;
@@ -90,6 +92,26 @@ fn readiness_input(key: &str) -> Option<(&'static str, &'static str)> {
         ),
         _ => return None,
     })
+}
+
+/// The factors with Garmin's own rating as their tone. A factor with a
+/// percentage but no rating stays neutral: Raring doesn't rate it here.
+pub(super) fn garmin_rated(r: &Value, factors: &[Factor]) -> Vec<Factor> {
+    let snapshot = readiness(r);
+    factors
+        .iter()
+        .map(|f| {
+            let feedback = readiness_input(&f.key).and_then(|(field, _)| {
+                snapshot[field]
+                    .as_str()
+                    .filter(|c| !c.is_empty() && !c.eq_ignore_ascii_case("NONE"))
+            });
+            Factor {
+                tone: feedback.map_or(Tone::Neutral, |c| factor_tone(Some(c), None)),
+                ..f.clone()
+            }
+        })
+        .collect()
 }
 
 /// The factors that hold readiness back and the ones that help it, by
@@ -196,45 +218,82 @@ const MAX_OFFSET_MS: f64 = 18. * 3_600_000.;
 /// No Body Battery event Garmin reports spans more than a day.
 const MAX_EVENT_MS: f64 = 24. * 3_600_000.;
 
+/// A parsed event plus the raw fields that identify it across Garmin's lists.
+struct Listed {
+    event: BatteryEvent,
+    gmt: Option<NaiveDateTime>,
+    duration_ms: Option<i64>,
+    id: Option<String>,
+}
+
+fn listed(e: &Value) -> Option<Listed> {
+    let impact = num(e, &[&["bodyBatteryImpact"]]).filter(|v| v.is_finite())?;
+    let gmt = string(e, &[&["eventStartTimeGmt"]])
+        .and_then(|s| NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%.f").ok());
+    let duration = num(e, &[&["durationInMilliseconds"]])
+        .and_then(|ms| within(ms, MAX_EVENT_MS))
+        .filter(|ms| *ms >= 0.);
+    // Garmin's event times are GMT with the wearer's offset alongside.
+    let offset = within(num(e, &[&["timezoneOffset"]]).unwrap_or(0.), MAX_OFFSET_MS);
+    let start = gmt
+        .zip(offset)
+        .and_then(|(t, offset)| t.checked_add_signed(Duration::milliseconds(offset as i64)));
+    let id = match &e["activityId"] {
+        Value::Number(n) => Some(n.to_string()),
+        Value::String(s) if !s.is_empty() => Some(s.clone()),
+        _ => None,
+    };
+    Some(Listed {
+        event: BatteryEvent {
+            kind: string(e, &[&["eventType"]]).unwrap_or_default(),
+            impact,
+            start,
+            minutes: duration.map(|ms| ms / 60_000.),
+            name: string(e, &[&["activityName"]]).filter(|n| !n.trim().is_empty()),
+            feedback: string(e, &[&["shortFeedback"]]),
+        },
+        gmt,
+        duration_ms: duration.map(|ms| ms.round() as i64),
+        id,
+    })
+}
+
+/// Whether two entries from different lists describe the same event: same
+/// type, start and duration, and the same id and name wherever both have one.
+fn same_event(a: &Listed, b: &Listed) -> bool {
+    let agree = |x: &Option<String>, y: &Option<String>| x.is_none() || y.is_none() || x == y;
+    a.event.kind == b.event.kind
+        && a.gmt == b.gmt
+        && a.duration_ms == b.duration_ms
+        && (a.gmt.is_some() || a.event.impact == b.event.impact)
+        && agree(&a.id, &b.id)
+        && agree(&a.event.name, &b.event.name)
+}
+
 fn battery_events(battery: &Value, summary: &Value) -> Vec<BatteryEvent> {
     // The daily summary's list names each activity, but it can be partial;
-    // the report's list has no names. Merge both, the summary's entry first.
-    let lists = [
-        &summary["bodyBatteryActivityEventList"],
-        &battery["bodyBatteryActivityEvent"],
-    ];
-    let mut seen = std::collections::HashSet::new();
-    let mut events: Vec<BatteryEvent> = lists
-        .iter()
-        .filter_map(|list| list.as_array())
-        .flatten()
-        .filter_map(|e| {
-            let impact = num(e, &[&["bodyBatteryImpact"]]).filter(|v| v.is_finite())?;
-            let gmt = string(e, &[&["eventStartTimeGmt"]])
-                .and_then(|s| NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%.f").ok());
-            let kind = string(e, &[&["eventType"]]).unwrap_or_default();
-            // The same event appears in both lists with the same type and start.
-            let identity = (kind.clone(), gmt, gmt.is_none().then(|| impact.to_bits()));
-            if !seen.insert(identity) {
-                return None;
-            }
-            // Garmin's event times are GMT with the wearer's offset alongside.
-            let offset = within(num(e, &[&["timezoneOffset"]]).unwrap_or(0.), MAX_OFFSET_MS);
-            let start = gmt.zip(offset).and_then(|(t, offset)| {
-                t.checked_add_signed(Duration::milliseconds(offset as i64))
-            });
-            Some(BatteryEvent {
-                kind,
-                impact,
-                start,
-                minutes: num(e, &[&["durationInMilliseconds"]])
-                    .and_then(|ms| within(ms, MAX_EVENT_MS))
-                    .filter(|ms| *ms >= 0.)
-                    .map(|ms| ms / 60_000.),
-                name: string(e, &[&["activityName"]]).filter(|n| !n.trim().is_empty()),
-                feedback: string(e, &[&["shortFeedback"]]),
-            })
-        })
+    // the report's list has no names. Each report entry matches at most one
+    // summary entry, so events that share a time inside one list all stay.
+    let parse = |list: &Value| -> Vec<Listed> {
+        list.as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(listed)
+            .collect()
+    };
+    let named = parse(&summary["bodyBatteryActivityEventList"]);
+    let mut matched = vec![false; named.len()];
+    let mut extra = vec![];
+    for entry in parse(&battery["bodyBatteryActivityEvent"]) {
+        match (0..named.len()).find(|&i| !matched[i] && same_event(&named[i], &entry)) {
+            Some(i) => matched[i] = true,
+            None => extra.push(entry),
+        }
+    }
+    let mut events: Vec<BatteryEvent> = named
+        .into_iter()
+        .chain(extra)
+        .map(|entry| entry.event)
         .collect();
     events.sort_by_key(|e| e.start);
     events

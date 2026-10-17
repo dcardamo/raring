@@ -75,7 +75,7 @@ function reconcile() {
     .replace(`<span>Acute load<b>58</b></span><div class="bar"><i style="width:58%;background:${C.fair}">`, `<span>Acute load<b>31</b></span><div class="bar"><i style="width:31%;background:${C.poor}">`)
     .replace(`<span class="pill ok">5 of 6 good</span>`, `<span class="pill ok">4 of 6 good</span>`)
     .replace(`<span>Easy</span><span>Steady</span><span class="on">Push</span>`, `<span class="on">Easy</span><span>Steady</span><span>Push</span>`)
-    .replace(`<span class="chip">${ico.flame}Room to build</span></div>`, `<span class="chip">${ico.flame}Load high</span></div>${row}`);
+    .replace(`<span class="chip">${ico.flame}Room to build</span></div>`, `<span class="chip">${ico.flame}On track</span></div>${row}`);
 }
 
 function reconcileClosed() {

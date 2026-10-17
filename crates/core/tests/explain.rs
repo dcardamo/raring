@@ -505,3 +505,80 @@ fn body_battery_ignores_absurd_offsets_and_durations() {
         );
     }
 }
+
+#[test]
+fn body_battery_keeps_distinct_events_that_share_a_time() {
+    let mut warmup = event("ACTIVITY", "2025-03-04T12:00:00", -2., Some("Warm-up"));
+    warmup["activityId"] = json!(101);
+    let mut intervals = event("ACTIVITY", "2025-03-04T12:00:00", -9., Some("Intervals"));
+    intervals["activityId"] = json!(102);
+    let summary = json!({"bodyBatteryActivityEventList": [warmup, intervals]});
+    let mut longer = event("ACTIVITY", "2025-03-04T12:00:00.0", -4., None);
+    longer["durationInMilliseconds"] = json!(3_600_000);
+    let report = json!({"bodyBatteryActivityEvent": [
+        // The report's copies of the two named workouts.
+        event("ACTIVITY", "2025-03-04T12:00:00.0", -2., None),
+        event("ACTIVITY", "2025-03-04T12:00:00.0", -9., None),
+        // Same start, different length: another event.
+        longer,
+        // Two naps at the same time in one list both count.
+        event("NAP", "2025-03-04T15:00:00.0", 1., None),
+        event("NAP", "2025-03-04T15:00:00.0", 2., None),
+    ]});
+    let store = store_with(&[("summary", summary), ("battery", report)]);
+    let why = screens::today(&store, DAY).body_battery_why.unwrap();
+    let mut rows: Vec<(&str, &str)> = why
+        .inputs
+        .iter()
+        .map(|i| (i.name.as_str(), i.value.as_deref().unwrap()))
+        .collect();
+    rows.sort();
+    assert_eq!(
+        rows,
+        [
+            ("Intervals", "−9"),
+            ("Nap", "+1"),
+            ("Nap", "+2"),
+            ("Warm-up", "−2"),
+            ("Workout", "−4"),
+        ]
+    );
+}
+
+#[test]
+fn percent_only_factors_stay_unrated_in_why_and_reconciliation() {
+    // Recovery has Garmin's percentage but no rating; the rest are rated.
+    let mut r = readiness(
+        "LOW",
+        40.,
+        ["GOOD", "GOOD", "GOOD", "GOOD", "MODERATE", "GOOD"],
+    );
+    r[0].as_object_mut()
+        .unwrap()
+        .remove("recoveryTimeFactorFeedback");
+    let store = store_with(&[
+        ("readiness", r),
+        (
+            "sleep",
+            json!({"dailySleepDTO": {"sleepScores": {"overall": {"value": 85}}}}),
+        ),
+    ]);
+    let view = screens::today(&store, DAY);
+    let why = view.readiness_why.unwrap();
+    let recovery = why.inputs.iter().find(|i| i.key == "recovery").unwrap();
+    assert_eq!(
+        (recovery.rating.as_deref(), recovery.tone),
+        (None, Tone::Neutral)
+    );
+    assert_eq!(
+        why.summary,
+        "Sleep history is holding readiness back; HRV and stress history are helping."
+    );
+    assert_eq!(
+        view.reconcile.unwrap().line,
+        "Sleep scored 85, but readiness is held back by sleep history."
+    );
+    // Today's factor bar keeps its existing percentage colour.
+    let factor = view.factors.iter().find(|f| f.key == "recovery").unwrap();
+    assert_eq!(factor.tone, Tone::Poor);
+}
