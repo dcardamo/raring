@@ -58,7 +58,7 @@ tip: string | null,
  */
 wakeNights: number, 
 /**
- * No sleep has synced for the current day, so the plan rests on older
- * nights; reminders skip it.
+ * No recorded sleep has synced for the current day, so the plan rests
+ * on older nights; reminders skip it.
  */
 stale: boolean, };

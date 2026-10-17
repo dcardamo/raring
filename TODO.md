@@ -67,9 +67,6 @@ Today · Sleep · Training · Health and metric access predictable.
   data, post-workout updates, shift work, travel, DST and overnight dates.
   Confirm fast offline rendering and unchanged access to all metrics.
 
-[garmin-sleep-rhythm]: https://www.garmin.com/en-US/blog/fitness/the-difference-between-garmin-venu-3-and-venu-4/
-[garmin-alignment-fields]: https://github.com/cyberjunky/ha-garmin/blob/main/src/ha_garmin/client.py
-
 ### 5. Garmin's Health Status
 
 - Verified: `POST /graphql-gateway/graphql` with
@@ -111,6 +108,9 @@ From item 3, in priority order.
 - Sleep alignment on other watches and while Garmin calibrates is unverified;
   Raring treats status codes containing CALIBRAT, NOT_ENOUGH, INSUFFICIENT or
   LEARNING as calibrating. Record real codes when seen.
+- Desktop has no bedtime reminder: its sync marks notifications as sent
+  without showing them. Deliver them (or stop marking them) before calling
+  reminders cross-platform.
 - Garmin's average bedtime before midnight: confirm whether
   `averageLocalSleepStartTime` comes back negative or wrapped (Raring accepts
   both).
@@ -317,7 +317,7 @@ faces, screens, sensors and audio prompts stay in Connect.
   steady-timing tip and evidence behind a tap. The weekly check-in gains a
   timing review with one focus. The off-by-default bedtime reminder fires at
   a configurable lead (30 min) from an Android alarm, once per night,
-  rescheduled on sync, settings and timezone changes. Verified on the
+  rescheduled on sync, settings, timezone, reboot and app-update events. Verified on the
   maintainer's Forerunner 970 from 18 stored nights (2026-09-29 to
   2026-10-16) plus two direct reads and a 20-request sync on 2026-10-17, no
   429s:

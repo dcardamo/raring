@@ -81,8 +81,8 @@ optional after sign-in.
   and the number of recorded wake times; a historical-average need is
   explicitly labeled. The same plan appears on Sleep and drives the bedtime
   reminder. Hide the plan if the need is unavailable, or if both the window
-  and wake history are; when no sleep has synced for the current day, say the
-  estimate uses older nights.
+  and wake history are; when no recorded sleep has synced for the current
+  day, say the estimate uses older nights.
 - Body Battery as a battery with its overnight charge; HRV with a 7-day line
   over Garmin's baseline band.
 - **Stress**: Garmin's average so far today, its category and day word, and
@@ -214,8 +214,9 @@ Sent by the phone itself.
 - **Wind-down**: the window's start (or Raring's asleep-by time) minus the
   lead from Settings. The reminder fires once per night, keyed by the morning
   the night ends, between the wind-down and asleep-by times; it is skipped
-  when no sleep has synced for the current day. Times are local wall-clock
-  times, so the platform reschedules when the timezone changes.
+  when no recorded sleep (a duration, start or end) has synced for the
+  current day. Times are local wall-clock times, so the platform reschedules
+  when the timezone changes.
 - **Timing review**: the week's earliest and latest bed and wake times, the
   wake-time spread (latest minus earliest) against the week before, and
   counts of Garmin's alignment ratings. The focus follows the majority rating
@@ -272,8 +273,11 @@ Sent by the phone itself.
   any notifications.
 - **Bedtime reminder**: the core returns tonight's wind-down time as a local
   wall-clock time; Android sets an alarm with a ten-minute window for it after
-  every sync, on app start, on settings changes and when the timezone or clock
-  changes, and asks the core again when it fires.
+  every sync, on app start, on settings changes, after a reboot or update and
+  when the timezone or clock changes, all from the cached plan without the
+  network, and asks the core again when it fires. One lock covers checking,
+  posting and recording the reminder. Android only for now: the desktop app
+  has no notification delivery, so it shows the plan but sends no reminder.
 - **Platform code**: keep each platform's native layer a thin shim over the
   core. Background scheduling is inherently native (WorkManager on Android,
   background refresh on iOS, syncing while the app runs on desktop); secure

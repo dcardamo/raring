@@ -142,6 +142,15 @@ fn sleep_record(store: &Store, date: &str) -> Option<Value> {
         .get("sleep", date)
         .filter(|v| !v.is_null() && !sleep(v).is_null())
 }
+/// Garmin answers with an empty or all-null record before the watch has
+/// uploaded a night, so only a duration or a recorded start or end counts.
+fn recorded_sleep(raw: &Value) -> bool {
+    let s = sleep(raw);
+    num(s, &[&["sleepTimeSeconds"]]).is_some_and(|t| t > 0.)
+        || ["sleepStartTimestampLocal", "sleepEndTimestampLocal"]
+            .iter()
+            .any(|k| local_time(s, &[k]).is_some())
+}
 fn need_detail(factor: &str, code: &str) -> String {
     match (factor, code) {
         (_, "HIGH_ACWR") => "high training load".into(),
@@ -285,7 +294,7 @@ pub(crate) fn sleep_plan(store: &Store, date: &str) -> Option<SleepPlan> {
         baseline_min,
         adjustments,
         wake_nights: wakes.len() as u32,
-        stale: record.is_none(),
+        stale: !record.as_ref().is_some_and(recorded_sleep),
     })
 }
 fn garmin_bedtime_window(need: &Value) -> Option<(i64, i64)> {

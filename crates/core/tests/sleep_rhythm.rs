@@ -294,6 +294,33 @@ fn stale_plans_show_but_never_remind() {
     assert!(plan.stale);
     assert_eq!(plan.source, SleepNeedSource::Average);
     assert!(notifications::bedtime(&store, at(DATE, "23:00")).is_none());
+
+    // An empty or all-null record for today is not a recorded night.
+    for empty in [
+        json!({"dailySleepDTO": {}}),
+        json!({"dailySleepDTO": {"calendarDate": DATE, "sleepTimeSeconds": null,
+            "sleepStartTimestampLocal": null, "sleepEndTimestampLocal": null}}),
+        with_next(
+            json!({"dailySleepDTO": {"sleepTimeSeconds": 0}}),
+            json!({
+                "calendarDate": day(1), "actual": 450,
+                "recommendedBedtimeStartMins": 1350, "recommendedBedtimeEndMins": 1410,
+            }),
+        ),
+    ] {
+        put(&store, DATE, &empty);
+        assert!(
+            screens::today(&store, DATE).sleep_plan.unwrap().stale,
+            "{empty}"
+        );
+        assert!(
+            notifications::bedtime(&store, at(DATE, "22:50")).is_none(),
+            "{empty}"
+        );
+    }
+    put(&store, DATE, &night(DATE, "23:00", "07:00"));
+    assert!(!screens::today(&store, DATE).sleep_plan.unwrap().stale);
+    assert!(notifications::bedtime(&store, at(DATE, "23:00")).is_some());
 }
 
 #[test]

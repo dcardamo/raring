@@ -396,8 +396,8 @@ pub struct SleepPlan {
     pub tip: Option<String>,
     /// Recorded wake times in the 14-day window; sparse history stays explicit.
     pub wake_nights: u32,
-    /// No sleep has synced for the current day, so the plan rests on older
-    /// nights; reminders skip it.
+    /// No recorded sleep has synced for the current day, so the plan rests
+    /// on older nights; reminders skip it.
     pub stale: bool,
 }
 

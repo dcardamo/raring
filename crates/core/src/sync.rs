@@ -138,7 +138,14 @@ pub async fn sync(
                     .as_array()
                     .is_some_and(|a| a.iter().any(|n| n["calendarDate"] == key.as_str()))
         });
-        if !current {
+        // Garmin may answer empty, null or not at all; ask at most hourly.
+        let checked = format!("checked:sleep_stats:{key}");
+        let recent = store
+            .cursor(&checked)
+            .and_then(|s| s.parse::<i64>().ok())
+            .is_some_and(|t| now.timestamp() - t < 3600);
+        if !current && !recent {
+            let before = report.requests;
             fetch(
                 store,
                 client,
@@ -150,6 +157,9 @@ pub async fn sync(
                 now,
             )
             .await;
+            if report.requests > before {
+                let _ = store.set_cursor(&checked, &now.timestamp().to_string());
+            }
         }
     }
     if !report.rate_limited && report.error.is_none() {

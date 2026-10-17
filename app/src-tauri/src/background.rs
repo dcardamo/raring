@@ -92,9 +92,11 @@ fn run_background_sync(db_path: &str, tokens_json: &str, now_iso: &str) -> SyncR
             result.tokens_json = serde_json::to_string(&outcome.tokens).unwrap_or_default();
             result.readiness_missing = !outcome.report.readiness_present;
             result.auth_failed = outcome.report.auth_failed;
+            // Kotlin's bedtime check posts reminders under one lock after every sync.
             result.notifications = outcome
                 .notifications
                 .into_iter()
+                .filter(|item| item.kind != "bedtime")
                 .map(|item| Notification {
                     id: format!("{}:{}", item.kind, item.tag),
                     title: item.title,

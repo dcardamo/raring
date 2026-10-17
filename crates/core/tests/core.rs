@@ -673,6 +673,8 @@ async fn sleep_stats_refetch_until_they_include_last_night() {
         (night.clone(), Some(stats("2025-01-09")), true),
         (night.clone(), Some(stats("2025-01-10")), false),
     ] {
+        // Each case stands for a later hour, past the hourly retry limit.
+        s.set_cursor("checked:sleep_stats:2025-01-10", "0").unwrap();
         if let Some(stored) = &stored {
             s.put(
                 "sleep_stats",
@@ -705,6 +707,49 @@ async fn sleep_stats_refetch_until_they_include_last_night() {
             fetches,
             "{last}"
         );
+    }
+}
+#[tokio::test]
+async fn empty_or_missing_sleep_stats_are_asked_for_at_most_hourly() {
+    let now = chrono::NaiveDate::from_ymd_opt(2025, 1, 10)
+        .unwrap()
+        .and_hms_opt(13, 0, 0)
+        .unwrap()
+        .and_local_timezone(Local)
+        .single()
+        .unwrap();
+    let night = json!({"dailySleepDTO":{"sleepTimeSeconds":25000}}).to_string();
+    let path = "/sleep-service/stats/sleep/daily/2025-01-04/2025-01-10";
+    for (status, body) in [(200, "{}"), (200, "null"), (204, ""), (404, "{}")] {
+        let s = Store::open(":memory:").unwrap();
+        s.put("profile", "me", "now", &json!({"displayName":"Sample User"}))
+            .unwrap();
+        for run in 0..2 {
+            let mut replies = vec![(200, "{}".to_owned()), (200, night.clone())];
+            replies.extend(vec![(200, "{}".to_owned()); 10]);
+            replies.push((status, body.to_owned()));
+            let (url, seen, thread) = mock(replies);
+            let c = Client::with_urls(
+                Tokens {
+                    access_token: token(1900000000),
+                    refresh_token: "refresh".into(),
+                    client_id: "TEST_DI".into(),
+                    expires_at: Utc::now() + Duration::days(30),
+                },
+                &url,
+                &url,
+                std::time::Duration::ZERO,
+            )
+            .unwrap();
+            raring_core::sync::sync(&s, &c, now, 13).await;
+            thread.join().unwrap();
+            let last = seen.lock().unwrap()[12].clone();
+            assert_eq!(
+                last.contains(path),
+                run == 0,
+                "{status} {body:?} run {run}: {last}"
+            );
+        }
     }
 }
 #[tokio::test]
