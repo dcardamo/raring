@@ -97,18 +97,25 @@ try {
  assert.notEqual(await slider.inputValue(),'29','chart taps select a reading');
  console.log('Daily focus, sleep plan and keyboard/touch history: passed');
 
- for(const width of [360,390,720,840,1024]) {
+ for(const width of [344,360,390,660,707,840,1024]) {
   await page.setViewportSize({width,height:900});
   for(const route of ['today','sleep','training','health','readiness','workout/9000000000001','metric/hrv','metric/bodyBattery','metric/stress','settings','checkin','onboarding']) {
    await page.goto(`${url}/#${route}`);await waitRoute(route);
    const layout=await page.evaluate(()=>{
+    // Largest vertical gap between cards stacked in the same grid column.
+    const holes=(grid)=>{
+     if(!grid || getComputedStyle(grid).display!=='grid')return 0;
+     const cards=[...grid.querySelectorAll(':scope>*,:scope>.row>*')].filter(e=>getComputedStyle(e).display!=='contents').map(e=>e.getBoundingClientRect());
+     return Math.max(0,...cards.map(c=>{const above=cards.filter(o=>o!==c && o.left<c.right-1 && o.right>c.left+1 && o.bottom<=c.top+1);return above.length?c.top-Math.max(...above.map(o=>o.bottom)):0}));
+    };
     const main=document.querySelector('main'),grid=document.querySelector('.dashboard'),phone=document.querySelector('.phone');
-    return {viewport:innerWidth,body:document.body.scrollWidth,main:main.clientWidth,content:main.scrollWidth,shell:phone.clientWidth,height:phone.clientHeight,columns:grid?getComputedStyle(grid).gridTemplateColumns.split(' ').length:0};
+    return {viewport:innerWidth,body:document.body.scrollWidth,main:main.clientWidth,content:main.scrollWidth,shell:phone.clientWidth,height:phone.clientHeight,columns:grid?getComputedStyle(grid).gridTemplateColumns.split(' ').length:0,holes:holes(grid)};
    });
    assert.equal(layout.shell,width,`${width}/${route}: shell uses available width`);
    assert.equal(layout.height,900,`${width}/${route}: shell uses available height`);
    assert.ok(layout.body<=width && layout.content<=layout.main+1,`${width}/${route}: horizontal overflow ${JSON.stringify(layout)}`);
-   if(width>=720 && layout.columns)assert.equal(layout.columns,2,`${width}/${route}: two columns`);
+   if(width>=660 && layout.columns)assert.equal(layout.columns,2,`${width}/${route}: two columns`);
+   assert.ok(layout.holes<=18,`${width}/${route}: ${layout.holes}px hole between cards`);
    if(width===840 || (width===390 && ['today','onboarding','settings'].includes(route)))await page.screenshot({path:resolve(output,`${width}-${route.replace('/','-')}.png`)});
   }
  }

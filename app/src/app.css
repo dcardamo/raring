@@ -49,22 +49,24 @@ button:disabled{cursor:default;opacity:.6}
 .stress-row span{font:600 14px Outfit;text-align:right}
 .stress-row small{color:var(--text3);text-align:right}
 .stress-row .bar{margin:0;height:10px}
-@media(min-width:720px){
+@media(min-width:660px){
  .scroll{padding:20px 28px 110px}
- .dashboard{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+ .dashboard{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:1px;gap:0 16px;align-items:start}
  .dashboard>.card,.dashboard>.row>.card{margin-top:0}
  .dashboard>.row{display:contents}
+ .dashboard>:only-child{grid-column:1 / -1}
  .page-hero{margin-bottom:24px}
  .page-hero>.dials{margin-top:24px}
  .workout-overview{grid-column:1 / -1}
- .health-dashboard>.vitals-monitor{grid-row:span 3}
  .workout-hero{max-width:640px;margin:auto}
  .tabs{padding-left:max(28px,calc((100% - 900px)/2));padding-right:max(28px,calc((100% - 900px)/2))}
  .tab{width:120px}
 }
 @media(max-width:375px){
  .scroll{padding-left:10px;padding-right:10px}
- .dial-button{min-width:88px}
+ .dial-button{min-width:0;width:88px}
+ .dial-button.large{width:140px}
  .dial-button:not(.large) .gauge{transform:scale(.88)}
+ .dial-button.large .gauge{transform:scale(.9)}
  .factors{gap:12px 8px}
 }

@@ -1,4 +1,5 @@
 <script lang="ts">
+ import {masonry} from '../masonry';
  import type {TodayView} from '../generated/TodayView';
  import type {HealthView} from '../generated/HealthView';
  import type {TrainingView} from '../generated/TrainingView';
@@ -38,7 +39,7 @@
   <p class="small">Latest synced estimate</p>
  {/if}
 </div>
-<div class="dashboard">
+<div class="dashboard" {@attach masonry}>
  {#if stress}
   {#if stress.timeline.length}<Card title="Through the day"><StressTimeline {stress}/></Card>{/if}
   {#if stress.time.length}<Card title="Time in each level">{#each stress.time as t}<div class="stress-row"><b>{stressNames[t.level]}</b><div class="bar"><i style:width={t.seconds/Math.max(stressTotal,1)*100+'%'} style:background={stressColors[t.level]}></i></div><span class="n">{duration(t.seconds/60)}</span><small>{Math.round(t.seconds/Math.max(stressTotal,1)*100)}%</small></div>{/each}{#if stress.activeS}<div class="stress-row"><b>Active</b><div class="bar"><i style:width={stress.activeS/Math.max(stressTotal,1)*100+'%'} style:background={colors.flame}></i></div><span class="n">{duration(stress.activeS/60)}</span><small>{Math.round(stress.activeS/Math.max(stressTotal,1)*100)}%</small></div>{/if}</Card>{/if}
