@@ -3,6 +3,7 @@ import {mkdir,readFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {createServer} from 'vite';
 import {chromium} from 'playwright';
+import {contrastFailures} from './contrast.mjs';
 
 const server=await createServer({configFile:resolve('vite.config.ts'),server:{host:'127.0.0.1',port:0}});
 const output=resolve('../.data/screens');
@@ -119,9 +120,15 @@ try {
    if(width>=660 && layout.columns)assert.equal(layout.columns,2,`${width}/${route}: two columns`);
    if(route==='today')assert.equal(layout.hero,width>=660,`${width}/today: headline beside dials only when unfolded`);
    assert.ok(layout.holes<=18,`${width}/${route}: ${layout.holes}px hole between cards`);
-   if(width===840 || (width===390 && ['today','onboarding','settings'].includes(route)))await page.screenshot({path:resolve(output,`${width}-${route.replace('/','-')}.png`)});
+   if([390,840].includes(width) && ['today','sleep','training','workout/9000000000001','health'].includes(route)) {
+    await page.evaluate(()=>document.fonts.ready);
+    const failures=await contrastFailures(page);
+    assert.deepEqual(failures,[],`${width}/${route}: text contrast`);
+   }
+   if(width===840 || (width===390 && ['today','sleep','training','workout/9000000000001','health','onboarding','settings'].includes(route)))await page.screenshot({path:resolve(output,`${width}-${route.replace('/','-')}.png`)});
   }
  }
+ console.log('Today, Sleep, Training, Workout and Health text contrast at 390/840: passed');
  // Folding/unfolding should reflow in place, without losing the open detail.
  await page.setViewportSize({width:390,height:844});
  await page.goto(`${url}/#metric/hrv`);await waitRoute('metric/hrv');

@@ -7,7 +7,7 @@
 </script>
 
 <Card title="Tonight's sleep" onclick={open} extra="sleep-plan">
- {#snippet aside()}<span class="pill violet"><Icon name="moon" size={13}/> Plan ahead</span>{/snippet}
+ {#snippet aside()}<span class="pill"><Icon name="moon" size={13}/> Plan ahead</span>{/snippet}
  <div class="sleep-window">
   <div><span>Asleep by</span><b class="n">{plan.bedtime}</b></div>
   <div class="sleep-bridge"><span class="n">{duration(plan.needMin)}</span><i></i><small>sleep need</small></div>
@@ -23,8 +23,8 @@
  .sleep-window span{font-size:11px;color:var(--text2)}
  .sleep-window b{font-size:30px;font-weight:500;line-height:1}
  .sleep-bridge{flex:1;text-align:center;max-width:120px}
- .sleep-bridge span{font-size:20px;color:var(--violet)}
- .sleep-bridge i{display:block;height:2px;background:linear-gradient(90deg,transparent,var(--violet),transparent)}
+ .sleep-bridge span{font-size:20px;color:var(--text)}
+ .sleep-bridge i{display:block;height:2px;background:rgba(255,255,255,.14)}
  small{font-size:10px;color:var(--text2)}
  p{font-size:11px;line-height:1.5;color:var(--text2);margin-top:16px}
 </style>

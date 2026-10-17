@@ -65,9 +65,9 @@
  .compact .signal-value{font-size:21px;text-align:center;margin:9px 0 6px}
  .compact .signal-value small{display:block;font-size:9px;margin:2px 0 0;min-height:12px}
  .signal-dot{width:5px;height:5px;border-radius:50%;background:var(--signal)}
- .signal-warning{font-size:12px;line-height:1.5;color:var(--amber);padding:12px 0 0}
+ .signal-warning{font-size:12px;line-height:1.5;color:var(--fair);padding:12px 0 0}
  details{border-top:1px solid var(--line);margin-top:16px;color:var(--text2);font-size:11px;line-height:1.6}
  summary{padding:14px 0 2px;min-height:44px;cursor:pointer}
  details p{padding-top:6px}
- summary:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+ summary:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 </style>

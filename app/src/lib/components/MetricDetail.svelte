@@ -7,7 +7,7 @@
  import {num,dateLabel,duration} from '../format';
  import {rangeStatus} from '../signals';
  import HistoryChart from './HistoryChart.svelte';
- import {toneColor,colors,stressColors,stressNames} from '../charts';
+ import {toneColor,batteryColor,colors,stressColors,stressNames} from '../charts';
  import Card from './Card.svelte';
  import Gauge from './Gauge.svelte';
  import RangeBar from './RangeBar.svelte';
@@ -29,7 +29,7 @@
   <p class="small">{stress.level?stressNames[stress.level]+' · ':''}average so far today{#if stress.max!=null}{` · peak ${num(stress.max)}`}{/if}</p>
   {#if stress.qualifier}<span class="pill" style:color={toneColor(stress.tone)}>{stress.qualifier}</span>{/if}
  {:else if battery}
-  <Gauge size={210} stroke={15} value={battery.now} caption="Latest synced" color={colors.mint}/>
+  <Gauge size={210} stroke={15} value={battery.now} caption="Latest synced" color={battery.now!=null?batteryColor(battery.now):colors.secondary}/>
  {:else if vital}
   <div class="metric-value n" style:color={toneColor(vital.tone)}>{num(vital.value,decimals)}<span class="unit">{vital.unit}</span></div>
   <p class="small">{dateLabel((data as HealthView).date)} · latest synced</p>
@@ -42,9 +42,9 @@
 <div class="dashboard" {@attach masonry}>
  {#if stress}
   {#if stress.timeline.length}<Card title="Through the day"><StressTimeline {stress}/></Card>{/if}
-  {#if stress.time.length}<Card title="Time in each level">{#each stress.time as t}<div class="stress-row"><b>{stressNames[t.level]}</b><div class="bar"><i style:width={t.seconds/Math.max(stressTotal,1)*100+'%'} style:background={stressColors[t.level]}></i></div><span class="n">{duration(t.seconds/60)}</span><small>{Math.round(t.seconds/Math.max(stressTotal,1)*100)}%</small></div>{/each}{#if stress.activeS}<div class="stress-row"><b>Active</b><div class="bar"><i style:width={stress.activeS/Math.max(stressTotal,1)*100+'%'} style:background={colors.flame}></i></div><span class="n">{duration(stress.activeS/60)}</span><small>{Math.round(stress.activeS/Math.max(stressTotal,1)*100)}%</small></div>{/if}</Card>{/if}
+  {#if stress.time.length}<Card title="Time in each level">{#each stress.time as t}<div class="stress-row"><b>{stressNames[t.level]}</b><div class="bar"><i style:width={t.seconds/Math.max(stressTotal,1)*100+'%'} style:background={stressColors[t.level]}></i></div><span class="n">{duration(t.seconds/60)}</span><small>{Math.round(t.seconds/Math.max(stressTotal,1)*100)}%</small></div>{/each}{#if stress.activeS}<div class="stress-row"><b>Active</b><div class="bar"><i style:width={stress.activeS/Math.max(stressTotal,1)*100+'%'} style:background={colors.secondary}></i></div><span class="n">{duration(stress.activeS/60)}</span><small>{Math.round(stress.activeS/Math.max(stressTotal,1)*100)}%</small></div>{/if}</Card>{/if}
   <Card title="Daily average">
-   <HistoryChart values={stress.trend} endDate={(data as TodayView).date} label="Average stress" color={colors.sky}/>
+   <HistoryChart values={stress.trend} endDate={(data as TodayView).date} label="Average stress" color={colors.ink}/>
   </Card>
  {:else if battery}
   <Card title="Today"><div class="battery-totals"><div><b class="big n">{num(battery.charged)}</b><span>Charged</span></div><div><b class="big n">{num(battery.drained)}</b><span>Drained</span></div></div></Card>

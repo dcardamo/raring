@@ -4,7 +4,7 @@
  import {colors,toneColor} from '../charts';
  import Icon from './Icon.svelte';
 
- let {values,endDate,label,unit='',decimals=0,band=null,bandLabel='Your usual range',readiness=false,nights=false,color=colors.mint}:{
+ let {values,endDate,label,unit='',decimals=0,band=null,bandLabel='Your usual range',readiness=false,nights=false,color=colors.ink}:{
   values:(number|null)[];endDate:string;label:string;unit?:string;decimals?:number;band?:[number,number]|null;
   bandLabel?:string;readiness?:boolean;nights?:boolean;color?:string;
  }=$props();
@@ -26,7 +26,7 @@
  }
 </script>
 
-<div class="history" style:--chart-color={color}>
+<div class="history">
  <div class="history-top">
   <span class="history-label">{label}</span>
   <div class="periods" role="group" aria-label="History period">
@@ -40,12 +40,12 @@
  <button class="chart-surface" tabindex="-1" aria-hidden="true" onclick={selectFromChart}>
   <svg viewBox="0 0 320 154" role="img" aria-label={`${label}, ${days} ${nights?'nights':'days'}. ${present} recorded. Missing readings are gaps.`}>
    {#if band}
-    <rect x="38" y={y(band[1])} width="274" height={Math.max(1,y(band[0])-y(band[1]))} fill={color} opacity=".10"/>
-    <line x1="38" x2="312" y1={y(band[0])} y2={y(band[0])} stroke={color} opacity=".3" stroke-dasharray="3 4"/>
-    <line x1="38" x2="312" y1={y(band[1])} y2={y(band[1])} stroke={color} opacity=".3" stroke-dasharray="3 4"/>
+    <rect x="38" y={y(band[1])} width="274" height={Math.max(1,y(band[0])-y(band[1]))} fill="#fff" opacity=".13"/>
+    <line x1="38" x2="312" y1={y(band[0])} y2={y(band[0])} stroke="#fff" opacity=".2" stroke-dasharray="3 4"/>
+    <line x1="38" x2="312" y1={y(band[1])} y2={y(band[1])} stroke="#fff" opacity=".2" stroke-dasharray="3 4"/>
    {/if}
    {#each [scale[1],(scale[0]+scale[1])/2,scale[0]] as tick}
-    <text x="0" y={y(tick)+3} fill="#A3ACBF" font-size="10">{num(tick,decimals)}</text>
+    <text x="0" y={y(tick)+3} fill="#8E98AC" font-size="10">{num(tick,decimals)}</text>
     <line x1="38" x2="312" y1={y(tick)} y2={y(tick)} stroke="currentColor" opacity=".08"/>
    {/each}
    <line x1={x(index)} x2={x(index)} y1="8" y2="142" stroke="currentColor" opacity=".35" stroke-dasharray="2 3"/>
@@ -69,8 +69,8 @@
  </div>
  <span id={id} class="sr-only">{label}, {days} {nights?'nights':'days'}. {present} recorded. Missing readings are gaps. Use the slider to select a date.</span>
  <div class="history-legend">
-  {#if band}<span><i style:background={color}></i>{bandLabel}</span>{/if}
-  {#if readiness}<span><i style:background={colors.coral}></i>Low / Poor</span><span><i style:background={colors.amber}></i>Moderate</span><span><i style:background={colors.mint}></i>High / Prime</span>{/if}
+  {#if band}<span><i style:background="rgba(255,255,255,.13)"></i>{bandLabel}</span>{/if}
+  {#if readiness}<span><i style:background={colors.poor}></i>Low / Poor</span><span><i style:background={colors.fair}></i>Moderate</span><span><i style:background={colors.good}></i>High / Prime</span>{/if}
   <span class="record-count">{present} / {days} recorded</span>
  </div>
  {#if !present}<p class="history-empty">No readings in this period. Missing data is never shown as zero.</p>{/if}
@@ -93,7 +93,7 @@
  .history-axis{display:flex;justify-content:space-between;padding-left:12%;font-size:10px;color:var(--text2)}
  .history-controls{display:flex;align-items:center;gap:12px;margin-top:6px}
  .history-controls button{display:grid;place-items:center;flex:none;background:var(--card);border:1px solid var(--line);border-radius:12px;width:44px;height:44px}
- input{width:100%;min-width:0;height:44px;margin:0;accent-color:var(--chart-color);cursor:ew-resize}
+ input{width:100%;min-width:0;height:44px;margin:0;accent-color:var(--ink);cursor:ew-resize}
  .history-legend{display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--text2);margin-top:12px;align-items:center}
  .history-legend span{display:inline-flex;align-items:center;gap:5px}
  .history-legend i{width:6px;height:6px;border-radius:2px;opacity:.7}

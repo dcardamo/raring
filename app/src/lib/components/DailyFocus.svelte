@@ -43,5 +43,5 @@
  .focus-reason>b{font-size:26px}
  small{font:500 11px Inter;color:var(--text2);margin-left:2px}
  .focus-detail{color:var(--text2);font-size:12px;line-height:1.5;margin-top:10px}
- .focus-footer{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--mint)}
+ .focus-footer{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--ink)}
 </style>

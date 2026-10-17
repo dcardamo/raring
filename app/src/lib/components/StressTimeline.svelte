@@ -52,16 +52,16 @@
 <svg viewBox="0 0 {W} {top+h+22}" role="slider" tabindex="0" aria-label="Stress through the day. Gaps are times without a reading." aria-valuemin={0} aria-valuemax={Math.max(0,stress.timeline.length-1)} aria-valuenow={Math.max(0,slot)} aria-valuetext={label} onclick={select} onkeydown={key}>{@render plot()}</svg>
 {/if}
 {#snippet plot()}
- {#if stress.sleep}<rect x={x(stress.sleep[0])} y={top-(compact?2:8)} width={x(stress.sleep[1])-x(stress.sleep[0])} height={h+(compact?4:8)} rx="6" fill={colors.violet} opacity=".09"/>{#if !compact}<text x={x(stress.sleep[0])+6} y={top+4} fill={colors.violet} font-size="10" opacity=".8">Asleep</text>{/if}{/if}
- {#if !compact}{#each [25,50,75] as level}<line x1={left} x2={W} y1={y(level)} y2={y(level)} stroke="currentColor" opacity=".07"/><text x="0" y={y(level)+3} fill="#69728A" font-size="9">{level}</text>{/each}{/if}
- {#each stress.active as [a,b]}<rect x={x(a)} y={top+h-(compact?4:6)} width={Math.max(1.5,x(b)-x(a))} height={compact?4:6} rx="2" fill={colors.flame} opacity=".85"/>{/each}
+ {#if stress.sleep}<rect x={x(stress.sleep[0])} y={top-(compact?2:8)} width={x(stress.sleep[1])-x(stress.sleep[0])} height={h+(compact?4:8)} rx="6" fill={colors.ink} opacity=".09"/>{#if !compact}<text x={x(stress.sleep[0])+6} y={top+4} fill={colors.ink} font-size="10" opacity="1">Asleep</text>{/if}{/if}
+ {#if !compact}{#each [25,50,75] as level}<line x1={left} x2={W} y1={y(level)} y2={y(level)} stroke="currentColor" opacity=".07"/><text x="0" y={y(level)+3} fill="#8E98AC" font-size="9">{level}</text>{/each}{/if}
+ {#each stress.active as [a,b]}<rect x={x(a)} y={top+h-(compact?4:6)} width={Math.max(1.5,x(b)-x(a))} height={compact?4:6} rx="2" fill={colors.secondary} opacity=".85"/>{/each}
  {#if compact}<line x1="0" x2={W} y1={top+h+.5} y2={top+h+.5} stroke="currentColor" opacity=".12"/>{/if}
  {#each Object.entries(paths) as [level,d]}{#if d}<path {d} fill={stressColors[level]} opacity=".9"/>{/if}{/each}
  {#if !compact && slot>=0}<line x1={x(slot*3+1.5)} x2={x(slot*3+1.5)} y1={top-8} y2={top+h} stroke="currentColor" opacity=".4" stroke-dasharray="2 3"/>{/if}
- {#if !compact}{#each [0,360,720,1080,1440] as m,i}<text x={x(m)} y={top+h+16} fill="#69728A" font-size="10" text-anchor={i===0?'start':i===4?'end':'middle'}>{i===4?'24:00':time(m)}</text>{/each}{/if}
+ {#if !compact}{#each [0,360,720,1080,1440] as m,i}<text x={x(m)} y={top+h+16} fill="#8E98AC" font-size="10" text-anchor={i===0?'start':i===4?'end':'middle'}>{i===4?'24:00':time(m)}</text>{/each}{/if}
 {/snippet}
 {#if !compact}
- <div class="legend">{#each ['rest','low','medium','high'] as level}<span><i style:background={stressColors[level]}></i>{stressNames[level]}</span>{/each}<span><i style:background={colors.flame}></i>Active</span>{#if stress.sleep}<span><i style:background={colors.violet} style:opacity=".5"></i>Asleep</span>{/if}</div>
+ <div class="legend">{#each ['rest','low','medium','high'] as level}<span><i style:background={stressColors[level]}></i>{stressNames[level]}</span>{/each}<span><i style:background={colors.secondary}></i>Active</span>{#if stress.sleep}<span><i style:background={colors.ink} style:opacity=".5"></i>Asleep</span>{/if}</div>
 {/if}
 <style>
  svg{display:block;width:100%;height:auto;overflow:visible;font-family:Inter,sans-serif;color:var(--text)}

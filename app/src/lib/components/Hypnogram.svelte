@@ -15,11 +15,11 @@
  }
 </script>
 <svg viewBox="0 0 326 142" class="plot" aria-label="Sleep stages over the night">
- {#each names as name,i}<text x="0" y={i*30+19} fill="#69728A" font-size="11" font-weight="600">{name}</text><line x1="46" x2="326" y1={i*30+15} y2={i*30+15} stroke="rgba(255,255,255,.05)"/>{/each}
+ {#each names as name,i}<text x="0" y={i*30+19} fill="#8E98AC" font-size="11" font-weight="600">{name}</text><line x1="46" x2="326" y1={i*30+15} y2={i*30+15} stroke="rgba(255,255,255,.05)"/>{/each}
  {#each segments as s,i}{@const x=46+s.startMin/total*280}
   {#if i>0}<line x1={x} x2={x} y1={lane(segments[i-1].stage)*30+15} y2={lane(s.stage)*30+15} stroke="rgba(255,255,255,.22)"/>{/if}
   <rect x={x} y={lane(s.stage)*30+4} width={Math.max(1,s.minutes/total*280)} height="22" rx="5" fill={palette[s.stage]}/>
  {/each}
- {#each [0,1/3,2/3,1] as part,i}<text class="time-label" x={46+part*280} y="139" fill="#69728A" font-size="11" text-anchor={i===0?'start':i===3?'end':'middle'}>{label(total*part)}</text>{/each}
+ {#each [0,1/3,2/3,1] as part,i}<text class="time-label" x={46+part*280} y="139" fill="#8E98AC" font-size="11" text-anchor={i===0?'start':i===3?'end':'middle'}>{label(total*part)}</text>{/each}
 </svg>
 <style>.plot{display:block;width:100%}</style>
