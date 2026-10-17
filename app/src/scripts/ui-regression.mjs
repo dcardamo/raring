@@ -125,7 +125,7 @@ try {
     const failures=await contrastFailures(page);
     assert.deepEqual(failures,[],`${width}/${route}: text contrast`);
    }
-   if(width===840 || (width===390 && ['today','sleep','training','workout/9000000000001','health','onboarding','settings'].includes(route)))await page.screenshot({path:resolve(output,`${width}-${route.replace('/','-')}.png`)});
+   if(width===840 || (width===1024 && ['today','sleep','health'].includes(route)) || (width===390 && ['today','sleep','training','workout/9000000000001','health','onboarding','settings'].includes(route)))await page.screenshot({path:resolve(output,`${width}-${route.replace('/','-')}.png`)});
   }
  }
  console.log('Today, Sleep, Training, Workout and Health text contrast at 390/840: passed');
@@ -387,6 +387,40 @@ try {
  assert.ok((await live.locator('.lever').textContent()).includes('age 36.2'),'Garmin fractional target ages are formatted for display');
  assert.ok(!(await live.locator('.lever').textContent()).includes('36.23456789'));
  console.log('Workout dates, partial zones, real chart axes, mixed-sport splits, sleep gaps and target formatting: passed');
+
+ const cached=await browser.newPage({viewport:{width:390,height:844}});
+ cached.on('pageerror',e=>errors.push(e.message));
+ await cached.addInitScript(samples=>{
+  localStorage.setItem('notifications-step-done','1');
+  const state=window.testViews={statusReads:0,reads:{},hold:new Set(),release:{}};
+  window.isTauri=true;
+  window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command)=>{
+   if(command.startsWith('plugin:event|'))return 1;
+   if(command==='app_status'){state.statusReads++;return {...samples.status,lastSync:new Date().toISOString()}}
+   if(command==='sync_now')return;
+   if(command in samples){state.reads[command]=(state.reads[command]??0)+1;
+    if(state.hold.has(command))await new Promise(resolve=>{state.release[command]=resolve});
+    return structuredClone(samples[command]);
+   }
+   throw Error('Unexpected view command '+command);
+  }};
+ },samples);
+ await cached.goto(`${url}/#today`);
+ await cached.locator('.dials').waitFor();
+ await cached.waitForFunction(()=>['sleep','training','health'].every(key=>window.testViews.reads[key]));
+ const statusReads=await cached.evaluate(()=>window.testViews.statusReads);
+ await cached.evaluate(()=>window.testViews.hold.add('sleep'));
+ await cached.getByRole('navigation').getByRole('button',{name:'Sleep',exact:true}).click();
+ await cached.locator('.sleep-hero').waitFor();
+ assert.equal(await cached.locator('.empty').count(),0,'cached tab switches without loading state');
+ assert.equal(await cached.evaluate(()=>window.testViews.statusReads),statusReads,'navigation does not query app status');
+ await cached.waitForFunction(()=>window.testViews.release.sleep);
+ await cached.evaluate(()=>window.testViews.release.sleep());
+ await cached.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();
+ await cached.locator('.dials').waitFor();
+ assert.equal(await cached.locator('.empty').count(),0,'returning to Today keeps its view visible');
+ await cached.close();
+ console.log('Cached view switching without loading or status IPC: passed');
  assert.deepEqual(errors,[],'no browser errors');
 } finally {
  await browser?.close();
