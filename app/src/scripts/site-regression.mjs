@@ -36,7 +36,7 @@ try{
  const links=new Set();
  for(const width of [320,390,768,1280]){
   await page.setViewportSize({width,height:900});
-  for(const path of ['/','/privacy.html']){
+  for(const path of ['/','/privacy.html','/compatibility.html']){
    await page.goto(origin+path);
    assert.equal(await page.locator('h1').count(),1);
    assert.equal(await page.locator('script,iframe,form').count(),0,'static pages have no scripts, embeds or forms');
@@ -50,6 +50,12 @@ try{
     assert.deepEqual(await page.locator('.benefits h3').allTextContents(),['Readiness','Sleep','Training','Workouts','Stress','Health']);
     assert.deepEqual(await page.locator('.highlights strong').allTextContents(),['Readiness','Sleep','Training','Stress']);
    }
+   if(path==='/compatibility.html'){
+    const tested=page.locator('tbody tr').filter({hasText:'Forerunner 970'});
+    assert.equal(await tested.locator('.tier').textContent(),'Partly tested');
+    assert.ok((await tested.textContent()).includes('Not yet checked:'));
+    assert.equal(await page.getByRole('link',{name:/Report on GitHub/}).getAttribute('href'),'https://github.com/dcardamo/raring/issues/new?labels=compatibility&title=Compatibility%3A%20');
+   }
    for(const img of await page.locator('img').all()){
     await img.scrollIntoViewIfNeeded();
     await img.evaluate(image=>image.decode());
@@ -59,7 +65,7 @@ try{
    assert.ok(layout.body<=width && layout.document<=width,`${width}${path}: overflow ${JSON.stringify(layout)}`);
    assert.ok(await page.locator('img').evaluateAll(images=>images.every(img=>img.complete && img.naturalWidth>0)),'images load');
    for(const href of await page.locator('a[href]').evaluateAll(anchors=>anchors.map(a=>a.href)))links.add(href);
-   if(width===390 || width===1280)await page.screenshot({path:resolve(output,`${width}-${path==='/'?'home':'privacy'}.png`),fullPage:true});
+   if(width===390 || width===1280)await page.screenshot({path:resolve(output,`${width}-${path==='/'?'home':path.slice(1,-5)}.png`),fullPage:true});
   }
  }
  // Follow every local link, including fragments, without fetching third-party sites.

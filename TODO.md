@@ -301,9 +301,9 @@ faces, screens, sensors and audio prompts stay in Connect.
   bests, sessions, sets per muscle and a 12-week heatmap. Raring's own body
   map figures replace the mockup placeholders. Offline help pages and a help
   sheet ship with it. `site/compatibility.html` covers set read-back only,
-  with partial evidence on the Forerunner 970, and is still unlinked:
-  publish it and create the `compatibility` issue label at merge. Verified
-  read-only on a real account (no 429 or auth failures):
+  with partial evidence on the Forerunner 970. It is linked from the website's
+  footer; reports use GitHub's `compatibility` label. Verified read-only on a
+  real account (no 429 or auth failures):
   - `/activity-service/activity/{id}/exerciseSets` returns
     `{activityId, exerciseSets}`; `exerciseSets` is `null` for activities
     without sets (such as ones from non-Garmin sources). Each set has
