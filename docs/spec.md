@@ -210,8 +210,11 @@ Sent by the phone itself.
   metrics, Fitness Age, endurance and hill scores, race predictions, running
   tolerance, personal records, and activities (summary, splits, heart-rate
   zones, charts and GPS routes).
-- The first sync requests up to 90 days of daily history. Saved history grows
-  as new days sync; older history beyond the initial window is not backfilled.
+- Each sync fetches the last 90 days day by day, then spends its remaining
+  request budget downloading older history in range requests, newest first
+  and resuming where the last run stopped, back to the account's oldest
+  data. A new phone downloads it all again; there is no Raring cloud. Older
+  days keep daily values; Settings shows how far back the history goes.
 - Garmin Connect stays installed on the phone because it uploads the watch's
   data.
 - python-garminconnect is the reference when Garmin changes sign-in or

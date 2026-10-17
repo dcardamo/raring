@@ -15,38 +15,6 @@ availability on every account or watch.
 
 ## Now
 
-### 1. Full history backfill
-
-Garmin keeps the whole account history and serves old dates, so a new phone
-or a reinstall downloads everything again. No Raring cloud is needed.
-
-- Verified: activities back to 2011 and daily summaries from 2025 on a real
-  account. Sleep and HRV went back only as far as the watch that records
-  them, which suggests Garmin has no retention cutoff (unverified for older
-  sleep data).
-- Use range queries rather than one request per day. Verified:
-  `POST /graphql-gateway/graphql` with
-  `query{trainingReadinessRangeScalar(startDate:…, endDate:…)}` returned 5½
-  months of readiness in one call. Candidates:
-  `/usersummary-service/stats/{stress,bodybattery,heartRate,im,respiration,steps,floors}/daily/{start}/{end}`,
-  `/hrv-service/hrv/daily/{start}/{end}`,
-  `/sleep-service/stats/sleep/daily/{start}/{end}` (returned empty for a
-  period without sleep data, so a period with data still needs checking),
-  GraphQL `heartRateVariabilityScalar`, `sleepSummariesScalar` (returned
-  null; check its arguments), and `enduranceScoreScalar`/`hillScoreScalar`
-  with `aggregation`. Activities page through
-  `/activitylist-service/activities/search/activities`.
-- Old days store daily values only. Per-day detail (sleep stages, stress
-  readings, activity charts and routes) downloads when a day or workout is
-  opened, and is then kept.
-- Runs in the background, newest first, resumable, inside the existing
-  request budget, backing off on 429. Find where the account's data starts
-  (first activity, first wellness day) and stop there. Show progress in
-  Settings ("History back to Mar 2019").
-- Spec: replace "first sync requests up to 90 days … not backfilled".
-- Check: sync tests on fixtures of range responses; a real-account run
-  timed, with the request count and any 429s recorded.
-
 ### 2. Watch sync freshness
 
 Raring is only as fresh as Garmin Connect's last upload from the watch.
@@ -259,6 +227,10 @@ Depends on item 1. The analysis Garmin's subscription charges for, free.
   block against the last).
 - Display only: averages and overlays, no new scores. Spec: add the
   averaging to Rules.
+- Older days live in the history rows listed under Done (item 1), next to
+  the per-day rows of the last 90 days; each chart reads both.
+- Opening an old day or workout should fetch its per-day detail (sleep
+  stages, stress readings, charts, route) on demand and keep it. Not built.
 
 ### 12. Export
 
@@ -373,4 +345,27 @@ faces, screens, sensors and audio prompts stay in Connect.
 
 ## Done
 
-Nothing yet.
+- **1. Full history backfill** (commit "Download the whole Garmin history
+  in the background"). After the per-day sync of the last 90 days, each run
+  spends its remaining budget on range requests, resuming from cursors
+  (`history:<series>:lo/hi`). Verified on a real account: about 260 requests
+  covered activities back to 2011 and daily summaries back to 2014, with no
+  429s at the client's 300 ms pacing; a normal sync afterwards made no
+  history requests. Range limits and shapes, all verified:
+  - `/usersummary-service/v2/dailysummaries?startDate&endDate`, at most a
+    year (`P1Y`); a nested summary, not the per-day shape. Stored as
+    `daily_summary`.
+  - `/metrics-service/metrics/trainingreadiness/{start}/{end}` (366 days) and
+    `/metrics-service/metrics/maxmet/daily/{start}/{end}` (2 years worked)
+    return exactly the per-day responses; they fill `readiness` and
+    `max_metrics` rows without overwriting existing ones.
+  - `/hrv-service/hrv/daily/{start}/{end}` (366 days): items equal the
+    per-day `hrvSummary`, stored as `hrv_summary`.
+  - `/sleep-service/sleep/dailySleepSummariesByDate?startDate&endDate`
+    (28 days): items equal the per-day `dailySleepDTO`, stored as
+    `sleep_summary`.
+  - `/activitylist-service/activities/search/activities` takes
+    `startDate`/`endDate` and up to 1000 per page; items stored as `listed`.
+  - The `/usersummary-service/stats/*/daily` and
+    `/sleep-service/stats/sleep/daily` ranges stop at 28 days, and the
+    Body Battery reports reject long ranges.

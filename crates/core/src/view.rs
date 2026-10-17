@@ -607,5 +607,9 @@ pub struct AppStatus {
     pub last_sync: Option<String>,
     /// Days of history stored so far.
     pub history_days: u32,
+    /// The oldest day with Garmin data on the phone, YYYY-MM-DD.
+    pub history_from: Option<String>,
+    /// False while older history is still downloading.
+    pub history_complete: bool,
     pub last_error: Option<String>,
 }

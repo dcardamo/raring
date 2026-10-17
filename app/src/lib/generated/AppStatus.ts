@@ -8,4 +8,12 @@ lastSync: string | null,
 /**
  * Days of history stored so far.
  */
-historyDays: number, lastError: string | null, };
+historyDays: number, 
+/**
+ * The oldest day with Garmin data on the phone, YYYY-MM-DD.
+ */
+historyFrom: string | null, 
+/**
+ * False while older history is still downloading.
+ */
+historyComplete: boolean, lastError: string | null, };

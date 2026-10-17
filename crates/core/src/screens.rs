@@ -497,6 +497,7 @@ fn activity_payload(store: &Store, id: &str) -> Option<ActivityPayload> {
         .into_iter()
         .flat_map(|(_, v)| v.as_array().cloned().unwrap_or_default())
         .find(|a| a["activityId"].to_string().trim_matches('"') == id)
+        .or_else(|| store.get("listed", id))
         .unwrap_or(Value::Null);
     (!detail.is_null() || !listed.is_null()).then_some(ActivityPayload { detail, listed })
 }

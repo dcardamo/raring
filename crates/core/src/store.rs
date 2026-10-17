@@ -28,7 +28,7 @@ impl Store {
     pub fn put(&self, endpoint: &str, key: &str, at: &str, value: &Value) -> rusqlite::Result<()> {
         let db = self.db.lock().unwrap();
         db.execute("INSERT INTO raw VALUES (?1,?2,?3,?4) ON CONFLICT(endpoint,key) DO UPDATE SET fetched_at=excluded.fetched_at,json=excluded.json", params![endpoint,key,at,value.to_string()])?;
-        if endpoint == "activity" || endpoint == "activities" {
+        if matches!(endpoint, "activity" | "activities" | "listed") {
             let items: Vec<&Value> = if let Some(a) = value.as_array() {
                 a.iter().collect()
             } else {
@@ -90,6 +90,35 @@ impl Store {
         stmt.query_map(params![since.unwrap_or(""), limit as i64], |r| r.get(0))
             .map(|it| it.flatten().collect())
             .unwrap_or_default()
+    }
+    pub fn oldest_activity(&self) -> Option<String> {
+        self.db
+            .lock()
+            .unwrap()
+            .query_row(
+                "SELECT start_local FROM activities ORDER BY replace(start_local, ' ', 'T') LIMIT 1",
+                [],
+                |r| r.get(0),
+            )
+            .optional()
+            .ok()
+            .flatten()
+    }
+    /// The oldest day key with data among the given per-day endpoints.
+    pub fn earliest_day(&self, endpoints: &[&str]) -> Option<String> {
+        let db = self.db.lock().unwrap();
+        endpoints
+            .iter()
+            .filter_map(|e| {
+                db.query_row(
+                    "SELECT min(key) FROM raw WHERE endpoint=?1 AND json!='null'",
+                    [e],
+                    |r| r.get::<_, Option<String>>(0),
+                )
+                .ok()
+                .flatten()
+            })
+            .min()
     }
     pub fn newest_activity(&self) -> Option<String> {
         self.db

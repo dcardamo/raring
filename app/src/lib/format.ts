@@ -14,5 +14,9 @@ export const dateLabel=(date:string)=>{
  const day=new Date(`${date}T12:00:00`);
  return Number.isNaN(day.getTime())?'Date unavailable':day.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
 };
+export const monthLabel=(date:string)=>{
+ const day=new Date(`${date.slice(0,10)}T12:00:00`);
+ return Number.isNaN(day.getTime())?'Date unavailable':day.toLocaleDateString('en-GB',{month:'short',year:'numeric'});
+};
 export const signed=(value:number|null|undefined,unit='')=>value==null?'—':Math.abs(value)<1?'':`${value>0?'+':'−'}${num(Math.abs(value),1)}${unit}`;
 export const num=(value:number|null|undefined,precision=0)=>value==null?'—':value.toFixed(precision).replace(/\.0+$/,'');

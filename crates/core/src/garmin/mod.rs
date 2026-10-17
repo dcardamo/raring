@@ -5,13 +5,15 @@ use base64::{
     engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD},
     Engine,
 };
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Duration, NaiveDate, Utc};
 use reqwest::{header, StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{fmt, sync::Arc, time::Instant};
 use tokio::sync::Mutex;
 
+/// Activities per history page; Garmin accepts up to 1000.
+pub const ACTIVITY_PAGE: &str = "100";
 const DI_GRANT: &str = "https://connectapi.garmin.com/di-oauth2-service/oauth/grant/service_ticket";
 const IDS: &[&str] = &[
     "GARMIN_CONNECT_MOBILE_ANDROID_DI_2025Q2",
@@ -382,6 +384,53 @@ impl Client {
                 "/activitylist-service/activities/search/activities".into(),
                 vec![("start", key), ("limit", "20")],
             ),
+            // Range keys are "START:END" (inclusive dates); activity pages add ":OFFSET".
+            "summary_range" | "sleep_range" | "hrv_range" | "readiness_range"
+            | "max_metrics_range" | "activities_range" => {
+                let mut parts = key.split(':');
+                let (Some(start), Some(end)) = (parts.next(), parts.next()) else {
+                    return Err(Error::Decode);
+                };
+                if [start, end]
+                    .iter()
+                    .any(|d| NaiveDate::parse_from_str(d, "%Y-%m-%d").is_err())
+                {
+                    return Err(Error::Decode);
+                }
+                let offset = parts.next().unwrap_or("0");
+                if offset.is_empty()
+                    || !offset.bytes().all(|b| b.is_ascii_digit())
+                    || parts.next().is_some()
+                {
+                    return Err(Error::Decode);
+                }
+                let dates = vec![("startDate", start), ("endDate", end)];
+                match kind {
+                    "summary_range" => ("/usersummary-service/v2/dailysummaries".into(), dates),
+                    "sleep_range" => (
+                        "/sleep-service/sleep/dailySleepSummariesByDate".into(),
+                        dates,
+                    ),
+                    "hrv_range" => (format!("/hrv-service/hrv/daily/{start}/{end}"), vec![]),
+                    "readiness_range" => (
+                        format!("/metrics-service/metrics/trainingreadiness/{start}/{end}"),
+                        vec![],
+                    ),
+                    "max_metrics_range" => (
+                        format!("/metrics-service/metrics/maxmet/daily/{start}/{end}"),
+                        vec![],
+                    ),
+                    _ => (
+                        "/activitylist-service/activities/search/activities".into(),
+                        vec![
+                            ("startDate", start),
+                            ("endDate", end),
+                            ("start", offset),
+                            ("limit", ACTIVITY_PAGE),
+                        ],
+                    ),
+                }
+            }
             "activity" | "splits" | "zones" | "details" => {
                 if !key.bytes().all(|b| b.is_ascii_digit()) || key.is_empty() {
                     return Err(Error::Decode);
