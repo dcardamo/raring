@@ -2,17 +2,23 @@
 import type { SleepNeedSource } from "./SleepNeedSource";
 
 /**
- * Garmin sleep need and a wake reference derived from the last 14 nights.
+ * Garmin's sleep need for tonight, with Garmin's bedtime window when it sends
+ * one, otherwise a bedtime derived from the last 14 nights' wake times.
  */
 export type SleepPlan = { 
 /**
- * Suggested time to be asleep tonight, HH:MM.
+ * Suggested time to be asleep tonight, HH:MM: the end of Garmin's window,
+ * or the median wake time minus the need.
  */
 bedtime: string, 
 /**
- * Median local wake time, HH:MM.
+ * Start of Garmin's recommended bedtime window, HH:MM, when Garmin sends one.
  */
-wakeTime: string, needMin: number, source: SleepNeedSource, 
+bedtimeStart: string | null, 
+/**
+ * Median local wake time, HH:MM, when any wake time is recorded.
+ */
+wakeTime: string | null, needMin: number, source: SleepNeedSource, 
 /**
  * Recorded wake times in the 14-day window; sparse history stays explicit.
  */

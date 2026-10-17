@@ -278,7 +278,15 @@ fn notification_log_and_defaults() {
         .single()
         .unwrap();
     let first = notifications::notifications(&s, when);
-    assert!(first.iter().any(|v| v.kind == "morning"));
+    let morning = first.iter().find(|v| v.kind == "morning").unwrap();
+    assert!(morning.title.contains("readiness 82 (high)"));
+    let night = morning.body.lines().next().unwrap();
+    assert_eq!(
+        night,
+        "Slept 7h 50m · sleep score 84 (good) · 18 min over need"
+    );
+    assert!(morning.body.contains("HRV 58 ms (balanced)"));
+    assert!(morning.body.contains("resting HR 52"));
     assert!(!first.iter().any(|v| v.kind == "bedtime"));
     notifications::mark_sent(&s, &first, when).unwrap();
     assert!(!notifications::notifications(&s, when)

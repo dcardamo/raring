@@ -177,7 +177,7 @@ async fn main() -> Result<()> {
         Some("sync")=>{let tokens=read_tokens()?;let budget=args.windows(2).find(|v|v[0]=="--budget").map(|v|v[1].parse::<usize>()).transpose()?.unwrap_or(60);
             let result=core.sync(tokens,now,budget).await?;save_tokens(&result.tokens)?;show(&result.report)?;},
         Some("status")=>show(&core.status())?,
-        Some("show")=>{let date=args.windows(2).find(|v|v[0]=="--date").map(|v|v[1].as_str()).unwrap_or(&today);
+        Some("show")=>{let current=core.current_date(now);let date=args.windows(2).find(|v|v[0]=="--date").map(|v|v[1].as_str()).unwrap_or(&current);
             match args.get(1).map(String::as_str){Some("today")=>show(&core.today(date))?,Some("sleep")=>show(&core.sleep(date))?,Some("training")=>show(&core.training(date))?,Some("health")=>show(&core.health(date))?,Some("checkin")=>show(&core.checkin(date))?,Some("workout")=>show(&core.workout(args.get(2).context("show workout ID")?))?,_=>bail!("show today|sleep|training|health|checkin|workout ID")}},
         Some("notifications")=>show(&core.notifications(now))?,
         Some("capture")=>{let out=Path::new(args.windows(2).find(|a|a[0]=="--out").map(|a|a[1].as_str()).context("capture --out DIR")?).to_path_buf();

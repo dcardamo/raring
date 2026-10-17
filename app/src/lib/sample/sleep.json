@@ -300,6 +300,7 @@
   ],
   "sleepPlan": {
     "bedtime": "23:06",
+    "bedtimeStart": "22:30",
     "wakeTime": "06:36",
     "needMin": 450,
     "source": "tonight",

@@ -39,8 +39,8 @@
         <ul class="highlights" aria-label="What you can see">
           <li><span class="dot mint"></span><strong>Readiness</strong><span>Find today’s pace</span></li>
           <li><span class="dot violet"></span><strong>Sleep</strong><span>See your recovery</span></li>
-          <li><span class="dot sky"></span><strong>Stress</strong><span>Spot busy stretches</span></li>
           <li><span class="dot orange"></span><strong>Training</strong><span>Balance your load</span></li>
+          <li><span class="dot sky"></span><strong>Stress</strong><span>Spot busy stretches</span></li>
         </ul>
       </div>
       <div class="app-preview">
@@ -55,30 +55,45 @@
       <ul class="benefits">
         <li><h3 class="readiness-label">Readiness</h3><p>Garmin’s Training Readiness with a daily focus—rest, easy, steady or push—and the factor holding you back.</p></li>
         <li><h3 class="sleep-label">Sleep</h3><p>Stages, overnight HRV and heart rate, a 14-night consistency chart and a suggested asleep-by time for tonight.</p></li>
-        <li><h3 class="stress-label">Stress</h3><p>Garmin’s stress through the day with sleep and activity marked, time in each level and your 30-day trend.</p></li>
-        <li><h3 class="training-label">Workouts</h3><p>Training Effect, route map, heart rate by zone, time in zones and splits for each activity.</p></li>
         <li><h3 class="training-label">Training</h3><p>Acute load against Garmin’s optimal range, load focus gaps, recovery time, VO₂ max and race predictions.</p></li>
+        <li><h3 class="training-label">Workouts</h3><p>Training Effect, route map, heart rate by zone, time in zones and splits for each activity.</p></li>
+        <li><h3 class="stress-label">Stress</h3><p>Garmin’s stress through the day with sleep and activity marked, time in each level and your 30-day trend.</p></li>
         <li><h3 class="health-label">Health</h3><p>Resting heart rate, HRV, respiration, SpO₂ and skin temperature against your own ranges, plus Fitness Age.</p></li>
       </ul>
       <p class="note">Plus a weekly check-in every Monday, and optional phone notifications for morning readiness, bedtime and vitals outside your usual range.</p>
     </section>
 
-    <section class="section spotlight" aria-labelledby="stress-title">
+    <section class="section spotlight" aria-labelledby="sleep-title">
       <div class="spotlight-copy">
-        <p class="eyebrow stress-label">Stress</p>
-        <h2 id="stress-title">See what your day asked of you.</h2>
-        <p>Follow Garmin’s stress readings from midnight to now, with sleep and workouts marked, so a busy afternoon stands out from a hard run.</p>
+        <p class="eyebrow sleep-label">Sleep</p>
+        <h2 id="sleep-title">See how last night set you up.</h2>
+        <p>Garmin’s sleep score and stages, set against the sleep you need and your usual nights, with a plan for getting enough tonight.</p>
         <ul class="checks">
-          <li>Today’s average, peak and level at a glance</li>
-          <li>Time spent at rest, low, medium and high</li>
-          <li>Daily averages over 7 and 30 days</li>
-          <li>Body Battery and its overnight charge on Today</li>
+          <li>Time asleep against Garmin’s sleep need</li>
+          <li>Stage timeline, with each stage against your usual</li>
+          <li>Overnight HRV, heart rate, respiration and SpO₂</li>
+          <li>A 14-night consistency chart and an asleep-by time for tonight</li>
         </ul>
       </div>
-      <div class="phone-frame"><img src="assets/stress.png" width="780" height="1688" alt="Stress screen showing an average of 31, a chart of readings through the day with sleep marked, and time in each stress level. All readings are sample data." loading="lazy" decoding="async"></div>
+      <div class="phone-frame"><img src="assets/sleep.png" width="780" height="1688" alt="Sleep screen showing a sleep score of 84, 7:48 asleep against a 7:30 need, a stage timeline, time in each stage and overnight HRV and heart rate. All readings are sample data." loading="lazy" decoding="async"></div>
     </section>
 
-    <section class="section spotlight reverse" aria-labelledby="workouts-title">
+    <section class="section spotlight reverse" aria-labelledby="training-title">
+      <div class="spotlight-copy">
+        <p class="eyebrow training-label">Training</p>
+        <h2 id="training-title">Train enough, not too much.</h2>
+        <p>See the load from your last seven days against Garmin’s optimal range, and which kinds of effort you’ve been short on.</p>
+        <ul class="checks">
+          <li>Training status, load ratio and recovery time</li>
+          <li>Daily load through the week</li>
+          <li>Low aerobic, high aerobic and anaerobic focus, with shortages flagged</li>
+          <li>VO₂ max, race predictions, endurance and hill scores</li>
+        </ul>
+      </div>
+      <div class="phone-frame"><img src="assets/training.png" width="780" height="1688" alt="Training screen showing a productive status, acute load of 612 in the optimal range, load ratio, recovery time, daily load for the week and four-week load focus. All readings are sample data." loading="lazy" decoding="async"></div>
+    </section>
+
+    <section class="section spotlight" aria-labelledby="workouts-title">
       <div class="spotlight-copy">
         <p class="eyebrow training-label">Workouts</p>
         <h2 id="workouts-title">Know what each workout did.</h2>
@@ -93,23 +108,34 @@
       <div class="phone-frame"><img src="assets/workout.png" width="780" height="1688" alt="Workout screen for a morning run showing training load, aerobic and anaerobic Training Effect, distance, time, pace, a route map and a heart-rate chart. All readings are sample data." loading="lazy" decoding="async"></div>
     </section>
 
-    <section class="section" aria-labelledby="screens-title">
-      <p class="eyebrow">Inside Raring</p>
-      <h2 id="screens-title">The rest of your day, in detail.</h2>
-      <div class="screen-gallery" role="region" aria-label="App screenshots" tabindex="0">
-        <figure>
-          <figcaption><h3 class="sleep-label">Sleep</h3><p>Sleep stages, overnight readings and tonight’s plan.</p></figcaption>
-          <div class="phone-frame"><img src="assets/sleep.png" width="780" height="1688" alt="Sleep screen showing a sleep score, time asleep, sleep stages and overnight readings." loading="lazy" decoding="async"></div>
-        </figure>
-        <figure>
-          <figcaption><h3 class="training-label">Training</h3><p>Load, recovery and the balance of your training.</p></figcaption>
-          <div class="phone-frame"><img src="assets/training.png" width="780" height="1688" alt="Training screen showing acute load, training status, recovery time and load focus." loading="lazy" decoding="async"></div>
-        </figure>
-        <figure>
-          <figcaption><h3 class="health-label">Health</h3><p>Your vitals against your own usual ranges.</p></figcaption>
-          <div class="phone-frame"><img src="assets/health.png" width="780" height="1688" alt="Health screen showing resting heart rate, HRV, respiration, oxygen saturation and skin-temperature change against personal ranges." loading="lazy" decoding="async"></div>
-        </figure>
+    <section class="section spotlight reverse" aria-labelledby="stress-title">
+      <div class="spotlight-copy">
+        <p class="eyebrow stress-label">Stress</p>
+        <h2 id="stress-title">See what your day asked of you.</h2>
+        <p>Follow Garmin’s stress readings from midnight to now, with sleep and workouts marked, so a busy afternoon stands out from a hard run.</p>
+        <ul class="checks">
+          <li>Today’s average, peak and level at a glance</li>
+          <li>Time spent at rest, low, medium and high</li>
+          <li>Daily averages over 7 and 30 days</li>
+          <li>Body Battery and its overnight charge on Today</li>
+        </ul>
       </div>
+      <div class="phone-frame"><img src="assets/stress.png" width="780" height="1688" alt="Stress screen showing an average of 31, a chart of readings through the day with sleep marked, and time in each stress level. All readings are sample data." loading="lazy" decoding="async"></div>
+    </section>
+
+    <section class="section spotlight" aria-labelledby="health-title">
+      <div class="spotlight-copy">
+        <p class="eyebrow health-label">Health</p>
+        <h2 id="health-title">Notice when something’s off.</h2>
+        <p>Each overnight reading sits against your own usual range, built from your recent nights, so an unusual one stands out before you feel it.</p>
+        <ul class="checks">
+          <li>Resting heart rate, HRV, respiration, SpO₂ and skin temperature</li>
+          <li>7- and 30-night history for each reading</li>
+          <li>A heads-up when two or more are outside your usual range</li>
+          <li>Fitness Age and the change that would lower it most</li>
+        </ul>
+      </div>
+      <div class="phone-frame"><img src="assets/health.png" width="780" height="1688" alt="Health screen showing resting heart rate, HRV, respiration, oxygen saturation and skin-temperature change, each within its personal range. All readings are sample data." loading="lazy" decoding="async"></div>
     </section>
 
     <section id="how-it-works" class="section" aria-labelledby="how-title">

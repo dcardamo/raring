@@ -70,6 +70,9 @@ impl Raring {
             notifications,
         })
     }
+    pub fn current_date(&self, now: DateTime<Local>) -> String {
+        screens::current_date(&self.store, now.naive_local()).to_string()
+    }
     pub fn today(&self, date: &str) -> view::TodayView {
         screens::today(&self.store, date)
     }

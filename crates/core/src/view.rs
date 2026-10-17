@@ -336,15 +336,19 @@ pub enum SleepNeedSource {
     Average,
 }
 
-/// Garmin sleep need and a wake reference derived from the last 14 nights.
+/// Garmin's sleep need for tonight, with Garmin's bedtime window when it sends
+/// one, otherwise a bedtime derived from the last 14 nights' wake times.
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct SleepPlan {
-    /// Suggested time to be asleep tonight, HH:MM.
+    /// Suggested time to be asleep tonight, HH:MM: the end of Garmin's window,
+    /// or the median wake time minus the need.
     pub bedtime: String,
-    /// Median local wake time, HH:MM.
-    pub wake_time: String,
+    /// Start of Garmin's recommended bedtime window, HH:MM, when Garmin sends one.
+    pub bedtime_start: Option<String>,
+    /// Median local wake time, HH:MM, when any wake time is recorded.
+    pub wake_time: Option<String>,
     pub need_min: f64,
     pub source: SleepNeedSource,
     /// Recorded wake times in the 14-day window; sparse history stays explicit.

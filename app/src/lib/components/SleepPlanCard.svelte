@@ -8,12 +8,20 @@
 
 <Card title="Tonight's sleep" onclick={open} extra="sleep-plan">
  {#snippet aside()}<span class="pill"><Icon name="moon" size={13}/> Plan ahead</span>{/snippet}
- <div class="sleep-window">
-  <div><span>Asleep by</span><b class="n">{plan.bedtime}</b></div>
-  <div class="sleep-bridge"><span class="n">{duration(plan.needMin)}</span><i></i><small>sleep need</small></div>
-  <div><span>{plan.wakeNights===14?'Usual wake':'Wake reference'}</span><b class="n">{plan.wakeTime}</b></div>
- </div>
- <p>{plan.source==='tonight'?"Garmin's need for tonight":plan.source==='average'?'14-day average Garmin sleep need':'Latest Garmin sleep need'} · median of {plan.wakeNights} recorded wake {plan.wakeNights===1?'time':'times'}. A suggestion, not an alarm.</p>
+ {#if plan.bedtimeStart}
+  <div class="sleep-window">
+   <div><span>Bedtime</span><b class="n">{plan.bedtimeStart}–{plan.bedtime}</b></div>
+   <div><span>Sleep need</span><b class="n">{duration(plan.needMin)}</b></div>
+  </div>
+  <p>Bedtime window and sleep need for tonight. A suggestion, not an alarm.</p>
+ {:else}
+  <div class="sleep-window">
+   <div><span>Asleep by</span><b class="n">{plan.bedtime}</b></div>
+   <div class="sleep-bridge"><span class="n">{duration(plan.needMin)}</span><i></i><small>sleep need</small></div>
+   <div><span>{plan.wakeNights===14?'Usual wake':'Wake reference'}</span><b class="n">{plan.wakeTime}</b></div>
+  </div>
+  <p>{plan.source==='tonight'?'Need for tonight':plan.source==='average'?'14-day average sleep need':'Latest sleep need'} · median of {plan.wakeNights} recorded wake {plan.wakeNights===1?'time':'times'}. A suggestion, not an alarm.</p>
+ {/if}
 </Card>
 
 <style>
