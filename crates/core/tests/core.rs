@@ -91,8 +91,7 @@ fn demo_seeds_current_day_and_screen_details() {
             .len(),
         3
     );
-    let workout =
-        raring_core::screens::workout(&store, raring_core::demo::WORKOUT_ID).unwrap();
+    let workout = raring_core::screens::workout(&store, raring_core::demo::WORKOUT_ID).unwrap();
     assert_eq!(workout.splits.len(), 10);
     assert_eq!(workout.heart_rate.len(), 210);
     assert_eq!(workout.route.len(), 210);
@@ -168,7 +167,9 @@ fn training_load_label_requires_garmin_range() {
             data["optimalRangeMax"] = json!(760);
         }
         store.put("training", "2025-01-02", "now", &data).unwrap();
-        let acute = raring_core::screens::training(&store, "2025-01-02").acute.unwrap();
+        let acute = raring_core::screens::training(&store, "2025-01-02")
+            .acute
+            .unwrap();
         assert_eq!(acute.label, expected);
         assert_eq!(acute.tone, tone);
         assert_eq!(acute.band.is_some(), range);
@@ -604,6 +605,8 @@ async fn health_status_caches_explicit_null_but_retries_missing_or_malformed_sum
     ] {
         let store = Store::open(":memory:").unwrap();
         store.put("profile", "me", "now", &json!({"displayName":"Sample User"})).unwrap();
+        store.put("devices", "me", "now", &json!([])).unwrap();
+        store.set_cursor("devices_checked", &Utc::now().timestamp().to_string()).unwrap();
         let mut replies = vec![(200, "{}".into()); 4];
         replies.push((200, answer.to_string()));
         let (url, seen, thread) = mock(replies);
@@ -645,6 +648,10 @@ async fn no_content_is_cached_and_bad_item_does_not_stop_readiness() {
             "now",
             &json!({"displayName":"Sample User"}),
         )
+        .unwrap();
+    store.put("devices", "me", "now", &json!([])).unwrap();
+    store
+        .set_cursor("devices_checked", &Utc::now().timestamp().to_string())
         .unwrap();
     let (url, seen, thread) = mock(vec![
         (204, "".into()),
@@ -727,6 +734,9 @@ async fn backfill_includes_yesterday_and_scans_existing_days_to_fill_older_gaps(
         s.put("records", "all", "now", &Value::Null).unwrap();
         s.set_cursor("records_checked", &Utc::now().timestamp().to_string())
             .unwrap();
+        s.put("devices", "me", "now", &json!([])).unwrap();
+        s.set_cursor("devices_checked", &Utc::now().timestamp().to_string())
+            .unwrap();
         let mut replies = vec![(200, "{}".into()); 13];
         replies.extend([(200, "[]".into()), (200, "{}".into())]);
         let (url, seen, thread) = mock(replies);
@@ -769,6 +779,8 @@ async fn backfill_skips_old_health_status_days_and_still_fetches_history_ranges(
     }
     store.put("records", "all", "now", &Value::Null).unwrap();
     store.set_cursor("records_checked", &Utc::now().timestamp().to_string()).unwrap();
+    store.put("devices", "me", "now", &json!([])).unwrap();
+    store.set_cursor("devices_checked", &Utc::now().timestamp().to_string()).unwrap();
     let mut replies = vec![(200, "{}".into()); 13];
     replies[4] = (200, json!({"data":{"healthStatusSummary":null}}).to_string());
     replies.extend([(200, "[]".into()), (200, json!({"data":[]}).to_string())]);

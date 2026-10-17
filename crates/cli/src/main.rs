@@ -65,6 +65,19 @@ fn show<T: serde::Serialize>(v: &T) -> Result<()> {
 fn scrub(v: &mut Value) {
     scrub_inner(v, &mut None, &mut None);
 }
+fn device_ids(list: &Value) -> Vec<String> {
+    list.as_array()
+        .or_else(|| list.get("devices").and_then(Value::as_array))
+        .into_iter()
+        .flatten()
+        .filter_map(|device| {
+            device["deviceId"]
+                .as_str()
+                .map(str::to_owned)
+                .or_else(|| device["deviceId"].as_u64().map(|id| id.to_string()))
+        })
+        .collect()
+}
 fn shift(value: &mut Value, origin: &mut Option<f64>) {
     if let Some(n) = value.as_f64() {
         let first = *origin.get_or_insert(n);
@@ -120,8 +133,20 @@ fn scrub_inner(v: &mut Value, lat: &mut Option<f64>, lon: &mut Option<f64>) {
                     || k.contains("phone")
                 {
                     *val = Value::from("REDACTED")
-                } else if k.ends_with("id") || k.contains("profilepk") || k.contains("userid") {
-                    *val = Value::from("123456")
+                } else if k.ends_with("id")
+                    || k.ends_with("ids")
+                    || k.contains("deviceid")
+                    || k.contains("identifier")
+                    || k.contains("profilepk")
+                    || k.contains("uuid")
+                    || k.contains("guid")
+                    || k == "imei"
+                {
+                    *val = if val.is_number() {
+                        Value::from(123456)
+                    } else {
+                        Value::from("REDACTED")
+                    }
                 } else if k.contains("polyline")
                     || k.contains("coordinates")
                     || k.contains("routepoints")
@@ -192,12 +217,34 @@ async fn main() -> Result<()> {
                             for detail in ["activity","splits","zones","details"] {
                                 match client.endpoint(detail,&id,None).await {
                                     Ok(mut value)=>{scrub(&mut value);fs::write(out.join(format!("{detail}.json")),serde_json::to_vec_pretty(&value)?)?;},
+                                    Err(e @ (garmin::Error::RateLimited{..} | garmin::Error::NeedsSignIn)) => {save_tokens(&client.tokens().await)?;return Err(e.into())},
                                     Err(e)=>eprintln!("{detail}: {e}")
                                 }
                             }
                         }
                     }
-                    scrub(&mut v);fs::write(out.join(format!("{kind}.json")),serde_json::to_vec_pretty(&v)?)?;},Err(e)=>eprintln!("{kind}: {e}")}
+                    scrub(&mut v);fs::write(out.join(format!("{kind}.json")),serde_json::to_vec_pretty(&v)?)?;},Err(e @ (garmin::Error::RateLimited{..} | garmin::Error::NeedsSignIn)) => {save_tokens(&client.tokens().await)?;return Err(e.into())},Err(e)=>eprintln!("{kind}: {e}")}
+            }
+            match client.endpoint("devices", "", None).await {
+                Ok(mut list) => {
+                    let ids = device_ids(&list);
+                    scrub(&mut list);
+                    fs::write(out.join("devices.json"), serde_json::to_vec_pretty(&list)?)?;
+                    let mut details = Vec::new();
+                    for (index, id) in ids.iter().enumerate() {
+                        match client.endpoint("device_detail", id, None).await {
+                            Ok(mut detail) => {
+                                scrub(&mut detail);
+                                details.push(serde_json::json!({"listIndex": index, "detail": detail}));
+                            }
+                            Err(e @ (garmin::Error::RateLimited{..} | garmin::Error::NeedsSignIn)) => {save_tokens(&client.tokens().await)?;return Err(e.into())},
+                            Err(e) => eprintln!("device detail #{}: {e}", index + 1),
+                        }
+                    }
+                    fs::write(out.join("device_details.json"), serde_json::to_vec_pretty(&details)?)?;
+                }
+                Err(e @ (garmin::Error::RateLimited{..} | garmin::Error::NeedsSignIn)) => {save_tokens(&client.tokens().await)?;return Err(e.into())},
+                Err(e) => eprintln!("devices: {e}"),
             }
             // A capture can refresh the tokens, and Garmin may rotate the refresh token.
             save_tokens(&client.tokens().await)?;
@@ -236,5 +283,52 @@ mod tests {
         assert_eq!(geometry["polyline"][0], json!([0.0, 0.0]));
         assert_eq!(geometry["polyline"][1], json!([0.001, 0.001]));
         assert_eq!(geometry["encodedPolyline"], "REDACTED");
+    }
+
+    #[test]
+    fn capture_redacts_nested_device_identifiers_and_serials() {
+        let mut list = json!([{
+            "deviceId": "AB12-DEV", "serialNumber": "SN-9XZ42",
+            "unitId": 938472, "lastUploadTimestamp": "2026-10-17T08:30:00Z",
+            "capabilities": [{"deviceIdentifier": "hidden-identifier", "uuid": "uuid-secret",
+                "nested": {"hardwareSerial": "hardware-secret", "guid": "guid-secret"}}]
+        }]);
+        assert_eq!(device_ids(&list), ["AB12-DEV"]);
+        scrub(&mut list);
+        let text = list.to_string();
+        for secret in [
+            "AB12-DEV",
+            "SN-9XZ42",
+            "938472",
+            "hidden-identifier",
+            "uuid-secret",
+            "hardware-secret",
+            "guid-secret",
+        ] {
+            assert!(!text.contains(secret), "leaked device identifier: {secret}");
+        }
+        assert_eq!(list[0]["deviceId"], "REDACTED");
+        assert_eq!(list[0]["unitId"], 123456);
+        assert_eq!(list[0]["lastUploadTimestamp"], "2026-10-17T08:30:00Z");
+        let mut detail = json!({"userDeviceId": "another-device", "nested": [
+            {"serialNumbers": ["serial-1", "serial-2"], "deviceID": "alpha-99",
+             "deviceIds": ["plural-1", "plural-2"]},
+            {"device": {"deviceId": 752989, "parentIdentifier": "parent-7"}}
+        ]});
+        scrub(&mut detail);
+        let text = detail.to_string();
+        for secret in [
+            "another-device",
+            "serial-1",
+            "serial-2",
+            "alpha-99",
+            "plural-1",
+            "plural-2",
+            "752989",
+            "parent-7",
+        ] {
+            assert!(!text.contains(secret), "leaked detail identifier: {secret}");
+        }
+        assert_eq!(device_ids(&json!({"devices": [{"deviceId": 42}]})), ["42"]);
     }
 }

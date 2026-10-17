@@ -70,6 +70,11 @@ button:disabled{cursor:default}
  .tabs{padding-left:max(28px,calc((100% - 900px)/2));padding-right:max(28px,calc((100% - 900px)/2))}
  .tab{width:120px}
 }
+.watch-notice{border-color:rgba(228,232,240,.13)}
+.watch-notice>p{font-size:14px;color:var(--text)}
+.watch-notice .small,.missing-reasons p{color:var(--text2);font-size:13px;line-height:1.5}
+.missing-reasons{display:grid;gap:6px}
+.watch-open{display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:10px 0;background:none;border:0;color:var(--text);font-weight:600;min-height:44px}
 @media(max-width:375px){
  .scroll{padding-left:10px;padding-right:10px}
  .dial-button{min-width:0;width:88px}

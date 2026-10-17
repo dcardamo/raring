@@ -348,6 +348,8 @@ impl Client {
             .replace('+', "%20");
         let (path, params): (String, Vec<(&str, &str)>) = match kind {
             "profile" => ("/userprofile-service/socialProfile".into(), vec![]),
+            "devices" => ("/device-service/deviceregistration/devices".into(), vec![]),
+            "device_detail" => (device_detail_path(key)?, vec![]),
             "summary" => (
                 format!("/usersummary-service/usersummary/daily/{d}"),
                 vec![("calendarDate", key)],
@@ -494,6 +496,21 @@ impl Client {
     }
 }
 
+fn device_detail_path(id: &str) -> Result<String> {
+    // Device IDs may be alphanumeric. Reject route separators and traversal before encoding.
+    if id.is_empty()
+        || !id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b':'))
+    {
+        return Err(Error::Decode);
+    }
+    let segment = url::form_urlencoded::byte_serialize(id.as_bytes()).collect::<String>();
+    Ok(format!(
+        "/device-service/deviceservice/user-device/{segment}"
+    ))
+}
+
 /// CLI-only sign-in; the app uses the SSO webview instead.
 pub async fn mobile_login<F>(email: &str, password: &str, mut mfa: F) -> Result<Tokens>
 where
@@ -536,4 +553,20 @@ where
         IOS_SERVICE_URL,
     )
     .await
+}
+
+#[cfg(test)]
+mod device_tests {
+    use super::*;
+
+    #[test]
+    fn detail_ids_are_validated_and_encoded_as_one_path_segment() {
+        assert_eq!(
+            device_detail_path("AB-12_3:4").unwrap(),
+            "/device-service/deviceservice/user-device/AB-12_3%3A4"
+        );
+        for id in ["", "../other", "a/b", "a?b", "a#b", "a\\b", "a b", "a%2Fb"] {
+            assert!(matches!(device_detail_path(id), Err(Error::Decode)));
+        }
+    }
 }

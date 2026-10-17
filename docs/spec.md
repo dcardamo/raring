@@ -69,6 +69,11 @@ optional after sign-in.
 
 ### Today
 
+- The quiet header line reports the selected watch's last upload to Garmin
+  Connect, not Raring's last API fetch. A stale upload gets a gentle card
+  inviting a Connect sync; without Connect installed, show plain guidance.
+  Explain unsupported missing readings only when the selected watch explicitly
+  says it cannot record them.
 - Three gauges: **Readiness** (Training Readiness, 0–100) large in the
   middle, **Sleep** (Sleep Score) on the left, **Load** (7-day acute load
   against Garmin's optimal range) on the right.
@@ -182,6 +187,24 @@ Sent by the phone itself.
 
 ## Rules
 
+- **Watch freshness**: prefer the unique primary activity tracker. Without one,
+  select a sole registration unless it is explicitly an accessory, or select
+  the only watch-like registration if all others are explicitly accessories;
+  an unknown second device is ambiguous. The selected watch's
+  `lastUploadTimestamp` is its upload time (UTC milliseconds); if there is no
+  unambiguous watch or valid timestamp, say the upload time is unavailable,
+  never substitute Raring's fetch time. Display elapsed minutes
+  under an hour, whole hours under a day, then whole days. At six hours without
+  an upload between 07:00 and 22:00 local time, suggest opening Garmin Connect;
+  never nag overnight. Also suggest it after 10:00 local time when today's
+  sleep is absent, yesterday's recorded wake time has passed, and the last
+  upload predates that expected wake. Missing sleep alone does not imply a
+  stale watch. Refresh the device list at most hourly, including after a 404,
+  and the selected device detail on each budgeted sync. Explicit `false` watch
+  capabilities may explain missing sleep scores, training readiness, HRV status
+  and skin temperature; absent/unknown capabilities do not mean unsupported.
+  An overdue sleep upload belongs only in the upload card, not the unsupported
+  metrics explanation.
 - **Suggested effort**: Garmin's readiness feedback, rephrased. The level sets
   push, steady or easy; a high load ratio caps it at steady.
 - **Biggest drag**: the readiness factor Garmin rates worst.
@@ -231,7 +254,10 @@ Sent by the phone itself.
   data. A new phone downloads it all again; there is no Raring cloud. Older
   days keep daily values; Settings shows how far back the history goes.
 - Garmin Connect stays installed on the phone because it uploads the watch's
-  data.
+  data. Device registration lists watches and their capabilities; device
+  service details give the watch's last upload. Opening Connect is an Android
+  package launch only; on other platforms or without Connect installed Raring
+  gives plain guidance.
 - python-garminconnect is the reference when Garmin changes sign-in or
   endpoints.
 
