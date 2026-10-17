@@ -10,7 +10,7 @@
 @font-face{font-family:Outfit;src:url(https://cdn.jsdelivr.net/fontsource/fonts/outfit:vf@latest/latin-wght-normal.woff2) format("woff2");font-weight:100 900;font-display:block}
 :root{
   --bg:#0B0F1A;--card:rgba(255,255,255,.045);--line:rgba(255,255,255,.07);
-  --text:#EEF1F7;--text2:#A3ACBF;--text3:#69728A;
+  --text:#EEF1F7;--text2:#B4BCCB;--text3:#8E98AC;
   --mint:#3DDC97;--amber:#FFB547;--coral:#FF6B6B;--violet:#9B8CFF;--flame:#FF8A3D;--sky:#5CC8FF;
   --good:#3DDC97;--fair:#FFB547;--poor:#FF6B6B;--amount:#5CA8FF;--ink:#E4E8F0;
 }
@@ -233,7 +233,7 @@ h1{font:600 30px/1.1 Outfit,Inter;margin-top:4px}
 <script>
 // Color carries meaning or it isn't there. Status: good, fair, poor. Effort: heart-rate zones, cool to hot.
 // Amount: one blue, faint to strong. Everything without a judgement is ink.
-const C = {good:"#3DDC97", fair:"#FFB547", poor:"#FF6B6B", amount:"#5CA8FF", ink:"#E4E8F0", ink2:"#A3ACBF", text3:"#69728A",
+const C = {good:"#3DDC97", fair:"#FFB547", poor:"#FF6B6B", amount:"#5CA8FF", ink:"#E4E8F0", ink2:"#B4BCCB", text3:"#8E98AC",
   stage:{deep:"#2F6FE0", light:"#5C9BFF", rem:"#A9C8FF", awake:"#E4E8F0"},
   z:["#7D879C", "#5CA8FF", "#FFD666", "#FF9F43", "#FF6B6B"]};
 
@@ -361,7 +361,7 @@ function hypnogram() {
   const lanes = {awake: 0, rem: 1, light: 2, deep: 3}, names = ["Awake", "REM", "Light", "Deep"], col = C.stage;
   const W = 326, x0 = 46, cw = W - x0, total = STAGES.reduce((a, s) => a + s[1], 0), LH = 30, start = 22 * 60 + 31;
   let s = `<svg width="${W}" height="${4 * LH + 22}" viewBox="0 0 ${W} ${4 * LH + 22}" style="display:block;max-width:100%;height:auto">`;
-  names.forEach((n, i) => s += `<text x="0" y="${i * LH + 19}" fill="#69728A" font-family="Inter" font-size="11" font-weight="600">${n}</text><line x1="${x0}" x2="${W}" y1="${i * LH + 15}" y2="${i * LH + 15}" stroke="rgba(255,255,255,.05)"/>`);
+  names.forEach((n, i) => s += `<text x="0" y="${i * LH + 19}" fill="#8E98AC" font-family="Inter" font-size="11" font-weight="600">${n}</text><line x1="${x0}" x2="${W}" y1="${i * LH + 15}" y2="${i * LH + 15}" stroke="rgba(255,255,255,.05)"/>`);
   let t = 0, prev = null;
   STAGES.forEach(([st, d]) => {
     const x = x0 + t / total * cw, w = d / total * cw, y = lanes[st] * LH + 4;
@@ -372,7 +372,7 @@ function hypnogram() {
   [[23, 0], [1, 0], [3, 0], [5, 0]].forEach(([h]) => {
     let m = h * 60 - start; if (m < 0) m += 1440;
     const x = x0 + m / total * cw;
-    s += `<text x="${x}" y="${4 * LH + 18}" fill="#69728A" font-family="Inter" font-size="11" text-anchor="middle">${String(h).padStart(2, "0")}:00</text>`;
+    s += `<text x="${x}" y="${4 * LH + 18}" fill="#8E98AC" font-family="Inter" font-size="11" text-anchor="middle">${String(h).padStart(2, "0")}:00</text>`;
   });
   return s + "</svg>";
 }
@@ -382,12 +382,12 @@ function consistency() {
   const bw = 14, gap = (W - 40 - nights.length * bw) / (nights.length - 1);
   let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;max-width:100%;height:auto">`;
   s += `<rect x="40" y="${Y(22.5)}" width="${W - 40}" height="${Y(23) - Y(22.5)}" fill="#fff" opacity=".06" rx="3"/><rect x="40" y="${Y(6.5)}" width="${W - 40}" height="${Y(7) - Y(6.5)}" fill="#fff" opacity=".06" rx="3"/>`;
-  [["22:00", 22], ["02:00", 2], ["06:00", 6]].forEach(([l, h]) => s += `<text x="0" y="${Y(h) + 4}" fill="#69728A" font-family="Inter" font-size="11">${l}</text><line x1="40" x2="${W}" y1="${Y(h)}" y2="${Y(h)}" stroke="rgba(255,255,255,.05)"/>`);
+  [["22:00", 22], ["02:00", 2], ["06:00", 6]].forEach(([l, h]) => s += `<text x="0" y="${Y(h) + 4}" fill="#8E98AC" font-family="Inter" font-size="11">${l}</text><line x1="40" x2="${W}" y1="${Y(h)}" y2="${Y(h)}" stroke="rgba(255,255,255,.05)"/>`);
   nights.forEach(([b, w], i) => {
     const x = 40 + i * (bw + gap), last = i === nights.length - 1;
     s += `<rect x="${x}" y="${Y(b)}" width="${bw}" height="${Y(w) - Y(b)}" rx="7" fill="${last ? C.ink : "rgba(228,232,240,.28)"}"/>`;
   });
-  return s + `<text x="40" y="${H - 2}" fill="#69728A" font-family="Inter" font-size="11">2 weeks ago</text><text x="${W}" y="${H - 2}" fill="#69728A" font-family="Inter" font-size="11" text-anchor="end">Last night</text></svg>`;
+  return s + `<text x="40" y="${H - 2}" fill="#8E98AC" font-family="Inter" font-size="11">2 weeks ago</text><text x="${W}" y="${H - 2}" fill="#8E98AC" font-family="Inter" font-size="11" text-anchor="end">Last night</text></svg>`;
 }
 function sleep() {
   const st = [["Deep", 96, C.stage.deep, "+12m", C.good], ["Light", 252, C.stage.light, "−4m", C.text3], ["REM", 120, C.stage.rem, "+9m", C.good], ["Awake", 20, C.stage.awake, "−6m", C.good]];
@@ -463,7 +463,7 @@ function hrChart() {
   bounds.forEach(b => s += `<line x1="0" x2="${W}" y1="${Y(b)}" y2="${Y(b)}" stroke="rgba(255,255,255,.06)" stroke-dasharray="3 4"/>`);
   const d = "M" + pts.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join("L");
   s += `<path d="${d}L${W},${H - 16}L0,${H - 16}Z" fill="url(#hra)"/><path d="${d}" fill="none" stroke="url(#hrg)" stroke-width="2.2" stroke-linejoin="round"/>`;
-  ["0", "15", "30", "45 min"].forEach((l, i) => s += `<text x="${i * 15 * 4 / 209 * W + (i ? 0 : 1)}" y="${H - 2}" fill="#69728A" font-family="Inter" font-size="11" ${i ? 'text-anchor="middle"' : ""}>${l}</text>`);
+  ["0", "15", "30", "45 min"].forEach((l, i) => s += `<text x="${i * 15 * 4 / 209 * W + (i ? 0 : 1)}" y="${H - 2}" fill="#8E98AC" font-family="Inter" font-size="11" ${i ? 'text-anchor="middle"' : ""}>${l}</text>`);
   return s + "</svg>";
 }
 function route() {
@@ -510,7 +510,7 @@ function health() {
   <header class="top"><div><div class="eyebrow">Updated 06:58</div><h1>Health</h1></div><div class="avatar">D</div></header>
   <div class="card" style="margin-top:8px"><h3>Fitness Age <span class="pill ok">▼ 1 this year</span></h3>
     <div style="display:flex;align-items:flex-end;justify-content:space-between">
-      <div><div class="n" style="font:600 72px/0.9 Outfit;color:${C.good}">39</div><div style="font:500 14px Inter;color:#A3ACBF;margin-top:8px"><b style="color:#EEF1F7">7 years younger</b> than your age</div></div>
+      <div><div class="n" style="font:600 72px/0.9 Outfit;color:${C.good}">39</div><div style="font:500 14px Inter;color:#B4BCCB;margin-top:8px"><b style="color:#EEF1F7">7 years younger</b> than your age</div></div>
       ${spark([42, 41.6, 41.4, 41, 40.6, 40.4, 40, 39.8, 39.5, 39.3, 39.1, 39], {w: 120, h: 70, color: C.good})}</div>
     <div class="agebar"><div class="mk fit" style="left:${(39 - 20) / 50 * 100}%"><span>YOU 39</span></div><div class="mk real" style="left:${(46 - 20) / 50 * 100}%"><span>AGE 46</span></div></div></div>
   <div class="card"><h3>Biggest lever</h3><div class="lever">

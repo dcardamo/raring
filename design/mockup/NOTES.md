@@ -24,6 +24,11 @@ color says how it's going. The `language` screen shows it.
   the body map, sets per muscle and the weekly heatmap.
 - **Ink:** everything else. Charts without a verdict, numbers, selected
   controls and primary buttons are white on the dark ink, not a hue.
+- **Contrast:** all text is at least 4.5:1 against the surface it sits on
+  (3:1 for large text). The grays are `#B4BCCB` for secondary and `#8E98AC`
+  for tertiary text; the old `#69728A` measured under 3:1 on chips and tiles.
+  Text on a colored fill is black or white, whichever reads better.
+  `node design/mockup/contrast.mjs` checks every screen.
 - **Glow** stays only behind Today, Sleep, Training and Health heroes,
   faintly, in the status color.
 

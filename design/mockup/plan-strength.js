@@ -78,6 +78,9 @@ function bodyMap(sex, sets, {w = 220, max = 12} = {}) {
     ${muscles}<g transform="matrix(-1 0 0 1 100 0)">${muscles}</g></g>`;
   return `<svg class="body" width="${w}" height="${(w * 204 / 214).toFixed(0)}" viewBox="0 0 214 204" role="img" aria-label="Muscles worked">${fig(front, 0)}${fig(rear, 114)}</svg>`;
 }
+// Black or white text, whichever reads better on a fill; one of them always clears 4.5:1.
+const lum = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255).map(x => x <= .03928 ? x / 12.92 : ((x + .055) / 1.055) ** 2.4).reduce((a, x, i) => a + x * [.2126, .7152, .0722][i], 0);
+const onFill = h => 1.05 / (lum(h) + .05) >= (lum(h) + .05) / .05 ? "#FFFFFF" : "#000000";
 const amountKey = (max, label = "sets") => `<div class="akey"><span class="n">0</span><i style="background:linear-gradient(90deg,#353C4C,#1F3557 12%,${C.amount})"></i><span class="n">${max}+ ${label}</span></div>`;
 
 /* ---------- Weekly plan ---------- */
@@ -341,15 +344,15 @@ function trendChart(W, H) {
   const {w, r} = SQUAT, lo = 80, hi = 105, pl = 30, pb = 20, X = i => pl + 6 + i * (W - pl - 14) / (w.length - 1), Y = v => 8 + (hi - v) / (hi - lo) * (H - pb - 14);
   const pts = w.map((v, i) => [X(i), Y(v)]);
   let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;max-width:100%;height:auto"><defs><linearGradient id="trf${W}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E4E8F0" stop-opacity=".12"/><stop offset="1" stop-color="#E4E8F0" stop-opacity="0"/></linearGradient></defs>`;
-  [80, 90, 100].forEach(v => s += `<line x1="${pl}" x2="${W}" y1="${Y(v)}" y2="${Y(v)}" stroke="rgba(255,255,255,.06)"/><text x="0" y="${Y(v) + 4}" fill="#69728A" font-family="Outfit" font-size="11">${v}</text>`);
+  [80, 90, 100].forEach(v => s += `<line x1="${pl}" x2="${W}" y1="${Y(v)}" y2="${Y(v)}" stroke="rgba(255,255,255,.06)"/><text x="0" y="${Y(v) + 4}" fill="#8E98AC" font-family="Outfit" font-size="11">${v}</text>`);
   const d = smooth(pts);
   s += `<path d="${d}L${X(w.length - 1)},${H - pb}L${X(0)},${H - pb}Z" fill="url(#trf${W})"/><path d="${d}" fill="none" stroke="${C.ink}" stroke-width="2.2" stroke-linecap="round"/>`;
   pts.forEach(([x, y], i) => {
     const lastPt = i === w.length - 1;
     s += lastPt ? `<circle cx="${x}" cy="${y}" r="6.5" fill="${C.good}" stroke="#0B0F1A" stroke-width="3"/>` : `<circle cx="${x}" cy="${y}" r="3" fill="#0B0F1A" stroke="${C.ink}" stroke-width="2"/>`;
-    if (r[i] < 5) s += `<text x="${x}" y="${y + 18}" fill="#69728A" font-family="Outfit" font-size="10" text-anchor="middle">×${r[i]}</text>`;
+    if (r[i] < 5) s += `<text x="${x}" y="${y + 18}" fill="#8E98AC" font-family="Outfit" font-size="10" text-anchor="middle">×${r[i]}</text>`;
   });
-  [["Jul", 0], ["Sep", 5], ["Oct", 10]].forEach(([l, i]) => s += `<text x="${X(i)}" y="${H - 3}" fill="#69728A" font-family="Inter" font-size="11" text-anchor="middle">${l}</text>`);
+  [["Jul", 0], ["Sep", 5], ["Oct", 10]].forEach(([l, i]) => s += `<text x="${X(i)}" y="${H - 3}" fill="#8E98AC" font-family="Inter" font-size="11" text-anchor="middle">${l}</text>`);
   return s + "</svg>";
 }
 
@@ -360,7 +363,7 @@ function heat() {
   const r = rng(11), weeks = ["4 Aug", "", "", "", "1 Sep", "", "", "", "29 Sep", "", "", "Now"];
   let s = `<div class="heat"><span></span>${weeks.map(w => `<small>${w}</small>`).join("")}`;
   MUSCLES.forEach(([m, v, avg]) => {
-    s += `<span>${m}</span>` + weeks.map((_, i) => { const x = i === 11 ? v : i === 5 ? Math.round(avg * .3) : Math.max(0, Math.round(avg + (r() - .5) * 5)); return `<i class="n" style="background:${amountColor(x, 12)}">${x}</i>`; }).join("");
+    s += `<span>${m}</span>` + weeks.map((_, i) => { const x = i === 11 ? v : i === 5 ? Math.round(avg * .3) : Math.max(0, Math.round(avg + (r() - .5) * 5)); return `<i class="n" style="background:${amountColor(x, 12)};color:${onFill(amountColor(x, 12))}">${x}</i>`; }).join("");
   });
   return s + "</div>";
 }
@@ -393,7 +396,7 @@ function strengthHistory() {
 
 function strengthCard() {
   return `<div class="card tap" data-go="strength-history"><h3>Strength · this week <span class="pill ok">${ico.star}1 record</span></h3>
-    <div class="st-sum"><div><div class="big n">29</div><div class="small" style="color:#A3ACBF">sets · 2 sessions</div></div>${bodyMap("female", WEEK, {w: 150})}</div></div>`;
+    <div class="st-sum"><div><div class="big n">29</div><div class="small" style="color:#B4BCCB">sets · 2 sessions</div></div>${bodyMap("female", WEEK, {w: 150})}</div></div>`;
 }
 
 /* ---------- Strength intro ---------- */
@@ -401,12 +404,12 @@ function introArt(step) {
   if (step === 1) return `<svg width="220" height="190" viewBox="0 0 220 190"><rect x="80" y="2" width="60" height="34" rx="10" fill="#1A2030"/><rect x="80" y="154" width="60" height="34" rx="10" fill="#1A2030"/>
     <circle cx="110" cy="95" r="70" fill="#121826" stroke="#2A3142" stroke-width="6"/><rect x="178" y="118" width="8" height="22" rx="3" fill="${C.ink}"/><rect x="178" y="58" width="8" height="18" rx="3" fill="#2A3142"/><rect x="34" y="70" width="8" height="18" rx="3" fill="#2A3142"/>
     <circle cx="182" cy="129" r="17" fill="none" stroke="${C.ink}" stroke-opacity=".35" stroke-width="2"/><text x="205" y="160" fill="${C.ink}" font-family="Inter" font-size="12" font-weight="600" text-anchor="middle">Lap</text>
-    <text x="110" y="70" fill="#69728A" font-family="Inter" font-size="11" font-weight="600" letter-spacing="1.5" text-anchor="middle">SET 2</text><text x="110" y="112" fill="${C.ink}" font-family="Outfit" font-size="44" font-weight="600" text-anchor="middle">10</text><text x="110" y="132" fill="#A3ACBF" font-family="Inter" font-size="12" text-anchor="middle">reps · 60 kg</text></svg>`;
+    <text x="110" y="70" fill="#8E98AC" font-family="Inter" font-size="11" font-weight="600" letter-spacing="1.5" text-anchor="middle">SET 2</text><text x="110" y="112" fill="${C.ink}" font-family="Outfit" font-size="44" font-weight="600" text-anchor="middle">10</text><text x="110" y="132" fill="#B4BCCB" font-family="Inter" font-size="12" text-anchor="middle">reps · 60 kg</text></svg>`;
   if (step === 2) return `<svg width="240" height="170" viewBox="0 0 240 170">${[[8, 1], [8, 1], [0, 2], [8, 1]].map(([r, k], i) => `<rect x="${30 + i * 50}" y="${120 - (r ? r * 11 : 4)}" width="34" height="${r ? r * 11 : 4}" rx="7" fill="${k === 2 ? C.fair : "rgba(228,232,240,.75)"}"/><text x="${47 + i * 50}" y="${112 - (r ? r * 11 : 4)}" fill="${k === 2 ? C.fair : C.ink}" font-family="Outfit" font-size="15" font-weight="600" text-anchor="middle">${r}</text>`).join("")}
     <line x1="20" x2="220" y1="122" y2="122" stroke="rgba(255,255,255,.1)"/><circle cx="147" cy="150" r="13" fill="${C.fair}"/><path d="M147 143v8M147 155h.01" stroke="#0B0F1A" stroke-width="2.4" stroke-linecap="round"/></svg>`;
   return `<svg width="250" height="150" viewBox="0 0 250 150"><rect x="14" y="30" width="54" height="94" rx="12" fill="#121826" stroke="#2A3142" stroke-width="3"/><rect x="24" y="48" width="34" height="6" rx="3" fill="${C.ink}"/><rect x="24" y="60" width="26" height="6" rx="3" fill="#2A3142"/><rect x="24" y="72" width="30" height="6" rx="3" fill="#2A3142"/>
-    <path d="M78 77h22" stroke="#69728A" stroke-width="2" stroke-dasharray="3 4"/><rect x="104" y="44" width="62" height="62" rx="14" fill="#121826" stroke="#2A3142" stroke-width="3"/><text x="135" y="68" fill="#69728A" font-family="Inter" font-size="10" font-weight="600" text-anchor="middle">SAT</text><text x="135" y="94" fill="${C.ink}" font-family="Outfit" font-size="26" font-weight="600" text-anchor="middle">18</text>
-    <path d="M172 77h22" stroke="#69728A" stroke-width="2" stroke-dasharray="3 4"/><circle cx="220" cy="77" r="24" fill="#121826" stroke="#2A3142" stroke-width="4"/><path d="M211 77h18M214 72v10M226 72v10" stroke="${C.ink}" stroke-width="2.4" stroke-linecap="round"/></svg>`;
+    <path d="M78 77h22" stroke="#8E98AC" stroke-width="2" stroke-dasharray="3 4"/><rect x="104" y="44" width="62" height="62" rx="14" fill="#121826" stroke="#2A3142" stroke-width="3"/><text x="135" y="68" fill="#8E98AC" font-family="Inter" font-size="10" font-weight="600" text-anchor="middle">SAT</text><text x="135" y="94" fill="${C.ink}" font-family="Outfit" font-size="26" font-weight="600" text-anchor="middle">18</text>
+    <path d="M172 77h22" stroke="#8E98AC" stroke-width="2" stroke-dasharray="3 4"/><circle cx="220" cy="77" r="24" fill="#121826" stroke="#2A3142" stroke-width="4"/><path d="M211 77h18M214 72v10M226 72v10" stroke="${C.ink}" stroke-width="2.4" stroke-linecap="round"/></svg>`;
 }
 const INTRO = [
   ["Lift with your watch", "Start a Strength activity. Press lap at the end of each set. Your watch counts the reps."],
@@ -461,7 +464,7 @@ function widget() {
         <div class="wd-r"><b>Ready to push</b><div class="wd-sl"><span class="moon">${ico.moon}</span><div><span>Asleep by</span><b class="n">22:50</b></div></div><small>Updated 06:58</small></div></div>
       <div class="wd sm"><div class="dial">${arc({size: 96, value: 82, color: C.good, stroke: 9})}<div class="dial-c"><b class="n" style="font-size:30px">82</b><em style="color:${C.good}">High</em></div></div><div class="wd-b">${ico.moon}<b class="n">22:50</b></div></div>
       <div class="wd sm eve"><div class="wd-moon">${ico.moon}</div><b class="n">22:50</b><span>Asleep by</span><div class="wd-b"><i style="background:${C.good}"></i><b class="n">82</b><small>today</small></div></div>
-      <div class="wd sm wait"><div class="dial">${arc({size: 96, value: 0, color: C.ink, stroke: 9})}<div class="dial-c"><b class="n" style="font-size:26px;color:#69728A">—</b></div></div><div class="wd-b">${ico.sync}<small>Waiting for Garmin</small></div></div>
+      <div class="wd sm wait"><div class="dial">${arc({size: 96, value: 0, color: C.ink, stroke: 9})}<div class="dial-c"><b class="n" style="font-size:26px;color:#8E98AC">—</b></div></div><div class="wd-b">${ico.sync}<small>Waiting for Garmin</small></div></div>
       <div class="apps4">${icon("#2A3350")}${icon("#33304A")}<div class="happ"><img src="../../site/assets/icon.svg" width="54" height="54" alt=""><span>Raring</span></div>${icon("#283A44")}</div>
     </div>
     <div class="dock"><div class="dk">${["#2B3350", "#33304A", "#283A44", "#3A2F3A"].map(c => `<i style="background:${c}"></i>`).join("")}</div><div class="hsearch">${ico.search}</div></div>
@@ -484,7 +487,7 @@ function language() {
       ${zoneBar([3.2, 9.75, 18.3, 17.5, 3.5])}</div>
     <div class="card"><h3>Amount</h3><p class="lp">How much, with no judgement. One blue, faint to strong.</p>
       ${amountKey(12)}<div class="lbodies">${bodyMap("female", WEEK, {w: 150})}${bodyMap("male", WEEK, {w: 150})}</div></div>
-    <div class="card"><h3>Ink</h3><p class="lp">Everything else: numbers, charts without a verdict, controls.</p>
+    <div class="card"><h3>Ink</h3><p class="lp">Everything else: numbers, charts without a verdict, controls. Text is at least 4.5:1 on every surface.</p>
       <div class="wk" style="height:80px">${[["M", 0], ["T", 95], ["W", 320], ["T", 186]].map(([d, v], i) => `<div>${v ? `<b>${v}</b>` : ""}<i style="height:${Math.max(v / 340 * 56, 4)}px;background:${i === 3 ? C.ink : "rgba(228,232,240,.30)"}"></i><span>${d}</span></div>`).join("")}</div>
       <div class="lbtns"><button class="btn primary sm">Primary</button><button class="btn sm">Secondary</button><button class="btn sm ghost">Quiet</button></div></div>
     <div class="card"><h3>Progress</h3><p class="lp">Partial credit. The bar turns amber when behind pace, green when done.</p>
