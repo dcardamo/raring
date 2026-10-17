@@ -13,3 +13,4 @@ garmin_tokens.json
 *.keystore
 # Private research notes (name other apps; the repo is public).
 /.research/
+/app/.android-user/
