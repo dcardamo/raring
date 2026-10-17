@@ -249,6 +249,26 @@ async fn sync_now(app: tauri::AppHandle) -> Result<AppStatus, String> {
 }
 
 #[tauri::command]
+fn open_garmin_connect(app: tauri::AppHandle) -> bool {
+    #[cfg(target_os = "android")]
+    {
+        #[derive(Deserialize)]
+        struct Response {
+            launched: bool,
+        }
+        return vault(&app)
+            .0
+            .run_mobile_plugin::<Response>("openGarminConnect", serde_json::json!({}))
+            .is_ok_and(|r| r.launched);
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = app;
+        false
+    }
+}
+
+#[tauri::command]
 fn request_notification_permission(app: tauri::AppHandle) -> Result<bool, String> {
     #[cfg(target_os = "android")]
     {
@@ -367,6 +387,7 @@ pub fn run() {
                     sync_now,
                     begin_sign_in,
                     sign_out,
+                    open_garmin_connect,
                     request_notification_permission,
                     get_settings,
                     set_settings,
@@ -386,6 +407,7 @@ pub fn run() {
                     sync_now,
                     begin_sign_in,
                     sign_out,
+                    open_garmin_connect,
                     request_notification_permission,
                     get_settings,
                     set_settings

@@ -15,20 +15,6 @@ availability on every account or watch.
 
 ## Now
 
-### 2. Watch sync freshness
-
-Raring is only as fresh as Garmin Connect's last upload from the watch.
-
-- Verified: `/device-service/deviceregistration/devices` lists devices and
-  `/device-service/deviceservice/user-device/{deviceId}` returns
-  `lastUploadTimestamp`.
-- Show "Watch synced 2 h ago" quietly in the Today header. When it's stale
-  (for example older than 6 h while awake, or no sleep upload by mid-morning),
-  show a gentle card: "Open Garmin Connect to sync your watch", which
-  deep-links to Connect when installed.
-- Use the device's capabilities to explain missing metrics ("Your watch
-  doesn't record skin temperature") instead of empty tiles.
-
 ### 3. Sleep rhythm and bedtime coaching
 
 Extend Sleep and the shared Tonight's sleep card, not a new screen. The
@@ -339,6 +325,26 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **2. Watch sync freshness** (commit "Show watch upload freshness and missing
+  capabilities"). Verified read-only on a real account:
+  `/device-service/deviceregistration/devices` returned an array of five
+  registrations; exactly one had `primaryActivityTrackerIndicator: true`, with
+  explicit `sleepSkinTemperatureCapable`, `hrvStatusCapable`,
+  `sleepScoreCapable` and `trainingReadinessCapable` booleans.
+  `/device-service/deviceservice/user-device/{deviceId}` returned an object
+  with numeric epoch-millisecond `lastUploadTimestamp` and
+  `lastDownloadTimestamp` (some registrations had null upload), plus `deviceId`,
+  `userId`, `deviceStatus`, `applicationId` and `applicationVersionId`.
+  Scrubbed, synthetic-valued response-shape fixtures are in
+  `crates/core/tests/fixtures/`. Today distinguishes watch upload from Raring's
+  own fetch, offers an Android Connect launch with plain-guidance fallback, and
+  explains unsupported missing metrics only for explicit false capabilities.
+  Capture used 30 requests (profile, 19 daily/activity kinds, four activity
+  details, list and five details); a budget-2 live sync stored both device
+  responses and Today showed a watch upload time. Across 32 reads there were
+  no 429 or auth failures. Phone/watch Connect launch with the real installed
+  app remains to verify.
 
 - **1. Full history backfill** (commit "Download the whole Garmin history
   in the background"). After the per-day sync of the last 90 days, each run

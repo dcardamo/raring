@@ -2,6 +2,7 @@ package app.raring
 
 import android.Manifest
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.os.Build
 import android.content.Intent
 import android.webkit.WebView
@@ -84,6 +85,16 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
                 else invoke.reject("sync pending — try again later")
             } catch (e: Exception) { invoke.reject("sync failed — try again", e) }
         }
+    }
+    @Command fun openGarminConnect(invoke: Invoke) {
+        val intent = activity.packageManager.getLaunchIntentForPackage("com.garmin.android.apps.connectmobile")
+        val launched = if (intent == null) false else try {
+            activity.startActivity(intent)
+            true
+        } catch (_: ActivityNotFoundException) {
+            false
+        }
+        invoke.resolve(JSObject().apply { put("launched", launched) })
     }
     @Command fun requestNotificationPermission(invoke: Invoke) {
         if (Build.VERSION.SDK_INT < 33 || getPermissionState("notifications") == PermissionState.GRANTED) {

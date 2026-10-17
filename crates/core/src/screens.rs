@@ -1,7 +1,8 @@
 //! Tolerant projections of raw Garmin responses. Unknown and absent fields stay absent.
-use crate::{rules, store::Store, view::*};
-use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, Timelike};
+use crate::{rules, store::Store, sync::selected_watch, view::*};
+use chrono::{DateTime, Datelike, Duration, Local, NaiveDate, NaiveDateTime, Timelike, Utc};
 use serde_json::Value;
+use std::collections::BTreeMap;
 
 fn at<'a>(v: &'a Value, keys: &[&str]) -> &'a Value {
     keys.iter().fold(v, |v, k| &v[*k])
@@ -311,7 +312,10 @@ fn label(v: Option<String>) -> String {
     let code = code
         .rsplit_once('_')
         .filter(|(prefix, suffix)| {
-            !prefix.is_empty() && prefix.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_')
+            !prefix.is_empty()
+                && prefix
+                    .chars()
+                    .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_')
                 && !suffix.is_empty()
                 && suffix.chars().all(|c| c.is_ascii_digit())
         })
@@ -334,18 +338,27 @@ fn label(v: Option<String>) -> String {
 fn device(v: &Value) -> &Value {
     v.as_object()
         .and_then(|map| {
-            map.values().find(|value| value["primaryTrainingDevice"].as_bool() == Some(true))
+            map.values()
+                .find(|value| value["primaryTrainingDevice"].as_bool() == Some(true))
                 .or_else(|| map.values().find(|value| value.is_object()))
         })
         .unwrap_or(&Value::Null)
 }
 fn training_device(v: &Value) -> &Value {
     let nested = &v["mostRecentTrainingStatus"]["latestTrainingStatusData"];
-    device(if nested.is_object() { nested } else { &v["latestTrainingStatusData"] })
+    device(if nested.is_object() {
+        nested
+    } else {
+        &v["latestTrainingStatusData"]
+    })
 }
 fn load_device(v: &Value) -> &Value {
     let nested = &v["mostRecentTrainingLoadBalance"]["metricsTrainingLoadBalanceDTOMap"];
-    device(if nested.is_object() { nested } else { &v["metricsTrainingLoadBalanceDTOMap"] })
+    device(if nested.is_object() {
+        nested
+    } else {
+        &v["metricsTrainingLoadBalanceDTOMap"]
+    })
 }
 fn ratio(v: &Value) -> Option<f64> {
     num(v, &[&["acuteChronicWorkloadRatio"]]).or_else(|| {
@@ -846,12 +859,177 @@ pub fn current_date(store: &Store, now: NaiveDateTime) -> NaiveDate {
         today
     }
 }
+fn watch_info(store: &Store) -> (Value, Option<DateTime<Utc>>) {
+    let list = store.get("devices", "me").unwrap_or(Value::Null);
+    let watch = selected_watch(&list).cloned().unwrap_or(Value::Null);
+    let detail = store
+        .get("device_detail", "selected")
+        .unwrap_or(Value::Null);
+    let matching = watch["deviceId"]
+        .as_u64()
+        .is_some_and(|id| detail["deviceId"].as_u64() == Some(id));
+    let uploaded = matching
+        .then(|| detail["lastUploadTimestamp"].as_i64())
+        .flatten()
+        .and_then(DateTime::from_timestamp_millis);
+    (watch, uploaded)
+}
+
+fn missing_metric_reasons(
+    watch: &Value,
+    s: &Value,
+    r: &Value,
+    h: &Value,
+) -> BTreeMap<String, String> {
+    let mut reasons = BTreeMap::new();
+    for (key, field, missing, reason) in [
+        (
+            "sleep",
+            "sleepScoreCapable",
+            sscore(s).is_none(),
+            "Your watch doesn't record sleep scores",
+        ),
+        (
+            "readiness",
+            "trainingReadinessCapable",
+            current_rscore(r).is_none(),
+            "Your watch doesn't record training readiness",
+        ),
+        (
+            "hrv",
+            "hrvStatusCapable",
+            num(hrv(h), &[&["lastNightAvg"]]).is_none(),
+            "Your watch doesn't record HRV status",
+        ),
+        (
+            "skinTemp",
+            "sleepSkinTemperatureCapable",
+            num(
+                s,
+                &[
+                    &["avgSkinTempDeviationC"],
+                    &["dailySleepDTO", "skinTempDeviation"],
+                ],
+            )
+            .is_none(),
+            "Your watch doesn't record skin temperature",
+        ),
+    ] {
+        if missing && watch[field].as_bool() == Some(false) {
+            reasons.insert(key.into(), reason.into());
+        }
+    }
+    reasons
+}
+
+/// Missing sleep alone is not evidence of a missed upload. Require yesterday's
+/// recorded wake, a known old upload, and a mid-morning clock on today's date.
+fn sleep_upload_stale(
+    store: &Store,
+    date: &str,
+    now: DateTime<Local>,
+    uploaded: Option<DateTime<Utc>>,
+) -> bool {
+    if date != now.date_naive().to_string()
+        || now.hour() < 10
+        || store
+            .get("sleep", date)
+            .is_some_and(|s| num(sleep(&s), &[&["sleepTimeSeconds"]]).is_some_and(|n| n > 0.))
+    {
+        return false;
+    }
+    let Some(uploaded) = uploaded else {
+        return false;
+    };
+    let yesterday = store
+        .get("sleep", &date_sub(date, 1))
+        .unwrap_or(Value::Null);
+    let Some(wake) = local_time(sleep(&yesterday), &["sleepEndTimestampLocal"])
+        .and_then(|s| NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%.f").ok())
+    else {
+        return false;
+    };
+    let expected = now.date_naive().and_time(wake.time());
+    // A yesterday-only upload cannot explain today's missing night. Compare
+    // local wall-clock timestamps in the phone's timezone, including DST.
+    now.naive_local() >= expected && uploaded.with_timezone(&Local).naive_local() < expected
+}
+
+#[cfg(test)]
+mod watch_tests {
+    use super::*;
+    use chrono::TimeZone;
+    use serde_json::json;
+
+    #[test]
+    fn absent_sleep_only_signals_stale_after_expected_wake_and_old_upload() {
+        let store = Store::open(":memory:").unwrap();
+        let now = Local
+            .with_ymd_and_hms(2025, 2, 4, 11, 0, 0)
+            .single()
+            .unwrap();
+        let yesterday = (now.date_naive() - Duration::days(1)).to_string();
+        let date = now.date_naive().to_string();
+        store
+            .put(
+                "sleep",
+                &yesterday,
+                "synthetic",
+                &json!({
+                    "dailySleepDTO": {"sleepEndTimestampLocal": format!("{yesterday}T07:20:00")}
+                }),
+            )
+            .unwrap();
+        let local = |hour| {
+            Local
+                .with_ymd_and_hms(2025, 2, 4, hour, 0, 0)
+                .single()
+                .unwrap()
+                .with_timezone(&Utc)
+        };
+        assert!(sleep_upload_stale(&store, &date, now, Some(local(6))));
+        assert!(!sleep_upload_stale(&store, &date, now, Some(local(8))));
+        assert!(!sleep_upload_stale(&store, &date, now, None));
+        assert!(!sleep_upload_stale(
+            &store,
+            &date,
+            now - Duration::hours(2),
+            Some(local(6))
+        ));
+        store
+            .put(
+                "sleep",
+                &date,
+                "synthetic",
+                &json!({"dailySleepDTO":{"sleepTimeSeconds":27000}}),
+            )
+            .unwrap();
+        assert!(!sleep_upload_stale(&store, &date, now, Some(local(6))));
+    }
+}
+
 pub fn today(store: &Store, date: &str) -> TodayView {
     let r = store.get("readiness", date).unwrap_or(Value::Null);
     let s = store.get("sleep", date).unwrap_or(Value::Null);
     let t = store.get("training", date).unwrap_or(Value::Null);
     let h = store.get("hrv", date).unwrap_or(Value::Null);
     let hs = hrv(&h);
+    let (watch, uploaded) = watch_info(store);
+    let mut missing_metric_reasons = missing_metric_reasons(&watch, &s, &r, &h);
+    // Before noon Today can still show yesterday's recorded night; check the
+    // current calendar day's missing upload rather than the displayed day.
+    let watch_sleep_upload_stale = sleep_upload_stale(
+        store,
+        &Local::now().date_naive().to_string(),
+        Local::now(),
+        uploaded,
+    );
+    if watch_sleep_upload_stale && !missing_metric_reasons.contains_key("sleep") {
+        missing_metric_reasons.insert(
+            "sleep".into(),
+            "Open Garmin Connect to sync your watch".into(),
+        );
+    }
     let rl = string(readiness(&r), &[&["level"], &["trainingReadinessLevel"]]);
     let ratio = ratio(&t).map(|v| if v > 10. { v / 100. } else { v });
     let call = rl.as_deref().map(|s| rules::effort(s, ratio));
@@ -958,13 +1136,20 @@ pub fn today(store: &Store, date: &str) -> TodayView {
     let hstatus = string(hs, &[&["status"]]);
     TodayView {
         date: date.into(),
+        watch_last_upload: uploaded.map(|t| t.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)),
+        watch_sleep_upload_stale,
+        missing_metric_reasons,
         sleep_plan: sleep_plan(store, date),
         readiness_trend: (0..30)
             .rev()
             .map(|i| {
-                store
-                    .get("readiness", &date_sub(date, i))
-                    .and_then(|v| if i == 0 { current_rscore(&v) } else { rscore(&v) })
+                store.get("readiness", &date_sub(date, i)).and_then(|v| {
+                    if i == 0 {
+                        current_rscore(&v)
+                    } else {
+                        rscore(&v)
+                    }
+                })
             })
             .collect(),
         readiness: current_rscore(&r).map(|v| {
@@ -1363,7 +1548,10 @@ pub fn training(store: &Store, date: &str) -> TrainingView {
             )
         }),
         status: status.clone().map(|s| label(Some(s))),
-        status_tone: status.as_ref().map(|s| rules::level(&label(Some(s.clone())))).unwrap_or(Tone::Neutral),
+        status_tone: status
+            .as_ref()
+            .map(|s| rules::level(&label(Some(s.clone()))))
+            .unwrap_or(Tone::Neutral),
         headline: match (load, band(&v)) {
             (Some(amount), Some([lo, _])) if amount < lo => "Room to build".into(),
             (Some(amount), Some([_, hi])) if amount > hi => "Load high".into(),
@@ -1405,13 +1593,12 @@ pub fn training(store: &Store, date: &str) -> TrainingView {
         hill_score: store
             .get("hill", date)
             .and_then(|v| num(&v, &[&["overallScore"], &["score"]])),
-        running_tolerance_km: store
-            .get("tolerance", date)
-            .and_then(|v| {
-                // The daily endpoint returns an array and reports acuteTolerance in metres.
-                num(first(&v), &[&["acuteTolerance"]]).map(|metres| metres / 1000.)
-                    .or_else(|| num(&v, &[&["runningTolerance"], &["tolerance"]]))
-            }),
+        running_tolerance_km: store.get("tolerance", date).and_then(|v| {
+            // The daily endpoint returns an array and reports acuteTolerance in metres.
+            num(first(&v), &[&["acuteTolerance"]])
+                .map(|metres| metres / 1000.)
+                .or_else(|| num(&v, &[&["runningTolerance"], &["tolerance"]]))
+        }),
         workouts,
     }
 }
@@ -1453,7 +1640,9 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
         1.
     };
     let stride = points.len().div_ceil(300).max(1);
-    let last = points.last().filter(|_| !(points.len() - 1).is_multiple_of(stride));
+    let last = points
+        .last()
+        .filter(|_| !(points.len() - 1).is_multiple_of(stride));
     for p in points.iter().step_by(stride).chain(last) {
         let a = &p["metrics"];
         if let (Some(h), Some(t), Some(origin)) = (
@@ -1496,20 +1685,27 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
     ]
     .iter()
     .filter_map(|(key, label, unit, div)| {
-        v.number(&[*key]).filter(|v| *key != "distance" || *v > 0.).map(|v| Stat {
-            key: (*key).into(),
-            label: (*label).into(),
-            value: v / div,
-            unit: (*unit).into(),
-        })
+        v.number(&[*key])
+            .filter(|v| *key != "distance" || *v > 0.)
+            .map(|v| Stat {
+                key: (*key).into(),
+                label: (*label).into(),
+                value: v / div,
+                unit: (*unit).into(),
+            })
     })
     .collect();
     if summary.icon == Icon::Bike {
         if let Some(speed) = v.number(&["averageSpeed"]) {
-            stats.insert(2.min(stats.len()), Stat {
-                key: "speed".into(), label: "Avg speed".into(),
-                value: speed * 3.6, unit: "km/h".into(),
-            });
+            stats.insert(
+                2.min(stats.len()),
+                Stat {
+                    key: "speed".into(),
+                    label: "Avg speed".into(),
+                    value: speed * 3.6,
+                    unit: "km/h".into(),
+                },
+            );
         }
     } else if let Some(distance) = summary.distance_km.filter(|d| *d > 0.) {
         if summary.duration_s > 0. {

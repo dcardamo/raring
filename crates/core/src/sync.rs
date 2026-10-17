@@ -96,6 +96,9 @@ pub async fn sync(
         return report;
     }
     let name = name.unwrap_or_default();
+    // Watch freshness takes priority over backfill; a small budget must not
+    // leave today's upload time hidden behind activity history.
+    sync_watch(store, client, &mut report, budget, now).await;
     for i in 0..(if (4..=10).contains(&now_local.hour()) {
         2
     } else {
@@ -273,6 +276,117 @@ pub async fn sync(
     report.tokens = Some(client.tokens().await);
     report
 }
+/// The list is hourly, but the selected watch's upload time changes on every sync.
+/// Keep the raw list and raw detail separately so a changed selection cannot
+/// accidentally display the previous watch's timestamp.
+pub(crate) async fn sync_watch(
+    store: &Store,
+    client: &Client,
+    report: &mut SyncReport,
+    budget: usize,
+    now: DateTime<Utc>,
+) {
+    let due = store
+        .cursor("devices_checked")
+        .and_then(|s| s.parse::<i64>().ok())
+        .is_none_or(|t| t > now.timestamp() || now.timestamp() - t >= 3600);
+    if due {
+        match request(store, client, report, "devices", "", None, budget, now).await {
+            Some(Got::Value(list)) if list.is_array() => {
+                if store
+                    .put("devices", "me", &now.to_rfc3339(), &list)
+                    .is_err()
+                    || store
+                        .set_cursor("devices_checked", &now.timestamp().to_string())
+                        .is_err()
+                {
+                    report.error = Some("local storage failed".into());
+                    return;
+                }
+                report.stored += 1;
+            }
+            Some(Got::Value(_)) => {
+                report.data_failures += 1;
+                let _ = store.set_cursor("retry:devices:", &(now.timestamp() + 3600).to_string());
+            }
+            Some(Got::Absent | Got::Later) | None => {}
+        }
+    }
+    let Some(id) = store
+        .get("devices", "me")
+        .and_then(|v| selected_watch_id(&v))
+    else {
+        return;
+    };
+    if let Some(Got::Value(detail)) = request(
+        store,
+        client,
+        report,
+        "device_detail",
+        &id,
+        None,
+        budget,
+        now,
+    )
+    .await
+    {
+        // Only a matching detail may replace the selected snapshot.
+        if detail["deviceId"]
+            .as_u64()
+            .is_some_and(|n| n.to_string() == id)
+        {
+            if store
+                .put("device_detail", "selected", &now.to_rfc3339(), &detail)
+                .is_err()
+            {
+                report.error = Some("local storage failed".into());
+            } else {
+                report.stored += 1;
+            }
+        } else {
+            report.data_failures += 1;
+        }
+    }
+}
+
+/// Never guess from an arbitrary accessory or a historical device. A primary
+/// tracker is authoritative; absent that, one capable watch is unambiguous.
+pub(crate) fn selected_watch(list: &Value) -> Option<&Value> {
+    let items = list.as_array()?;
+    let id = |v: &&Value| v["deviceId"].as_u64().filter(|n| *n > 0).is_some();
+    let primaries: Vec<_> = items
+        .iter()
+        .filter(id)
+        .filter(|v| v["primaryActivityTrackerIndicator"] == true)
+        .collect();
+    if primaries.len() == 1 {
+        return primaries.into_iter().next();
+    }
+    if !primaries.is_empty() {
+        return None;
+    }
+    let eligible: Vec<_> = items
+        .iter()
+        .filter(id)
+        .filter(|v| {
+            [
+                "sleepScoreCapable",
+                "hrvStatusCapable",
+                "trainingReadinessCapable",
+            ]
+            .iter()
+            .any(|field| v[*field] == true)
+        })
+        .collect();
+    (eligible.len() == 1).then(|| eligible[0])
+}
+
+fn selected_watch_id(list: &Value) -> Option<String> {
+    selected_watch(list)?["deviceId"]
+        .as_u64()
+        .map(|id| id.to_string())
+}
+
 enum Got {
     Value(Value),
     /// Garmin answered with no content.

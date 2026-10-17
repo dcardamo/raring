@@ -295,6 +295,25 @@ pub fn seed(store: &Store, day: NaiveDate) -> rusqlite::Result<()> {
         &format!("{day}T09:00:00Z"),
         &fixture["profile"],
     )?;
+    store.put(
+        "devices",
+        "me",
+        "synthetic",
+        &json!([
+            {"deviceId": 1001, "primaryActivityTrackerIndicator": true,
+             "sleepSkinTemperatureCapable": true, "hrvStatusCapable": true,
+             "trainingReadinessCapable": true, "sleepScoreCapable": true}
+        ]),
+    )?;
+    store.put(
+        "device_detail",
+        "selected",
+        "synthetic",
+        &json!({
+            "deviceId": 1001,
+            "lastUploadTimestamp": day.and_hms_opt(9, 0, 0).unwrap().and_utc().timestamp_millis()
+        }),
+    )?;
     for (id, name, kind, when, distance, seconds, load, zones) in [
         (
             WORKOUT_ID,

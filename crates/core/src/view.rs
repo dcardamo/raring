@@ -11,6 +11,7 @@
 //! day may not have synced yet. Screens hide what is missing.
 
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use ts_rs::TS;
 
 /// The color meaning shared by all screens: good is mint, fair amber,
@@ -252,6 +253,13 @@ pub struct FitnessAgeCard {
 pub struct TodayView {
     /// Local date, YYYY-MM-DD.
     pub date: String,
+    /// Selected watch's last Garmin Connect upload, UTC ISO 8601.
+    pub watch_last_upload: Option<String>,
+    /// True only when today's sleep is absent after a known wake time and
+    /// the watch has not uploaded since that expected wake.
+    pub watch_sleep_upload_stale: bool,
+    /// Missing metric keys and explanations; absent means capability unknown.
+    pub missing_metric_reasons: BTreeMap<String, String>,
     pub readiness: Option<Gauge>,
     /// Readiness scores for the last 30 days, oldest first (the Readiness
     /// detail chart).

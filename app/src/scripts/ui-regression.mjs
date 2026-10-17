@@ -16,6 +16,23 @@ try {
  const page=await browser.newPage({viewport:{width:390,height:844},hasTouch:true,isMobile:true});
  const errors=[];
  page.on('pageerror',e=>errors.push(e.message));
+ for(const width of [390,700,1100]){
+  const watch=await browser.newPage({viewport:{width,height:844}});
+  await watch.goto(`${url}/?fixture=stale#today`);
+  await watch.getByText('Open Garmin Connect to sync your watch',{exact:true}).waitFor();
+  await watch.getByText("Your watch doesn't record skin temperature",{exact:true}).waitFor();
+  await watch.screenshot({path:resolve(output,`watch-stale-${width}.png`)});
+  await watch.getByRole('button',{name:'Open Garmin Connect'}).click();
+  await watch.getByText('Open Garmin Connect on your phone, then sync your watch there.',{exact:true}).waitFor();
+  await watch.close();
+ }
+ const fresh=await browser.newPage({viewport:{width:390,height:844}});
+ await fresh.goto(`${url}/?fixture=fresh#today`);
+ await fresh.getByText('Watch synced 2 h ago',{exact:true}).waitFor();
+ assert.equal(await fresh.getByText('Open Garmin Connect to sync your watch',{exact:true}).count(),0);
+ await fresh.screenshot({path:resolve(output,'watch-fresh-390.png')});
+ await fresh.close();
+ console.log('Watch freshness, missing capability, Connect fallback at 390/700/1100: passed');
  const waitRoute=async(route)=>{
   await page.waitForURL(`${url}/#${route}`);
   await page.locator('h1').waitFor();
@@ -254,29 +271,29 @@ try {
  await live.clock.fastForward(30_000);
  assert.equal(await live.evaluate(()=>window.testBackend.syncs),3,'failed syncs do not retry every poll');
  await live.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();
- await live.locator('.sync-indicator').getByText('Sync delayed · Error: Synthetic offline error',{exact:true}).waitFor();
+ await live.locator('.sync-indicator').getByText('Raring sync delayed · Error: Synthetic offline error').waitFor();
  await live.clock.fastForward(30_000);
- assert.ok((await live.locator('.sync-indicator').textContent()).includes('Sync delayed'),'an unchanged cached success must not clear a newer failure');
+ assert.ok((await live.locator('.sync-indicator').textContent()).includes('Raring sync delayed'),'an unchanged cached success must not clear a newer failure');
  await live.evaluate(()=>{
   const s=window.testBackend;
   s.samples.status.lastSync=new Date(s.lastAttempt-1000).toISOString();
   window.dispatchEvent(new Event('raring:resume'));
  });
  await live.clock.fastForward(30_000);
- assert.ok((await live.locator('.sync-indicator').textContent()).includes('Sync delayed'),'a previously unseen success before the failed attempt must not clear its warning');
+ assert.ok((await live.locator('.sync-indicator').textContent()).includes('Raring sync delayed'),'a previously unseen success before the failed attempt must not clear its warning');
  await live.evaluate(()=>{
   const s=window.testBackend.samples.status;
   s.lastSync=new Date().toISOString();s.lastError='Synthetic partial sync error';
   window.dispatchEvent(new Event('raring:resume'));
  });
  await live.clock.fastForward(30_000);
- assert.ok((await live.locator('.sync-indicator').textContent()).includes('Sync delayed'),'partial syncs still show an error');
+ assert.ok((await live.locator('.sync-indicator').textContent()).includes('Raring sync delayed'),'partial syncs still show an error');
  await live.evaluate(()=>{
   const s=window.testBackend.samples.status;
   s.lastSync=new Date().toISOString();s.lastError=null;
   window.dispatchEvent(new Event('raring:resume'));
  });
- await live.locator('.sync-indicator').getByText(/^Last synced/).waitFor({timeout:5_000});
+ await live.locator('.sync-indicator').getByText('Watch upload time unavailable',{exact:true}).waitFor({timeout:5_000});
  assert.equal(await live.evaluate(()=>window.testBackend.syncs),3,'background recovery clears the warning without another foreground sync');
  // A late Today response must not overwrite the newly opened Sleep page.
  await live.evaluate(()=>{window.testBackend.holdToday=true;window.dispatchEvent(new Event('raring:resume'))});
@@ -378,9 +395,8 @@ try {
  await live.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();
  await live.locator('.sync-indicator').waitFor();
  await live.getByRole('button',{name:'Refresh',exact:true}).click();
- await live.locator('.sync-indicator').getByText(/^Last synced/).waitFor();
- const synced=await live.evaluate(()=>new Date(window.testBackend.samples.status.lastSync).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
- assert.ok((await live.locator('.sync-indicator').textContent()).includes('Last synced '+synced),'UTC sync instants render in the device timezone');
+ await live.locator('.sync-indicator').getByText('Watch upload time unavailable',{exact:true}).waitFor();
+ assert.ok(await live.evaluate(()=>window.testBackend.samples.status.lastSync!==null),'Raring refresh does not invent a watch upload time');
  await live.evaluate(()=>{window.testBackend.samples.health.lever.ageIfMet=36.23456789});
  await live.getByRole('navigation').getByRole('button',{name:'Health',exact:true}).click();
  await live.locator('.lever').waitFor();
