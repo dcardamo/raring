@@ -7,6 +7,7 @@ import type { Factor } from "./Factor";
 import type { FitnessAgeCard } from "./FitnessAgeCard";
 import type { Gauge } from "./Gauge";
 import type { HrvCard } from "./HrvCard";
+import type { PlanWeek } from "./PlanWeek";
 import type { Reconciliation } from "./Reconciliation";
 import type { SleepPlan } from "./SleepPlan";
 import type { StressCard } from "./StressCard";
@@ -52,4 +53,8 @@ callNote: string | null, bodyBattery: BodyBatteryCard, stress: StressCard, hrv: 
 /**
  * True on Mondays once the weekly check-in exists.
  */
-checkinReady: boolean, focus: TodayFocus, };
+checkinReady: boolean, focus: TodayFocus, 
+/**
+ * This week's plan; None until targets are set.
+ */
+plan: PlanWeek | null, };

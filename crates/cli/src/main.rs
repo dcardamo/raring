@@ -210,8 +210,12 @@ async fn main() -> Result<()> {
             // --at YYYY-MM-DDTHH:MM sets the clock, for checking Today's time-of-day phases.
             let now=match args.windows(2).find(|v|v[0]=="--at"){Some(v)=>Local.from_local_datetime(&chrono::NaiveDateTime::parse_from_str(&v[1],"%Y-%m-%dT%H:%M").context("--at YYYY-MM-DDTHH:MM")?).earliest().context("--at: no such local time")?,None=>now};
             let current=core.current_date(now);let date=args.windows(2).find(|v|v[0]=="--date").map(|v|v[1].as_str()).unwrap_or(&current);
-            match args.get(1).map(String::as_str){Some("today")=>show(&core.today_at(date,now))?,Some("sleep")=>show(&core.sleep(date))?,Some("training")=>show(&core.training(date))?,Some("health")=>show(&core.health(date))?,Some("checkin")=>show(&core.checkin(date))?,Some("workout")=>show(&core.workout(args.get(2).context("show workout ID")?))?,_=>bail!("show today|sleep|training|health|checkin|workout ID")}},
+            match args.get(1).map(String::as_str){Some("today")=>show(&core.today_at(date,now))?,Some("sleep")=>show(&core.sleep(date))?,Some("training")=>show(&core.training(date))?,Some("health")=>show(&core.health(date))?,Some("checkin")=>show(&core.checkin(date))?,Some("plan")=>show(&core.plan(date))?,Some("workout")=>show(&core.workout(args.get(2).context("show workout ID")?))?,_=>bail!("show today|sleep|training|health|checkin|plan|workout ID")}},
+        Some("set-plan")=>{let update=serde_json::from_str(args.get(1).context("set-plan JSON")?)?;core.set_plan(&core.current_date(now),&update)?;show(&core.plan(&core.current_date(now)))?;},
         Some("notifications")=>show(&core.notifications(now))?,
+        // One raw read-only request, unscrubbed: for checking an endpoint's shape locally.
+        Some("fetch")=>{let kind=args.get(1).context("fetch KIND [KEY]")?;let key=args.get(2).map(String::as_str).unwrap_or("");
+            let client=garmin::Client::new(read_tokens()?)?;let result=client.endpoint(kind,key,None).await;save_tokens(&client.tokens().await)?;show(&result?)?;},
         Some("capture")=>{let out=Path::new(args.windows(2).find(|a|a[0]=="--out").map(|a|a[1].as_str()).context("capture --out DIR")?).to_path_buf();
             fs::create_dir_all(&out)?;let client=garmin::Client::new(read_tokens()?)?;
             // Capture explicitly fetches; it is never called during tests or normal sync.
@@ -257,7 +261,7 @@ async fn main() -> Result<()> {
             save_tokens(&client.tokens().await)?;
             println!("Scrubbed capture at {}. Review it manually before sharing.",out.display());
         },
-        _=>bail!("usage: raring login [--import FILE] | sync [--budget N] | status | demo [--date YYYY-MM-DD] | show SCREEN [--date YYYY-MM-DD] [--at YYYY-MM-DDTHH:MM] | notifications | capture --out DIR")
+        _=>bail!("usage: raring login [--import FILE] | sync [--budget N] | status | demo [--date YYYY-MM-DD] | show SCREEN [--date YYYY-MM-DD] [--at YYYY-MM-DDTHH:MM] | set-plan JSON | notifications | fetch KIND [KEY] | capture --out DIR")
     }
     Ok(())
 }

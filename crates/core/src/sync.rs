@@ -195,12 +195,18 @@ pub async fn sync(
             }
         }
     }
+    if !report.rate_limited && report.error.is_none() {
+        sync_intensity_weeks(store, client, &mut report, today, budget, now).await;
+    }
     if !report.rate_limited && report.error.is_none() && report.requests < budget {
         // Scan newest-first on every run. A previous run may have exhausted its budget
         // after indexing a list but before retrieving its activity details.
         let cutoff = date(today - Duration::days(RECENT_DAYS - 1));
+        // The oldest day this run's freshly read pages list completely.
+        let mut listed_from: Option<NaiveDate> = None;
         for page in 0..20 {
             let key = (page * 20).to_string();
+            let before = report.stored;
             if !fetch(
                 store,
                 client,
@@ -219,6 +225,12 @@ pub async fn sync(
                 break;
             };
             let Some(items) = list.as_array() else { break };
+            // A page served from the cache (retry wait) says nothing new.
+            let fresh = report.stored > before && items.iter().all(|item| {
+                item["startTimeLocal"].as_str().and_then(day).is_some()
+                    && (item["activityId"].as_u64().is_some()
+                        || item["activityId"].as_str().is_some_and(|s| !s.is_empty()))
+            });
             let mut reached_old = false;
             for item in items {
                 if item["startTimeLocal"]
@@ -260,6 +272,26 @@ pub async fn sync(
                     break;
                 }
             }
+            if fresh {
+                listed_from = if items.len() < 20 {
+                    Some(floor())
+                } else if items.iter().any(|i| {
+                    i["startTimeLocal"]
+                        .as_str()
+                        .is_some_and(|d| d < cutoff.as_str())
+                }) {
+                    day(&cutoff)
+                } else {
+                    // The oldest listed day may continue on the next page.
+                    items
+                        .iter()
+                        .filter_map(|i| i["startTimeLocal"].as_str().and_then(day))
+                        .min()
+                        .map(|d| d + Duration::days(1))
+                };
+            } else if !fresh {
+                break;
+            }
             if reached_old
                 || items.len() < 20
                 || report.rate_limited
@@ -268,6 +300,9 @@ pub async fn sync(
             {
                 break;
             }
+        }
+        if let Some(from) = listed_from.filter(|from| *from <= today) {
+            mark_listed(store, from, today);
         }
     }
     if !report.rate_limited && report.error.is_none() && report.requests < budget {
@@ -403,6 +438,56 @@ pub(crate) async fn sync_watch(
         } else {
             report.data_failures += 1;
         }
+    }
+}
+
+/// Garmin's weekly intensity rows, read at most daily. Their dates mark where
+/// Garmin's intensity week starts, which can differ from the account's
+/// start-of-week setting.
+async fn sync_intensity_weeks(
+    store: &Store,
+    client: &Client,
+    report: &mut SyncReport,
+    today: NaiveDate,
+    budget: usize,
+    now: DateTime<Utc>,
+) {
+    let due = store
+        .cursor("intensity_weeks_checked")
+        .and_then(|s| s.parse::<i64>().ok())
+        .is_none_or(|t| t > now.timestamp() || now.timestamp() - t >= 86400);
+    if !due {
+        return;
+    }
+    let key = date(today);
+    let rows = match request(store, client, report, "intensity_weeks", &key, None, budget, now).await {
+        Some(Got::Value(v))
+            if v.as_array().is_some_and(|rows| {
+                rows.iter()
+                    .all(|r| r["calendarDate"].as_str().and_then(day).is_some())
+            }) =>
+        {
+            Some(v)
+        }
+        Some(Got::Value(_)) => {
+            report.data_failures += 1;
+            None
+        }
+        Some(Got::Absent) => None,
+        Some(Got::Later) | None => return,
+    };
+    if rows
+        .as_ref()
+        .is_some_and(|v| store.put("intensity_weeks", "me", &now.to_rfc3339(), v).is_err())
+        || store
+            .set_cursor("intensity_weeks_checked", &now.timestamp().to_string())
+            .is_err()
+    {
+        report.error = Some("local storage failed".into());
+        return;
+    }
+    if rows.is_some() {
+        report.stored += 1;
     }
 }
 
@@ -659,6 +744,35 @@ fn next_chunk(store: &Store, series: &Series, today: NaiveDate) -> Option<(Naive
         None if target < floor => None,
         None => Some(((target - width).max(floor), target)),
     }
+}
+/// Days whose activities the newest-first scan listed completely, as
+/// `listed:lo`/`listed:hi`. A new run extends the span when it reaches back
+/// into it; otherwise only its own span counts.
+fn mark_listed(store: &Store, from: NaiveDate, to: NaiveDate) {
+    let span = |k: &str| store.cursor(k).as_deref().and_then(day);
+    let lo = match (span("listed:lo"), span("listed:hi")) {
+        (Some(lo), Some(hi)) if from <= hi + Duration::days(1) => lo.min(from),
+        _ => from,
+    };
+    let _ = store.set_cursor("listed:lo", &date(lo));
+    let _ = store.set_cursor("listed:hi", &date(to));
+}
+/// Whether every day from `from` to `to` has a complete recent activity list.
+/// Legacy history cursors alone cannot distinguish absence from failed reads.
+pub fn activities_listed(store: &Store, from: NaiveDate, to: NaiveDate) -> bool {
+    let span = |lo: &str, hi: &str| {
+        Some((
+            store.cursor(lo).as_deref().and_then(day)?,
+            store.cursor(hi).as_deref().and_then(day)?,
+        ))
+    };
+    let spans: Vec<(NaiveDate, NaiveDate)> = [span("listed:lo", "listed:hi")]
+    .into_iter()
+    .flatten()
+    .collect();
+    from.iter_days()
+        .take_while(|d| *d <= to)
+        .all(|d| spans.iter().any(|(lo, hi)| (*lo..=*hi).contains(&d)))
 }
 fn mark_covered(store: &Store, name: &str, start: NaiveDate, end: NaiveDate) {
     let (lo, hi) =

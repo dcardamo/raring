@@ -60,24 +60,17 @@ From item 3, in priority order.
 
 ## Next
 
-### 7. Weekly plan, intensity minutes and goals
+### 7a. Weekly plan follow-ups
 
-Add a weekly plan to Today and the check-in, backed by Garmin's intensity
-minutes and goals: `/wellness-service/wellness/daily/im/{d}`,
-`/usersummary-service/stats/im/weekly/{start}/{end}` and
-`/goal-service/goal/user/effective/{d}`. Show the intensity-minutes ring on
-Health and in the check-in; it feeds the weekly focus and Fitness Age lever.
-
-- Targets: strength sessions, vigorous/intensity minutes (Garmin's goal by
-  default), Zone 2 minutes and asleep-on-time nights. Show partial credit,
-  planned rest days, the weekly check-in and week-over-week history. See
-  `design/mockup/` screens `plan`, `plan-setup` and `checkin`.
-- Decisions in `design/mockup/NOTES.md`: start the week on Garmin's setting;
-  follow Garmin's units. Pace uses elapsed training days (nights for sleep);
-  asleep-on-time means within 15 minutes of the suggested time, excluding
-  nights without a plan. History averages target completion capped at 100%
-  per target. Add Raring's pace, timing and completion math to the spec's
-  Rules section when this ships.
+- Check on a watch whose account starts the week on Sunday whether its own
+  intensity-minutes widget resets on Monday like Garmin's weekly rows.
+- The mockup's "Next up" strength workout card on the plan screen waits for
+  planned training (item 15) or the workout builder (item 22).
+- Offline help pages "How targets count" and "Rest days and paused weeks"
+  when the Help screen ships.
+- The shared `dateLabel` reads "Mon, 5 Oct" on Android's WebView (Chrome
+  124) but "Mon 5 Oct" in desktop browsers; build it by hand as `plan.ts`
+  does for week ranges.
 
 ### 8. Read-only strength view
 
@@ -144,7 +137,11 @@ Depends on item 1. The analysis Garmin's subscription charges for, free.
 ### 12. Export
 
 - Settings → Export: a zip of JSON (raw Garmin responses) plus CSVs of the
-  daily tables, through the Android share sheet.
+  daily tables, through the Android share sheet. Include the local settings
+  rows, notably the weekly plan's targets and paused weeks (settings key
+  `plan`, kept per week) and immutable prospective sleep-plan snapshots
+  (`sleep_plan:YYYY-MM-DD`, with night, dated bounds/source and capture times).
+  Offer importing them on a new phone.
 - Optional FIT originals for activities:
   `/download-service/files/activity/{id}`.
 
@@ -254,6 +251,59 @@ faces, screens, sensors and audio prompts stay in Connect.
 
 ## Done
 
+- **7. Weekly plan, intensity minutes and goals** (commit "Add the weekly plan
+  and intensity minutes"). A weekly plan on Today, its own screen and
+  setup (presets, four targets, rest days, pause, last week on these
+  targets), an intensity-minutes ring on Health and in the check-in, and a
+  plan card in the check-in with week-over-week changes. Targets live in the
+  core's settings store, versioned by week. Pace, asleep-on-time, Zone 2,
+  completion and history rules are in the spec. Asleep on time uses item 3's
+  shared sleep plan (`night`, `bedtimeStartAt`, `bedtimeAt`), captured
+  prospectively on live sync/open and never reconstructed from backfill.
+  Snapshot settings are immutable and included in the planned export. Intensity
+  minutes feed the weekly focus (Garmin's weekly goal first, then Fitness
+  Age's vigorous average). The week follows Garmin's intensity window, not
+  the start-of-week setting (evidence below). Sync adds one request a day
+  (weekly intensity rows); the user-settings and goals endpoints are not
+  called. Verification used 37 read-only requests (seven single reads and
+  one budget-30 sync), with no 429 or auth failures; the plan's intensity
+  total matched Garmin's weekly row. Covered by `crates/core/tests/weekly_plan.rs`
+  (pace, rest days, partial credit, capped history, paused weeks, per-week
+  targets, Garmin week start, midnight windows, daily sync of the rows) and
+  `plan_evidence.rs` (incomplete/verified-zero coverage, timer-only strength,
+  authoritative weekly intensity, immutable prospective sleep plans, no
+  pre-plan achievement history, honest summary states). The UI regression
+  script covers partial/unavailable states at phone, unfolded and desktop
+  widths, including known-only completion that must not read as all reached.
+  Existing databases need a new complete recent activity-list scan before
+  strength/Zone 2 can be judged; missing activity types or zone durations
+  remain unavailable. No additional Garmin requests are introduced by these
+  evidence fixes. Follow-up verification: 196 Rust tests, clippy, Svelte/TS
+  checks, 39 UI unit tests, browser regressions/build and the secret scan
+  pass. Partial/unavailable screenshots are retained at 390/700/1100 px in
+  `.data/screens/weekly-evidence-*`; emulator-5574 verified unknown activity
+  coverage, absent historical sleep evidence, pre-plan gaps and target saves,
+  then was shut down. No additional account calls for the corrections.
+  - Verified read-only on a real account (2026-10-17):
+    - `/usersummary-service/stats/im/weekly/{start}/{end}` returns an array of
+      `{calendarDate, moderateValue, vigorousValue, weeklyGoal}` (minutes),
+      one row per week, dated by its first day. The rows were dated Mondays
+      even with a Sunday start-of-week setting (user settings
+      `firstDayOfWeek`, device `startOfWeek`).
+    - `/wellness-service/wellness/daily/im/{d}` returns the day's
+      `moderateMinutes`/`vigorousMinutes` and the week so far
+      (`weeklyModerate`, `weeklyVigorous`, `weeklyTotal` = moderate + 2 ×
+      vigorous, `weekGoal`). Sunday carried the week that began the Monday
+      before; Monday reset to zero. The daily summary's
+      `moderateIntensityMinutes`, `vigorousIntensityMinutes` and
+      `intensityMinutesGoal` hold the same daily values, and their sums matched
+      the weekly rows for two full weeks, so Raring reads days from summaries.
+    - `/goal-service/goal/user/effective/{d}` returns
+      `[{goalType, goalValue}]`, including `INTENSITY_MINUTES`, equal to the
+      summary's `intensityMinutesGoal`; Raring doesn't need the request.
+    - So the plan week follows Garmin's intensity window, not the start-of-week
+      setting: totals match Garmin's weekly total. Whether the watch's own
+      intensity widget also resets on Monday is unconfirmed.
 - **4. Today that fits the time of day** (commit "Lead Today with the card
   that fits the time of day"). The hero (gauges, headline, chips and item
   6's reconciliation line) and the metric cards stay put; one advice card

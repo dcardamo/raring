@@ -4,7 +4,7 @@ import { createNavigation, normalizeRoute, routeTrail, tabs } from './navigation
 describe('routes', () => {
   it('accepts known routes and rejects invalid or malformed fragments', () => {
     expect(tabs).toEqual(['today', 'sleep', 'training', 'health']);
-    for (const route of [...tabs, 'readiness', 'checkin', 'settings', 'onboarding',
+    for (const route of [...tabs, 'readiness', 'checkin', 'plan', 'plan-setup', 'settings', 'onboarding',
       'workout/123_abc-2', ...['bodyBattery', 'stress', 'restingHr', 'hrv', 'respiration', 'spo2',
         'skinTemp', 'vo2max', 'endurance', 'hill', 'runningTolerance'].map(id => `metric/${id}`)]) {
       expect(normalizeRoute(`#${route}`)).toBe(route);
@@ -19,6 +19,8 @@ describe('routes', () => {
     expect(routeTrail('health', ['today', 'sleep'])).toEqual(['today', 'health']);
     expect(routeTrail('readiness', ['today', 'training'])).toEqual(['today', 'readiness']);
     expect(routeTrail('checkin')).toEqual(['today', 'checkin']);
+    expect(routeTrail('plan', ['today', 'health'])).toEqual(['today', 'plan']);
+    expect(routeTrail('plan-setup', ['today', 'checkin'])).toEqual(['today', 'plan', 'plan-setup']);
     expect(routeTrail('workout/7')).toEqual(['today', 'training', 'workout/7']);
     expect(routeTrail('workout/7', ['today'])).toEqual(['today', 'workout/7']);
     expect(routeTrail('workout/7', ['today', 'training'])).toEqual(['today', 'training', 'workout/7']);

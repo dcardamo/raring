@@ -189,6 +189,9 @@ pub fn seed(store: &Store, day: NaiveDate) -> rusqlite::Result<()> {
         } else {
             45 + days_ago % 22
         });
+        values["summary"]["moderateIntensityMinutes"] = json!([12, 30, 8, 0, 25, 18, 0][days_ago as usize % 7]);
+        values["summary"]["vigorousIntensityMinutes"] = json!([20, 14, 0, 0, 22, 6, 0][days_ago as usize % 7]);
+        values["summary"]["intensityMinutesGoal"] = json!(150);
         values["summary"]["bodyBatteryAtWakeTime"] = json!(if days_ago == 0 {
             87
         } else {

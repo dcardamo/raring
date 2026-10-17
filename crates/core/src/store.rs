@@ -91,6 +91,18 @@ impl Store {
             .map(|it| it.flatten().collect())
             .unwrap_or_default()
     }
+    /// Activities starting on local days `from` through `to` (YYYY-MM-DD), oldest first.
+    pub fn activities_between(&self, from: &str, to: &str) -> Vec<(String, String)> {
+        let db = self.db.lock().unwrap();
+        let Ok(mut stmt) = db.prepare(
+            "SELECT id,start_local FROM activities WHERE substr(start_local,1,10) BETWEEN ?1 AND ?2 ORDER BY replace(start_local, ' ', 'T')",
+        ) else {
+            return vec![];
+        };
+        stmt.query_map(params![from, to], |r| Ok((r.get(0)?, r.get(1)?)))
+            .map(|it| it.flatten().collect())
+            .unwrap_or_default()
+    }
     pub fn oldest_activity(&self) -> Option<String> {
         self.db
             .lock()
@@ -157,6 +169,14 @@ impl Store {
         let json = serde_json::to_string(settings)
             .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
         self.set_setting("settings", &json)
+    }
+    /// Prospective evidence is immutable: a later sync must not move a night's target.
+    pub fn insert_setting(&self, key: &str, value: &str) -> rusqlite::Result<()> {
+        self.db.lock().unwrap().execute(
+            "INSERT OR IGNORE INTO settings (key,value) VALUES (?1,?2)",
+            params![key, value],
+        )?;
+        Ok(())
     }
     pub fn cursor(&self, key: &str) -> Option<String> {
         self.db

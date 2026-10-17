@@ -17,8 +17,8 @@ The visual reference is [design/mockup](../design/mockup/): open
   and color. Text is a headline of a few words, labels and numbers. Anything
   longer sits behind a tap.
 - **Garmin's numbers.** Every metric is Garmin's. Raring's own math is
-  limited to fallback normal ranges, week-over-week changes, and the advice
-  rules below.
+  limited to fallback normal ranges, week-over-week changes, weekly plan
+  progress, and the advice rules below.
 - **Fast.** Opens instantly from local data and syncs in the background.
   Switching views draws the last data at once and refreshes it behind the
   scenes; the full-screen loading state is only for a first launch with no
@@ -126,6 +126,9 @@ optional after sign-in.
 - Vitals as five compact readings with units, Garmin Health Status when
   available, a range-status indicator and a count of recorded and comparable
   readings. Missing or uncalibrated data is neutral, never an all-clear.
+- **This week**: the weekly plan's targets as compact bars with "N/target"
+  and the days left, opening the plan. Before targets are set, a small card
+  invites setting them up.
 - Today's workouts with a heart-rate zone strip, and Fitness Age with its
   trend line. The weekly check-in card appears here on Mondays.
 
@@ -210,10 +213,41 @@ optional after sign-in.
   reach.
 - **Drivers**: VO2max, resting heart rate, BMI or body fat, and vigorous
   minutes as tiles with range bars.
+- **Intensity minutes**: this plan week's total as a ring against Garmin's
+  weekly goal, with moderate and vigorous minutes; it opens the weekly plan.
 - When two or more vitals are outside their personal ranges, an amber
   message suggests taking it easy and checking how you feel, without
   diagnosing an illness. A partially calibrated monitor reports only the
   readings it can compare.
+
+### Weekly plan
+
+Opened from Today's plan card. Phone, unfolded (two columns from 660 px) and
+desktop layouts follow `design/mockup/` screens `plan` and `plan-setup`.
+
+- **This week**: the week's dates, how many targets are on track ("3 of 4"),
+  the days left and which targets are behind. One line per target: an icon,
+  "N of target" in Garmin's units, a bar (ink on track, amber behind pace,
+  green when done) and a few words: the days that counted or what is left.
+  Partial credit shows for measured targets; incomplete evidence says why
+  instead of showing a failure. The summary's denominator includes all enabled
+  targets, while only measured targets count as reached or on track.
+- **Last 8 weeks**: one bar per week, the share of targets reached; a week
+  reaching every target is green, a paused week shows a pause mark, and a
+  week without a plan or measurable evidence is a gap, never zero. An asterisk
+  marks completion across known targets only; even 100% there isn't green
+  "All reached" while another target is unknown.
+- **Targets** (setup): start from a preset (Strength, Endurance, Sleep,
+  Custom) that sets all four targets, then adjust any of them: strength
+  sessions a week, intensity minutes (Garmin's weekly goal unless changed),
+  Zone 2 minutes and nights asleep on time; zero turns a target off. Pick
+  rest days, pause this week (travel or illness, left out of history), and
+  see last week measured against the current targets. Changes save at once
+  and apply from the current week; earlier weeks keep the targets they had.
+  "Last week on these targets" is explicitly a retrospective setup comparison,
+  not an achievement record for a week before setup.
+- Targets are a local setting in the core's own database, so every platform
+  gets them; nothing is sent to Garmin or anywhere else.
 
 ### Weekly check-in
 
@@ -223,7 +257,12 @@ chart with an arrow against the week before. VO2max and Fitness Age changes
 are called out. A timing card shows the week's bed and wake times, their
 earliest and latest, how many nights Garmin rated aligned, ahead or behind,
 and one timing focus. It is descriptive: no adherence score, streaks or
-claims that timing changed a score. It ends with one win and one focus for the
+claims that timing changed a score. An intensity card shows Garmin's weekly
+intensity minutes as a ring against Garmin's goal, with the moderate and
+vigorous split. Once targets are set, a plan card (mockup `checkin`) lists
+each target's result for the plan week that just ended, a check or amber dot,
+the change against the week before, and next week's targets and rest days
+with Keep and Change. It ends with one win and one focus for the
 coming week, a line each. Past check-ins stay in a list.
 
 ## Notifications
@@ -338,6 +377,11 @@ Sent by the phone itself.
   readings; the detail shows every reading. Colors follow Garmin's categories.
 - **Body Battery color**: good at 70 and above, fair from 30, poor below 30.
   Garmin rates no level, so only the display color is bucketed.
+- **Plan week**: Garmin's intensity-minutes week, taken from the dates of its
+  weekly intensity rows (Monday until they sync). Garmin's intensity week
+  can differ from the account's start-of-week setting; following
+  Garmin's window keeps the plan's intensity total equal to Garmin's weekly
+  total and lines up with the Monday check-in.
 - **Why sheets**: only Garmin's inputs, ratings and feedback, worst first.
   Readiness is *held back by* the factors Garmin rates Poor (Moderate ones
   when none is Poor and readiness isn't High or Prime) and *helped by* the
@@ -360,9 +404,69 @@ Sent by the phone itself.
   by" and "helping", never "because" or a cause Garmin didn't give. Numbers
   are Garmin's; the only arithmetic is hours from Garmin's recovery minutes
   and the existing 30-day VO2max change. No new scores, no medical claims.
+- **Plan progress**: intensity minutes are Garmin's weekly total for the
+  plan week: the daily summaries' moderate minutes plus twice the vigorous
+  ones (Garmin's own weighting), against the target or Garmin's weekly goal.
+  Strength counts activities whose Garmin type is strength training,
+  including timer-only sessions without recorded sets: missing set tracking
+  doesn't mean no workout happened. Zone 2
+  minutes sum each activity's seconds in heart-rate zone 2 from Garmin's
+  `hrTimeInZones`: Garmin's own zones for that activity, from zone 2's
+  `zoneLowBoundary` up to zone 3's, as set on the watch when it was recorded;
+  Raring never computes zones from heart-rate samples. Whole minutes,
+  rounded down.
+- **Evidence coverage**: strength and Zone 2 require a successfully fetched,
+  complete activity-list span covering the week through today (or all seven
+  days of a past week). A full pagination page proves only dates newer than
+  its oldest entry, since that date may continue on the next page; a short
+  page proves the list ended. Cached retry pages and malformed lists do not
+  extend coverage. Strength also requires a known Garmin type for every
+  indexed activity; missing details aren't a zero workout count. Zone 2
+  requires an explicit zone-2 duration for every indexed activity, or an
+  explicitly empty zone array (verified zero). Missing/null/malformed zones
+  remain unknown. No set or lap evidence is required to count strength.
+  Intensity needs numeric moderate and vigorous values for every elapsed day
+  through today, or Garmin's authoritative weekly row; future days aren't
+  required. Daily values take priority when complete, because they refresh
+  more frequently than weekly rows. Incomplete targets stay unavailable, not
+  Behind, and are excluded from completion. A fully listed empty week and
+  explicit zero summaries are measured zeros, not gaps. Existing databases
+  need a new activity-list scan before activity coverage can be trusted.
+- **Saved sleep plans**: on live sync and opening current Today or Sleep,
+  capture the first non-stale shared plan prospectively in the local settings
+  store (`sleep_plan:YYYY-MM-DD`): the night, dated bounds, source, an
+  offset-bearing capture timestamp, and local capture time. Capture must precede the window's
+  start (or asleep-by estimate) by more than 15 minutes and no recorded sleep
+  for that night may already exist. The first capture is immutable; later
+  advice changes, outcome uploads and backfill never rewrite it. Historical
+  chart reads never capture plans. Include these settings records in export.
+- **Asleep on time**: compare Garmin's recorded sleep start only to that
+  night's saved plan: inside Garmin's bedtime window widened by 15 minutes
+  either side, or within 15 minutes of the saved Raring asleep-by estimate.
+  The capture must precede the actual sleep start as well. Without a saved
+  plan or recorded sleep, exclude the night rather than count a miss. This
+  intentionally provides no retroactive adherence for nights before capture
+  existed, even if their sleep data and recommendations can be backfilled.
+- **Pace**: a target is behind when its share reached (value ÷ target) is
+  below the share of the week's training days that have passed: days before
+  today that aren't rest days, over all training days. Today hasn't passed,
+  so a session later today is never late. Asleep on time uses nights instead:
+  nights already counted over the nights in the week that weren't left out.
+  Done means value ≥ target. "On track" counts measurable targets that
+  aren't behind; the check-in counts targets reached.
+- **Completion and history**: each target's completion is value ÷ target,
+  capped at 100%; a week's completion is the average over its measurable
+  targets. Paused weeks and weeks with no measurable targets have none. Each
+  week is measured against the targets in effect that week; weeks before the
+  first configured plan are unconfigured gaps in history and check-ins.
+  Changing targets later never assigns new targets to those earlier weeks.
+  Check-ins distinguish All reached, Partly reached, No targets reached,
+  Partial evidence, Not enough evidence and Paused. All reached requires
+  every enabled target to be measured and reached.
 - **Weekly focus**: the biggest gap among sleep against need, load-focus
-  shortage, falling readiness, and vigorous minutes against the Fitness Age
-  target.
+  shortage, falling readiness, and intensity minutes against Garmin's weekly
+  goal for the plan week that just ended (without them, Fitness Age's
+  vigorous-minutes average against its target).
 
 ## Garmin access
 
@@ -379,7 +483,8 @@ Sent by the phone itself.
   (including Garmin's sleep need, bedtime window and Sleep Alignment), seven-day
   sleep stats (Garmin's average bed and wake times), HRV, training readiness,
   Body Battery, stress, SpO2, respiration, Health Status (GraphQL baseline and
-  status), training status, max metrics, Fitness Age, endurance and hill
+  status), weekly intensity minutes (dates of Garmin's intensity weeks, read
+  daily), training status, max metrics, Fitness Age, endurance and hill
   scores, race predictions, running
   tolerance, personal records, and activities (summary, splits, heart-rate
   zones, charts and GPS routes).

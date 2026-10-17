@@ -137,12 +137,64 @@ try {
  for(let i=0;i<4;i++)await page.getByRole('button',{name:'Next'}).click();
  const timing=page.locator('.timing-review');
  await timing.waitFor();
- assert.equal(await page.locator('.checkin-controls span').textContent(),'5 / 6','the timing review sits before the summary');
+ assert.equal(await page.locator('.checkin-controls span').textContent(),'5 / 8','the timing review follows the area cards');
  const review=await timing.textContent();
  assert.ok(review.includes('Bedtimes22:31–00:30') && review.includes('Garmin: 5 aligned · 2 behind') && review.includes('Keep waking near 06:48.'),review);
  assert.equal(await timing.locator('rect.night').count(),7);
  await page.getByRole('button',{name:'Next'}).click();
+ assert.ok((await page.locator('.intensity-review').textContent()).includes("Garmin's goal reached"));
+ await page.getByRole('button',{name:'Next'}).click();
+ const planReview=page.locator('.plan-checkin');
+ assert.ok((await planReview.textContent()).includes('Zone 2 and Asleep on time came up short'));
+ assert.deepEqual(await planReview.locator('.delta').allTextContents(),['same','▲ 12','▼ 13','▼ 1']);
+ await planReview.getByRole('button',{name:'Keep'}).click();
  await page.getByText('THE FOCUS',{exact:true}).waitFor();
+ await page.getByRole('button',{name:'Previous'}).click();
+ await page.locator('.plan-checkin').getByRole('button',{name:'Change'}).click();await waitRoute('plan-setup');
+ await back('plan');
+ await page.goto(`${url}/#today`);await waitRoute('today');
+ await page.locator('.plan-card').click();await waitRoute('plan');
+ assert.equal(await page.locator('.plan-week .goal[data-state="behind"]').count(),1,'Zone 2 alone is behind pace');
+ assert.equal(await page.locator('.plan-history .week').count(),8);
+ await page.getByRole('button',{name:'Edit targets'}).click();await waitRoute('plan-setup');
+ await page.getByRole('button',{name:'More strength sessions'}).click();
+ assert.equal(await page.getByRole('radio',{name:'Custom'}).getAttribute('aria-checked'),'true','an edited target makes the plan custom');
+ await page.getByRole('radio',{name:'Endurance'}).click();
+ assert.equal(await page.locator('.plan-targets .stepper b').first().textContent(),'1');
+ assert.equal(await page.getByRole('button',{name:'Mon',exact:true}).getAttribute('aria-pressed'),'true','presets keep rest days');
+ await page.getByRole('button',{name:'More intensity minutes'}).click();
+ await page.getByRole('button',{name:"Use Garmin's 150"}).click();
+ await back('plan');await back('today');
+ console.log('Weekly plan, setup, check-in plan and intensity pages: passed');
+ for(const width of [390,700,1100]){
+  for(const fixture of ['plan-partial','plan-unavailable']){
+   const evidence=await browser.newPage({viewport:{width,height:1000}});
+   evidence.on('pageerror',e=>errors.push(e.message));
+   for(const route of ['plan','checkin']){
+    await evidence.goto(`${url}/?fixture=${fixture}#${route}`);
+    if(route==='checkin'){
+     await evidence.locator('.checkin-controls').waitFor();
+     for(let i=0;i<7 && !(await evidence.locator('.plan-checkin').count());i++)await evidence.getByRole('button',{name:'Next',exact:true}).click();
+    }
+    const card=evidence.locator(route==='plan'?'.plan-week':'.plan-checkin');
+    await card.waitFor();
+    const text=await card.textContent();
+    assert.ok(text.includes(fixture==='plan-partial'?'Partial evidence':'Not enough evidence'));
+    assert.ok(text.includes('Workout list incomplete') && text.includes('Needs a saved sleep plan and recorded night'));
+    assert.ok(!text.includes('All reached')&&!text.includes('Every target reached'));
+    if(route==='plan' && fixture==='plan-partial'){
+     assert.equal(await evidence.locator('.plan-history .now b').textContent(),'100*');
+     const color=await evidence.locator('.plan-history .now .track i').evaluate(el=>getComputedStyle(el).backgroundColor);
+     assert.notEqual(color,'rgb(61, 220, 151)','known-only 100% is not all reached');
+    }
+    assert.deepEqual(await contrastFailures(evidence),[],`${width}/${fixture}/${route}: contrast`);
+    assert.ok(await evidence.evaluate(()=>document.querySelector('main').scrollWidth<=document.querySelector('main').clientWidth+1));
+    await evidence.screenshot({path:resolve(output,`weekly-evidence-${fixture}-${width}-${route}.png`)});
+   }
+   await evidence.close();
+  }
+ }
+ console.log('Partial/unavailable plan evidence at phone, unfolded and desktop widths: passed');
  await page.goto(`${url}/#settings`);await waitRoute('settings');
  assert.equal(await page.locator('.setting.lead').count(),0,'the lead appears with the bedtime reminder');
  await page.locator('label.setting',{hasText:'Bedtime'}).locator('input').check();
@@ -154,7 +206,7 @@ try {
 
  for(const width of [344,360,390,660,707,840,1024]) {
   await page.setViewportSize({width,height:900});
-  for(const route of ['today','sleep','training','health','readiness','workout/9000000000001','metric/hrv','metric/restingHr','metric/bodyBattery','metric/stress','settings','checkin','onboarding']) {
+  for(const route of ['today','sleep','training','health','readiness','workout/9000000000001','metric/hrv','metric/restingHr','metric/bodyBattery','metric/stress','settings','checkin','plan','plan-setup','onboarding']) {
    await page.goto(`${url}/#${route}`);await waitRoute(route);
    const layout=await page.evaluate(()=>{
     // Largest vertical gap between cards stacked in the same grid column.
@@ -174,15 +226,15 @@ try {
    if(width>=660 && layout.columns)assert.equal(layout.columns,2,`${width}/${route}: two columns`);
    if(route==='today')assert.equal(layout.hero,width>=660,`${width}/today: headline beside dials only when unfolded`);
    assert.ok(layout.holes<=18,`${width}/${route}: ${layout.holes}px hole between cards`);
-   if([390,840].includes(width) && ['today','sleep','training','workout/9000000000001','health'].includes(route)) {
+   if([390,840].includes(width) && ['today','sleep','training','workout/9000000000001','health','plan','plan-setup'].includes(route)) {
     await page.evaluate(()=>document.fonts.ready);
     const failures=await contrastFailures(page);
     assert.deepEqual(failures,[],`${width}/${route}: text contrast`);
    }
-   if(width===840 || (width===390 && ['today','sleep','training','workout/9000000000001','health','metric/restingHr','onboarding','settings'].includes(route)) || (width===1024 && ['today','sleep','health','metric/restingHr'].includes(route)) || (width===660 && ['health','metric/restingHr'].includes(route)))await page.screenshot({path:resolve(output,`${width}-${route.replace('/','-')}.png`)});
+   if(width===840 || (width===390 && ['today','sleep','training','workout/9000000000001','health','metric/restingHr','onboarding','settings','plan','plan-setup'].includes(route)) || (width===1024 && ['today','sleep','health','metric/restingHr','plan','plan-setup'].includes(route)) || (width===660 && ['health','metric/restingHr'].includes(route)))await page.screenshot({path:resolve(output,`${width}-${route.replace('/','-')}.png`)});
   }
  }
- console.log('Today, Sleep, Training, Workout and Health text contrast at 390/840: passed');
+ console.log('Today, Sleep, Training, Workout, Health and plan text contrast at 390/840: passed');
  // Folding/unfolding should reflow in place, without losing the open detail.
  await page.setViewportSize({width:390,height:844});
  await page.goto(`${url}/#metric/hrv`);await waitRoute('metric/hrv');
@@ -289,7 +341,9 @@ try {
   await phasePage.getByText(differ.reconcile.line).waitFor();
   assert.equal(await phasePage.locator('.daily-focus .segments').count(),focus.effort?1:0,`${name}: effort call ${focus.effort?'shown':'hidden'}`);
   const text=await phasePage.locator('.dashboard').textContent();
-  assert.ok(!/\bin \d+ ?(min|h)\b|left\b/i.test(text),`${name}: no countdown`);
+  // The weekly plan's "N days left" counts the week, not the time to bed.
+  const advice=await phasePage.locator('.dashboard > :not(.plan-card)').allTextContents();
+  assert.ok(!/\bin \d+ ?(min|h)\b|left\b/i.test(advice.join(' ')),`${name}: no countdown`);
   if(name==='evening')assert.equal(await phasePage.locator('.sleep-plan .strip-bar u').count(),1,'the strip marks now against the window');
   if(name==='late')assert.ok(text.includes("Tonight's window was"));
   if(name==='missing')assert.ok(text.includes('Not synced yet') && !text.includes('Lowest readiness factor'),'an unsynced night is neutral');

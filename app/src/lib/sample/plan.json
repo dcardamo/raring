@@ -1,0 +1,208 @@
+{
+  "configured": true,
+  "targets": {
+    "preset": "strength",
+    "strengthSessions": 3,
+    "intensityMin": null,
+    "zone2Min": 90,
+    "asleepNights": 5,
+    "restDays": [
+      0,
+      4
+    ]
+  },
+  "garminIntensityGoal": 150,
+  "weekStartsOn": 0,
+  "week": {
+    "start": "2025-10-13",
+    "end": "2025-10-19",
+    "paused": false,
+    "daysLeft": 3,
+    "items": [
+      {
+        "kind": "strength",
+        "value": 2,
+        "target": 3,
+        "completion": 0.6666666666666666,
+        "pace": 0.4,
+        "state": "onTrack",
+        "note": "Tue, Wed",
+        "unavailable": null
+      },
+      {
+        "kind": "intensity",
+        "value": 124,
+        "target": 150,
+        "completion": 0.8266666666666667,
+        "pace": 0.4,
+        "state": "onTrack",
+        "note": "Garmin's weekly goal · 26 min to go",
+        "unavailable": null
+      },
+      {
+        "kind": "zone2",
+        "value": 30,
+        "target": 90,
+        "completion": 0.3333333333333333,
+        "pace": 0.4,
+        "state": "behind",
+        "note": "60 min to go",
+        "unavailable": null
+      },
+      {
+        "kind": "asleepOnTime",
+        "value": 3,
+        "target": 5,
+        "completion": 0.6,
+        "pace": 0.5714285714285714,
+        "state": "onTrack",
+        "note": "Mon, Tue, Thu",
+        "unavailable": null
+      }
+    ],
+    "total": 4,
+    "onTrack": 3,
+    "reached": 0,
+    "headline": "On track",
+    "detail": "3 days left · Zone 2 is behind",
+    "completion": 0.6066666666666666
+  },
+  "lastWeek": {
+    "start": "2025-10-06",
+    "end": "2025-10-12",
+    "paused": false,
+    "daysLeft": 0,
+    "items": [
+      {
+        "kind": "strength",
+        "value": 3,
+        "target": 3,
+        "completion": 1,
+        "pace": 1,
+        "state": "done",
+        "note": "Tue, Thu, Sat",
+        "unavailable": null
+      },
+      {
+        "kind": "intensity",
+        "value": 162,
+        "target": 150,
+        "completion": 1,
+        "pace": 1,
+        "state": "done",
+        "note": "Garmin's weekly goal · Reached",
+        "unavailable": null
+      },
+      {
+        "kind": "zone2",
+        "value": 72,
+        "target": 90,
+        "completion": 0.8,
+        "pace": 1,
+        "state": "behind",
+        "note": "18 min to go",
+        "unavailable": null
+      },
+      {
+        "kind": "asleepOnTime",
+        "value": 4,
+        "target": 5,
+        "completion": 0.8,
+        "pace": 1,
+        "state": "behind",
+        "note": "Mon, Tue, Wed, Sat",
+        "unavailable": null
+      }
+    ],
+    "total": 4,
+    "onTrack": 2,
+    "reached": 2,
+    "headline": "Partly reached",
+    "detail": "Zone 2 and Asleep on time came up short",
+    "completion": 0.8999999999999999
+  },
+  "history": [
+    {
+      "start": "2025-08-25",
+      "completion": 0.7,
+      "partial": false,
+      "paused": false,
+      "current": false
+    },
+    {
+      "start": "2025-09-01",
+      "completion": 0.91,
+      "partial": false,
+      "paused": false,
+      "current": false
+    },
+    {
+      "start": "2025-09-08",
+      "completion": 1,
+      "partial": false,
+      "paused": false,
+      "current": false
+    },
+    {
+      "start": "2025-09-15",
+      "completion": null,
+      "partial": false,
+      "paused": true,
+      "current": false
+    },
+    {
+      "start": "2025-09-22",
+      "completion": 0.76,
+      "partial": false,
+      "paused": false,
+      "current": false
+    },
+    {
+      "start": "2025-09-29",
+      "completion": 0.99,
+      "partial": false,
+      "paused": false,
+      "current": false
+    },
+    {
+      "start": "2025-10-06",
+      "completion": 0.9,
+      "partial": false,
+      "paused": false,
+      "current": false
+    },
+    {
+      "start": "2025-10-13",
+      "completion": 0.6066666666666666,
+      "partial": false,
+      "paused": false,
+      "current": true
+    }
+  ],
+  "presets": [
+    {
+      "preset": "strength",
+      "strengthSessions": 3,
+      "intensityMin": null,
+      "zone2Min": 90,
+      "asleepNights": 5,
+      "restDays": []
+    },
+    {
+      "preset": "endurance",
+      "strengthSessions": 1,
+      "intensityMin": null,
+      "zone2Min": 150,
+      "asleepNights": 5,
+      "restDays": []
+    },
+    {
+      "preset": "sleep",
+      "strengthSessions": 2,
+      "intensityMin": null,
+      "zone2Min": 60,
+      "asleepNights": 6,
+      "restDays": []
+    }
+  ]
+}

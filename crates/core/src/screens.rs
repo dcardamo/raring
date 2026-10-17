@@ -1,5 +1,5 @@
 //! Tolerant projections of raw Garmin responses. Unknown and absent fields stay absent.
-use crate::{phase, rules, store::Store, sync::selected_watch, view::*};
+use crate::{phase, plan, rules, store::Store, sync::selected_watch, view::*};
 use chrono::{
     DateTime, Datelike, Duration, FixedOffset, Local, NaiveDate, NaiveDateTime, Timelike, Utc,
 };
@@ -39,7 +39,7 @@ pub(crate) fn humanize_code(code: &str) -> Option<String> {
     let first = chars.next()?;
     Some(first.to_ascii_uppercase().to_string() + chars.as_str())
 }
-fn local_time(v: &Value, keys: &[&str]) -> Option<String> {
+pub(crate) fn local_time(v: &Value, keys: &[&str]) -> Option<String> {
     let value = at(v, keys);
     if let Some(s) = value.as_str() {
         return Some(s.replace(' ', "T"));
@@ -106,7 +106,7 @@ fn battery_latest(v: &Value) -> Option<f64> {
         .max_by_key(|(time, _)| *time)
         .map(|(_, level)| level)
 }
-fn sleep(v: &Value) -> &Value {
+pub(crate) fn sleep(v: &Value) -> &Value {
     if !v["dailySleepDTO"].is_null() {
         &v["dailySleepDTO"]
     } else {
@@ -149,7 +149,7 @@ fn sleep_record(store: &Store, date: &str) -> Option<Value> {
 }
 /// Garmin answers with an empty or all-null record before the watch has
 /// uploaded a night, so only a duration or a recorded start or end counts.
-fn recorded_sleep(raw: &Value) -> bool {
+pub(crate) fn recorded_sleep(raw: &Value) -> bool {
     let s = sleep(raw);
     num(s, &[&["sleepTimeSeconds"]]).is_some_and(|t| t > 0.)
         || ["sleepStartTimestampLocal", "sleepEndTimestampLocal"]
@@ -811,7 +811,11 @@ fn activity_payload(store: &Store, id: &str) -> Option<ActivityPayload> {
         .unwrap_or(Value::Null);
     (!detail.is_null() || !listed.is_null()).then_some(ActivityPayload { detail, listed })
 }
-fn activity(store: &Store, id: &str) -> Option<ActivityCard> {
+pub(crate) fn activity_kind(store: &Store, id: &str) -> Option<String> {
+    activity_payload(store, id).map(|p| p.kind()).filter(|k| !k.is_empty())
+}
+
+pub(crate) fn activity(store: &Store, id: &str) -> Option<ActivityCard> {
     let v = activity_payload(store, id)?;
     let kind = v.kind();
     let icon = if kind.contains("run") {
@@ -1704,6 +1708,7 @@ pub fn today_at(store: &Store, date: &str, now: DateTime<FixedOffset>) -> TodayV
             .is_ok_and(|d| d.weekday() == chrono::Weekday::Mon)
             && store.get("summary", &date_sub(date, 1)).is_some(),
         focus,
+        plan: plan::this_week(store, date),
     };
     view.readiness_why = explain::readiness_why(&r, &view.factors, rl.as_deref());
     view.body_battery_why =
@@ -2339,6 +2344,9 @@ pub fn health(store: &Store, date: &str) -> HealthView {
         drivers,
         vitals: vitals(store, date),
         stress: stress(store, date),
+        intensity: NaiveDate::parse_from_str(date, "%Y-%m-%d").ok().and_then(|d| {
+            plan::intensity(store, plan::week_start(d, plan::week_starts_on(store)), d)
+        }),
     }
 }
 pub fn checkin(store: &Store, monday: &str) -> CheckinView {
@@ -2431,15 +2439,26 @@ pub fn checkin(store: &Store, monday: &str) -> CheckinView {
         .value
         .zip(cards[0].previous)
         .map(|(a, b)| ((b - a) / 100.).max(0.));
-    let vigorous_gap = health(store, &last)
-        .drivers
-        .iter()
-        .find(|d| d.key == "vigorousMinutes")
-        .and_then(|d| d.value.zip(d.target))
+    let plan_week = NaiveDate::parse_from_str(monday, "%Y-%m-%d")
+        .ok()
+        .map(|d| (d, plan::last_full_week(store, d)));
+    let intensity = plan_week.and_then(|(d, start)| plan::intensity(store, start, d));
+    // Garmin's weekly intensity minutes against its goal; without them, the
+    // Fitness Age vigorous-minutes average against its target.
+    let intensity_gap = intensity
+        .as_ref()
+        .and_then(|i| i.goal.map(|g| (i.total, g)))
+        .or_else(|| {
+            health(store, &last)
+                .drivers
+                .iter()
+                .find(|d| d.key == "vigorousMinutes")
+                .and_then(|d| d.value.zip(d.target))
+        })
         .filter(|(_, t)| *t > 0.)
         .map(|(v, t)| ((t - v) / t).max(0.));
     let focus =
-        rules::weekly_focus(sleep_gap, load_gap, readiness_drop, vigorous_gap).map(str::to_owned);
+        rules::weekly_focus(sleep_gap, load_gap, readiness_drop, intensity_gap).map(str::to_owned);
     let vo2max_change = historical_vo2(store, &last)
         .zip(historical_vo2(store, &date_sub(monday, 8)))
         .map(|(a, b)| a - b);
@@ -2452,6 +2471,8 @@ pub fn checkin(store: &Store, monday: &str) -> CheckinView {
         fitness_age_change,
         win,
         focus,
+        plan: plan_week.and_then(|(d, _)| plan::checkin(store, d)),
+        intensity,
     }
 }
 

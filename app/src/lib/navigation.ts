@@ -4,7 +4,7 @@ const metrics = new Set([
   'bodyBattery', 'stress', 'restingHr', 'hrv', 'respiration', 'spo2', 'skinTemp',
   'vo2max', 'endurance', 'hill', 'runningTolerance',
 ]);
-const routes = new Set([...tabs, 'readiness', 'checkin', 'settings', 'onboarding']);
+const routes = new Set([...tabs, 'readiness', 'checkin', 'plan', 'plan-setup', 'settings', 'onboarding']);
 const trainingMetrics = new Set(['vo2max', 'endurance', 'hill', 'runningTolerance']);
 
 export function normalizeRoute(hashOrRoute: string): string {
@@ -26,7 +26,8 @@ export function routeTrail(target: string, fromTrail: string[] = []): string[] {
   if (route === 'onboarding') return ['onboarding'];
   if (route === 'today') return ['today'];
   if ((tabs as readonly string[]).includes(route)) return ['today', route];
-  if (route === 'readiness' || route === 'checkin') return ['today', route];
+  if (route === 'readiness' || route === 'checkin' || route === 'plan') return ['today', route];
+  if (route === 'plan-setup') return ['today', 'plan', route];
   if (route === 'settings') {
     const caller = fromTrail.at(-1) === 'settings' ? fromTrail.slice(0, -1) : fromTrail;
     return [...(caller[0] === 'today' ? caller : ['today']), route];

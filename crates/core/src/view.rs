@@ -413,6 +413,8 @@ pub struct TodayView {
     /// True on Mondays once the weekly check-in exists.
     pub checkin_ready: bool,
     pub focus: TodayFocus,
+    /// This week's plan; None until targets are set.
+    pub plan: Option<PlanWeek>,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
@@ -779,6 +781,8 @@ pub struct HealthView {
     pub drivers: Vec<Driver>,
     pub vitals: VitalsCard,
     pub stress: StressCard,
+    /// This week's intensity minutes, when Garmin reported any day of it.
+    pub intensity: Option<IntensityCard>,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
@@ -838,6 +842,10 @@ pub struct CheckinView {
     pub fitness_age_change: Option<f64>,
     pub win: Option<String>,
     pub focus: Option<String>,
+    /// The plan week that ended most recently; None until targets are set.
+    pub plan: Option<PlanCheckin>,
+    /// Intensity minutes for that plan week.
+    pub intensity: Option<IntensityCard>,
 }
 
 /// Notification switches (Settings screen). Defaults follow the spec:
@@ -898,4 +906,188 @@ pub struct AppStatus {
     /// False while older history is still downloading.
     pub history_complete: bool,
     pub last_error: Option<String>,
+}
+
+/// The four weekly plan targets.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum PlanTargetKind {
+    Strength,
+    Intensity,
+    Zone2,
+    AsleepOnTime,
+}
+
+/// Behind pace is amber, done is green, on track is ink.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum PlanState {
+    OnTrack,
+    Behind,
+    Done,
+}
+
+/// The starting point that set the targets; any change makes them Custom.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum PlanPreset {
+    Strength,
+    Endurance,
+    Sleep,
+    Custom,
+}
+
+/// Weekly plan targets: a local setting, never sent anywhere. A target of
+/// zero is off.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PlanTargets {
+    pub preset: PlanPreset,
+    pub strength_sessions: u32,
+    /// Weekly intensity minutes; None follows Garmin's weekly goal.
+    pub intensity_min: Option<u32>,
+    pub zone2_min: u32,
+    pub asleep_nights: u32,
+    /// Weekdays with nothing due, 0 = Monday … 6 = Sunday.
+    pub rest_days: Vec<u8>,
+}
+
+impl PlanTargets {
+    pub fn preset(preset: PlanPreset) -> Self {
+        let (strength_sessions, zone2_min, asleep_nights) = match preset {
+            PlanPreset::Strength | PlanPreset::Custom => (3, 90, 5),
+            PlanPreset::Endurance => (1, 150, 5),
+            PlanPreset::Sleep => (2, 60, 6),
+        };
+        Self {
+            preset,
+            strength_sessions,
+            intensity_min: None,
+            zone2_min,
+            asleep_nights,
+            rest_days: vec![],
+        }
+    }
+}
+
+/// One target's progress for a week.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PlanProgress {
+    pub kind: PlanTargetKind,
+    /// Sessions, minutes or nights so far.
+    pub value: f64,
+    pub target: f64,
+    /// value / target, capped at 1: partial credit.
+    pub completion: f64,
+    /// Share of the week's training days (nights, for sleep) that have passed.
+    pub pace: f64,
+    pub state: PlanState,
+    /// A few words under the bar: the days that counted, or what is left.
+    pub note: String,
+    /// Why this target can't be measured; it is then left out of every count.
+    pub unavailable: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PlanWeek {
+    /// First and last day, YYYY-MM-DD, starting on Garmin's first day of the week.
+    pub start: String,
+    pub end: String,
+    pub paused: bool,
+    /// Whole days after today in this week; 0 for past weeks and on the last day.
+    pub days_left: u32,
+    /// Targets that are on (above zero), in a fixed order.
+    pub items: Vec<PlanProgress>,
+    /// Measurable targets.
+    pub total: u32,
+    /// Measurable targets not behind pace.
+    pub on_track: u32,
+    pub reached: u32,
+    /// Honest summary of reached/partial/none/unknown/paused states.
+    pub headline: String,
+    /// "3 days left · Zone 2 is behind".
+    pub detail: String,
+    /// Average completion of the measurable targets; None when there are
+    /// none or the week has no data.
+    pub completion: Option<f64>,
+}
+
+/// A history bar. `partial` means an enabled target lacks evidence, so 100%
+/// of known targets must not be displayed as all reached.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PlanHistoryWeek {
+    pub start: String,
+    pub completion: Option<f64>,
+    pub partial: bool,
+    pub paused: bool,
+    pub current: bool,
+}
+
+/// The weekly plan screen and its setup.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PlanView {
+    /// False until targets are saved once.
+    pub configured: bool,
+    /// This week's targets (the Strength preset before setup).
+    pub targets: PlanTargets,
+    /// Garmin's weekly intensity-minutes goal, the default intensity target.
+    pub garmin_intensity_goal: Option<f64>,
+    /// Garmin's first day of the week, 0 = Monday … 6 = Sunday.
+    pub week_starts_on: u8,
+    pub week: PlanWeek,
+    /// Last week measured against this week's targets.
+    pub last_week: PlanWeek,
+    /// Eight weeks ending with this one, oldest first.
+    pub history: Vec<PlanHistoryWeek>,
+    /// Starting points for setup: Strength, Endurance and Sleep.
+    pub presets: Vec<PlanTargets>,
+}
+
+/// A target change from the setup screen.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PlanUpdate {
+    pub targets: PlanTargets,
+    /// Leave this week out of history.
+    pub paused: bool,
+}
+
+/// The plan card of the weekly check-in: the week that just ended.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PlanCheckin {
+    pub week: PlanWeek,
+    /// Each item's value the week before, in the same order.
+    pub previous: Vec<Option<f64>>,
+    /// "Same targets · rest Mon and Fri".
+    pub next: String,
+}
+
+/// Garmin's intensity minutes for one week.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct IntensityCard {
+    pub start: String,
+    pub end: String,
+    /// Garmin's weekly total: moderate minutes plus twice the vigorous ones.
+    pub total: f64,
+    pub moderate: f64,
+    pub vigorous: f64,
+    /// Garmin's weekly goal.
+    pub goal: Option<f64>,
 }

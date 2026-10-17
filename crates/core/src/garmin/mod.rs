@@ -404,6 +404,15 @@ impl Client {
                     vec![],
                 )
             }
+            // Eight weeks ending on `key`; one row per Garmin intensity week.
+            "intensity_weeks" => {
+                let end = NaiveDate::parse_from_str(key, "%Y-%m-%d").map_err(|_| Error::Decode)?;
+                let start = end - chrono::Duration::weeks(8);
+                (
+                    format!("/usersummary-service/stats/im/weekly/{start}/{end}"),
+                    vec![],
+                )
+            }
             "fitness_age" => (format!("/fitnessage-service/fitnessage/{key}"), vec![]),
             "endurance" => (
                 "/metrics-service/metrics/endurancescore".into(),

@@ -126,5 +126,76 @@
   "vo2maxChange": 1,
   "fitnessAgeChange": -1,
   "win": "You made room for recovery and still built your load.",
+  "plan": {
+    "week": {
+      "start": "2025-10-13",
+      "end": "2025-10-19",
+      "paused": false,
+      "daysLeft": 0,
+      "items": [
+        {
+          "kind": "strength",
+          "value": 3,
+          "target": 3,
+          "completion": 1,
+          "pace": 1,
+          "state": "done",
+          "note": "Tue, Thu, Sat",
+          "unavailable": null
+        },
+        {
+          "kind": "intensity",
+          "value": 162,
+          "target": 150,
+          "completion": 1,
+          "pace": 1,
+          "state": "done",
+          "note": "Garmin's weekly goal · Reached",
+          "unavailable": null
+        },
+        {
+          "kind": "zone2",
+          "value": 72,
+          "target": 90,
+          "completion": 0.8,
+          "pace": 1,
+          "state": "behind",
+          "note": "18 min to go",
+          "unavailable": null
+        },
+        {
+          "kind": "asleepOnTime",
+          "value": 4,
+          "target": 5,
+          "completion": 0.8,
+          "pace": 1,
+          "state": "behind",
+          "note": "Mon, Tue, Wed, Sat",
+          "unavailable": null
+        }
+      ],
+      "total": 4,
+      "onTrack": 2,
+      "reached": 2,
+      "headline": "Partly reached",
+      "detail": "Zone 2 and Asleep on time came up short",
+      "completion": 0.8999999999999999
+    },
+    "previous": [
+      3,
+      150,
+      85,
+      5
+    ],
+    "next": "Same targets · rest Mon and Fri"
+  },
+  "intensity": {
+    "start": "2025-10-13",
+    "end": "2025-10-19",
+    "total": 162,
+    "moderate": 62,
+    "vigorous": 50,
+    "goal": 150
+  },
   "focus": "Add one hard interval session to fill your anaerobic gap."
 }

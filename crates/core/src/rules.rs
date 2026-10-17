@@ -184,13 +184,13 @@ pub fn weekly_focus(
     sleep_gap: Option<f64>,
     load_gap: Option<f64>,
     readiness_drop: Option<f64>,
-    vigorous_gap: Option<f64>,
+    intensity_gap: Option<f64>,
 ) -> Option<&'static str> {
     [
         ("Sleep", sleep_gap),
         ("Load focus", load_gap),
         ("Readiness", readiness_drop),
-        ("Vigorous minutes", vigorous_gap),
+        ("Intensity minutes", intensity_gap),
     ]
     .into_iter()
     .filter_map(|(name, v)| v.filter(|x| *x > 0.0).map(|x| (name, x)))

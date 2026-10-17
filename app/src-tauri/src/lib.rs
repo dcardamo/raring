@@ -161,6 +161,9 @@ async fn read_view<T: Send + 'static>(
 #[tauri::command]
 async fn today(app: tauri::AppHandle, date: Option<String>) -> Result<TodayView, String> {
     read_view(app, move |core| {
+        if date.is_none() {
+            core.capture_sleep_plan(Local::now()).map_err(|e| e.to_string())?;
+        }
         Ok(core.today(&date.unwrap_or_else(|| core.current_date(Local::now()))))
     })
     .await
@@ -168,6 +171,9 @@ async fn today(app: tauri::AppHandle, date: Option<String>) -> Result<TodayView,
 #[tauri::command]
 async fn sleep(app: tauri::AppHandle, date: Option<String>) -> Result<SleepView, String> {
     read_view(app, move |core| {
+        if date.is_none() {
+            core.capture_sleep_plan(Local::now()).map_err(|e| e.to_string())?;
+        }
         Ok(core.sleep(&date.unwrap_or_else(|| core.current_date(Local::now()))))
     })
     .await
@@ -197,6 +203,23 @@ async fn health(app: tauri::AppHandle, date: Option<String>) -> Result<HealthVie
 async fn checkin(app: tauri::AppHandle, week_start: Option<String>) -> Result<CheckinView, String> {
     read_view(app, move |core| {
         Ok(core.checkin(&week_start.unwrap_or_else(monday)))
+    })
+    .await
+}
+
+#[tauri::command]
+async fn plan(app: tauri::AppHandle, date: Option<String>) -> Result<PlanView, String> {
+    read_view(app, move |core| {
+        Ok(core.plan(&date.unwrap_or_else(|| core.current_date(Local::now()))))
+    })
+    .await
+}
+/// Saves to the week the plan screen shows.
+#[tauri::command]
+async fn set_plan(app: tauri::AppHandle, update: PlanUpdate) -> Result<(), String> {
+    read_view(app, move |core| {
+        core.set_plan(&core.current_date(Local::now()), &update)
+            .map_err(|e| e.to_string())
     })
     .await
 }
@@ -422,6 +445,8 @@ pub fn run() {
                     workout,
                     health,
                     checkin,
+                    plan,
+                    set_plan,
                     sync_now,
                     begin_sign_in,
                     sign_out,
@@ -442,6 +467,8 @@ pub fn run() {
                     workout,
                     health,
                     checkin,
+                    plan,
+                    set_plan,
                     sync_now,
                     begin_sign_in,
                     sign_out,

@@ -16,7 +16,7 @@ try{
  const pageErrors=[];
  page.on('pageerror',e=>pageErrors.push(e));
  for(const [name,route,query] of [
-  ['today','today',''],['sleep','sleep',''],['training','training',''],['workout','workout/9000000000001',''],['health','health',''],['readiness','readiness',''],['hrv-history','metric/hrv',''],['stress','metric/stress',''],['checkin','checkin',''],['onboarding','onboarding',''],['settings','settings',''],['today-missing','today','?fixture=missing'],['today-empty','today','?fixture=empty']
+  ['today','today',''],['sleep','sleep',''],['training','training',''],['workout','workout/9000000000001',''],['health','health',''],['readiness','readiness',''],['hrv-history','metric/hrv',''],['stress','metric/stress',''],['checkin','checkin',''],['plan','plan',''],['plan-setup','plan-setup',''],['onboarding','onboarding',''],['settings','settings',''],['today-missing','today','?fixture=missing'],['today-empty','today','?fixture=empty']
  ]){
   await page.goto(`${url}/${query}#${route}`);
   await page.waitForFunction(()=>!document.querySelector('.empty') && !document.querySelector('.scroll > .empty') || document.querySelector('.empty')?.textContent?.includes('Syncing your Garmin data') && location.search.includes('empty'));
@@ -34,7 +34,7 @@ try{
    console.log(`readiness-trend: ${resolve(output,'readiness-trend.png')}`);
   }
   if(name==='checkin'){
-   for(const area of ['sleep','training','health','timing','summary']){
+   for(const area of ['sleep','training','health','timing','intensity','plan','summary']){
     await page.getByRole('button',{name:'Next'}).click();
     await page.screenshot({path:resolve(output,`checkin-${area}.png`)});
     console.log(`checkin-${area}: ${resolve(output,`checkin-${area}.png`)}`);

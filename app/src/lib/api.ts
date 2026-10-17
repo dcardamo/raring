@@ -8,6 +8,7 @@ import sampleWorkout from './sample/workout.json';
 import sampleHealth from './sample/health.json';
 import sampleCheckin from './sample/checkin.json';
 import sampleStatus from './sample/status.json';
+import samplePlan from './sample/plan.json';
 import type { AppStatus } from './generated/AppStatus';
 import type { TodayView } from './generated/TodayView';
 import type { SleepView } from './generated/SleepView';
@@ -16,6 +17,8 @@ import type { WorkoutView } from './generated/WorkoutView';
 import type { HealthView } from './generated/HealthView';
 import type { CheckinView } from './generated/CheckinView';
 import type { Settings } from './generated/Settings';
+import type { PlanView } from './generated/PlanView';
+import type { PlanUpdate } from './generated/PlanUpdate';
 
 export type { Settings } from './generated/Settings';
 export const defaultSettings = {notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,bedtimeLeadMin:30,adaptiveToday:true} satisfies Settings;
@@ -29,6 +32,10 @@ export const training = (date?:string):Promise<TrainingView> => call('training',
 export const workout = (id:string):Promise<WorkoutView> => call('workout',{id},sampleWorkout as unknown as WorkoutView);
 export const health = (date?:string):Promise<HealthView> => call('health',{date},sampleHealth as unknown as HealthView);
 export const checkin = (weekStart?:string):Promise<CheckinView> => call('checkin',{weekStart},sampleCheckin as unknown as CheckinView);
+// The preview keeps saved targets in memory; only the Rust core measures them.
+let previewPlan:PlanView = copy(samplePlan as unknown as PlanView);
+export const plan = (date?:string):Promise<PlanView> => call('plan',{date},previewPlan);
+export const set_plan = (update:PlanUpdate):Promise<void> => {if(!isTauri()){previewPlan={...previewPlan,configured:true,targets:copy(update.targets),week:{...previewPlan.week,paused:update.paused}};return Promise.resolve()}return invoke<void>('set_plan',{update})};
 export const sync_now = ():Promise<void> => call('sync_now',undefined,undefined);
 export const open_garmin_connect = ():Promise<boolean> => call('open_garmin_connect',undefined,false);
 export const begin_sign_in = ():Promise<void> => call('begin_sign_in',undefined,undefined);

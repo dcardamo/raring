@@ -367,6 +367,14 @@
       31
     ]
   },
+  "intensity": {
+    "start": "2025-10-13",
+    "end": "2025-10-19",
+    "total": 124,
+    "moderate": 64,
+    "vigorous": 30,
+    "goal": 150
+  },
   "drivers": [
     {
       "key": "vo2max",

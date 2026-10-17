@@ -3,6 +3,7 @@ pub mod demo;
 pub mod garmin;
 pub mod notifications;
 pub mod phase;
+pub mod plan;
 pub mod rules;
 pub mod screens;
 pub mod store;
@@ -62,7 +63,11 @@ impl Raring {
         let client = garmin::Client::new(tokens)?;
         let store = Arc::clone(&self.store);
         // SQLite calls are short and individually mutex-protected. Network awaits never hold the DB lock.
-        let report = sync::sync(&store, &client, now, budget).await;
+        let mut report = sync::sync(&store, &client, now, budget).await;
+        // A sync may take minutes; evidence was available only after it ended.
+        if plan::capture_sleep_plan(&store, Local::now()).is_err() {
+            report.error = Some("Could not save tonight's plan".into());
+        }
         let tokens = client.tokens().await;
         let notifications = notifications::notifications(&store, now);
         Ok(SyncOutcome {
@@ -70,6 +75,11 @@ impl Raring {
             report,
             notifications,
         })
+    }
+    /// Capture only a live prospective plan; historical view reads stay pure.
+    pub fn capture_sleep_plan(&self, now: DateTime<Local>) -> Result<()> {
+        plan::capture_sleep_plan(&self.store, now)?;
+        Ok(())
     }
     pub fn current_date(&self, now: DateTime<Local>) -> String {
         screens::current_date(&self.store, now.naive_local()).to_string()
@@ -95,6 +105,16 @@ impl Raring {
     }
     pub fn checkin(&self, monday: &str) -> view::CheckinView {
         screens::checkin(&self.store, monday)
+    }
+    pub fn plan(&self, date: &str) -> view::PlanView {
+        plan::view(&self.store, date)
+    }
+    /// Saves this week's targets; `today` picks the week.
+    pub fn set_plan(&self, today: &str, update: &view::PlanUpdate) -> Result<()> {
+        let today = chrono::NaiveDate::parse_from_str(today, "%Y-%m-%d")
+            .map_err(|_| Error::InvalidSetting)?;
+        plan::set(&self.store, today, update)?;
+        Ok(())
     }
     pub fn status(&self) -> view::AppStatus {
         let (history_from, history_complete) =

@@ -892,6 +892,60 @@
     "change12m": -3
   },
   "checkinReady": true,
+  "plan": {
+    "start": "2025-10-13",
+    "end": "2025-10-19",
+    "paused": false,
+    "daysLeft": 3,
+    "items": [
+      {
+        "kind": "strength",
+        "value": 2,
+        "target": 3,
+        "completion": 0.6666666666666666,
+        "pace": 0.4,
+        "state": "onTrack",
+        "note": "Tue, Wed",
+        "unavailable": null
+      },
+      {
+        "kind": "intensity",
+        "value": 124,
+        "target": 150,
+        "completion": 0.8266666666666667,
+        "pace": 0.4,
+        "state": "onTrack",
+        "note": "Garmin's weekly goal · 26 min to go",
+        "unavailable": null
+      },
+      {
+        "kind": "zone2",
+        "value": 30,
+        "target": 90,
+        "completion": 0.3333333333333333,
+        "pace": 0.4,
+        "state": "behind",
+        "note": "60 min to go",
+        "unavailable": null
+      },
+      {
+        "kind": "asleepOnTime",
+        "value": 3,
+        "target": 5,
+        "completion": 0.6,
+        "pace": 0.5714285714285714,
+        "state": "onTrack",
+        "note": "Mon, Tue, Thu",
+        "unavailable": null
+      }
+    ],
+    "total": 4,
+    "onTrack": 3,
+    "reached": 0,
+    "headline": "On track",
+    "detail": "3 days left · Zone 2 is behind",
+    "completion": 0.6066666666666666
+  },
   "focus": {
     "phase": "wake",
     "cards": [
