@@ -578,7 +578,6 @@ fn percent_only_factors_stay_unrated_in_why_and_reconciliation() {
         view.reconcile.unwrap().line,
         "Sleep scored 85, but readiness is held back by sleep history."
     );
-    // Today's factor bar keeps its existing percentage colour.
     let factor = view.factors.iter().find(|f| f.key == "recovery").unwrap();
-    assert_eq!(factor.tone, Tone::Poor);
+    assert_eq!((factor.tone, factor.percent), (Tone::Neutral, Some(31.)));
 }

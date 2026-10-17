@@ -76,8 +76,8 @@ optional after sign-in.
   sentence naming Garmin's factors. It's a self-contained piece Today's
   layout can move.
 - **Today's focus**: Rest, Easy, Steady or Push, with the suggestion lit up,
-  followed by the lowest recorded Garmin readiness factor. Tap to see all six
-  factors and their feedback.
+  followed by the readiness factor Garmin rates worst (nothing when Garmin
+  rated none). Tap to see all six factors and their feedback.
 - **Tonight's sleep**: Garmin's bedtime window and sleep need for tonight;
   without Garmin's window, a suggested asleep-by time, the need and usual
   wake time. The same plan appears on Sleep; a historical-average need is
@@ -101,9 +101,10 @@ optional after sign-in.
 
 - Large gauge with Garmin's level (Prime/High green, Moderate amber, Low/Poor
   red) and a few-word headline from Garmin's own feedback.
-- Factor bars worst first; tapping one explains it in a sentence. A factor
-  Garmin didn't rate (it sends NONE, for example without valid sleep) is a
-  gap, never 0.
+- Factor bars worst first; tapping one explains it in a sentence. A bar's
+  color is Garmin's rating; a percentage without a rating keeps its number
+  but stays neutral. A factor Garmin didn't rate (it sends NONE, for example
+  without valid sleep) is a gap, never 0.
 - A Why sheet lists the six factors worst first, each with the value Garmin
   used (sleep score, recovery hours, 7-day HRV, acute load) and Garmin's
   rating, under one line naming what holds readiness back and what helps.
@@ -192,7 +193,9 @@ Sent by the phone itself.
 
 - **Suggested effort**: Garmin's readiness feedback, rephrased. The level sets
   push, steady or easy; a high load ratio caps it at steady.
-- **Biggest drag**: the readiness factor Garmin rates worst.
+- **Biggest drag**: the readiness factor Garmin rates worst, its percentage
+  breaking ties. Unrated factors never count; with none rated there is no
+  drag.
 - **Bedtime**: Garmin's recommended bedtime window for tonight when it sends
   one; the asleep-by time is its end. Otherwise usual wake time (14-day
   median) minus tonight's sleep need (Garmin's next-night adjusted need when

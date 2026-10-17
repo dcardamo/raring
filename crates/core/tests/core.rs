@@ -110,7 +110,7 @@ fn demo_seeds_current_day_and_screen_details() {
     );
 }
 #[test]
-fn readiness_feedback_overrides_percent_and_missing_feedback_falls_back() {
+fn readiness_factor_colours_come_only_from_garmins_rating() {
     use raring_core::view::Tone;
     let store = Store::open(":memory:").unwrap();
     store
@@ -134,8 +134,16 @@ fn readiness_feedback_overrides_percent_and_missing_feedback_falls_back() {
     assert_eq!(factor("sleep"), Tone::Poor);
     assert_eq!(factor("hrv"), Tone::Good);
     assert_eq!(factor("acuteLoad"), Tone::Fair);
-    assert_eq!(factor("recovery"), Tone::Good);
+    assert_eq!(factor("recovery"), Tone::Neutral, "a percentage alone is not a rating");
+    assert_eq!(factor("sleepHistory"), Tone::Neutral);
     assert_eq!(factor("stressHistory"), Tone::Good);
+    let percent = |key| view.factors.iter().find(|f| f.key == key).unwrap().percent;
+    assert_eq!(percent("recovery"), Some(85.), "the percentage still shows");
+    // Garmin rates sleep worst, even though HRV has the lowest percentage.
+    assert_eq!(
+        view.call_note.as_deref(),
+        Some("Sleep is your biggest drag today.")
+    );
 }
 #[test]
 fn load_chip_uses_garmin_optimal_range() {

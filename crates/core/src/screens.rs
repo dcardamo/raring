@@ -427,7 +427,9 @@ fn band(v: &Value) -> Option<[f64; 2]> {
     })?;
     Some([low, high])
 }
-fn factor_tone(feedback: Option<&str>, percent: Option<f64>) -> Tone {
+/// Garmin's rating as a tone. Without a rating the factor stays neutral:
+/// Raring doesn't rate Garmin's percentages itself.
+fn factor_tone(feedback: Option<&str>) -> Tone {
     let feedback = feedback.unwrap_or("").to_ascii_uppercase();
     let words: Vec<&str> = feedback.split(|c: char| !c.is_ascii_alphabetic()).collect();
     if words.iter().any(|w| {
@@ -450,7 +452,7 @@ fn factor_tone(feedback: Option<&str>, percent: Option<f64>) -> Tone {
     }) {
         Tone::Good
     } else {
-        percent.map(rules::score).unwrap_or(Tone::Neutral)
+        Tone::Neutral
     }
 }
 // Detail fields live in summaryDTO; the list record can fill gaps in a partial detail.
@@ -907,7 +909,7 @@ pub fn today(store: &Store, date: &str) -> TodayView {
                 tone: if unrated {
                     Tone::Neutral
                 } else {
-                    factor_tone(feedback, percent)
+                    factor_tone(feedback)
                 },
                 detail: feedback
                     .map(|s| label(Some(s.into())))
@@ -921,9 +923,19 @@ pub fn today(store: &Store, date: &str) -> TodayView {
             .unwrap_or(100.)
             .total_cmp(&b.percent.unwrap_or(100.))
     });
+    // The factor Garmin rates worst, its percentage breaking ties; unrated
+    // factors never count.
+    let rank = |tone: Tone| match tone {
+        Tone::Poor => 0,
+        Tone::Fair => 1,
+        Tone::Good => 2,
+        Tone::Neutral => 3,
+    };
+    let worst = factors.iter().map(|f| rank(f.tone)).filter(|r| *r < 3).min();
     let drag = factors
         .iter()
-        .filter_map(|f| f.percent.map(|p| (f.name.as_str(), p)))
+        .filter(|f| Some(rank(f.tone)) == worst)
+        .map(|f| (f.name.as_str(), f.percent.unwrap_or(f64::MAX)))
         .collect::<Vec<_>>();
     let biggest_drag = rules::biggest_drag(&drag).map(str::to_owned);
     let mut chips = vec![];
@@ -1085,15 +1097,13 @@ pub fn today(store: &Store, date: &str) -> TodayView {
             .is_ok_and(|d| d.weekday() == chrono::Weekday::Mon)
             && store.get("summary", &date_sub(date, 1)).is_some(),
     };
-    // The Why sheet and reconciliation judge factors by Garmin's rating alone.
-    let rated = explain::garmin_rated(&r, &view.factors);
-    view.readiness_why = explain::readiness_why(&r, &rated, rl.as_deref());
+    view.readiness_why = explain::readiness_why(&r, &view.factors, rl.as_deref());
     view.body_battery_why =
         explain::body_battery_why(b, &summary, view.body_battery.now, &view.stress);
     view.reconcile = explain::reconcile(explain::Scores {
         readiness: view.readiness.as_ref(),
         level: rl.as_deref(),
-        factors: &rated,
+        factors: &view.factors,
         sleep: view.sleep.as_ref(),
         battery_at_wake: num(&summary, &[&["bodyBatteryAtWakeTime"]])
             .filter(|v| (0. ..=100.).contains(v)),

@@ -23,7 +23,7 @@
   <div class="focus-reason">
    <span class="factor-icon" style:color={toneColor(factor.tone)}><Icon name={factor.key==='sleep'||factor.key==='sleepHistory'?'moon':factor.key==='hrv'?'hrv':factor.key==='recovery'?'clock':'gauge'} size={20}/></span>
    <div><span class="reason-label">Lowest readiness factor</span><strong>{factor.name}</strong></div>
-   <b class="n" style:color={toneColor(factor.tone)}>{Math.round(factor.percent!)}<small>/100</small></b>
+   {#if factor.percent!=null}<b class="n" style:color={toneColor(factor.tone)}>{Math.round(factor.percent)}<small>/100</small></b>{/if}
   </div>
   <p class="focus-detail">{factor.detail}</p>
  {:else if today.callNote}

@@ -2,7 +2,7 @@
 //! own factors, events and feedback. docs/spec.md lists the wording rules
 //! under Rules ("Why sheets" and "Scores that differ").
 use super::{
-    factor_tone, hrv, humanize_code, label, load_device, num, readiness, string, training_device,
+    hrv, humanize_code, label, load_device, num, readiness, string, training_device,
 };
 use crate::{rules, view::*};
 use chrono::{Duration, NaiveDateTime};
@@ -92,26 +92,6 @@ fn readiness_input(key: &str) -> Option<(&'static str, &'static str)> {
         ),
         _ => return None,
     })
-}
-
-/// The factors with Garmin's own rating as their tone. A factor with a
-/// percentage but no rating stays neutral: Raring doesn't rate it here.
-pub(super) fn garmin_rated(r: &Value, factors: &[Factor]) -> Vec<Factor> {
-    let snapshot = readiness(r);
-    factors
-        .iter()
-        .map(|f| {
-            let feedback = readiness_input(&f.key).and_then(|(field, _)| {
-                snapshot[field]
-                    .as_str()
-                    .filter(|c| !c.is_empty() && !c.eq_ignore_ascii_case("NONE"))
-            });
-            Factor {
-                tone: feedback.map_or(Tone::Neutral, |c| factor_tone(Some(c), None)),
-                ..f.clone()
-            }
-        })
-        .collect()
 }
 
 /// The factors that hold readiness back and the ones that help it, by
