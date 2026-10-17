@@ -91,6 +91,7 @@ class SyncWorker(context: Context, params: WorkerParameters): CoroutineWorker(co
             val pending = PendingIntent.getActivity(context, id.hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             val notification = NotificationCompat.Builder(context, CHANNEL)
                 .setSmallIcon(R.drawable.ic_notification).setContentTitle(title).setContentText(body)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(body))
                 .setAutoCancel(true).setContentIntent(pending).build()
             (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(id.hashCode(), notification)
             Log.i(TAG, "notification posted: ${id.substringBefore(':')}")

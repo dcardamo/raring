@@ -1,4 +1,8 @@
-use crate::{screens, store::Store, view::Settings};
+use crate::{
+    screens,
+    store::Store,
+    view::{Settings, SleepView, TodayView, VitalKind},
+};
 use chrono::{DateTime, Datelike, Local, Timelike};
 use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -19,6 +23,56 @@ fn enabled(s: &Settings, kind: &str) -> bool {
         _ => false,
     }
 }
+fn duration(min: f64) -> String {
+    let min = min.round() as i64;
+    format!("{}h {:02}m", min / 60, min % 60)
+}
+/// Collapsed notifications show only the first line, so it carries the night.
+fn morning_body(view: &TodayView, sleep: &SleepView) -> String {
+    let mut night = vec![];
+    if let Some(asleep) = sleep.asleep_min {
+        night.push(format!("Slept {}", duration(asleep)));
+    }
+    if let Some(score) = &sleep.score {
+        night.push(format!(
+            "sleep score {:.0} ({})",
+            score.value,
+            score.label.to_lowercase()
+        ));
+    }
+    if let (Some(asleep), Some(need)) = (sleep.asleep_min, sleep.need_min) {
+        let gap = (asleep - need).round();
+        night.push(match gap {
+            g if g >= 0. => format!("{g:.0} min over need"),
+            g => format!("{:.0} min short of need", -g),
+        });
+    }
+    let mut recovery = vec![];
+    if let Some(hrv) = view.hrv.last_night {
+        recovery.push(match &view.hrv.status {
+            Some(status) => format!("HRV {hrv:.0} ms ({})", status.to_lowercase()),
+            None => format!("HRV {hrv:.0} ms"),
+        });
+    }
+    if let Some(rhr) = view
+        .vitals
+        .readings
+        .iter()
+        .find(|r| r.kind == VitalKind::RestingHr)
+        .and_then(|r| r.value)
+    {
+        recovery.push(format!("resting HR {rhr:.0}"));
+    }
+    if let Some(battery) = view.body_battery.now {
+        recovery.push(format!("Body Battery {battery:.0}"));
+    }
+    [night.join(" · "), recovery.join(" · ")]
+        .into_iter()
+        .chain(view.call_note.clone())
+        .filter(|line| !line.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
 pub fn notifications(store: &Store, now: DateTime<Local>) -> Vec<Notification> {
     let day = now.date_naive().to_string();
     let mut result = vec![];
@@ -34,11 +88,19 @@ pub fn notifications(store: &Store, now: DateTime<Local>) -> Vec<Notification> {
         }
     };
     let view = screens::today(store, &day);
-    if view.sleep.is_some() && view.readiness.is_some() {
+    if let (Some(_), Some(readiness)) = (&view.sleep, &view.readiness) {
         add(
             "morning",
-            "Your day at a glance",
-            view.headline.clone(),
+            &match view.call {
+                Some(_) => format!(
+                    "{} · readiness {:.0} ({})",
+                    view.headline,
+                    readiness.value,
+                    readiness.label.to_lowercase()
+                ),
+                None => format!("Readiness {:.0}", readiness.value),
+            },
+            morning_body(&view, &screens::sleep_view(store, &day)),
             day.clone(),
         );
     }
