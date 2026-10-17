@@ -22,7 +22,7 @@
  let now=$state(new Date()),connectUnavailable=$state(false);
  let route=$state('today'),trail=$state<string[]>(['today']),data=$state<PageData|null>(null),status=$state<AppStatus|null>(null),settings=$state<api.Settings>({...api.defaultSettings}),loading=$state(true),error=$state(''),syncError=$state(''),syncing=$state(false),selectedFactor=$state(''),checkinIndex=$state(0),onboardStep=$state(0),startY=0,startedAtTop=false,swipeX=0;
  let navigation:ReturnType<typeof createNavigation>,scroll:HTMLElement;
- let requestId=0,lastSyncAttempt:number|null=null,prefetched=false,cacheGeneration=0;
+ let requestId=0,statusReadId=0,appliedStatusReadId=0,lastSyncAttempt:number|null=null,prefetched=false,cacheGeneration=0;
  let hasRendered=$state(false);
  let touching=false,pendingSwap:{route:string;data:PageData}|null=null;
  const views=new Map<string,PageData>();
@@ -85,18 +85,24 @@
   if(!silent)loading=!data;
   try {
    if(withStatus){
+    const statusRead=++statusReadId;
     const nextStatus=await api.app_status();
-    if(request!==requestId)return;
-    // A queued or slow Android sync can succeed after the foreground wait ends.
-    if(lastSyncAttempt!==null && nextStatus.lastSync && Date.parse(nextStatus.lastSync)>=lastSyncAttempt && !nextStatus.lastError)syncError='';
-    if(status && status.lastSync!==nextStatus.lastSync)clearViews();
-    status=nextStatus;
-    checkDay();
-    if(live){
-     if(!status.signedIn){onboardStep=0;clearViews();data=null;if(current!=='onboarding')navigate('onboarding');return}
-     if(localStorage.getItem('notifications-step-done')!=='1'){onboardStep=1;if(current!=='onboarding')navigate('onboarding');return}
-     if(current==='onboarding'){navigate('today');return}
+    if(statusRead>appliedStatusReadId){
+     appliedStatusReadId=statusRead;
+     // A queued or slow Android sync can succeed after the foreground wait ends.
+     if(lastSyncAttempt!==null && nextStatus.lastSync && Date.parse(nextStatus.lastSync)>=lastSyncAttempt && !nextStatus.lastError)syncError='';
+     const changedSync=status!==null && status.lastSync!==nextStatus.lastSync;
+     if(changedSync)clearViews();
+     status=nextStatus;
+     checkDay();
+     if(live){
+      if(!status.signedIn){onboardStep=0;clearViews();data=null;if(route!=='onboarding')navigate('onboarding');return}
+      if(localStorage.getItem('notifications-step-done')!=='1'){onboardStep=1;if(route!=='onboarding')navigate('onboarding');return}
+      if(route==='onboarding'){navigate('today');return}
+     }
+     if(changedSync && request!==requestId)void refresh(true);
     }
+    if(request!==requestId)return;
    }
    if(current==='settings'){
     const nextSettings=await api.get_settings();

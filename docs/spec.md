@@ -276,8 +276,9 @@ Sent by the phone itself.
   prefetched and cached by route for the current day. A completed sync, a
   changed sync timestamp or a local day rollover invalidates in-flight reads
   and the cache without clearing the visible view. Status is read on start,
-  resume and sync, not before every navigation, and view commands read
-  SQLite off the WebView thread.
+  resume and sync, not before every navigation, and is applied independently
+  of navigation so a tab switch can't discard a newer sync or sign-out. View
+  commands read SQLite off the WebView thread.
 - **Platform code**: keep each platform's native layer a thin shim over the
   core. Background scheduling is inherently native (WorkManager on Android,
   background refresh on iOS, syncing while the app runs on desktop); secure

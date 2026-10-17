@@ -415,12 +415,21 @@ try {
  await cached.clock.install({time:new Date('2026-10-16T14:00:00Z')});
  await cached.addInitScript(samples=>{
   localStorage.setItem('notifications-step-done','1');
-  const state=window.testViews={samples,reads:{},completed:{},pending:{},holdNext:{},statusReads:0,syncCalls:0};
+  const state=window.testViews={samples,reads:{},completed:{},pending:{},holdNext:{},statusReads:0,statusCompleted:0,syncCalls:0};
   samples.status.lastSync=new Date().toISOString();
   window.isTauri=true;
   window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command)=>{
    if(command.startsWith('plugin:event|'))return 1;
-   if(command==='app_status'){state.statusReads++;return structuredClone(samples.status)}
+   if(command==='app_status'){
+    state.statusReads++;
+    const snapshot=structuredClone(samples.status);
+    if(state.holdNext.app_status){
+     state.holdNext.app_status--;
+     await new Promise(resolve=>{(state.pending.app_status??=[]).push(resolve)});
+    }
+    state.statusCompleted++;
+    return snapshot;
+   }
    if(command==='sync_now'){state.syncCalls++;return;}
    if(command in samples){
     state.reads[command]=(state.reads[command]??0)+1;
@@ -526,8 +535,41 @@ try {
  await cached.getByRole('heading',{name:'Poll rollover'}).waitFor();
  await cached.waitForFunction(previous=>window.testViews.completed.sleep>previous,pollReads);
  assert.equal(await cached.evaluate(()=>window.testViews.syncCalls),1,'day rollover never needs a Garmin sync');
+
+ // Navigation must not discard a concurrent status read or its sign-in gate.
+ const healthReads=await cached.evaluate(()=>window.testViews.completed.health);
+ await cached.evaluate(()=>{const s=window.testViews.samples;s.health.fitnessAge.fitnessAge=37;s.status.lastSync='2026-10-18T14:01:00Z'});
+ await hold('app_status');
+ await cached.evaluate(()=>window.dispatchEvent(new Event('raring:resume')));
+ await pending('app_status');
+ await tabCached('Sleep');
+ await cached.locator('.sleep-hero').waitFor();
+ await release('app_status');
+ await cached.waitForFunction(previous=>window.testViews.completed.health>previous,healthReads);
+ await hold('health');await tabCached('Health');await pending('health');
+ assert.equal(await cached.locator('.age-number').textContent(),'37','in-flight status invalidates other tabs after navigation');
+ await release('health');
+ await cached.evaluate(()=>{window.testViews.samples.status.signedIn=false});
+ await hold('app_status');
+ await cached.evaluate(()=>window.dispatchEvent(new Event('raring:resume')));
+ await pending('app_status');
+ await tabCached('Today');
+ await cached.locator('.dials').waitFor();
+ await release('app_status');
+ await cached.waitForURL('**/#onboarding');
+ assert.equal(await cached.getByRole('navigation').count(),0,'in-flight sign-out status gates navigation');
+ await cached.evaluate(()=>{window.testViews.samples.status.signedIn=true});
+ await hold('app_status');
+ await cached.evaluate(()=>window.dispatchEvent(new Event('raring:resume')));
+ await pending('app_status');
+ const statuses=await cached.evaluate(()=>window.testViews.statusCompleted);
+ await cached.evaluate(()=>{window.testViews.samples.status.signedIn=false;window.dispatchEvent(new Event('raring:resume'))});
+ await cached.waitForFunction(previous=>window.testViews.statusCompleted>previous,statuses);
+ await release('app_status');
+ await cached.waitForFunction(()=>window.testViews.pending.app_status?.length===0);
+ assert.equal(new URL(cached.url()).hash,'#onboarding','older signed-in status cannot undo a newer sign-out');
  await cached.close();
- console.log('Cached switching, sync/rollover invalidation, scroll and touch cancellation: passed');
+ console.log('Cached switching, sync/rollover invalidation, scroll, touch cancellation and status races: passed');
  assert.deepEqual(errors,[],'no browser errors');
 } finally {
  await browser?.close();

@@ -322,8 +322,10 @@ faces, screens, sensors and audio prompts stay in Connect.
   local day rollover invalidate in-flight reads and cached tabs while keeping
   the visible view until fresh data arrives. Scroll position is restored on
   the cached render; touch cancellation and backgrounding flush deferred
-  updates. Status refreshes on start, resume and sync. Rust view and status
-  commands now read SQLite off the WebView thread. On emulator-5572
+  updates. Status refreshes on start, resume and sync, independently of
+  navigation so a concurrent tab switch cannot discard a newer sync or
+  sign-out result. Rust view and status commands read SQLite off the WebView
+  thread. On emulator-5572
   with a 37 MB full-history database (debug APK, 10 warm tab activations):
   tab activation-to-first-paint was 87–521 ms before, with the full-screen
   loading state on every switch; after cache-invalidation fixes it was
