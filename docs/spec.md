@@ -25,7 +25,8 @@ The visual reference is [design/mockup](../design/mockup/): open
   sync, changed sync timestamp or local day rollover invalidates in-flight
   reads and the tab cache without clearing the visible view. The full-screen
   loading state is reserved for the first view without data. Status is read on
-  start, resume and sync, not before every navigation.
+  start, resume and sync, not before every navigation; navigating during a
+  status read cannot discard its cache invalidation or sign-out gate.
 - **Private.** Data stays on the device. No accounts, analytics, or services
   other than Garmin.
 - **Cross-platform.** One Rust core and one Svelte UI for Android, iOS and
