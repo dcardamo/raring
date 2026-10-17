@@ -1159,6 +1159,43 @@ async fn cycling_or_altitude_alone_fetches_reduced_units_weekly_without_catalog(
 }
 
 #[tokio::test]
+async fn one_threshold_failure_does_not_starve_the_other_metrics() {
+    let now = chrono::NaiveDate::from_ymd_opt(2025, 1, 10).unwrap()
+        .and_hms_opt(13, 0, 0).unwrap().and_local_timezone(Local).single().unwrap();
+    let store = threshold_sync_store(now, "acclimation", false);
+    for kind in ["lactate_threshold", "running_power_threshold", "cycling_ftp", "acclimation"] {
+        store.set_cursor(&format!("{kind}_checked"), "0").unwrap();
+    }
+    let (url, seen, server) = mock(vec![
+        (500, "{}".into()),
+        (200, json!({"calendarDate":"2025-01-10","sport":"RUNNING","functionalThresholdPower":280}).to_string()),
+        (200, json!({"calendarDate":"2025-01-10","sport":"CYCLING","functionalThresholdPower":215}).to_string()),
+        (200, json!({"altitudeAcclimation":900,"altitudeAcclimationDate":"2025-01-10"}).to_string()),
+    ]);
+    let client = Client::with_urls(Tokens {
+        access_token: token(1900000000), refresh_token: "refresh".into(),
+        client_id: "TEST_DI".into(), expires_at: Utc::now() + Duration::days(30),
+    }, &url, &url, std::time::Duration::ZERO).unwrap();
+    let first = raring_core::sync::sync(&store, &client, now, 2).await;
+    assert_eq!((first.requests, first.data_failures), (2, 1));
+    assert_eq!(store.get("running_power_threshold", "latest").unwrap()["functionalThresholdPower"], 280);
+    assert!(store.cursor("retry:lactate_threshold:2025-01-10").is_some());
+    // The failed metric is now in retry backoff, but unfinished healthy metrics are still due.
+    let second = raring_core::sync::sync(&store, &client, now, 2).await;
+    assert_eq!((second.requests, second.data_failures), (2, 0));
+    assert_eq!(store.get("cycling_ftp", "latest").unwrap()["functionalThresholdPower"], 215);
+    assert_eq!(store.get("acclimation", "latest").unwrap()["altitudeAcclimation"], 900);
+    server.join().unwrap();
+    let requests = seen.lock().unwrap();
+    assert_eq!(requests.len(), 4);
+    for (request, path) in requests.iter().zip([
+        "latestLactateThreshold", "powerToWeight/latest", "latestFunctionalThresholdPower/CYCLING", "heataltitudeacclimation/latest",
+    ]) {
+        assert!(request.contains(path), "{request}");
+    }
+}
+
+#[tokio::test]
 async fn missing_or_failed_latest_check_preserves_a_recorded_reading_and_budget() {
     let now = chrono::NaiveDate::from_ymd_opt(2025, 1, 10).unwrap()
         .and_hms_opt(13, 0, 0).unwrap().and_local_timezone(Local).single().unwrap();

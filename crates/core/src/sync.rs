@@ -732,7 +732,9 @@ async fn sync_thresholds(store: &Store, client: &Client, report: &mut SyncReport
                 }
                 Value::Null
             }
-            Some(Got::Later) | None => return,
+            // Retry is per metric; request still enforces global auth/rate/budget stops.
+            Some(Got::Later) => continue,
+            None => return,
         };
         if store.put(kind, "latest", &now.to_rfc3339(), &value).is_err()
             || store.set_cursor(&cursor, &now.timestamp().to_string()).is_err() {

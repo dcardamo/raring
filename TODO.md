@@ -289,8 +289,10 @@ faces, screens, sensors and audio prompts stay in Connect.
   within the sync budget, including empty and 404 results; a 404 or failed
   check retains an earlier valid reading, with bounded retry. Any recorded
   threshold/acclimation response enables the existing weekly reduced units
-  fetch; the exercise catalog still requires strength sets. No historic day
-  expansion, threshold estimates or writes.
+  fetch; the exercise catalog still requires strength sets. An endpoint's
+  failure or retry window does not block the other metrics; global auth,
+  rate-limit and budget stops still apply. No historic day expansion,
+  threshold estimates or writes.
   Verified with four read-only requests on one account (no 429/auth errors):
   - `GET /biometric-service/biometric/latestLactateThreshold` (no arguments)
     returns an array of separately dated `speed`, `hearRate` (Garmin's
