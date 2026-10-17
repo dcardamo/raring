@@ -320,6 +320,10 @@ try {
    assert.ok(layout.body<=width && layout.content<=layout.main+1,`${width}/${route}: horizontal overflow ${JSON.stringify(layout)}`);
    if(width>=660 && layout.columns)assert.equal(layout.columns,2,`${width}/${route}: two columns`);
    if(route==='today')assert.equal(layout.hero,width>=660,`${width}/today: headline beside dials only when unfolded`);
+   if(route==='health'){
+    assert.ok(await page.getByText('Last measured Tue 14 Oct').isVisible(),`${width}/health: dated weigh-in`);
+    assert.ok(await page.getByText('recorded weigh-ins only',{exact:false}).isVisible(),`${width}/health: sparse trend label`);
+   }
    assert.ok(layout.holes<=18,`${width}/${route}: ${layout.holes}px hole between cards`);
    if([390,840].includes(width) && ['today','sleep','training','workout/9000000000001','workout/9000000000002','strength','help/strength-sets','health','plan','plan-setup'].includes(route)) {
     await page.evaluate(()=>document.fonts.ready);
@@ -330,6 +334,31 @@ try {
   }
  }
  console.log('Today, Sleep, Training, Workout, Health and plan text contrast at 390/840: passed');
+ // Isolated readings must have visible markers, but gaps must not become lines.
+ const weightSample=JSON.parse(await readFile(resolve('src/lib/sample/health.json'),'utf8'));
+ for(const indices of [[2],[1,7]]){
+  const sparse=structuredClone(weightSample);
+  sparse.bodyWeight.trend=Array(12).fill(null);
+  for(const [i,index] of indices.entries())sparse.bodyWeight.trend[index]=72+i;
+  const sparsePage=await browser.newPage({viewport:{width:390,height:844}});
+  await sparsePage.route('**/src/lib/sample/health.json*',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(sparse)}`}));
+  await sparsePage.goto(`${url}/?weight-sparse=${indices.join('-')}#health`);
+  const weightCard=sparsePage.locator('.health-dashboard .card').filter({has:sparsePage.locator('h3', {hasText:'Weight'})});
+  await weightCard.getByText('Last measured',{exact:false}).waitFor();
+  const svg=weightCard.locator('svg');
+  const circles=svg.locator('circle');
+  assert.equal(await circles.count(),indices.length,`${indices}: all recorded weeks have visible dots`);
+  const path=await svg.locator('path').getAttribute('d');
+  assert.equal((path?.match(/M/g)??[]).length,indices.length,`${indices}: one segment per isolated reading`);
+  assert.ok(!path?.includes('L'),`${indices}: do not connect empty weeks`);
+  for(const [i,index] of indices.entries()){
+   const x=Number(await circles.nth(i).getAttribute('cx'));
+   assert.ok(Math.abs(x-(4+index*152/11))<0.1,`${indices}: circle follows the path's x coordinate`);
+  }
+  assert.equal(await sparsePage.locator('.health-dashboard .card').filter({has:sparsePage.locator('h3', {hasText:'Stress'})}).locator('svg circle').count(),1,'other sparklines keep their final marker');
+  await sparsePage.close();
+ }
+ console.log('Sparse weight dots and unconnected empty weeks: passed');
  // Folding/unfolding should reflow in place, without losing the open detail.
  await page.setViewportSize({width:390,height:844});
  await page.goto(`${url}/#metric/hrv`);await waitRoute('metric/hrv');

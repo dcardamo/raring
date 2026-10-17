@@ -267,13 +267,22 @@ Questions go to GitHub; the address is shown as text.
   method behind a tap; personal ranges are not medical targets.
 - **Stress**: today's average with a 30-day line of daily averages, opening
   the same detail as Today.
+- **Weight and body composition**: show the last dated weigh-in, a sparse
+  12-week trend and Garmin's BMI/body fat if recorded. Weight follows Garmin's
+  measurement setting (kg or lb), not the activity set's unit in isolation.
+  Missing measurements and weeks stay blank, never zero. Weight is private to
+  Health; it does not trigger notifications. Until Garmin's measurement-system
+  setting syncs, the tile waits rather than guessing kg for a pounds account.
 - **Fitness Age**: large number, trend line, and a bar placing it against your
   real age.
 - **Biggest lever**: a progress ring toward Garmin's target for the driver
   that would help most (for example vigorous minutes), with the age you'd
   reach.
 - **Drivers**: VO2max, resting heart rate, BMI or body fat, and vigorous
-  minutes as tiles with range bars.
+  minutes as tiles with range bars. Garmin's Fitness Age component owns its
+  target and age estimate; a recorded weigh-in can supply a missing BMI or
+  body-fat value measured in the last 30 days but never creates a target or
+  Fitness Age prediction.
 - **Intensity minutes**: this plan week's total as a ring against Garmin's
   weekly goal, with moderate and vigorous minutes; it opens the weekly plan.
 - When two or more vitals are outside their personal ranges, an amber
@@ -359,6 +368,12 @@ Sent by the phone itself.
 
 ## Rules
 
+- **Weight history**: Garmin's weigh-ins are grams; display kg or lb to 0.1
+  from the account's measurement system. For repeated weigh-ins on a date,
+  keep the latest timestamp. The 12-week trend shows the last recorded value
+  in each week, without averaging or carrying it across gaps. Latest is read
+  at most daily, recent ranges weekly and older years in budgeted ranges;
+  empty results count as checked. No weight-based verdicts or notifications.
 - **Watch freshness**: prefer the unique primary activity tracker. Without one,
   select a sole registration unless it is explicitly an accessory, or select
   the only watch-like registration if all others are explicitly accessories;
@@ -621,6 +636,10 @@ Sent by the phone itself.
   scores, race predictions, running
   tolerance, personal records, and activities (summary, splits, heart-rate
   zones, charts and GPS routes), plus strength sets for strength activities.
+  Weight and body composition use `/weight-service/weight/latest?date=` and
+  `/weight-service/weight/dateRange?startDate=&endDate=`; raw and per-day
+  readings stay local. The already reduced user-settings preferences supply
+  the measurement system for units; the full profile is not stored.
 - **Strength**: sets come from `/activity-service/activity/{id}/exerciseSets`
   for activities Garmin types `strength_training`: once, then at most hourly
   for 48 hours after the start to pick up early Connect edits. Later edits

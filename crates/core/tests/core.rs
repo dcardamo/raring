@@ -765,6 +765,9 @@ async fn backfill_includes_yesterday_and_scans_existing_days_to_fill_older_gaps(
             .unwrap();
         s.set_cursor("intensity_weeks_checked", &Utc::now().timestamp().to_string())
             .unwrap();
+        for kind in ["weight_latest", "weight_recent"] {
+            s.set_cursor(&format!("{kind}_checked"), &Utc::now().timestamp().to_string()).unwrap();
+        }
         let mut replies = vec![(200, "{}".into()); 13];
         replies.extend([(200, "[]".into()), (200, "{}".into())]);
         let (url, seen, thread) = mock(replies);
@@ -811,6 +814,9 @@ async fn backfill_skips_old_health_status_days_and_still_fetches_history_ranges(
     store.set_cursor("devices_checked", &Utc::now().timestamp().to_string()).unwrap();
     store.set_cursor("intensity_weeks_checked", &Utc::now().timestamp().to_string()).unwrap();
     store.put("sleep_stats", &today.to_string(), "now", &json!({})).unwrap();
+    for kind in ["weight_latest", "weight_recent"] {
+        store.set_cursor(&format!("{kind}_checked"), &Utc::now().timestamp().to_string()).unwrap();
+    }
     let mut replies = vec![(200, "{}".into()); 13];
     replies[4] = (200, json!({"data":{"healthStatusSummary":null}}).to_string());
     replies.extend([(200, "[]".into()), (200, json!({"data":[]}).to_string())]);

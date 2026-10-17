@@ -1001,6 +1001,19 @@ pub struct Lever {
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
+pub struct BodyWeightCard {
+    pub value: f64,
+    pub unit: WeightUnit,
+    pub measured_on: String,
+    pub bmi: Option<f64>,
+    pub body_fat: Option<f64>,
+    /// Last 12 weeks, oldest first; gaps are not zero.
+    pub trend: Vec<Option<f64>>,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct HealthView {
     /// Local date, YYYY-MM-DD.
     pub date: String,
@@ -1009,6 +1022,7 @@ pub struct HealthView {
     pub drivers: Vec<Driver>,
     pub vitals: VitalsCard,
     pub stress: StressCard,
+    pub body_weight: Option<BodyWeightCard>,
     /// This week's intensity minutes, when Garmin reported any day of it.
     pub intensity: Option<IntensityCard>,
 }

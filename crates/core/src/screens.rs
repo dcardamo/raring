@@ -2312,7 +2312,64 @@ pub fn strength(store: &Store, date: &str) -> Option<StrengthView> {
         .collect();
     crate::strength::history(store, date, workouts)
 }
+fn body_weight(store: &Store, date: &str) -> Option<BodyWeightCard> {
+    let end = NaiveDate::parse_from_str(date, "%Y-%m-%d").ok()?;
+    let start = end - Duration::days(83);
+    let rows = store.history("weight", date, 1000);
+    let latest = store.get("weight_latest", "me").unwrap_or(Value::Null);
+    let latest_day = latest["date"]
+        .as_i64()
+        .and_then(DateTime::from_timestamp_millis)
+        .map(|time| time.date_naive());
+    let latest_row = latest_day
+        .filter(|d| *d <= end)
+        .map(|d| (d.to_string(), &latest));
+    let mut entries: BTreeMap<String, &Value> = rows.iter().map(|(d, v)| (d.clone(), v)).collect();
+    if let Some((day, row)) = latest_row {
+        let older = entries
+            .get(&day)
+            .and_then(|v| v["timestampGMT"].as_i64())
+            .unwrap_or(0);
+        if row["timestampGMT"].as_i64().unwrap_or(0) >= older {
+            entries.insert(day, row);
+        }
+    }
+    let (measured_on, current) = entries
+        .iter()
+        .rev()
+        .find(|(_, row)| num(row, &[&["weight"]]).is_some_and(|v| v.is_finite() && v > 0.))?;
+    // Do not assume metric while the user's measurement setting is still unknown.
+    let settings = store.get("profile_settings", "me")?;
+    let system = settings["measurementSystem"].as_str()?;
+    if system != "metric" && !system.starts_with("statute") { return None; }
+    let unit = crate::strength::weight_unit(store);
+    let value = crate::strength::weight(num(current, &[&["weight"]]), unit)?;
+    let mut trend = vec![None; 12];
+    for (day, row) in &entries {
+        let Some(day) = NaiveDate::parse_from_str(day, "%Y-%m-%d").ok() else {
+            continue;
+        };
+        if day < start || day > end {
+            continue;
+        }
+        let index = ((day - start).num_days() / 7) as usize;
+        if let Some(v) = crate::strength::weight(num(row, &[&["weight"]]).filter(|n| n.is_finite() && *n > 0.), unit) {
+            trend[index] = Some(v);
+        }
+    }
+    Some(BodyWeightCard {
+        value,
+        unit,
+        measured_on: measured_on.clone(),
+        bmi: num(current, &[&["bmi"]]).filter(|n| n.is_finite() && *n > 0.),
+        body_fat: num(current, &[&["bodyFat"]])
+            .filter(|n| n.is_finite() && (0. ..=100.).contains(n)),
+        trend,
+    })
+}
+
 pub fn health(store: &Store, date: &str) -> HealthView {
+    let body_weight = body_weight(store, date);
     let v = store.get("fitness_age", date).unwrap_or(Value::Null);
     let drivers: Vec<Driver> = [
         ("vo2max", "VO2max", "ml/kg/min"),
@@ -2335,7 +2392,22 @@ pub fn health(store: &Store, date: &str) -> HealthView {
         } else {
             &v["fitnessAgeData"][*key]
         };
-        let value = num(data, &[&["value"]]).filter(|n| n.is_finite());
+        let value = num(data, &[&["value"]])
+            .filter(|n| n.is_finite())
+            .or_else(|| {
+                // A weigh-in can supply the displayed driver, not Garmin's target or age estimate.
+                // An old reading stays on the dated tile, not a current driver.
+                let recent = body_weight.as_ref().filter(|w| {
+                    NaiveDate::parse_from_str(date, "%Y-%m-%d").ok()
+                        .zip(NaiveDate::parse_from_str(&w.measured_on, "%Y-%m-%d").ok())
+                        .is_some_and(|(today, measured)| (0..=30).contains(&(today - measured).num_days()))
+                });
+                match *key {
+                    "bmi" => recent.and_then(|w| w.bmi),
+                    "bodyFat" => recent.and_then(|w| w.body_fat),
+                    _ => None,
+                }
+            });
         value.map(|value| {
             let target =
                 num(data, &[&["targetValue"], &["target"]]).filter(|n| n.is_finite() && *n > 0.);
@@ -2409,6 +2481,7 @@ pub fn health(store: &Store, date: &str) -> HealthView {
         drivers,
         vitals: vitals(store, date),
         stress: stress(store, date),
+        body_weight,
         intensity: NaiveDate::parse_from_str(date, "%Y-%m-%d").ok().and_then(|d| {
             plan::intensity(store, plan::week_start(d, plan::week_starts_on(store)), d)
         }),

@@ -1,5 +1,26 @@
 {
   "date": "2025-10-16",
+  "bodyWeight": {
+    "value": 72.4,
+    "unit": "kg",
+    "measuredOn": "2025-10-14",
+    "bmi": 23.8,
+    "bodyFat": null,
+    "trend": [
+      71.8,
+      null,
+      72.1,
+      null,
+      72.6,
+      72.3,
+      null,
+      72.5,
+      72.4,
+      null,
+      72.2,
+      72.4
+    ]
+  },
   "fitnessAge": {
     "fitnessAge": 39,
     "chronologicalAge": 46,

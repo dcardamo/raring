@@ -148,6 +148,7 @@ async fn wellness_ranges_stop_at_the_oldest_summary_and_keep_existing_days() {
     let s = Store::open(":memory:").unwrap();
     cover(&s, "summary", "2000-01-01", "2025-04-01");
     cover(&s, "activities", "2000-01-01", "2025-04-01");
+    cover(&s, "weight", "2000-01-01", "2025-04-01");
     s.put(
         "daily_summary",
         "2025-01-15",
@@ -271,6 +272,70 @@ async fn range_keys_are_validated_before_any_request() {
             "{key}"
         );
     }
+    assert!(matches!(
+        client.endpoint("weight_latest", "", None).await,
+        Err(garmin::Error::Decode)
+    ));
     thread.join().unwrap();
     assert!(seen.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn latest_weight_requires_and_sends_a_date() {
+    let (client, seen, thread) = mock(vec![(200, "null".into())]);
+    client.endpoint("weight_latest", "2025-06-30", None).await.unwrap();
+    thread.join().unwrap();
+    assert!(seen.lock().unwrap()[0].contains("/weight-service/weight/latest?date=2025-06-30"));
+}
+
+#[tokio::test]
+async fn weight_range_keeps_last_weigh_in_and_empty_ranges_advance() {
+    let s = Store::open(":memory:").unwrap();
+    for name in [
+        "summary",
+        "activities",
+        "readiness",
+        "hrv",
+        "max_metrics",
+        "sleep",
+    ] {
+        cover(&s, name, "2000-01-01", "2025-04-01");
+    }
+    let sample = json!({"dateWeightList":[
+        {"calendarDate":"2025-03-01","timestampGMT":100,"weight":70000.0,"bmi":null},
+        {"calendarDate":"2025-03-01","timestampGMT":200,"weight":71000.0,"bodyFat":22.0}
+    ],"totalAverage":{"weight":70500.0}});
+    let (report, seen) = run(&s, vec![(200, sample.to_string())], 1).await;
+    assert_eq!(report.stored, 1);
+    assert!(seen[0].contains("/weight-service/weight/dateRange?startDate="));
+    assert_eq!(s.get("weight", "2025-03-01").unwrap()["weight"], 71000.0);
+    let (_, seen) = run(
+        &s,
+        vec![(
+            200,
+            json!({"dateWeightList":[],"totalAverage":{"weight":null}}).to_string(),
+        )],
+        1,
+    )
+    .await;
+    assert!(seen[0].contains("/weight-service/weight/dateRange"));
+    assert!(s.cursor("history:weight:lo").is_some());
+}
+
+#[tokio::test]
+async fn malformed_weight_range_does_not_advance_coverage() {
+    let s = Store::open(":memory:").unwrap();
+    for name in [
+        "summary",
+        "activities",
+        "readiness",
+        "hrv",
+        "max_metrics",
+        "sleep",
+    ] {
+        cover(&s, name, "2000-01-01", "2025-04-01");
+    }
+    let (report, _) = run(&s, vec![(200, "{}".into())], 1).await;
+    assert_eq!(report.data_failures, 1);
+    assert!(s.cursor("history:weight:lo").is_none());
 }

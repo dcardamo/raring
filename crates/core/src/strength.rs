@@ -261,6 +261,9 @@ struct Prefs {
     week_start: Weekday,
     figure: Figure,
 }
+pub(crate) fn weight_unit(store: &Store) -> WeightUnit {
+    prefs(store).unit
+}
 fn prefs(store: &Store) -> Prefs {
     let v = store.get("profile_settings", "me").unwrap_or(Value::Null);
     let v = reduce_settings(&v);
@@ -279,7 +282,7 @@ fn prefs(store: &Store) -> Prefs {
         },
     }
 }
-fn weight(grams: Option<f64>, unit: WeightUnit) -> Option<f64> {
+pub(crate) fn weight(grams: Option<f64>, unit: WeightUnit) -> Option<f64> {
     grams.map(|g| {
         let w = match unit {
             WeightUnit::Kg => g / 1000.,

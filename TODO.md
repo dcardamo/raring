@@ -163,9 +163,6 @@ separate export. The offline JSON/CSV export does not make network requests.
 
 Each is a tile or detail in an existing screen first.
 
-13. **Weight and body composition**: `/weight-service/weight/dateRange`,
-    `/weight-service/weight/latest`. Trend tile and the BMI or body-fat
-    Fitness Age driver.
 14. **All-day heart rate**:
     `/wellness-service/wellness/dailyHeartRate/{displayName}?date=`. Day chart
     with sleep and activities marked, like the stress detail.
@@ -265,6 +262,33 @@ faces, screens, sensors and audio prompts stay in Connect.
 
 ## Done
 
+- **13. Weight and body composition** (commit "Show weight and body composition on Health").
+  Health shows the latest weigh-in, a 12-week sparse trend and recorded BMI/body
+  fat when supplied. Fitness Age continues to use Garmin's targets; a weight
+  reading can fill an absent BMI/body-fat driver without inventing a target or
+  age estimate. Garmin's measurement system sets kg or lb. No weight alerts.
+  Latest is checked daily; the recent 90-day range is checked weekly, including
+  empty ranges; older years use budgeted range-history chunks. Verified
+  read-only endpoints (no 429 or auth failure):
+  - `GET /weight-service/weight/dateRange?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD`
+    returns `{startDate,endDate,dateWeightList,totalAverage}`. Each entry has
+    `calendarDate`, `date` and `timestampGMT` (epoch milliseconds), `weight`
+    in **grams**, `samplePk`, `sourceType`, optional `weightDelta`, `bmi`,
+    `bodyFat`, `bodyWater`, `boneMass`, `muscleMass`, `visceralFat`,
+    `metabolicAge`, `physiqueRating`; body-composition fields can be null.
+    Multiple entries for a day are possible. An empty range returns an empty
+    `dateWeightList` and an object `totalAverage` with null measurements.
+  - `GET /weight-service/weight/latest?date=YYYY-MM-DD` returns a single
+    weigh-in with `date`/`timestampGMT` in milliseconds, `weight` in grams,
+    nullable BMI and body-composition fields, `sourceType`, `version`,
+    `weightDelta` and nullable `caloricIntake`. Omitting `date` returned HTTP
+    400; latest may predate the requested date. A body-composition reading
+    with non-null fields was not available to verify on this account.
+  - Add Weight to item 11's long-range chart metric picker using the stored
+    daily weigh-ins; retain gaps rather than filling missing weeks.
+  - Confirm `/latest` on an account with no weigh-ins and the non-null body
+    composition values from a compatible scale; neither was available in the
+    read-only account verification.
 - **12. Export** (commit "Export Garmin history from local data"). Settings
   builds a ZIP in shared Rust code containing all saved raw Garmin JSON,
   per-day CSV tables, non-credential keys from the local settings table and

@@ -445,6 +445,10 @@ impl Client {
                 )
             }
             "fitness_age" => (format!("/fitnessage-service/fitnessage/{key}"), vec![]),
+            "weight_latest" => {
+                NaiveDate::parse_from_str(key, "%Y-%m-%d").map_err(|_| Error::Decode)?;
+                ("/weight-service/weight/latest".into(), vec![("date", key)])
+            }
             "endurance" => (
                 "/metrics-service/metrics/endurancescore".into(),
                 vec![("calendarDate", key)],
@@ -475,7 +479,7 @@ impl Client {
             ),
             // Range keys are "START:END" (inclusive dates); activity pages add ":OFFSET".
             "summary_range" | "sleep_range" | "hrv_range" | "readiness_range"
-            | "max_metrics_range" | "activities_range" => {
+            | "max_metrics_range" | "activities_range" | "weight_range" => {
                 let mut parts = key.split(':');
                 let (Some(start), Some(end)) = (parts.next(), parts.next()) else {
                     return Err(Error::Decode);
@@ -496,6 +500,7 @@ impl Client {
                 let dates = vec![("startDate", start), ("endDate", end)];
                 match kind {
                     "summary_range" => ("/usersummary-service/v2/dailysummaries".into(), dates),
+                    "weight_range" => ("/weight-service/weight/dateRange".into(), dates),
                     "sleep_range" => (
                         "/sleep-service/sleep/dailySleepSummariesByDate".into(),
                         dates,

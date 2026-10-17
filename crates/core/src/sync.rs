@@ -198,6 +198,7 @@ pub async fn sync(
     }
     if !report.rate_limited && report.error.is_none() {
         sync_intensity_weeks(store, client, &mut report, today, budget, now).await;
+        sync_weight(store, client, &mut report, today, budget, now).await;
     }
     if !report.rate_limited && report.error.is_none() && report.requests < budget {
         // Scan newest-first on every run. A previous run may have exhausted its budget
@@ -420,7 +421,12 @@ async fn strength_reference(
     budget: usize,
     now: DateTime<Utc>,
 ) {
-    if store.history("exercise_sets", "~", 1).is_empty() {
+    let has_sets = !store.history("exercise_sets", "~", 1).is_empty();
+    let has_weight = !store.history("weight", "~", 1).is_empty()
+        || store
+            .get("weight_latest", "me")
+            .is_some_and(|v| !v.is_null());
+    if !has_sets && !has_weight {
         return;
     }
     let due = |cursor: &str, days: i64| {
@@ -433,7 +439,7 @@ async fn strength_reference(
         ("profile_settings", "me", "profile_settings_checked", 7),
         ("exercise_catalog", "garmin", "exercise_catalog_checked", 30),
     ] {
-        if !due(cursor, days) {
+        if !due(cursor, days) || (kind == "exercise_catalog" && !has_sets) {
             continue;
         }
         match request(store, client, report, kind, key, None, budget, now).await {
@@ -590,6 +596,88 @@ async fn sync_intensity_weeks(
     if rows.is_some() {
         report.stored += 1;
     }
+}
+
+/// Weight is sparse. Check the latest entry daily and reread the recent range
+/// weekly for edits; empty ranges are checked too, without per-day requests.
+async fn sync_weight(
+    store: &Store,
+    client: &Client,
+    report: &mut SyncReport,
+    today: NaiveDate,
+    budget: usize,
+    now: DateTime<Utc>,
+) {
+    for (kind, interval) in [("weight_latest", 86400), ("weight_recent", 7 * 86400)] {
+        let cursor = format!("{kind}_checked");
+        if store
+            .cursor(&cursor)
+            .and_then(|v| v.parse::<i64>().ok())
+            .is_some_and(|t| t <= now.timestamp() && now.timestamp() - t < interval)
+        {
+            continue;
+        }
+        let key = if kind == "weight_latest" {
+            date(today)
+        } else {
+            format!("{}:{}", date(today - Duration::days(89)), date(today))
+        };
+        let endpoint = if kind == "weight_latest" {
+            kind
+        } else {
+            "weight_range"
+        };
+        let value = match request(store, client, report, endpoint, &key, None, budget, now).await {
+            Some(Got::Value(v)) => {
+                if kind == "weight_recent" && !valid_weight_range(&v) {
+                    report.data_failures += 1;
+                    return;
+                }
+                Some(v)
+            }
+            Some(Got::Absent) => None,
+            Some(Got::Later) | None => return,
+        };
+        let result = if kind == "weight_latest" {
+            store
+                .put(
+                    "weight_latest",
+                    "me",
+                    &now.to_rfc3339(),
+                    &value.unwrap_or(Value::Null),
+                )
+                .map(|_| 1)
+        } else if let Some(v) = value {
+            store_range(store, "weight_range", &v, &now.to_rfc3339())
+        } else {
+            Ok(0)
+        };
+        match result {
+            Ok(n) => report.stored += n,
+            Err(_) => {
+                report.error = Some("local storage failed".into());
+                return;
+            }
+        }
+        if store
+            .set_cursor(&cursor, &now.timestamp().to_string())
+            .is_err()
+        {
+            report.error = Some("local storage failed".into());
+            return;
+        }
+    }
+}
+
+fn valid_weight_range(value: &Value) -> bool {
+    value["dateWeightList"].as_array().is_some_and(|rows| {
+        rows.iter().all(|row| {
+            row["calendarDate"].as_str().and_then(day).is_some()
+                && row["weight"]
+                    .as_f64()
+                    .is_some_and(|w| w.is_finite() && w > 0.)
+        })
+    })
 }
 
 /// A unique primary tracker is authoritative. Without one, a lone registration
@@ -796,6 +884,11 @@ const HISTORY: &[Series] = &[
         kind: "sleep_range",
         span: 28,
     },
+    Series {
+        name: "weight",
+        kind: "weight_range",
+        span: 365,
+    },
 ];
 /// The per-day sync covers today and the 89 days before it.
 pub const RECENT_DAYS: i64 = 90;
@@ -815,7 +908,7 @@ fn covered(store: &Store, name: &str) -> Option<(NaiveDate, NaiveDate)> {
 }
 /// How far back a series has to go, or `None` while the series it depends on are unfinished.
 fn series_floor(store: &Store, name: &str) -> Option<NaiveDate> {
-    if name == "summary" || name == "activities" {
+    if name == "summary" || name == "activities" || name == "weight" {
         return Some(floor());
     }
     let done = |n: &str| covered(store, n).is_some_and(|(lo, _)| lo <= floor());
@@ -892,6 +985,7 @@ fn store_range(store: &Store, kind: &str, value: &Value, at: &str) -> rusqlite::
     let items = match kind {
         "summary_range" => value["data"].as_array(),
         "hrv_range" => value["hrvSummaries"].as_array(),
+        "weight_range" => value["dateWeightList"].as_array(),
         _ => value.as_array(),
     };
     let items: &[Value] = items.map_or(&[], Vec::as_slice);
@@ -927,6 +1021,7 @@ fn store_range(store: &Store, kind: &str, value: &Value, at: &str) -> rusqlite::
         "sleep_range" => "sleep_summary",
         "hrv_range" => "hrv_summary",
         "readiness_range" => "readiness",
+        "weight_range" => "weight",
         _ => "max_metrics",
     };
     let per_day = matches!(kind, "readiness_range" | "max_metrics_range");
@@ -937,6 +1032,12 @@ fn store_range(store: &Store, kind: &str, value: &Value, at: &str) -> rusqlite::
         }
         let value = if per_day {
             Value::Array(entries)
+        } else if kind == "weight_range" {
+            // More than one weigh-in on a day: show the last by Garmin's timestamp.
+            entries
+                .into_iter()
+                .max_by_key(|v| v["timestampGMT"].as_i64().unwrap_or(0))
+                .unwrap_or(Value::Null)
         } else {
             entries.swap_remove(0)
         };
@@ -978,6 +1079,10 @@ pub async fn history(
                     Some(Got::Absent) => Value::Null,
                     Some(Got::Value(v)) => v,
                 };
+            if series.kind == "weight_range" && !value.is_null() && !valid_weight_range(&value) {
+                report.data_failures += 1;
+                break;
+            }
             match store_range(store, series.kind, &value, &now.to_rfc3339()) {
                 Ok(n) => report.stored += n,
                 Err(_) => {

@@ -358,7 +358,10 @@ fn weeks_follow_garmins_intensity_week() {
     assert!(view.configured);
     assert_eq!(view.targets, targets());
     assert_eq!(core.today(TODAY).plan.unwrap().items[0].target, 3.);
-    assert_eq!(core.checkin("2025-03-17").plan.unwrap().week.start, "2025-03-09");
+    assert_eq!(
+        core.checkin("2025-03-17").plan.unwrap().week.start,
+        "2025-03-09"
+    );
     // No first-version fallback: earlier weeks still have no plan or history.
     assert!(view.history[..7].iter().all(|w| w.completion.is_none()));
     assert!(view.history[7].completion.is_some());
@@ -549,6 +552,8 @@ fn put_for_scan(store: &Store, today: chrono::NaiveDate) {
         "records_checked",
         "devices_checked",
         "intensity_weeks_checked",
+        "weight_latest_checked",
+        "weight_recent_checked",
     ] {
         store
             .set_cursor(key, &chrono::Utc::now().timestamp().to_string())
