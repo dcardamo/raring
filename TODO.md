@@ -299,9 +299,12 @@ faces, screens, sensors and audio prompts stay in Connect.
   On a read-only copy of the backfill lane's full-history database: 3,836
   raw responses and 2,571 daily rows exported offline in 12 seconds to a
   9.1 MB ZIP, with 40,192 KiB peak RSS (`time -v`, separate process); no
-  Garmin requests or 429s. Desktop Downloads and sharing on a physical
-  phone remain unverified. FIT originals remain a separate, explicitly
-  budgeted follow-up above.
+  Garmin requests or 429s. Integrated emulator testing opened the actual
+  Android share sheet and verified the ZIP includes stored plan versions and
+  prospectively captured sleep plans. Android publication uses an atomic
+  no-replace rename because its sandbox forbids hard links. Desktop Downloads
+  and sharing on a physical phone remain unverified. FIT originals remain a
+  separate, explicitly budgeted follow-up above.
 
 - **11. Long-term trends and comparisons** (commit "Add long-term trends and
   comparisons"). Every trend chart gains 7D, 30D, 90D, 1Y and All, with

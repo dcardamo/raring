@@ -2729,6 +2729,7 @@ dependencies = [
  "chrono",
  "getrandom 0.3.4",
  "jni",
+ "libc",
  "log",
  "raring-core",
  "serde",

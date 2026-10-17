@@ -339,6 +339,49 @@ mod tests {
     }
 
     #[test]
+    fn preserves_real_plan_schema_and_prospectively_captured_snapshot() {
+        use chrono::TimeZone;
+        let store = Store::open(":memory:").unwrap();
+        let date = chrono::NaiveDate::from_ymd_opt(2025, 1, 2).unwrap();
+        let now = chrono::Local
+            .from_local_datetime(&date.and_hms_opt(12, 0, 0).unwrap())
+            .single()
+            .unwrap();
+        crate::demo::seed(&store, date).unwrap();
+        crate::plan::set(
+            &store,
+            date,
+            &crate::view::PlanUpdate {
+                targets: crate::view::PlanTargets::preset(crate::view::PlanPreset::Strength),
+                paused: false,
+            },
+        )
+        .unwrap();
+        crate::plan::capture_sleep_plan(&store, now).unwrap();
+        let snapshot = "sleep_plan:2025-01-03";
+        let expected_plan: Value = serde_json::from_str(&store.setting("plan").unwrap()).unwrap();
+        let expected_snapshot: Value =
+            serde_json::from_str(&store.setting(snapshot).unwrap()).unwrap();
+        let path = std::env::temp_dir().join(format!(
+            "raring-plan-export-{}-{}.zip",
+            std::process::id(),
+            Utc::now().timestamp_nanos_opt().unwrap()
+        ));
+        write(&store, &path, "1.2.3").unwrap();
+        let mut archive = zip::ZipArchive::new(File::open(&path).unwrap()).unwrap();
+        let mut body = String::new();
+        archive
+            .by_name("settings.json")
+            .unwrap()
+            .read_to_string(&mut body)
+            .unwrap();
+        let settings: Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(settings["plan"], expected_plan);
+        assert_eq!(settings[snapshot], expected_snapshot);
+        std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
     fn excludes_credentials_at_every_depth_and_exports_every_safe_setting() {
         let store = Store::open(":memory:").unwrap();
         store.set_setting("settings", r#"{"notifyBedtime":true,"weeklyTargets":{"sessions":3},"refreshToken":"do-not-export"}"#).unwrap();

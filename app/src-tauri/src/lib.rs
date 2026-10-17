@@ -371,7 +371,36 @@ fn database_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
     Ok(root.join("raring.db"))
 }
 
-// A hard link publishes a complete file atomically and fails if the name already exists.
+// Android's app sandbox forbids hard links. The kernel's no-replace rename
+// publishes a complete archive atomically without clobbering another export.
+#[cfg(any(target_os = "linux", target_os = "android"))]
+fn publish_archive_no_replace(
+    source: &std::path::Path,
+    destination: &std::path::Path,
+) -> Result<(), String> {
+    use std::{ffi::CString, os::unix::ffi::OsStrExt};
+    let source = CString::new(source.as_os_str().as_bytes()).map_err(|e| e.to_string())?;
+    let destination = CString::new(destination.as_os_str().as_bytes()).map_err(|e| e.to_string())?;
+    // SAFETY: both pointers remain valid, NUL-terminated paths throughout the
+    // syscall; renameat2 takes no writable buffers or owned file descriptors.
+    let result = unsafe {
+        libc::syscall(
+            libc::SYS_renameat2,
+            libc::AT_FDCWD,
+            source.as_ptr(),
+            libc::AT_FDCWD,
+            destination.as_ptr(),
+            libc::RENAME_NOREPLACE,
+        )
+    };
+    if result == 0 {
+        Ok(())
+    } else {
+        Err(std::io::Error::last_os_error().to_string())
+    }
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "android")))]
 fn publish_archive_no_replace(
     source: &std::path::Path,
     destination: &std::path::Path,
