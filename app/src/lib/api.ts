@@ -21,6 +21,9 @@ import type { StrengthView } from './generated/StrengthView';
 import type { HealthView } from './generated/HealthView';
 import type { CheckinView } from './generated/CheckinView';
 import type { Settings } from './generated/Settings';
+import type { TrendQuery } from './generated/TrendQuery';
+import type { TrendView } from './generated/TrendView';
+import { sampleTrend } from './sample/trend';
 import type { PlanView } from './generated/PlanView';
 import type { PlanUpdate } from './generated/PlanUpdate';
 
@@ -45,6 +48,7 @@ export const workout = (id:string):Promise<WorkoutView> => {
 export const strength = (date?:string):Promise<StrengthView|null> => call('strength',{date},sampleStrength as unknown as StrengthView);
 export const health = (date?:string):Promise<HealthView> => call('health',{date},sampleHealth as unknown as HealthView);
 export const checkin = (weekStart?:string):Promise<CheckinView> => call('checkin',{weekStart},sampleCheckin as unknown as CheckinView);
+export const trend = (query:TrendQuery):Promise<TrendView> => isTauri()?invoke<TrendView>('trend',{query}):Promise.resolve().then(()=>sampleTrend(query));
 // The preview keeps saved targets in memory; only the Rust core measures them.
 let previewPlan:PlanView = copy(samplePlan as unknown as PlanView);
 export const plan = (date?:string):Promise<PlanView> => call('plan',{date},previewPlan);

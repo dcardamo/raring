@@ -17,8 +17,9 @@ The visual reference is [design/mockup](../design/mockup/): open
   and color. Text is a headline of a few words, labels and numbers. Anything
   longer sits behind a tap.
 - **Garmin's numbers.** Every metric is Garmin's. Raring's own math is
-  limited to fallback normal ranges, week-over-week changes, weekly plan
-  progress, and the advice rules below.
+  limited to fallback normal ranges, display averages and period
+  comparisons, week-over-week changes, weekly plan progress, and the advice
+  rules below.
 - **Fast.** Opens instantly from local data and syncs in the background.
   Switching views draws the last data at once and refreshes it behind the
   scenes; the full-screen loading state is only for a first launch with no
@@ -120,8 +121,8 @@ optional after sign-in.
   or rest period with Garmin's impact, plus Garmin's feedback on the day.
 - **Stress**: Garmin's average so far today, its category and day word, and
   the day in 15-minute bars. Tap for the full day of three-minute readings
-  with sleep and activity marked, Garmin's time in each category, and 7-/30-day
-  daily averages. Times Garmin cannot rate (moving, off-wrist) are gaps, never
+  with sleep and activity marked, Garmin's time in each category, and the
+  daily average as a trend chart. Times Garmin cannot rate (moving, off-wrist) are gaps, never
   zero.
 - Vitals as five compact readings with units, Garmin Health Status when
   available, a range-status indicator and a count of recorded and comparable
@@ -143,10 +144,10 @@ optional after sign-in.
 - A Why sheet lists the six factors worst first, each with the value Garmin
   used (sleep score, recovery hours, 7-day HRV, acute load) and Garmin's
   rating, under one line naming what holds readiness back and what helps.
-- Interactive 7-/30-day trend chart and today's call. Tap the chart or use
-  the date slider to inspect a reading. Dates are anchored to the stored
-  Garmin day, missing days remain gaps, and readiness uses Garmin's level
-  boundaries (50 for Moderate, 75 for High).
+- Readiness trend chart and today's call. Tap the chart or use the date
+  slider to inspect a reading. Dates are anchored to the stored Garmin day,
+  missing days remain gaps, and daily bars use Garmin's level boundaries (50
+  for Moderate, 75 for High).
 
 ### Sleep
 
@@ -158,6 +159,8 @@ optional after sign-in.
 - **Consistency**: 14-night chart with your usual bed and wake windows
   shaded, and Garmin's seven-day average bedtime and wake time above it when
   synced. No rhythm score or chronotype of Raring's own.
+- **Sleep history**: Garmin's sleep score as a trend chart; time asleep is
+  one overlay away.
 - **Sleep alignment**: Garmin's status (Aligned, Ahead, Behind, Jet lag) and
   last night's sleep against Garmin's optimal sleep window on an overnight
   timeline, with the last seven nights below. Garmin's window is a dashed
@@ -248,8 +251,7 @@ Questions go to GitHub; the address is shown as text.
   existing resting-HR and other daily readings. Show units, the personal range,
   its Garmin or Raring source, and explicit within/above/below-range or
   missing/baseline-building labels.
-  Each detail has interactive 7-/30-night history with the current range
-  shaded, actual dates and missing nights left blank. Nightly HRV against the
+  Each detail has a trend chart with the current range shaded on daily ranges, actual dates and missing nights left blank. Nightly HRV against the
   baseline is distinct from Garmin's seven-day HRV status. Explain the comparison
   method behind a tap; personal ranges are not medical targets.
 - **Stress**: today's average with a 30-day line of daily averages, opening
@@ -267,6 +269,24 @@ Questions go to GitHub; the address is shown as text.
   message suggests taking it easy and checking how you feel, without
   diagnosing an illness. A partially calibrated monitor reports only the
   readings it can compare.
+
+### Trends
+
+Every trend chart (Readiness, the vitals, stress, Body Battery, VO2max,
+acute load, Fitness Age and Sleep's history card) is the same interactive chart, drawn from local data.
+
+- Ranges 7D, 30D, 90D, 1Y and All, plus Dates for a chosen training block. Up to 90 days shows each day; longer
+  ranges show weekly or monthly averages, and the selected point says how many
+  days it holds.
+- **Compare**: off, the previous period (same length, faint dashed line on
+  the same axis, with both averages and the change), or a second metric with
+  its own right-hand axis. Both metrics are selectable; periods without data
+  remain empty. Dates selects a block's inclusive start and end; the comparison
+  start selects an equally long block, aligned by elapsed day. One comparison
+  at a time; All has no previous period.
+- Garmin rates days, not averages: only daily readiness bars take Garmin's
+  level colors, and the current baseline band shows only on daily ranges.
+  Averages, overlays and changes are ink, with no verdict and no new score.
 
 ### Weekly plan
 
@@ -423,6 +443,27 @@ Sent by the phone itself.
   medical targets.
 - **Stress bars**: the Today card averages each 15 minutes of Garmin's
   readings; the detail shows every reading. Colors follow Garmin's categories.
+- **Trends**: one value per Garmin day, from the recent per-day rows and the
+  history rows behind them. Readiness is the morning score; Body Battery the
+  day's high; acute load the day's last readiness snapshot; vitals use Health
+  Status where Garmin sent it, otherwise the nightly record, read from the
+  same fields as the Sleep and Health screens (Sleep HR is Garmin's overnight
+  average and never stands in for resting HR). Garmin's
+  invalid placeholders are missing (zero remains valid for stress and scores). Up to 90 days shows days; up to
+  two years, weeks (Monday to Sunday); longer, calendar months, the last one
+  ending on the selected date. 1Y shows 52 Monday-start weeks through that
+  date, including the partial last week. Custom blocks use consecutive seven-day
+  buckets from the chosen start, or months clipped to the chosen start/end.
+  A week or month's value is the mean of its recorded days,
+  never counting missing days as zero; one with none is a gap. A period's
+  average is the mean of all its recorded days, not of the bucket averages.
+  The previous period is the same span just before (the 52 weeks before, for
+  a year), or the chosen equal-length block; the change is this average minus
+  that one. All starts at the
+  metric's first recorded day. Every supplied date (end, block start,
+  comparison start) lies between 1990-01-01 and today, and a comparison block
+  must end by today; otherwise the chart says which date to change instead of
+  drawing an empty range.
 - **Body Battery color**: good at 70 and above, fair from 30, poor below 30.
   Garmin rates no level, so only the display color is bucketed.
 - **Plan week**: Garmin's intensity-minutes week, taken from the dates of its
@@ -586,6 +627,10 @@ Sent by the phone itself.
   and resuming where the last run stopped, back to the account's oldest
   data. A new phone downloads it all again; there is no Raring cloud. Older
   days keep daily values; Settings shows how far back the history goes.
+  Trend charts read only this local history. No Health Status range was found
+  in the web GraphQL inventory or probes; older nights' vitals come from the
+  nightly records, without extra per-day requests. Respiration can differ
+  slightly between Health Status and the nightly record.
 - Garmin Connect stays installed on the phone because it uploads the watch's
   data. Device registration lists watches and their capabilities; device
   service details give the watch's last upload. Opening Connect is an Android

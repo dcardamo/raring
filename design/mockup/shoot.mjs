@@ -21,6 +21,7 @@ const screens = {
   'tod-rules': ['phone'], 'tod-wake': ['phone'], 'tod-day': ['phone', 'desktop'], 'tod-evening': ['phone', 'fold'], 'tod-winddown': ['phone'],
   'tod-late': ['phone'], 'tod-missing': ['phone'], 'tod-overview': ['phone'],
   reconcile: ['phone'], 'reconcile-closed': ['phone'], 'why-readiness': ['phone', 'desktop'], 'why-battery': ['phone'], 'why-training': ['phone'],
+  'trend-year': ['phone', 'fold', 'desktop'], 'trend-overlay': ['phone', 'fold', 'desktop'], 'trend-compare': ['phone', 'fold', 'desktop'], 'trend-all': ['phone'],
 };
 // Overlays are shot at the window's size, as they'd appear.
 const fixedHeight = new Set(['help-sheet', 'widget', 'why-readiness', 'why-battery', 'why-training']);

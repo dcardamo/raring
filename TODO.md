@@ -58,6 +58,25 @@ From item 3, in priority order.
   `averageLocalSleepStartTime` comes back negative or wrapped (Raring accepts
   both).
 
+### Trends follow-ups
+
+From item 11, in priority order.
+
+- Check the trend charts on a real phone with the full history: each range
+  should draw without a visible wait, and the overlay picker should be easy
+  to use one-handed.
+- Opening an old day or workout should fetch its per-day detail (sleep
+  stages, stress readings, charts, route) on demand and keep it. Not built:
+  it needs a way to open a past day on Sleep and Stress and an online fetch
+  path for views, larger than item 11.
+- Weekly trend buckets run Monday to Sunday. Consider aligning them with
+  Garmin's reported intensity-week boundary, which the weekly plan already
+  uses; a display preference need not match that data window.
+- Fitness Age history is limited to downloaded per-day estimates; endurance,
+  hill score and race predictions have no long-history rows. The web GraphQL lists
+  `enduranceScoreScalar` and `hillScoreScalar` (start, end, weekly
+  aggregation); unverified.
+
 ## Next
 
 ### 7a. Weekly plan follow-ups
@@ -124,24 +143,6 @@ the persistent notification a weather app keeps up to date.
   screen.
 - Rendered natively (Glance or RemoteViews) from a small snapshot the Rust
   core writes after each sync, so the widget never starts the web view.
-
-### 11. Long-term trends and comparisons
-
-Depends on item 1. The analysis Garmin's subscription charges for, free.
-
-- Every trend chart gains ranges up to 1 year and All, with weekly or
-  monthly averaging on long ranges.
-- Overlay any two metrics on one chart (for example sleep time against
-  readiness, or load against HRV), and compare two periods (this training
-  block against the last).
-- Display only: averages and overlays, no new scores. Spec: add the
-  averaging to Rules.
-- Older days live in the history rows listed under Done (item 1), next to
-  the per-day rows of the last 90 days; each chart reads both. Check the web
-  app's other GraphQL queries for a Health Status range read before adding
-  per-day requests to long-range trends.
-- Opening an old day or workout should fetch its per-day detail (sleep
-  stages, stress readings, charts, route) on demand and keep it. Not built.
 
 ### 12. Export
 
@@ -260,6 +261,39 @@ faces, screens, sensors and audio prompts stay in Connect.
 
 ## Done
 
+- **11. Long-term trends and comparisons** (commit "Add long-term trends and
+  comparisons"). Every trend chart gains 7D, 30D, 90D, 1Y and All, with
+  weekly averages up to two years and monthly beyond, selectable primary
+  and overlay metrics, and comparison with the previous period or chosen
+  equal-length training blocks. Sleep, acute load and Fitness Age gain history
+  cards and Body Battery a daily-high chart. The Rust core averages from local rows
+  (`trend` command, `raring trend` in the CLI); no new requests. On the
+  maintainer's full-history database (37 MB) a debug CLI read took at most
+  31 ms for All (14 metrics checked, 0–31 ms). Emulator-5580 passed
+  custom-block and overlay smoke checks with that database; four All-history
+  IPC reads including an HRV overlay took 14–38 ms. No new requests are made
+  by charts. Read-only checks against the real account, three GraphQL
+  requests, no 429s:
+  - No Health Status range was found in the web app's published GraphQL
+    operation inventory or three live probes (not proof none exists): `healthStatusSummaries`,
+    `healthStatusSummaryRange`, `healthStatusRange`, `healthStatusScalar`,
+    `healthStatusRangeScalar`, `healthStatusSummariesScalar`,
+    `healthStatusSummaryRangeScalar`, `healthStatusHistory`, `healthStatus`,
+    `healthStatusTrend` and `healthStatusTrendScalar` are undefined fields,
+    and `healthStatusSummary` accepts only `calendarDate` (`startDate`,
+    `endDate` and `days` are unknown arguments). Introspection is disabled.
+  - Health Status is preferred; older dates fall back to nightly records.
+    Sleep HR (`avgHeartRate`) stays distinct from resting HR. The two sources
+    can report different respiration averages; do not describe them as
+    interchangeable measurements.
+  - History coverage is metric- and account-dependent. Skin temperature may
+    exist only in detailed sleep rows; Fitness Age has no historical range
+    backfill. Summaries marked `includesWellnessData: false` do not establish
+    resting HR, Body Battery or stress coverage. Sparse VO2 max readings
+    remain sparse rather than being filled into unmeasured days.
+  - Acute load history comes from readiness history's `acuteLoad`; the
+    corresponding Training Status field is `dailyTrainingLoadAcute`.
+    Detailed account comparisons remain in the private research notes.
 - **8. Read-only strength view** (commit "Show strength sets, history and the
   body map"). Strength activities show Garmin's sets per exercise with
   last time, records and miscount flags; Training has a this-week card;

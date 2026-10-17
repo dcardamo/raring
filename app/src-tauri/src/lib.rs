@@ -218,6 +218,13 @@ async fn checkin(app: tauri::AppHandle, week_start: Option<String>) -> Result<Ch
 }
 
 #[tauri::command]
+async fn trend(app: tauri::AppHandle, query: TrendQuery) -> Result<TrendView, String> {
+    read_view(app, move |core| {
+        core.trend(&query, &core.current_date(Local::now()))
+    })
+    .await
+}
+#[tauri::command]
 async fn plan(app: tauri::AppHandle, date: Option<String>) -> Result<PlanView, String> {
     read_view(app, move |core| {
         Ok(core.plan(&date.unwrap_or_else(|| core.current_date(Local::now()))))
@@ -456,6 +463,7 @@ pub fn run() {
                     strength,
                     health,
                     checkin,
+                    trend,
                     plan,
                     set_plan,
                     sync_now,
@@ -479,6 +487,7 @@ pub fn run() {
                     strength,
                     health,
                     checkin,
+                    trend,
                     plan,
                     set_plan,
                     sync_now,

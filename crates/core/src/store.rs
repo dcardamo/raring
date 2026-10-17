@@ -80,6 +80,65 @@ impl Store {
         })
         .unwrap_or_default()
     }
+    /// Day rows from `from` to `to`, oldest first.
+    pub fn days_between(&self, endpoint: &str, from: &str, to: &str) -> Vec<(String, Value)> {
+        let db = self.db.lock().unwrap();
+        let Ok(mut stmt) = db.prepare(
+            "SELECT key,json FROM raw WHERE endpoint=?1 AND key BETWEEN ?2 AND ?3 ORDER BY key",
+        ) else {
+            return vec![];
+        };
+        stmt.query_map(params![endpoint, from, to], |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+        })
+        .map(|rows| {
+            rows.flatten()
+                .filter_map(|(k, s)| serde_json::from_str(&s).ok().map(|v| (k, v)))
+                .collect()
+        })
+        .unwrap_or_default()
+    }
+    /// One number per day row, the first of `paths` (SQLite JSON paths such as
+    /// `$.a.b`) that holds one. SQLite extracts it, so large rows such as a
+    /// night's sleep are never parsed whole.
+    pub fn day_numbers(
+        &self,
+        endpoint: &str,
+        paths: &[&str],
+        from: &str,
+        to: &str,
+    ) -> Vec<(String, f64)> {
+        if paths.is_empty() {
+            return vec![];
+        }
+        let extract: Vec<String> = (0..paths.len())
+            .map(|i| format!("json_extract(json,?{})", i + 4))
+            .collect();
+        let sql = format!(
+            "SELECT key,{} FROM raw WHERE endpoint=?1 AND key BETWEEN ?2 AND ?3 AND json!='null' ORDER BY key",
+            // COALESCE needs at least two arguments.
+            if extract.len() == 1 {
+                extract[0].clone()
+            } else {
+                format!("COALESCE({})", extract.join(","))
+            }
+        );
+        let db = self.db.lock().unwrap();
+        let Ok(mut stmt) = db.prepare(&sql) else {
+            return vec![];
+        };
+        let mut args: Vec<&dyn rusqlite::ToSql> = vec![&endpoint, &from, &to];
+        args.extend(paths.iter().map(|p| p as &dyn rusqlite::ToSql));
+        stmt.query_map(args.as_slice(), |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, Option<f64>>(1).ok().flatten()))
+        })
+        .map(|rows| {
+            rows.flatten()
+                .filter_map(|(k, v)| v.map(|v| (k, v)))
+                .collect()
+        })
+        .unwrap_or_default()
+    }
     pub fn activity_ids(&self, since: Option<&str>, limit: usize) -> Vec<String> {
         let db = self.db.lock().unwrap();
         let Ok(mut stmt) = db.prepare(

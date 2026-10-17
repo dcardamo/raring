@@ -515,13 +515,26 @@ try {
  live.on('pageerror',e=>errors.push(e.message));
  await live.clock.install({time:new Date('2026-10-16T14:00:00Z')});
  await live.addInitScript(samples=>{
+function trendFixture(q){
+     const n=q.range==='days7'?7:q.range==='days90'?90:q.range==='year'?52:30;
+     const source=q.metric==='readiness'?samples.today.readinessTrend:q.metric==='stress'?samples.today.stress.trend:samples.health.vitals.readings.find(v=>v.kind===(q.metric==='sleepHr'?'restingHr':q.metric))?.trend ?? [];
+     const end=q.end??samples.today.date;
+     const points=Array.from({length:n},(_,i)=>{const d=new Date(end+'T12:00:00Z');d.setUTCDate(d.getUTCDate()-n+1+i);const date=d.toISOString().slice(0,10),value=source[source.length-n+i]??null;return {start:date,end:date,value,days:value==null?0:1}});
+     const present=points.filter(p=>p.value!=null),series={metric:q.metric,name:q.metric,unit:q.metric==='hrv'?'ms':'',points,average:present.length?present.reduce((s,p)=>s+p.value,0)/present.length:null,days:present.length};
+     return {range:q.range,bucket:'day',from:points[0].start,to:end,series,overlay:null,previous:null,change:null,available:[q.metric]};
+    }
   localStorage.setItem('notifications-step-done','1');
   const state=window.testBackend={samples,syncs:0,reads:0,lastAttempt:null,failSync:false,failRead:false,holdToday:false,pendingToday:null};
   samples.status.lastSync=new Date(Date.now()-3600_000).toISOString();
   window.isTauri=true;
   window.__TAURI_INTERNALS__={
    transformCallback:()=>1,
-   invoke:async(command)=>{
+   invoke:async(command,args)=>{
+ if(command==='trend'){
+     const result=trendFixture(args.query);state.trendReads=(state.trendReads??0)+1;
+     if(state.holdTrend)await new Promise(resolve=>{state.pendingTrend=resolve});
+     return result;
+    }
     if(command==='app_status')return structuredClone(samples.status);
     if(command==='sync_now'){
      state.syncs++;state.lastAttempt=Date.now();
@@ -598,6 +611,22 @@ try {
  await live.clock.fastForward(1_000);
  assert.equal(await live.locator('h1').textContent(),'Sleep');
  await live.locator('.sleep-hero').waitFor();
+ // A mounted long-range chart must refresh on sync; an old pending read must not win.
+ await live.goto(`${url}/#readiness`);
+ const liveTrend=live.locator('.history');
+ await liveTrend.getByRole('button',{name:'30 days',exact:true}).click();
+ await liveTrend.getByRole('slider').waitFor();
+ await live.evaluate(()=>{window.testBackend.holdTrend=true});
+ await liveTrend.getByRole('button',{name:'1 year',exact:true}).click();
+ await live.waitForFunction(()=>window.testBackend.pendingTrend);
+ await live.evaluate(()=>{
+  const s=window.testBackend;s.holdTrend=false;s.samples.today.readinessTrend[29]=93;
+  s.samples.status.lastSync=new Date(Date.now()+1000).toISOString();window.dispatchEvent(new Event('raring:resume'));
+ });
+ await liveTrend.locator('.reading-values b').first().getByText('93',{exact:true}).waitFor();
+ await live.evaluate(()=>window.testBackend.pendingTrend());
+ await live.clock.fastForward(1000);
+ assert.equal(await liveTrend.locator('.reading-values b').first().textContent(),'93','a stale pre-sync trend cannot replace the refreshed one');
  console.log('Live cache polling, throttled sync, failures and route races: passed');
 
  // A partially calibrated monitor must not turn missing readings into an all-clear.
@@ -612,7 +641,7 @@ try {
  await live.getByRole('navigation').getByRole('button',{name:'Health',exact:true}).click();
  await live.getByText('1 reading in range',{exact:true}).waitFor();
  assert.equal(await live.getByText('Within your ranges',{exact:true}).count(),0);
- assert.equal(await live.getByText('Not recorded',{exact:true}).count(),3);
+ assert.equal(await live.locator('.signal-grid').getByText('Not recorded',{exact:true}).count(),3);
  await live.screenshot({path:resolve(output,'health-partial.png')});
  await live.evaluate(()=>{
   const v=window.testBackend.samples.health.vitals.readings;
@@ -704,11 +733,20 @@ try {
  cached.on('pageerror',e=>errors.push(e.message));
  await cached.clock.install({time:new Date('2026-10-16T14:00:00Z')});
  await cached.addInitScript(samples=>{
+function trendFixture(q){
+     const n=q.range==='days7'?7:q.range==='days90'?90:q.range==='year'?52:30;
+     const source=q.metric==='readiness'?samples.today.readinessTrend:q.metric==='stress'?samples.today.stress.trend:samples.health.vitals.readings.find(v=>v.kind===(q.metric==='sleepHr'?'restingHr':q.metric))?.trend ?? [];
+     const end=q.end??samples.today.date;
+     const points=Array.from({length:n},(_,i)=>{const d=new Date(end+'T12:00:00Z');d.setUTCDate(d.getUTCDate()-n+1+i);const date=d.toISOString().slice(0,10),value=source[source.length-n+i]??null;return {start:date,end:date,value,days:value==null?0:1}});
+     const present=points.filter(p=>p.value!=null),series={metric:q.metric,name:q.metric,unit:q.metric==='hrv'?'ms':'',points,average:present.length?present.reduce((s,p)=>s+p.value,0)/present.length:null,days:present.length};
+     return {range:q.range,bucket:'day',from:points[0].start,to:end,series,overlay:null,previous:null,change:null,available:[q.metric]};
+    }
   localStorage.setItem('notifications-step-done','1');
   const state=window.testViews={samples,reads:{},completed:{},pending:{},holdNext:{},statusReads:0,statusCompleted:0,syncCalls:0};
   samples.status.lastSync=new Date().toISOString();
   window.isTauri=true;
-  window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command)=>{
+  window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
+ if(command==='trend')return trendFixture(args.query);
    if(command.startsWith('plugin:event|'))return 1;
    if(command==='app_status'){
     state.statusReads++;
@@ -870,6 +908,79 @@ try {
  assert.equal(new URL(cached.url()).hash,'#onboarding','older signed-in status cannot undo a newer sign-out');
  await cached.close();
  console.log('Cached switching, sync/rollover invalidation, scroll, touch cancellation and status races: passed');
+ for(const width of [390,700,1100]){
+  const trends=await browser.newPage({viewport:{width,height:900}});
+  trends.on('pageerror',e=>errors.push(e.message));
+  async function shot(name){
+   const height=await trends.locator('.scroll').evaluate(e=>e.scrollHeight+100);
+   await trends.setViewportSize({width,height:Math.max(900,height)});
+   await trends.locator('.scroll').evaluate(e=>{e.scrollTop=0;e.scrollLeft=0});
+   await trends.screenshot({path:resolve(output,`${name}-${width}.png`)});
+   await trends.setViewportSize({width,height:900});
+  }
+  await trends.goto(`${url}/#readiness`);
+  const history=trends.locator('.history').first();
+  await history.getByRole('button',{name:'90 days',exact:true}).click();
+  await history.getByText('Reading your history…').waitFor({state:'detached'});
+  assert.equal(await history.locator('.history-bar').count()+await history.locator('.history-gap').count(),90,'90 days are daily');
+  await history.getByRole('button',{name:'1 year',exact:true}).click();
+  await history.getByText('Weekly average of recorded days',{exact:true}).waitFor();
+  assert.equal(await history.locator('.history-bar').count()+await history.locator('.history-gap').count(),52,'a year is 52 weeks');
+  const fills=new Set(await history.locator('.history-bar').evaluateAll(bars=>bars.map(b=>b.getAttribute('fill'))));
+  assert.deepEqual([...fills],['#E4E8F0'],'weekly averages are ink, not Garmin levels');
+  assert.ok((await history.getByRole('slider').getAttribute('aria-valuetext')).startsWith('Week of '));
+  assert.match(await history.locator('.history-reading small').textContent(),/^\d of \d days recorded$/);
+  await history.getByRole('button',{name:'Previous',exact:true}).click();
+  await history.locator('.history-previous').waitFor();
+  assert.ok((await history.locator('.period-averages').textContent()).includes('Period before'));
+  await shot('trends-previous');
+  await history.getByRole('button',{name:'All history',exact:true}).click();
+  await history.getByText(/^\d+ \/ \d+ weeks$/).waitFor();
+  assert.ok(await history.getByRole('button',{name:'Previous',exact:true}).isDisabled(),'All has no period before it');
+  assert.equal(await history.locator('.history-previous').count(),0);
+  await history.getByRole('button',{name:'90 days',exact:true}).click();
+  await history.getByRole('button',{name:'Metric',exact:true}).click();
+  await history.locator('.history-overlay').waitFor();
+  assert.equal(await history.getByRole('combobox',{name:'Metric to overlay'}).inputValue(),'sleepTime');
+  assert.ok((await history.locator('.history-legend').textContent()).includes('Time asleep, right axis'));
+  assert.match(await history.locator('.overlay-reading b').textContent(),/^\d+:\d\d$/,'time asleep reads as hours and minutes');
+  await history.getByRole('combobox',{name:'Metric to overlay'}).selectOption('hrv');
+  await history.getByText('HRV, right axis',{exact:true}).waitFor();
+  await shot('trends-overlay');
+  await history.getByRole('combobox',{name:'Primary metric',exact:true}).selectOption('sleepTime');
+  await history.getByRole('combobox',{name:'Metric to overlay'}).selectOption('acuteLoad');
+  await history.getByText('Acute load, right axis',{exact:true}).waitFor();
+  await history.getByRole('button',{name:'Custom dates',exact:true}).click();
+  await history.getByLabel('Block start',{exact:true}).fill('2025-08-01');
+  await history.getByLabel('Block end',{exact:true}).fill('2025-08-28');
+  await history.getByRole('button',{name:'Previous',exact:true}).click();
+  await history.getByLabel('Comparison block start',{exact:true}).fill('2025-05-01');
+  await history.getByText(/Against 2025-05-01 – 2025-05-28/).waitFor();
+  await history.getByLabel('Block start',{exact:true}).fill('');
+  await history.getByText(/Couldn't read this range/).waitFor();
+  await history.getByLabel('Block start',{exact:true}).fill('2025-08-01');
+  await history.getByText(/Against 2025-05-01 – 2025-05-28/).waitFor();
+  await history.scrollIntoViewIfNeeded();
+  await shot('trends-custom');
+  const overflow=await trends.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
+  assert.ok(overflow<=1,`no horizontal overflow at ${width}px`);
+  assert.equal(await trends.locator('.phone').evaluate(e=>e.scrollLeft),0,'chart focus cannot scroll the clipped hero glow sideways');
+  await trends.goto(`${url}/#metric/hrv`);
+  const nightly=trends.locator('.history').first();
+  await nightly.getByRole('button',{name:'All history',exact:true}).click();
+  await nightly.getByText(/^(Weekly|Monthly) average of recorded days$/).waitFor();
+  await trends.goto(`${url}/#metric/stress`);
+  const stress=trends.locator('.history').first();
+  await stress.getByRole('button',{name:'All history',exact:true}).click();
+  await stress.getByText('Monthly average of recorded days',{exact:true}).waitFor();
+  assert.ok((await stress.getByRole('slider').getAttribute('aria-valuetext')).startsWith('October 2025:'));
+  await trends.goto(`${url}/#metric/hrv`);
+  await nightly.getByRole('button',{name:'All history',exact:true}).click();
+  assert.equal(await nightly.getByText('Current Garmin baseline',{exact:true}).count(),0,'past baselines differed, so averages show none');
+  await shot('trends-all');
+  await trends.close();
+ }
+ console.log('Trend ranges, weekly and monthly averages, overlays and the period before at 390/700/1100: passed');
 
  // "Follow my day": a slow save must not leave Today in the layout that was just switched off.
  const layout=await browser.newPage({viewport:{width:390,height:844}});

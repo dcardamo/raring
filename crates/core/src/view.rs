@@ -1136,6 +1136,128 @@ pub struct AppStatus {
     pub last_error: Option<String>,
 }
 
+/// A metric with a daily value that trend charts can show and overlay.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum TrendMetric {
+    /// Garmin's morning Training Readiness score.
+    Readiness,
+    SleepScore,
+    /// Minutes asleep.
+    SleepTime,
+    /// Nightly average HRV, ms.
+    Hrv,
+    RestingHr,
+    /// Garmin's average heart rate during sleep (Health Status "HR").
+    SleepHr,
+    Respiration,
+    Spo2,
+    SkinTemp,
+    /// The day's highest Body Battery.
+    BodyBattery,
+    /// Garmin's average stress for the day.
+    Stress,
+    Vo2max,
+    FitnessAge,
+    /// Garmin's acute (7-day) training load at the end of the day.
+    AcuteLoad,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum TrendRange {
+    Days7,
+    Days30,
+    Days90,
+    Year,
+    All,
+    Custom,
+}
+
+/// How many days one point covers. Long ranges average weeks or months.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum TrendBucket {
+    Day,
+    Week,
+    Month,
+}
+
+/// What a trend chart asks for: one metric over a range, optionally with a
+/// second metric overlaid or the period before it.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct TrendQuery {
+    pub metric: TrendMetric,
+    pub range: TrendRange,
+    /// The last day, YYYY-MM-DD; the current day when absent.
+    #[serde(default)]
+    pub end: Option<String>,
+    #[serde(default)]
+    pub overlay: Option<TrendMetric>,
+    #[serde(default)]
+    pub previous: bool,
+    /// Inclusive first day for a custom training block.
+    #[serde(default)]
+    pub start: Option<String>,
+    /// First day of an equally long comparison block; absent means the previous period.
+    #[serde(default)]
+    pub comparison_start: Option<String>,
+}
+
+/// One day, week or month. The value is the mean of the recorded days in it;
+/// None when no day in it was recorded.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct TrendPoint {
+    /// First and last day covered, YYYY-MM-DD.
+    pub start: String,
+    pub end: String,
+    pub value: Option<f64>,
+    /// Recorded days behind the value.
+    pub days: u32,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct TrendSeries {
+    pub metric: TrendMetric,
+    pub name: String,
+    pub unit: String,
+    /// Oldest first.
+    pub points: Vec<TrendPoint>,
+    /// Mean of every recorded day in the period.
+    pub average: Option<f64>,
+    pub days: u32,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct TrendView {
+    pub range: TrendRange,
+    pub bucket: TrendBucket,
+    /// First and last day of the period, YYYY-MM-DD; for All, from the
+    /// first recorded day.
+    pub from: String,
+    pub to: String,
+    pub series: TrendSeries,
+    /// A second metric over the same points.
+    pub overlay: Option<TrendSeries>,
+    /// The same-length period just before, point for point.
+    pub previous: Option<TrendSeries>,
+    /// This period's average minus the previous one's.
+    pub change: Option<f64>,
+    /// Supported metrics for the picker; unavailable periods stay empty.
+    pub available: Vec<TrendMetric>,
+}
+
 /// The four weekly plan targets.
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]

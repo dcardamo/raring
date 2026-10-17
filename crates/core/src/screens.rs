@@ -70,7 +70,7 @@ fn snapshot_time(v: &Value, field: &str) -> Option<i64> {
                 .map(|d| d.and_utc().timestamp_millis())
         })
 }
-fn readiness(v: &Value) -> &Value {
+pub(crate) fn readiness(v: &Value) -> &Value {
     let Some(snapshots) = v.as_array() else {
         return v;
     };
@@ -112,6 +112,62 @@ pub(crate) fn sleep(v: &Value) -> &Value {
     } else {
         v
     }
+}
+/// A night's overnight averages. The heart rate is Garmin's average during
+/// sleep, never resting heart rate.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Night {
+    HeartRate,
+    Spo2,
+    Respiration,
+    SkinTemp,
+}
+/// Field names inside a sleep record: `dailySleepDTO` in a per-day row, the
+/// item itself in a history row. First match wins.
+fn night_fields(field: Night) -> &'static [&'static str] {
+    match field {
+        Night::HeartRate => &["avgHeartRate", "averageHeartRate"],
+        Night::Spo2 => &["averageSpO2Value", "avgSpO2"],
+        Night::Respiration => &["averageRespirationValue"],
+        Night::SkinTemp => &["skinTempDeviation"],
+    }
+}
+/// A per-day sleep row carries skin temperature beside the record, and that
+/// value wins over the record's own.
+const ROW_SKIN_TEMP: &str = "avgSkinTempDeviationC";
+pub(crate) fn night_valid(field: Night, n: f64) -> bool {
+    n.is_finite()
+        && match field {
+            Night::HeartRate => n > 0. && n < 300.,
+            Night::Spo2 => n > 0. && n <= 100.,
+            Night::Respiration => n > 0. && n < 100.,
+            Night::SkinTemp => n.abs() < 10.,
+        }
+}
+/// One overnight average from a sleep row or history item.
+pub(crate) fn night_value(raw: &Value, field: Night) -> Option<f64> {
+    let outer = (field == Night::SkinTemp)
+        .then(|| num(raw, &[&[ROW_SKIN_TEMP]]))
+        .flatten();
+    outer
+        .or_else(|| {
+            let record = sleep(raw);
+            night_fields(field)
+                .iter()
+                .find_map(|f| num(record, &[&[f]]))
+        })
+        .filter(|n| night_valid(field, *n))
+}
+/// The same fields as `night_value`, as SQLite JSON paths in the same order,
+/// so long trends read them without parsing whole nights.
+pub(crate) fn night_paths(field: Night) -> Vec<String> {
+    let fields = night_fields(field);
+    (field == Night::SkinTemp)
+        .then(|| format!("$.{ROW_SKIN_TEMP}"))
+        .into_iter()
+        .chain(fields.iter().map(|f| format!("$.dailySleepDTO.{f}")))
+        .chain(fields.iter().map(|f| format!("$.{f}")))
+        .collect()
 }
 fn sleep_need_minutes(need: &Value) -> Option<f64> {
     // Connect's adjusted "actual" need is in minutes; the older explicit
@@ -573,7 +629,7 @@ fn sscore(v: &Value) -> Option<f64> {
 fn current_rscore(v: &Value) -> Option<f64> {
     num(readiness(v), &[&["score"], &["trainingReadinessScore"]])
 }
-fn rscore(v: &Value) -> Option<f64> {
+pub(crate) fn rscore(v: &Value) -> Option<f64> {
     // Historical days and weekly comparisons need a consistent morning baseline,
     // not a post-workout dip that depends on when that day's last sync happened.
     let morning = v
@@ -921,13 +977,11 @@ fn vital_value(store: &Store, kind: VitalKind, date: &str) -> Option<f64> {
             &[&["sleepingRespirationValue"], &["avgSleepRespirationValue"]],
         ),
         VitalKind::Spo2 => ("spo2", &[&["averageSpO2"], &["sleepSpO2"]]),
-        VitalKind::SkinTemp => (
-            "sleep",
-            &[
-                &["avgSkinTempDeviationC"],
-                &["dailySleepDTO", "skinTempDeviation"],
-            ],
-        ),
+        VitalKind::SkinTemp => {
+            return store
+                .get("sleep", date)
+                .and_then(|v| night_value(&v, Night::SkinTemp))
+        }
     };
     store.get(source, date).and_then(|v| num(&v, paths))
 }
@@ -1292,14 +1346,7 @@ fn missing_metric_reasons(
         (
             "skinTemp",
             "sleepSkinTemperatureCapable",
-            num(
-                s,
-                &[
-                    &["avgSkinTempDeviationC"],
-                    &["dailySleepDTO", "skinTempDeviation"],
-                ],
-            )
-            .is_none(),
+            night_value(s, Night::SkinTemp).is_none(),
             "Your watch doesn't record skin temperature",
         ),
     ] {
@@ -1841,20 +1888,19 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
                 OvernightKind::HeartRate,
                 "heart rate",
                 "bpm",
-                num(v, &[&["avgHeartRate"], &["averageHeartRate"]])
-                    .filter(|n| *n > 0. && *n < 300.),
+                night_value(v, Night::HeartRate),
             ),
             (
                 OvernightKind::Respiration,
                 "respiration",
                 "br/min",
-                num(v, &[&["averageRespirationValue"]]).filter(|n| *n > 0. && *n < 100.),
+                night_value(v, Night::Respiration),
             ),
             (
                 OvernightKind::Spo2,
                 "SpO2",
                 "%",
-                num(v, &[&["averageSpO2Value"], &["avgSpO2"]]).filter(|n| *n > 0. && *n <= 100.),
+                night_value(v, Night::Spo2),
             ),
         ]
         .iter()

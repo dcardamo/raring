@@ -145,3 +145,36 @@ where they are.
 Not mocked: empty states, saving offline, a failed save. For a failed save,
 recommend keeping edits on the device, fetching the sets again before writing
 in case they changed in Connect, and saying plainly what was rejected.
+
+# Long-term trends: notes
+
+Screens `trend-year`, `trend-overlay`, `trend-compare` and `trend-all`
+(`trends.js`, `trends.css`). One chart serves every trend: Readiness, the
+vitals, stress, Body Battery, sleep, acute load and VO₂ max.
+
+## Decided
+
+- **Ranges:** 7D, 30D, 90D, 1Y and All, plus Dates for a custom training block. Up to 90 days shows one point per
+  day; 1Y shows weekly averages; All shows weekly averages for up to two
+  years of history and monthly averages beyond. Weeks start on Monday until
+  Garmin's start-of-week setting syncs (item 7).
+- **Averages** are the mean of the days Garmin recorded in the week or
+  month. Missing days are left out, never zero; a week or month with no
+  recorded day is a gap. The selected point says how many days it holds.
+  *Rules: in the spec.*
+- **Color:** Garmin rates single days, not averages. Daily readiness bars
+  keep Garmin's level colors; weekly and monthly readiness bars are ink.
+  Other metrics stay ink lines at every range (a bar from an axis that
+  doesn't start at zero would exaggerate). The current baseline band shows
+  only on daily ranges, since past baselines differed.
+- **Overlay:** both the primary and second metric can be selected. The second
+  uses secondary ink with its own right-hand axis; bars dim under it. Picked
+  from every supported trend metric; empty periods remain empty. No correlation figure: lining two lines up implies no cause.
+- **Previous period:** the same length immediately before, as a faint
+  dashed line on the same axis, with both periods' averages and the change
+  in ink (no verdict color). A comparison start date can instead select any
+  equally long block, aligned by elapsed day. Not offered on All.
+- One comparison at a time: off, previous period, or a metric.
+- **Layout:** the mockup spans the chart card across unfolded and desktop
+  screens. The app keeps the card in its masonry column and draws the chart
+  at the card's width, so cards don't leave holes around it.

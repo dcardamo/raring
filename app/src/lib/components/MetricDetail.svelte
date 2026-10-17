@@ -3,6 +3,8 @@
  import type {TodayView} from '../generated/TodayView';
  import type {HealthView} from '../generated/HealthView';
  import type {TrainingView} from '../generated/TrainingView';
+ import type {VitalReading} from '../generated/VitalReading';
+ import type {TrendMetric} from '../generated/TrendMetric';
  import {metricDescriptions,metricSource} from '../metrics';
  import {num,dateLabel,duration} from '../format';
  import {vitalStatus,rangeName,vitalName} from '../signals';
@@ -11,7 +13,6 @@
  import Card from './Card.svelte';
  import Gauge from './Gauge.svelte';
  import RangeBar from './RangeBar.svelte';
- import Sparkline from './Sparkline.svelte';
  import StressTimeline from './StressTimeline.svelte';
  import WhySheet from './WhySheet.svelte';
  let {metric,data}:{metric:string,data:TodayView|HealthView|TrainingView}=$props();
@@ -22,6 +23,8 @@
  let vital=$derived(source==='health'?(data as HealthView).vitals.readings.find(v=>v.kind===metric):null);
  let training=$derived(source==='training'?data as TrainingView:null);
  let trainingValue=$derived(training?({vo2max:training.vo2max,endurance:training.enduranceScore,hill:training.hillScore,runningTolerance:training.runningToleranceKm} as Record<string,number|null>)[metric]:null);
+ // Health Status's HR is Garmin's sleep average, so its history is Sleep HR, not resting HR.
+ const vitalTrend=(v:VitalReading):TrendMetric=>v.kind==='restingHr'?(v.status || v.rangeSource==='garmin'?'sleepHr':'restingHr'):v.kind;
  let decimals=$derived(metric==='skinTemp'||metric==='respiration'?1:0);
 </script>
 <div class="metric-hero">
@@ -46,21 +49,22 @@
   {#if stress.timeline.length}<Card title="Through the day"><StressTimeline {stress}/></Card>{/if}
   {#if stress.time.length}<Card title="Time in each level">{#each stress.time as t}<div class="stress-row"><b>{stressNames[t.level]}</b><div class="bar"><i style:width={t.seconds/Math.max(stressTotal,1)*100+'%'} style:background={stressColors[t.level]}></i></div><span class="n">{duration(t.seconds/60)}</span><small>{Math.round(t.seconds/Math.max(stressTotal,1)*100)}%</small></div>{/each}{#if stress.activeS}<div class="stress-row"><b>Active</b><div class="bar"><i style:width={stress.activeS/Math.max(stressTotal,1)*100+'%'} style:background={colors.secondary}></i></div><span class="n">{duration(stress.activeS/60)}</span><small>{Math.round(stress.activeS/Math.max(stressTotal,1)*100)}%</small></div>{/if}</Card>{/if}
   <Card title="Daily average">
-   <HistoryChart values={stress.trend} endDate={(data as TodayView).date} label="Average stress" color={colors.ink}/>
+   <HistoryChart values={stress.trend} endDate={(data as TodayView).date} label="Average stress" color={colors.ink} metric="stress"/>
   </Card>
  {:else if battery}
+  <Card title="Daily high"><HistoryChart values={[]} endDate={(data as TodayView).date} label="Highest Body Battery" metric="bodyBattery" initialRange="days30"/></Card>
   <Card title="Today"><div class="battery-totals"><div><b class="big n">{num(battery.charged)}</b><span>Charged</span></div><div><b class="big n">{num(battery.drained)}</b><span>Drained</span></div></div></Card>
  {:else if vital}
   <Card title="Nightly history">
    {#key metric}
-    <HistoryChart values={vital.trend} endDate={(data as HealthView).date} label={vitalName(vital)} unit={vital.unit} {decimals} band={vital.normal} bandLabel={'Current '+rangeName(vital)} nights/>
+    <HistoryChart values={vital.trend} endDate={(data as HealthView).date} label={vitalName(vital)} unit={vital.unit} {decimals} band={vital.normal} bandLabel={'Current '+rangeName(vital)} nights metric={vitalTrend(vital)}/>
    {/key}
   </Card>
   <Card title={rangeName(vital)}>
    {#if vital.normal}<RangeBar value={vital.value} scale={vital.scale} range={vital.normal} color={toneColor(vital.tone)}/><p class="metric-copy range-caption">{num(vital.normal[0],decimals)}–{num(vital.normal[1],decimals)} {vital.unit}</p>{:else}<p class="metric-copy">{vital.status==='ONBOARDING'?"Garmin is still building this baseline.":metric==='hrv'?"Waiting for Garmin to report your HRV baseline.":"At least 14 recorded nights are needed for Raring's fallback range."}</p>{/if}
   </Card>
  {:else if training && metric==='vo2max' && training.vo2maxTrend.some(v=>v!=null)}
-  <Card title="Weekly trend"><div class="metric-chart"><Sparkline values={training.vo2maxTrend} w={500} h={150}/></div><div class="chart-ends"><span>Earlier</span><span>Latest</span></div></Card>
+  <Card title="History"><HistoryChart values={[]} label="VO₂ max" metric="vo2max" initialRange="year"/></Card>
  {/if}
  <Card title="About this metric"><p class="metric-copy">{vital?.kind==='restingHr' && (vital.status || vital.rangeSource==='garmin') ? 'Garmin’s average heart rate during sleep, compared with its Health Status baseline. This is not your resting heart rate or a medical target.' : metricDescriptions[metric]}</p></Card>
 </div>

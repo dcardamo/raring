@@ -9,6 +9,7 @@ pub mod screens;
 pub mod store;
 pub mod strength;
 pub mod sync;
+pub mod trends;
 pub mod view;
 
 use chrono::{DateTime, Local, NaiveDateTime};
@@ -109,6 +110,10 @@ impl Raring {
     }
     pub fn checkin(&self, monday: &str) -> view::CheckinView {
         screens::checkin(&self.store, monday)
+    }
+    /// A trend chart's points; `today` is the default last day.
+    pub fn trend(&self, query: &view::TrendQuery, today: &str) -> std::result::Result<view::TrendView, String> {
+        trends::trend(&self.store, query, today)
     }
     pub fn plan(&self, date: &str) -> view::PlanView {
         plan::view(&self.store, date)

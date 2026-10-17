@@ -182,6 +182,9 @@ fn scrub_inner(v: &mut Value, lat: &mut Option<f64>, lon: &mut Option<f64>) {
         _ => {}
     }
 }
+fn enum_arg<T: serde::de::DeserializeOwned>(s: String) -> Result<T> {
+    Ok(serde_json::from_value(Value::String(s))?)
+}
 #[tokio::main]
 async fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -213,6 +216,9 @@ async fn main() -> Result<()> {
             match args.get(1).map(String::as_str){Some("today")=>show(&core.today_at(date,now))?,Some("sleep")=>show(&core.sleep(date))?,Some("training")=>show(&core.training(date))?,Some("health")=>show(&core.health(date))?,Some("checkin")=>show(&core.checkin(date))?,Some("plan")=>show(&core.plan(date))?,Some("strength")=>show(&core.strength(date))?,Some("workout")=>show(&core.workout(args.get(2).context("show workout ID")?))?,_=>bail!("show today|sleep|training|health|checkin|plan|strength|workout ID")}},
         Some("set-plan")=>{let update=serde_json::from_str(args.get(1).context("set-plan JSON")?)?;core.set_plan(&core.current_date(now),&update)?;show(&core.plan(&core.current_date(now)))?;},
         Some("notifications")=>show(&core.notifications(now))?,
+        Some("trend")=>{let current=core.current_date(now);let arg=|k:&str|args.windows(2).find(|v|v[0]==k).map(|v|v[1].clone());
+            let query=raring_core::view::TrendQuery{metric:enum_arg(args.get(1).context("trend METRIC")?.clone())?,range:enum_arg(arg("--range").unwrap_or("days30".into()))?,end:arg("--date"),overlay:arg("--overlay").map(enum_arg).transpose()?,previous:args.iter().any(|a|a=="--previous"),start:arg("--start"),comparison_start:arg("--comparison-start")};
+            let started=std::time::Instant::now();let view=core.trend(&query,&current).map_err(anyhow::Error::msg)?;eprintln!("trend read in {} ms",started.elapsed().as_millis());show(&view)?},
         // One raw read-only request, unscrubbed: for checking an endpoint's shape locally.
         Some("fetch")=>{let kind=args.get(1).context("fetch KIND [KEY]")?;let key=args.get(2).map(String::as_str).unwrap_or("");
             let client=garmin::Client::new(read_tokens()?)?;let result=client.endpoint(kind,key,None).await;save_tokens(&client.tokens().await)?;show(&result?)?;},
@@ -261,7 +267,7 @@ async fn main() -> Result<()> {
             save_tokens(&client.tokens().await)?;
             println!("Scrubbed capture at {}. Review it manually before sharing.",out.display());
         },
-        _=>bail!("usage: raring login [--import FILE] | sync [--budget N] | status | demo [--date YYYY-MM-DD] | show SCREEN [--date YYYY-MM-DD] [--at YYYY-MM-DDTHH:MM] | set-plan JSON | notifications | fetch KIND [KEY] | capture --out DIR")
+        _=>bail!("usage: raring login [--import FILE] | sync [--budget N] | status | demo [--date YYYY-MM-DD] | show SCREEN [--date YYYY-MM-DD] [--at YYYY-MM-DDTHH:MM] | set-plan JSON | notifications | trend METRIC [--range days7|days30|days90|year|all|custom] [--start DATE] [--date DATE] [--overlay METRIC] [--previous] [--comparison-start DATE] | fetch KIND [KEY] | capture --out DIR")
     }
     Ok(())
 }
