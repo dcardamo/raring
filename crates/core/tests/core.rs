@@ -609,7 +609,14 @@ async fn backfill_includes_yesterday_and_scans_existing_days_to_fill_older_gaps(
                 s.put(kind, day, "now", &Value::Null).unwrap();
             }
         }
-        for kind in ["fitness_age", "races", "endurance", "hill", "tolerance"] {
+        for kind in [
+            "sleep_stats",
+            "fitness_age",
+            "races",
+            "endurance",
+            "hill",
+            "tolerance",
+        ] {
             s.put(kind, "2025-01-10", "now", &Value::Null).unwrap();
         }
         s.put("records", "all", "now", &Value::Null).unwrap();
@@ -635,6 +642,69 @@ async fn backfill_includes_yesterday_and_scans_existing_days_to_fill_older_gaps(
         assert_eq!(report.requests, 14);
         assert!(s.get("summary", expected).is_some());
         assert!(seen.lock().unwrap()[13].contains(expected));
+    }
+}
+#[tokio::test]
+async fn sleep_stats_refetch_until_they_include_last_night() {
+    let s = Store::open(":memory:").unwrap();
+    let now = chrono::NaiveDate::from_ymd_opt(2025, 1, 10)
+        .unwrap()
+        .and_hms_opt(13, 0, 0)
+        .unwrap()
+        .and_local_timezone(Local)
+        .single()
+        .unwrap();
+    s.put(
+        "profile",
+        "me",
+        "now",
+        &json!({"displayName":"Sample User"}),
+    )
+    .unwrap();
+    let night = json!({"dailySleepDTO":{"sleepTimeSeconds":25000}}).to_string();
+    let stats = |date: &str| {
+        json!({"overallStats":{},"individualStats":[{"calendarDate":date}]}).to_string()
+    };
+    for (sleep, stored, fetches) in [
+        // Before last night has synced, any copy will do.
+        ("{}".to_owned(), None, true),
+        ("{}".to_owned(), Some(stats("2025-01-09")), false),
+        // Once it has, a copy without it is refetched.
+        (night.clone(), Some(stats("2025-01-09")), true),
+        (night.clone(), Some(stats("2025-01-10")), false),
+    ] {
+        if let Some(stored) = &stored {
+            s.put(
+                "sleep_stats",
+                "2025-01-10",
+                "now",
+                &serde_json::from_str(stored).unwrap(),
+            )
+            .unwrap();
+        }
+        let mut replies = vec![(200, "{}".to_owned()), (200, sleep)];
+        replies.extend(vec![(200, "{}".to_owned()); 11]);
+        let (url, seen, thread) = mock(replies);
+        let c = Client::with_urls(
+            Tokens {
+                access_token: token(1900000000),
+                refresh_token: "refresh".into(),
+                client_id: "TEST_DI".into(),
+                expires_at: Utc::now() + Duration::days(30),
+            },
+            &url,
+            &url,
+            std::time::Duration::ZERO,
+        )
+        .unwrap();
+        raring_core::sync::sync(&s, &c, now, 13).await;
+        thread.join().unwrap();
+        let last = seen.lock().unwrap()[12].clone();
+        assert_eq!(
+            last.contains("/sleep-service/stats/sleep/daily/2025-01-04/2025-01-10"),
+            fetches,
+            "{last}"
+        );
     }
 }
 #[tokio::test]

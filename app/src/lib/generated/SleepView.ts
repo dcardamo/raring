@@ -2,6 +2,8 @@
 import type { Gauge } from "./Gauge";
 import type { NightWindow } from "./NightWindow";
 import type { OvernightTile } from "./OvernightTile";
+import type { SleepAlignment } from "./SleepAlignment";
+import type { SleepAverages } from "./SleepAverages";
 import type { SleepPlan } from "./SleepPlan";
 import type { StageSegment } from "./StageSegment";
 import type { StageTotal } from "./StageTotal";
@@ -22,4 +24,12 @@ consistency: Array<NightWindow>,
 /**
  * Typical spread of bedtimes, minutes (the "±18 min" pill).
  */
-consistencySpreadMin: number | null, bedWindow: [number, number] | null, wakeWindow: [number, number] | null, sleepPlan: SleepPlan | null, };
+consistencySpreadMin: number | null, bedWindow: [number, number] | null, wakeWindow: [number, number] | null, 
+/**
+ * Garmin's seven-day average bed and wake times, when synced.
+ */
+garminAverages: SleepAverages | null, 
+/**
+ * Garmin's Sleep Alignment; None without any recent sleep.
+ */
+alignment: SleepAlignment | null, sleepPlan: SleepPlan | null, };

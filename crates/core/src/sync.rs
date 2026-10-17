@@ -123,6 +123,36 @@ pub async fn sync(
         }
     }
     if !report.rate_limited && report.error.is_none() {
+        // Garmin's seven-day averages change with each new night: refetch until
+        // they include last night once it has synced.
+        let key = date(today);
+        let night = store.get("sleep", &key).is_some_and(|v| {
+            v["dailySleepDTO"]["sleepTimeSeconds"]
+                .as_f64()
+                .is_some_and(|s| s > 0.)
+        });
+        let stats = store.get("sleep_stats", &key);
+        let current = stats.as_ref().is_some_and(|v| {
+            !night
+                || v["individualStats"]
+                    .as_array()
+                    .is_some_and(|a| a.iter().any(|n| n["calendarDate"] == key.as_str()))
+        });
+        if !current {
+            fetch(
+                store,
+                client,
+                &mut report,
+                "sleep_stats",
+                &key,
+                Some(name),
+                budget,
+                now,
+            )
+            .await;
+        }
+    }
+    if !report.rate_limited && report.error.is_none() {
         for kind in SLOW {
             let key = if *kind == "records" {
                 "all".to_owned()

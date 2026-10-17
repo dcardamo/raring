@@ -74,10 +74,15 @@ optional after sign-in.
 - **Today's focus**: Rest, Easy, Steady or Push, with the suggestion lit up,
   followed by the lowest recorded Garmin readiness factor. Tap to see all six
   factors and their feedback.
-- **Tonight's sleep**: Garmin's bedtime window and sleep need for tonight;
-  without Garmin's window, a suggested asleep-by time, the need and usual
-  wake time. The same plan appears on Sleep; a historical-average need is
-  explicitly labeled, along with the number of recorded wake times. Hide the plan if the need is unavailable, or if both the window and wake history are.
+- **Tonight's sleep**: one next step: the wind-down time, Garmin's bedtime
+  window and sleep need for tonight, and one line on why the need is what it
+  is, from Garmin's feedback. Without Garmin's window it shows Raring's
+  asleep-by estimate instead, labeled as Raring's, with the usual wake time
+  and the number of recorded wake times; a historical-average need is
+  explicitly labeled. The same plan appears on Sleep and drives the bedtime
+  reminder. Hide the plan if the need is unavailable, or if both the window
+  and wake history are; when no sleep has synced for the current day, say the
+  estimate uses older nights.
 - Body Battery as a battery with its overnight charge; HRV with a 7-day line
   over Garmin's baseline band.
 - **Stress**: Garmin's average so far today, its category and day word, and
@@ -108,8 +113,20 @@ optional after sign-in.
 - Stage timeline (awake, REM, light, deep) and a stage bar with each stage's
   change against your usual.
 - Overnight tiles with lines: HRV, heart rate, respiration, SpO2.
-- 14-night consistency chart with your bed and wake windows shaded.
-- Tonight's sleep plan, shared with Today. It is a suggestion, not an alarm.
+- **Consistency**: 14-night chart with your usual bed and wake windows
+  shaded, and Garmin's seven-day average bedtime and wake time above it when
+  synced. No rhythm score or chronotype of Raring's own.
+- **Sleep alignment**: Garmin's status (Aligned, Ahead, Behind, Jet lag) and
+  last night's sleep against Garmin's optimal sleep window on an overnight
+  timeline, with the last seven nights below. Garmin's window is a dashed
+  outline, never shaded like your usual windows, and is labeled as the
+  longer-term rhythm, separate from tonight's bedtime window. Without a
+  rating for last night, show the latest one with its date; say when Garmin
+  is still calibrating, and otherwise that alignment is unavailable.
+- Tonight's sleep plan, shared with Today. "Why this plan" lists the
+  evidence: who set the bedtime, Garmin's need, baseline and adjustments, the
+  wind-down lead, and one tip toward steadier timing. It is a suggestion, not
+  an alarm, and never changes the watch's sleep schedule.
 
 ### Training
 
@@ -158,8 +175,11 @@ optional after sign-in.
 Opened from the Monday notification: a short stack of swipeable cards for the
 week just ended. Readiness, sleep, training and health each get a gauge or
 chart with an arrow against the week before. VO2max and Fitness Age changes
-are called out. It ends with one win and one focus for the coming week, a line
-each. Past check-ins stay in a list.
+are called out. A timing card shows the week's bed and wake times, their
+earliest and latest, how many nights Garmin rated aligned, ahead or behind,
+and one timing focus. It is descriptive: no adherence score, streaks or
+claims that timing changed a score. It ends with one win and one focus for the
+coming week, a line each. Past check-ins stay in a list.
 
 ## Notifications
 
@@ -172,7 +192,7 @@ Sent by the phone itself.
 | VO2max or Fitness Age changed | Either direction                             | On      |
 | Vitals off                    | Two or more vitals outside normal range      | On      |
 | Training status changed       | On sync                                      | Off     |
-| Bedtime                       | 30 minutes before the suggested bedtime      | Off     |
+| Bedtime                       | Wind-down time of tonight's plan (lead 30 min, configurable) | Off     |
 
 ## Rules
 
@@ -183,7 +203,24 @@ Sent by the phone itself.
   one; the asleep-by time is its end. Otherwise usual wake time (14-day
   median) minus tonight's sleep need (Garmin's next-night adjusted need when
   present, otherwise its latest adjusted need or the 14-day average). Label
-  the source and wake-history count.
+  the source and wake-history count. Garmin's optimal sleep window (Sleep
+  Alignment) is never used as tonight's bedtime.
+- **Advice precedence and labels**: bedtime from Garmin's window ("Garmin
+  plan"), else Raring's estimate ("Raring estimate"). The reason line comes
+  from Garmin's need, baseline and adjustment codes. The timing tip uses
+  Garmin's alignment status for last night when present (behind: keep a steady
+  wake time rather than forcing one early night), otherwise the usual wake
+  time; it never just says to go to bed earlier.
+- **Wind-down**: the window's start (or Raring's asleep-by time) minus the
+  lead from Settings. The reminder fires once per night, keyed by the morning
+  the night ends, between the wind-down and asleep-by times; it is skipped
+  when no sleep has synced for the current day. Times are local wall-clock
+  times, so the platform reschedules when the timezone changes.
+- **Timing review**: the week's earliest and latest bed and wake times, the
+  wake-time spread (latest minus earliest) against the week before, and
+  counts of Garmin's alignment ratings. The focus follows the majority rating
+  when at least three nights are rated, otherwise whether wake times varied
+  by an hour or more, and names the week's median wake time.
 - **Normal range**: the middle 80% of the last 30 nights, once there are at
   least 14. HRV uses Garmin's own baseline instead.
 - **Stress bars**: the Today card averages each 15 minutes of Garmin's
@@ -205,7 +242,9 @@ Sent by the phone itself.
   [python-garminconnect](https://github.com/cyberjunky/python-garminconnect)
   does. Tokens are encrypted with an Android Keystore key and refresh
   themselves.
-- **Data** comes from `connectapi.garmin.com`: daily summary, sleep, HRV,
+- **Data** comes from `connectapi.garmin.com`: daily summary, sleep
+  (including Garmin's sleep need, bedtime window and Sleep Alignment), seven-day
+  sleep stats (Garmin's average bed and wake times), HRV,
   training readiness, Body Battery, stress, SpO2, respiration, training status, max
   metrics, Fitness Age, endurance and hill scores, race predictions, running
   tolerance, personal records, and activities (summary, splits, heart-rate
@@ -231,6 +270,10 @@ Sent by the phone itself.
   hourly, and every 15 minutes in the morning until readiness arrives. A job
   calls the Rust core directly over JNI, without starting the UI, then posts
   any notifications.
+- **Bedtime reminder**: the core returns tonight's wind-down time as a local
+  wall-clock time; Android sets an alarm with a ten-minute window for it after
+  every sync, on app start, on settings changes and when the timezone or clock
+  changes, and asks the core again when it fires.
 - **Platform code**: keep each platform's native layer a thin shim over the
   core. Background scheduling is inherently native (WorkManager on Android,
   background refresh on iOS, syncing while the app runs on desktop); secure
