@@ -346,7 +346,8 @@ faces, screens, sensors and audio prompts stay in Connect.
   (`history:<series>:lo/hi`). Verified on a real account: about 260 requests
   covered activities back to 2011 and daily summaries back to 2014, with no
   429s at the client's 300 ms pacing; a normal sync afterwards made no
-  history requests. Range limits and shapes, all verified:
+  history requests. Checked from the CLI only; the Android background
+  job running it is still to check on the emulator and a phone. Range limits and shapes, all verified:
   - `/usersummary-service/v2/dailysummaries?startDate&endDate`, at most a
     year (`P1Y`); a nested summary, not the per-day shape. Stored as
     `daily_summary`.
