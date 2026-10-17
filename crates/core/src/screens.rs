@@ -1,5 +1,5 @@
 //! Tolerant projections of raw Garmin responses. Unknown and absent fields stay absent.
-use crate::{phase, plan, rules, store::Store, sync::selected_watch, view::*};
+use crate::{phase, plan, planned, rules, store::Store, sync::selected_watch, view::*};
 use chrono::{
     DateTime, Datelike, Duration, FixedOffset, Local, NaiveDate, NaiveDateTime, Timelike, Utc,
 };
@@ -1565,6 +1565,12 @@ pub fn today(store: &Store, date: &str) -> TodayView {
 }
 /// Today as of `now`, which sets the time-of-day phase.
 pub fn today_at(store: &Store, date: &str, now: DateTime<FixedOffset>) -> TodayView {
+    let calendar = NaiveDate::parse_from_str(date, "%Y-%m-%d").unwrap_or(now.date_naive());
+    today_at_calendar(store, date, now, calendar)
+}
+/// Keep the sleep/readiness display day separate from the actual local calendar day.
+/// Explicit historical reads use `today_at`, which anchors both to `date`.
+pub fn today_at_calendar(store: &Store, date: &str, now: DateTime<FixedOffset>, calendar: NaiveDate) -> TodayView {
     let r = store.get("readiness", date).unwrap_or(Value::Null);
     let s = store.get("sleep", date).unwrap_or(Value::Null);
     let t = store.get("training", date).unwrap_or(Value::Null);
@@ -1875,6 +1881,7 @@ pub fn today_at(store: &Store, date: &str, now: DateTime<FixedOffset>) -> TodayV
             .is_ok_and(|d| d.weekday() == chrono::Weekday::Mon)
             && store.get("summary", &date_sub(date, 1)).is_some(),
         focus,
+        planned: planned::session(store, &calendar.to_string(), now.with_timezone(&Utc)),
         plan: plan::this_week(store, date),
     };
     view.readiness_why = explain::readiness_why(&r, &view.factors, rl.as_deref());
@@ -2069,6 +2076,12 @@ fn hour(s: &str) -> Option<f64> {
     Some(x.next()?.parse::<f64>().ok()? + x.next()?.parse::<f64>().ok()? / 60.)
 }
 pub fn training(store: &Store, date: &str) -> TrainingView {
+    let calendar = NaiveDate::parse_from_str(date, "%Y-%m-%d").unwrap_or(NaiveDate::MIN);
+    training_at_calendar(store, date, calendar, Utc::now())
+}
+/// Historical Training uses its requested date; live Training receives the
+/// calendar day independently of the displayed sleep/readiness day.
+pub fn training_at_calendar(store: &Store, date: &str, calendar: NaiveDate, now: DateTime<Utc>) -> TrainingView {
     let v = store.get("training", date).unwrap_or(Value::Null);
     let load = acute(&v);
     let status = status(&v);
@@ -2171,6 +2184,7 @@ pub fn training(store: &Store, date: &str) -> TrainingView {
         })
     })
     .collect();
+    let (race_state, race) = planned::race(store, &calendar.to_string(), now);
     let mut view = TrainingView {
         acute: load.map(|amount| {
             gauge(
@@ -2245,6 +2259,9 @@ pub fn training(store: &Store, date: &str) -> TrainingView {
                 .or_else(|| num(&v, &[&["runningTolerance"], &["tolerance"]]))
         }),
         workouts,
+        planned: planned::session(store, &calendar.to_string(), now),
+        race,
+        race_state,
         strength,
     };
     view.status_why = explain::training_why(explain::TrainingInputs {

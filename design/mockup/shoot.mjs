@@ -13,7 +13,7 @@ const url = pathToFileURL(resolve(here, 'index.html')).href, out = resolve(here,
 const sizes = {phone: [390, 844, 2], fold: [720, 900, 1], desktop: [1280, 820, 1]};
 const screens = {
   language: ['phone', 'desktop'],
-  today: ['phone'], sleep: ['phone'], training: ['phone'], workout: ['phone'], health: ['phone'],
+  today: ['phone', 'fold', 'desktop'], sleep: ['phone'], training: ['phone', 'fold', 'desktop'], workout: ['phone'], health: ['phone'],
   plan: ['phone', 'fold', 'desktop'], 'plan-setup': ['phone', 'fold', 'desktop'], checkin: ['phone'],
   'intro-1': ['phone'], 'intro-2': ['phone'], 'intro-3': ['phone'], 'intro-4': ['phone'],
   'strength-workout': ['phone', 'fold', 'desktop'], fix: ['phone', 'fold', 'desktop'], 'strength-history': ['phone', 'fold', 'desktop'],

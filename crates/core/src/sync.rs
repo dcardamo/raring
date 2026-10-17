@@ -220,6 +220,11 @@ pub async fn sync(
         sync_intensity_weeks(store, client, &mut report, today, budget, now).await;
         sync_weight(store, client, &mut report, today, budget, now).await;
     }
+    // The app uses a 60-request sync. Tiny explicit budgets keep existing daily
+    // metrics first; planned data waits for a normal run.
+    if budget >= 20 && !report.rate_limited && report.error.is_none() {
+        sync_planned(store, client, &mut report, today, budget, now).await;
+    }
     if !report.rate_limited && report.error.is_none() && report.requests < budget {
         // Scan newest-first on every run. A previous run may have exhausted its budget
         // after indexing a list but before retrieving its activity details.
@@ -565,6 +570,76 @@ pub(crate) async fn sync_watch(
             }
         } else {
             report.data_failures += 1;
+        }
+    }
+}
+
+/// Refresh the current schedule as a snapshot: an empty answer must replace the old
+/// list, while a failed read leaves the old snapshot (visibly stale). All calls use
+/// the shared request budget, pacing and backoff.
+async fn sync_planned(
+    store: &Store,
+    client: &Client,
+    report: &mut SyncReport,
+    today: NaiveDate,
+    budget: usize,
+    now: DateTime<Utc>,
+) {
+    let start = date(today);
+    let end = date(today + Duration::days(14));
+    let calls = [
+        ("coach_plans", start.as_str()),
+        ("scheduled_workouts", ""),
+        ("upcoming_events", "all"),
+    ];
+    let schedule_key = format!("{start}:{end}");
+    for (kind, key) in calls {
+        let key = if kind == "scheduled_workouts" {
+            &schedule_key
+        } else {
+            key
+        };
+        let checked = format!("planned_checked:{kind}");
+        if store
+            .cursor(&checked)
+            .and_then(|s| s.parse::<i64>().ok())
+            .is_some_and(|t| t <= now.timestamp() && now.timestamp() - t < 6 * 3600)
+        {
+            continue;
+        }
+        let result = request(store, client, report, kind, key, None, budget, now).await;
+        let value = match result {
+            Some(Got::Value(v)) => {
+                let valid = match kind {
+                    "coach_plans" => v["trainingPlanList"].is_array(),
+                    _ => v.is_array(),
+                };
+                if !valid {
+                    report.data_failures += 1;
+                    let _ = store.set_cursor(&format!("retry:{kind}:{key}"), &(now.timestamp() + 3600).to_string());
+                    continue;
+                }
+                report.stored += 1;
+                v
+            }
+            Some(Got::Absent) => Value::Null,
+            Some(Got::Later) => continue,
+            None => return,
+        };
+        let snapshot = if kind == "scheduled_workouts" {
+            serde_json::json!({"startDate": start, "endDate": end, "entries": value})
+        } else {
+            value
+        };
+        if store
+            .put(kind, "current", &now.to_rfc3339(), &snapshot)
+            .is_err()
+            || store
+                .set_cursor(&checked, &now.timestamp().to_string())
+                .is_err()
+        {
+            report.error = Some("local storage failed".into());
+            return;
         }
     }
 }
@@ -1203,3 +1278,6 @@ fn failure(store: &Store, report: &mut SyncReport, error: garmin::Error, now: Da
         let _ = store.set_cursor("last_error", report.error.as_deref().unwrap_or(""));
     }
 }
+
+#[cfg(test)]
+mod planned_tests;

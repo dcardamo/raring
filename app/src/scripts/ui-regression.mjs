@@ -51,6 +51,31 @@ try {
  assert.equal(await sleepUpload.getByText('About missing readings',{exact:true}).count(),0,'upload delays are not unsupported capabilities');
  await sleepUpload.close();
  console.log('Watch freshness, missing capability, Connect fallback at 390/700/1100: passed');
+ for(const width of [390,700,1100]){
+  const planned=await browser.newPage({viewport:{width,height:844}});
+  await planned.goto(`${url}/?fixture=planned#today`);
+  await planned.getByText('Easy Run',{exact:true}).waitFor();
+  await planned.screenshot({path:resolve(output,`planned-today-${width}.png`),fullPage:true});
+  await planned.getByRole('navigation').getByRole('button',{name:'Training'}).click();
+  await planned.getByText('City 10K',{exact:true}).waitFor();
+  await planned.screenshot({path:resolve(output,`planned-training-${width}.png`),fullPage:true});
+  await planned.close();
+ }
+ const emptyPlanned=await browser.newPage({viewport:{width:390,height:844}});
+ const emptyToday=JSON.parse(await readFile(resolve('src/lib/sample/today.json'),'utf8'));
+ const emptyTraining=JSON.parse(await readFile(resolve('src/lib/sample/training.json'),'utf8'));
+ emptyToday.planned={state:'empty',session:null,coach:null,coverageStart:'2025-10-16',coverageEnd:'2025-10-30'};
+ emptyTraining.planned=emptyToday.planned;emptyTraining.race=null;emptyTraining.raceState='empty';
+ await emptyPlanned.route(u=>['/src/lib/sample/today.json','/src/lib/sample/training.json'].includes(u.pathname),route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(route.request().url().includes('today.json')?emptyToday:emptyTraining)}`}));
+ await emptyPlanned.goto(`${url}/?fixture=planned-empty#today`);
+ await emptyPlanned.getByText(/No workouts in Garmin’s cached schedule.*16 Oct.*30 Oct/).waitFor();
+ await emptyPlanned.getByRole('navigation').getByRole('button',{name:'Training'}).click();
+ await emptyPlanned.getByText('No upcoming race in Garmin’s next 90 days.',{exact:true}).waitFor();
+ emptyTraining.raceState='partial';
+ await emptyPlanned.goto(`${url}/?fixture=planned-partial#training`);
+ await emptyPlanned.getByText('Race schedule incomplete: Garmin returned the first 10 events.',{exact:true}).waitFor();
+ await emptyPlanned.close();
+ console.log('Planned training, race and empty states at phone, unfolded and desktop widths: passed');
  const waitRoute=async(route)=>{
   await page.waitForURL(`${url}/#${route}`);
   await page.locator('h1').waitFor();
@@ -464,6 +489,7 @@ try {
   await pill.click();
   await phasePage.getByText(differ.reconcile.line).waitFor();
   assert.equal(await phasePage.locator('.daily-focus .segments').count(),focus.effort?1:0,`${name}: effort call ${focus.effort?'shown':'hidden'}`);
+  assert.equal(await phasePage.locator('.planned-session').count(),['winddown','late'].includes(name)?0:1,`${name}: no planned exercise card during sleep phases`);
   const text=await phasePage.locator('.dashboard').textContent();
   // The weekly plan's "N days left" counts the week, not the time to bed.
   const advice=await phasePage.locator('.dashboard > :not(.plan-card)').allTextContents();

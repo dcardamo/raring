@@ -946,6 +946,16 @@
     "detail": "3 days left · Zone 2 is behind",
     "completion": 0.6066666666666666
   },
+  "planned": {
+    "state": "available",
+    "session": {
+      "name": "Easy Run",
+      "date": "2025-10-17"
+    },
+    "coach": "Garmin Coach 10K",
+    "coverageStart": "2025-10-16",
+    "coverageEnd": "2025-10-30"
+  },
   "focus": {
     "phase": "wake",
     "cards": [

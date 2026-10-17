@@ -433,6 +433,7 @@ pub struct TodayView {
     /// True on Mondays once the weekly check-in exists.
     pub checkin_ready: bool,
     pub focus: TodayFocus,
+    pub planned: PlannedTraining,
     /// This week's plan; None until targets are set.
     pub plan: Option<PlanWeek>,
 }
@@ -691,6 +692,48 @@ pub struct RacePrediction {
     pub seconds: f64,
 }
 
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum PlannedState {
+    Unknown,
+    Stale,
+    Partial,
+    Empty,
+    Available,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PlannedSession {
+    pub name: String,
+    /// Garmin calendar date, not a UTC instant.
+    pub date: String,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PlannedTraining {
+    pub state: PlannedState,
+    pub session: Option<PlannedSession>,
+    pub coach: Option<String>,
+    /// Inclusive Garmin calendar dates from the cached schedule request.
+    pub coverage_start: Option<String>,
+    pub coverage_end: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct UpcomingRace {
+    pub name: String,
+    /// The all-day calendar date is never converted through a timezone.
+    pub date: String,
+    pub days_until: i32,
+}
+
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -715,6 +758,9 @@ pub struct TrainingView {
     pub hill_score: Option<f64>,
     pub running_tolerance_km: Option<f64>,
     pub workouts: Vec<ActivityCard>,
+    pub planned: PlannedTraining,
+    pub race: Option<UpcomingRace>,
+    pub race_state: PlannedState,
     /// This week's strength sets, when any strength session has sets in
     /// the last 12 weeks.
     pub strength: Option<StrengthWeek>,

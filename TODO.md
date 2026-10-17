@@ -168,16 +168,29 @@ request count as an explicit choice. Download within the existing request
 budget and 429 backoff, resume after interruption, then add the files to a
 separate export. The offline JSON/CSV export does not make network requests.
 
+### 15a. Planned training follow-ups
+
+- On an account with a scheduled Coach plan and an upcoming race, compare
+  Raring's next-session name and Garmin calendar day with Garmin Connect,
+  and confirm the race title and all-day countdown on a real phone. Current
+  empty-account reads cannot verify populated payload fields or Coach task IDs.
+- Coach tasks (`GET /trainingplan-service/trainingplan/tasks/{planId}?localeKey=en`)
+  are deferred despite the community-client route: verify populated shape and
+  a useful next-session projection before spending background requests.
+- Check whether Garmin's scheduled-workout list exposes explicit completion
+  or cancellation fields on populated accounts before assigning either meaning.
+  Do not infer completion by matching activity names or times.
+- A cached 14-day-ahead schedule covers one fewer future day after midnight.
+  The empty card now names the cached dates; consider a date-roll refresh
+  (still budgeted and paced) if the uncovered last day matters in practice.
+- If a populated calendar uses a different race discriminator, add only that
+  verified shape. A full 10-event page is partial coverage; look for documented
+  pagination/filtering before considering another request.
+
 ## Later: more Garmin data
 
 Each is a tile or detail in an existing screen first.
 
-15. **Planned training**: Garmin Coach plans
-    (`/trainingplan-service/trainingplan/active-plans`, `/tasks/{id}`),
-    scheduled workouts
-    (`/workout-service/schedule/workoutScheduleByPeriod`) and races
-    (`/calendar-service/events/upcoming`). Today shows the planned session
-    beside readiness; a race countdown on Training. Read-only here.
 16. **Gear**: `/gear-service/gear/v2/list`. Shoe and bike distance against
     the retirement threshold, with an optional notification.
 17. **Thresholds and acclimation**: lactate threshold, cycling FTP and
@@ -268,6 +281,27 @@ faces, screens, sensors and audio prompts stay in Connect.
 
 ## Done
 
+- **15. Planned training, read-only** (commit "Show planned training and upcoming races").
+  Today and Training show Garmin's next scheduled session and Coach context;
+  Training shows the next race date/countdown. Today hides the session card
+  during wind-down and late night. Verified read-only against one account:
+  `GET /trainingplan-service/trainingplan/active-plans?startDate=YYYY-MM-DD`
+  returned `searchFilter` and `trainingPlanList` (array);
+  `GET /workout-service/schedule/workoutScheduleByPeriod?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD`
+  and `GET /calendar-service/events/upcoming?numDaysForward=90&limit=10`
+  returned arrays. The community client specifies
+  `GET /trainingplan-service/trainingplan/tasks/{planId}?localeKey=en`;
+  tasks were not verified because no valid plan ID was available and are now
+  deferred until their display value is verified. Populated workout/race
+  fields, completion/cancellation flags and device coverage remain unverified.
+  Schedule/race days are local calendar dates, countdowns are whole days;
+  no guessed UTC times or device-support conclusions. Live planned cards use
+  the actual calendar day even when Today shows yesterday's sleep; explicit
+  historical views retain their selected date. Cached schedule bounds appear
+  on empty/stale cards, and a full 10-event response is incomplete race
+  coverage. Reads use six-hour cadence (including 404/empty), shared
+  budget/backoff and 12-hour freshness. Synthetic empty, changed, stale,
+  all-day and midnight cases plus emulator UI passed.
 - **14. All-day heart rate** (commit "Show all-day heart rate and daily resting HR").
   Health and Today's Right now link to the day chart. It marks recorded sleep
   and activities, preserving off-wrist and absent samples as gaps. The chart

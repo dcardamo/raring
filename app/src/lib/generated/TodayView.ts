@@ -9,6 +9,7 @@ import type { Gauge } from "./Gauge";
 import type { HeartRateDay } from "./HeartRateDay";
 import type { HrvCard } from "./HrvCard";
 import type { PlanWeek } from "./PlanWeek";
+import type { PlannedTraining } from "./PlannedTraining";
 import type { Reconciliation } from "./Reconciliation";
 import type { SleepPlan } from "./SleepPlan";
 import type { StressCard } from "./StressCard";
@@ -54,7 +55,7 @@ callNote: string | null, bodyBattery: BodyBatteryCard, stress: StressCard, heart
 /**
  * True on Mondays once the weekly check-in exists.
  */
-checkinReady: boolean, focus: TodayFocus, 
+checkinReady: boolean, focus: TodayFocus, planned: PlannedTraining, 
 /**
  * This week's plan; None until targets are set.
  */

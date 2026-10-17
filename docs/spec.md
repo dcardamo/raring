@@ -142,8 +142,11 @@ optional after sign-in.
 - **This week**: the weekly plan's targets as compact bars with "N/target"
   and the days left, opening the plan. Before targets are set, a small card
   invites setting them up.
-- Today's workouts with a heart-rate zone strip, and Fitness Age with its
-  trend line. The weekly check-in card appears here on Mondays.
+- A read-only next-session card from Garmin's scheduled workout calendar,
+  separate from readiness and effort advice. It is absent during wind-down
+  and late night; missing or stale schedules are not empty schedules. Today's
+  recorded activities remain separate from planned sessions. Fitness Age has
+  its trend line. The weekly check-in card appears here on Mondays.
 
 ### Readiness
 
@@ -200,7 +203,11 @@ optional after sign-in.
 - **Strength · this week**, when a strength session in the last 12 weeks
   has recorded sets: sets, sessions, records and a small body map. Opens
   Strength.
-- Workout list with zone strips and load.
+- A read-only next-session card with active Garmin Coach context when known,
+  and an upcoming race countdown from Garmin's calendar dates. Empty, stale
+  and unavailable schedule/calendar states are distinct. No scheduled item is
+  marked done by time or name; the workout list below contains recorded
+  activities with zone strips and load.
 
 ### Workout
 
@@ -363,6 +370,33 @@ each target's result for the plan week that just ended, a check or amber dot,
 the change against the week before, and next week's targets and rest days
 with Keep and Change. It ends with one win and one focus for the
 coming week, a line each. Past check-ins stay in a list.
+
+## Planned training (read-only)
+
+The core fetches active Garmin Coach plans, a dated 14-day-ahead workout
+schedule (inclusive start and end), and up to 10 upcoming calendar events in
+Garmin's 90-day window. Coach tasks wait for a verified display projection.
+Each snapshot is checked at most every six hours (including absent responses),
+shares the normal request budget and rate-limit backoff, and becomes stale
+after 12 hours or when its cached window no longer covers today. An empty
+schedule names its **cached start and end dates**, not a rolling promise of
+"the next two weeks" after midnight. A new empty response replaces an older
+schedule; failed reads keep the last snapshot but never present it as current.
+
+A calendar date is a local Garmin day, including for all-day races; countdowns
+use date subtraction, not UTC instants. Today's sleep/readiness day can still
+be yesterday after midnight, but live planned cards always use the **actual
+local calendar date**. Explicit historical views retain the selected date.
+Garmin's upcoming-events endpoint has a limit of 10: fewer than 10 typed
+events with no race means no race in the returned 90-day window, but a full
+10-event page is **incomplete coverage**. A full page without a race is never
+"no upcoming race"; a race in a full page is only the earliest visible in
+that page, marked incomplete. No undocumented pagination or extra requests.
+An active Coach plan is separate context, not proof that the next scheduled
+workout belongs to it. Unknown statuses and fields stay neutral; no completion
+or cancellation mapping is assumed before a populated response is verified.
+An empty account does not establish watch or plan support. No Garmin writes,
+workout builder or daily-suggested-workout inference ship here.
 
 ## Notifications
 

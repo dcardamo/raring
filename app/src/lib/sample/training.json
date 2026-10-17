@@ -226,6 +226,22 @@
       "benefit": "Base"
     }
   ],
+  "planned": {
+    "state": "available",
+    "session": {
+      "name": "Easy Run",
+      "date": "2025-10-17"
+    },
+    "coach": "Garmin Coach 10K",
+    "coverageStart": "2025-10-16",
+    "coverageEnd": "2025-10-30"
+  },
+  "race": {
+    "name": "City 10K",
+    "date": "2025-10-28",
+    "daysUntil": 12
+  },
+  "raceState": "available",
   "strength": {
     "figure": "female",
     "weekStart": "2025-10-13",

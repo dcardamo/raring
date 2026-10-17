@@ -151,7 +151,7 @@ h1{font:600 30px/1.1 Outfit,Inter;margin-top:4px}
 .lfbar{position:relative;height:10px;border-radius:5px;background:rgba(255,255,255,.06)}
 .lfbar u{position:absolute;top:-3px;bottom:-3px;border:1.5px dashed rgba(255,255,255,.28);border-radius:7px}
 .lfbar i{position:absolute;left:0;top:0;bottom:0;border-radius:5px}
-.race{display:flex;flex-direction:column;gap:9px}
+.planned{display:flex;align-items:center;gap:14px}.planned .plan-icon{width:40px;height:40px;border-radius:13px;background:rgba(228,232,240,.10);display:grid;place-items:center}.planned b{display:block;font:600 17px Outfit}.planned small{display:block;color:var(--text2);margin-top:4px}.race{display:flex;flex-direction:column;gap:9px}
 .race div{display:flex;justify-content:space-between;font-size:13px;color:var(--text2)}
 .race b{font:600 15px Outfit;color:var(--text)}
 .list .item{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
@@ -340,6 +340,7 @@ function today() {
   <div class="card"><h3>Today's call</h3>
     <div class="seg"><span>Rest</span><span>Easy</span><span>Steady</span><span class="on">Push</span></div>
     <div class="sub">${ico.check}Morning run done · <b class="n" style="color:#EEF1F7">186</b> load</div></div>
+  <div class="card tap" data-go="training"><h3>Planned session</h3><div class="planned"><div class="plan-icon">${ico.run}</div><div><b>Easy Run</b><small>Tomorrow · Garmin schedule</small></div></div></div>
   ${planCard()}
   <div class="row">
     <div class="card"><h3>Body Battery</h3><div class="bb"><div class="batt"><i style="height:78%"></i></div><div><div class="big n">78</div><div class="small"><b>+62</b> overnight</div></div></div></div>
@@ -433,6 +434,8 @@ function training() {
   </section>
   <div class="headline" style="margin-top:-6px"><h2>Room to build</h2>
     <div class="chips"><span class="chip">${ico.flame}Load ratio<b class="n">1.1</b></span><span class="chip">${ico.clock}Recovery<b class="n">18h</b></span></div></div>
+  <div class="card"><h3>Next session</h3><div class="planned"><div class="plan-icon">${ico.run}</div><div><b>Easy Run</b><small>Tomorrow · Garmin schedule</small></div></div></div>
+  <div class="card"><h3>Upcoming race</h3><div class="planned"><div><b>City 10K</b><small>12 days · Wed 28 Oct</small></div></div></div>
   <div class="card"><h3>This week</h3><div class="wk">${wk.map(([d, v], i) => `<div>${v ? `<b>${v}</b>` : ""}<i style="height:${Math.max(v / 340 * 80, 4)}px;background:${v ? (i === 6 ? C.ink : "rgba(228,232,240,.30)") : "rgba(255,255,255,.08)"}"></i><span>${d}</span></div>`).join("")}</div></div>
   <div class="card"><h3>Load focus · 4 weeks</h3>${lf.map(([n, v, [a, b], tag]) => `<div class="lf"><div class="lf-top"><span>${n} ${tag}</span><b>${v}</b></div><div class="lfbar"><u style="left:${a / 900 * 100}%;width:${(b - a) / 900 * 100}%"></u><i style="width:${v / 900 * 100}%;background:${v < a ? C.fair : "rgba(228,232,240,.75)"}"></i></div></div>`).join("")}</div>
   <div class="row">

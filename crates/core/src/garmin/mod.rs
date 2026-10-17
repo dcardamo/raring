@@ -448,6 +448,41 @@ impl Client {
                     vec![],
                 )
             }
+            "coach_plans" => {
+                NaiveDate::parse_from_str(key, "%Y-%m-%d").map_err(|_| Error::Decode)?;
+                (
+                    "/trainingplan-service/trainingplan/active-plans".into(),
+                    vec![("startDate", key)],
+                )
+            }
+            "coach_tasks" => {
+                let id = key.parse::<u64>().map_err(|_| Error::Decode)?;
+                if id == 0 || id.to_string() != key {
+                    return Err(Error::Decode);
+                }
+                (
+                    format!("/trainingplan-service/trainingplan/tasks/{id}"),
+                    vec![("localeKey", "en")],
+                )
+            }
+            "scheduled_workouts" => {
+                let (start, end) = key.split_once(':').ok_or(Error::Decode)?;
+                let start_date =
+                    NaiveDate::parse_from_str(start, "%Y-%m-%d").map_err(|_| Error::Decode)?;
+                let end_date =
+                    NaiveDate::parse_from_str(end, "%Y-%m-%d").map_err(|_| Error::Decode)?;
+                if end_date < start_date || end_date - start_date > chrono::Duration::days(14) {
+                    return Err(Error::Decode);
+                }
+                (
+                    "/workout-service/schedule/workoutScheduleByPeriod".into(),
+                    vec![("startDate", start), ("endDate", end)],
+                )
+            }
+            "upcoming_events" => (
+                "/calendar-service/events/upcoming".into(),
+                vec![("numDaysForward", "90"), ("limit", "10")],
+            ),
             "fitness_age" => (format!("/fitnessage-service/fitnessage/{key}"), vec![]),
             "weight_latest" => {
                 NaiveDate::parse_from_str(key, "%Y-%m-%d").map_err(|_| Error::Decode)?;

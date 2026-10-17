@@ -5,6 +5,7 @@ pub mod garmin;
 pub mod notifications;
 pub mod phase;
 pub mod plan;
+pub mod planned;
 pub mod rules;
 pub mod screens;
 pub mod store;
@@ -13,7 +14,7 @@ pub mod sync;
 pub mod trends;
 pub mod view;
 
-use chrono::{DateTime, Local, NaiveDateTime};
+use chrono::{DateTime, Local, NaiveDateTime, Utc};
 pub use garmin::Tokens;
 pub use notifications::Notification;
 use std::{path::Path, sync::Arc};
@@ -94,11 +95,17 @@ impl Raring {
     pub fn today_at(&self, date: &str, now: DateTime<Local>) -> view::TodayView {
         screens::today_at(&self.store, date, now.fixed_offset())
     }
+    pub fn today_live_at(&self, display_date: &str, now: DateTime<Local>) -> view::TodayView {
+        screens::today_at_calendar(&self.store, display_date, now.fixed_offset(), now.date_naive())
+    }
     pub fn sleep(&self, date: &str) -> view::SleepView {
         screens::sleep_view(&self.store, date)
     }
     pub fn training(&self, date: &str) -> view::TrainingView {
         screens::training(&self.store, date)
+    }
+    pub fn training_live_at(&self, display_date: &str, now: DateTime<Local>) -> view::TrainingView {
+        screens::training_at_calendar(&self.store, display_date, now.date_naive(), now.with_timezone(&Utc))
     }
     pub fn workout(&self, id: &str) -> Option<view::WorkoutView> {
         screens::workout(&self.store, id)

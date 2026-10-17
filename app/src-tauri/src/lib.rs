@@ -192,11 +192,14 @@ async fn read_view<T: Send + 'static>(
 #[tauri::command]
 async fn today(app: tauri::AppHandle, date: Option<String>) -> Result<TodayView, String> {
     read_view(app, move |core| {
-        if date.is_none() {
-            core.capture_sleep_plan(Local::now())
-                .map_err(|e| e.to_string())?;
+        match date {
+            Some(day) => Ok(core.today(&day)),
+            None => {
+                let now = Local::now();
+                core.capture_sleep_plan(now).map_err(|e| e.to_string())?;
+                Ok(core.today_live_at(&core.current_date(now), now))
+            }
         }
-        Ok(core.today(&date.unwrap_or_else(|| core.current_date(Local::now()))))
     })
     .await
 }
@@ -214,7 +217,11 @@ async fn sleep(app: tauri::AppHandle, date: Option<String>) -> Result<SleepView,
 #[tauri::command]
 async fn training(app: tauri::AppHandle, date: Option<String>) -> Result<TrainingView, String> {
     read_view(app, move |core| {
-        Ok(core.training(&date.unwrap_or_else(|| core.current_date(Local::now()))))
+        let now = Local::now();
+        Ok(match date {
+            Some(day) => core.training(&day),
+            None => core.training_live_at(&core.current_date(now), now),
+        })
     })
     .await
 }
