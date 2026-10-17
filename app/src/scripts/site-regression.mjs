@@ -47,6 +47,9 @@ try{
     const free=await page.locator('.free-note').boundingBox();
     assert.ok(free && free.y+free.height<=900,`${width}: free-to-use message is above the fold`);
     assert.deepEqual(await page.locator('.screen-gallery img').evaluateAll(images=>images.map(img=>img.getAttribute('src'))),['assets/sleep.png','assets/training.png','assets/health.png']);
+    assert.deepEqual(await page.locator('.spotlight img').evaluateAll(images=>images.map(img=>img.getAttribute('src'))),['assets/stress.png','assets/workout.png']);
+    assert.deepEqual(await page.locator('.benefits h3').allTextContents(),['Readiness','Sleep','Stress','Workouts','Training','Health']);
+    assert.deepEqual(await page.locator('.highlights strong').allTextContents(),['Readiness','Sleep','Stress','Training']);
    }
    for(const img of await page.locator('img').all()){
     await img.scrollIntoViewIfNeeded();
@@ -98,7 +101,7 @@ try{
  assert.deepEqual(unexpected,[],'no third-party resource requests');
  assert.deepEqual(failures,[],'no broken resources');
  assert.deepEqual(errors,[],'no browser errors');
- console.log('Static site: 320–1280px layouts, free-to-use copy, screenshot gallery, assets, links, install/privacy navigation and no third-party requests passed with JavaScript disabled.');
+ console.log('Static site: 320–1280px layouts, free-to-use copy, benefits, stress and workout spotlights, screenshot gallery, assets, links, install/privacy navigation and no third-party requests passed with JavaScript disabled.');
 }finally{
  await browser?.close();
  await new Promise(resolve=>server.close(resolve));
