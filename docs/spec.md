@@ -27,13 +27,23 @@ The visual reference is [design/mockup](../design/mockup/): open
 
 ## Look
 
-- Dark ink background with a soft glow tinted by the screen's main state, for
-  example green when readiness is high.
-- One color per area: readiness mint to cyan (amber and coral at lower
-  levels), sleep violet, load and training orange. Heart-rate zones run gray,
-  blue, green, amber, red.
-- Gauges are arcs open at the bottom, with a soft halo. Load gauges mark
-  Garmin's optimal range as a band, with a dot for the current value.
+- Dark ink background, with a faint glow behind a screen's main gauge in that
+  gauge's status color.
+- Color means something or it isn't used. Icons and titles say where you
+  are; color says how it's going:
+  - **Status**: green good, amber fair, red poor. Missing data is a gap,
+    never a zero.
+  - **Effort**: heart-rate zones run gray, blue, yellow, orange, red. Red
+    means hard.
+  - **Amount**: one blue, faint to strong, for counts without a judgement,
+    such as sets per muscle.
+  - **Ink**: everything else, including charts without a verdict, selected
+    controls and primary buttons (white on ink).
+- Text is at least 4.5:1 against its surface (3:1 for large text). Text on a
+  colored fill is black or white, whichever reads better.
+- Gauges are solid arcs open at the bottom, colored by status. Load gauges
+  mark Garmin's optimal range as a neutral band, with a dot for the current
+  value.
 - Rounded cards, Outfit for numbers and headings, Inter for text.
 
 ## Screens
