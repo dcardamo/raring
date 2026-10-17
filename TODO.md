@@ -15,32 +15,6 @@ availability on every account or watch.
 
 ## Now
 
-### Instant view switching
-
-Switching views (Today, Sleep, …) shows "Loading your day…" before the
-view appears. Views should switch instantly.
-
-- Cause, from the code: every navigation clears the current data
-  (`data=null` in `App.svelte`), shows the full-screen loading state, then
-  waits for two IPC calls in turn, `app_status` and then the view; each
-  command opens the SQLite database again. Building views in Rust is not the
-  bottleneck: `raring show` took 10–50 ms per tab in a release build,
-  process start included, on a database with full history, and each view is
-  7–17 KB of JSON.
-- Keep the last view model for each route in memory and render it
-  immediately; refresh in the background and swap new data in without
-  moving content under the finger. Prefetch the four tab views after the
-  first renders. The full-screen loading state is only for a first launch
-  with no data.
-- Don't wait for `app_status` on navigation; refresh it on start, resume and
-  sync.
-- Check whether the synchronous Tauri commands block the UI thread on
-  Android, or wait on the database while a sync writes (5 s busy timeout).
-  If so, run them off the main thread or keep one connection open.
-- Check: a UI test that switching views never shows the loading state once
-  data exists, and the time from tap to new view on the emulator, before and
-  after.
-
 ### 2. Watch sync freshness
 
 Raring is only as fresh as Garmin Connect's last upload from the watch.
@@ -365,6 +339,23 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Instant view switching** (commit "Switch cached views immediately").
+  Tab views are prefetched after the first render and cached by route for the
+  current day; navigation displays cached data before a background refresh,
+  without a status IPC. Successful syncs, changed last-sync timestamps and
+  local day rollover invalidate in-flight reads and cached tabs while keeping
+  the visible view until fresh data arrives. Scroll position is restored on
+  the cached render; touch cancellation and backgrounding flush deferred
+  updates. Status refreshes on start, resume and sync. Rust view and status
+  commands now read SQLite off the WebView thread. On emulator-5572
+  with a 37 MB full-history database (debug APK, 10 warm tab activations):
+  tab activation-to-first-paint was 87–521 ms before, with the full-screen
+  loading state on every switch; after cache-invalidation fixes it was
+  8–53 ms, with no full-screen loading state.
+  Direct Today IPC still took ~480–500 ms on Android debug, but animation
+  frames continued (~29–30 frames instead of 0–1); no persistent connection
+  was needed. No Garmin endpoints or account requests were involved.
 
 - **1. Full history backfill** (commit "Download the whole Garmin history
   in the background"). After the per-day sync of the last 90 days, each run

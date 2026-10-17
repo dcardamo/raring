@@ -20,8 +20,44 @@
  type PageData=TodayView|SleepView|TrainingView|WorkoutView|HealthView|CheckinView;
  let route=$state('today'),trail=$state<string[]>(['today']),data=$state<PageData|null>(null),status=$state<AppStatus|null>(null),settings=$state<api.Settings>({...api.defaultSettings}),loading=$state(true),error=$state(''),syncError=$state(''),syncing=$state(false),selectedFactor=$state(''),checkinIndex=$state(0),onboardStep=$state(0),startY=0,startedAtTop=false,swipeX=0;
  let navigation:ReturnType<typeof createNavigation>,scroll:HTMLElement;
- let requestId=0,refreshing=false,lastSyncAttempt:number|null=null;
+ let requestId=0,lastSyncAttempt:number|null=null,prefetched=false,cacheGeneration=0;
+ let hasRendered=$state(false);
+ let touching=false,pendingSwap:{route:string;data:PageData}|null=null;
+ const views=new Map<string,PageData>();
+ const pendingViews=new Map<string,Promise<PageData>>();
+ let cacheDay=new Date().toDateString();
+ function clearViews(){views.clear();pendingViews.clear();pendingSwap=null;prefetched=false;cacheGeneration++}
  const scrollPositions=new Map<string,number>();
+ function checkDay(){
+  const day=new Date().toDateString();
+  if(day!==cacheDay){clearViews();cacheDay=day}
+ }
+ function cached(current:string){checkDay();return views.get(current)??null}
+ async function readView(current:string):Promise<PageData>{
+  for(;;){
+   checkDay();
+   const generation=cacheGeneration;
+   let read=pendingViews.get(current);
+   if(!read){
+    read=loadView(current).then(next=>{if(generation===cacheGeneration)views.set(current,next);return next})
+     .finally(()=>{if(pendingViews.get(current)===read)pendingViews.delete(current)});
+    pendingViews.set(current,read);
+   }
+   try{
+    const next=await read;
+    checkDay();
+    if(generation===cacheGeneration)return next;
+   }catch(e){
+    if(generation===cacheGeneration)throw e;
+   }
+  }
+ }
+ function prefetchTabs(){
+  if(prefetched)return;
+  prefetched=true;
+  const generation=cacheGeneration;
+  void tick().then(()=>{if(generation===cacheGeneration)return Promise.allSettled(tabs.filter(tab=>tab!==route).map(tab=>readView(tab)))});
+ }
  const fixture=new URLSearchParams(location.search).get('fixture');
  const live=isTauri() && fixture===null;
  let syncBusy=$derived(syncing || status?.syncing===true);
@@ -41,69 +77,92 @@
    default:return api.today();
   }
  }
- async function refresh(silent=false){
-  if(silent && refreshing)return;
+ async function refresh(silent=false,withStatus=false){
+  checkDay();
   const current=route,request=++requestId;
-  refreshing=true;
-  if(!silent)loading=true;
+  if(!silent)loading=!data;
   try {
-   const nextStatus=await api.app_status();
-   if(request!==requestId)return;
-   // A queued or slow Android sync can succeed after the foreground wait ends.
-   if(lastSyncAttempt!==null && nextStatus.lastSync && Date.parse(nextStatus.lastSync)>=lastSyncAttempt && !nextStatus.lastError)syncError='';
-   status=nextStatus;
-   if(live){
-    if(!status.signedIn){onboardStep=0;if(current!=='onboarding')navigate('onboarding');return}
-    if(localStorage.getItem('notifications-step-done')!=='1'){onboardStep=1;if(current!=='onboarding')navigate('onboarding');return}
-    if(current==='onboarding'){navigate('today');return}
+   if(withStatus){
+    const nextStatus=await api.app_status();
+    if(request!==requestId)return;
+    // A queued or slow Android sync can succeed after the foreground wait ends.
+    if(lastSyncAttempt!==null && nextStatus.lastSync && Date.parse(nextStatus.lastSync)>=lastSyncAttempt && !nextStatus.lastError)syncError='';
+    if(status && status.lastSync!==nextStatus.lastSync)clearViews();
+    status=nextStatus;
+    checkDay();
+    if(live){
+     if(!status.signedIn){onboardStep=0;clearViews();data=null;if(current!=='onboarding')navigate('onboarding');return}
+     if(localStorage.getItem('notifications-step-done')!=='1'){onboardStep=1;if(current!=='onboarding')navigate('onboarding');return}
+     if(current==='onboarding'){navigate('today');return}
+    }
    }
    if(current==='settings'){
     const nextSettings=await api.get_settings();
     if(request===requestId)settings=nextSettings;
    }else if(current!=='onboarding'){
-    let next=await loadView(current);
+    let next=await readView(current);
     if(request!==requestId)return;
     if(fixture==='missing' && current==='today'){
      next={...(next as TodayView),readiness:null,readinessTrend:[],sleep:null,sleepPlan:null,load:null,chips:[],factors:[],call:null,callNote:null,bodyBattery:{now:null,charged:null,drained:null},stress:{average:null,max:null,level:null,qualifier:null,tone:'neutral',timeline:[],active:[],sleep:null,time:[],activeS:null,trend:[]},hrv:{lastNight:null,status:null,tone:'neutral',baseline:null,week:[]},vitals:{readings:[],offCount:0,baselineReady:false},activities:[],fitnessAge:{fitnessAge:null,chronologicalAge:null,trend:[],change12m:null},headline:''};
     }
-    data=fixture==='empty' && current==='today'?null:next;
+    const updated=fixture==='empty' && current==='today'?null:next;
+    if(touching && data && updated)pendingSwap={route:current,data:updated};
+    else data=updated;
+    if(data){hasRendered=true;prefetchTabs()}
    }
+   if(hasRendered && !prefetched && current!=='onboarding')prefetchTabs();
    if(request===requestId)error='';
   }catch(e){
-   if(request===requestId){if(!silent)data=null;error=String(e)}
+   if(request===requestId){error=String(e)}
   }finally{
-   if(request===requestId){loading=false;refreshing=false}
+   if(request===requestId)loading=false;
   }
-  if(request===requestId && live && route!=='onboarding' && document.visibilityState==='visible' && shouldSync(status,lastSyncAttempt))void syncNow();
+  if(request===requestId && withStatus && live && route!=='onboarding' && document.visibilityState==='visible' && shouldSync(status,lastSyncAttempt))void syncNow();
  }
  async function syncNow(){
   if(syncing || status?.syncing)return;
   syncing=true;syncError='';lastSyncAttempt=Date.now();
-  try{await api.sync_now();await refresh(true)}catch(e){syncError=String(e)}
+  try{await api.sync_now();clearViews();await refresh(true,true)}catch(e){syncError=String(e)}
   finally{syncing=false}
  }
  onMount(()=>{
   let disposed=false,unlisten=()=>{};
   navigation=createNavigation(next=>{
+   const from=route;
    const changed=next[next.length-1]!==route;
-   if(changed){scrollPositions.set(route,scroll?.scrollTop??0);data=null;selectedFactor='';checkinIndex=0}
+   if(changed){scrollPositions.set(route,scroll?.scrollTop??0);pendingSwap=null;selectedFactor='';checkinIndex=0}
    trail=next;route=next[next.length-1];
-   void refresh().then(async()=>{
-    await tick();
-    if(changed && route===next[next.length-1] && scroll)scroll.scrollTop=scrollPositions.get(route)??0;
+   const available=changed?cached(route):null;
+   if(changed){
+    data=available;
+    if(available)void tick().then(()=>restoreScroll(next));
+   }
+   void refresh(false,status===null || from==='onboarding' && route!=='onboarding').then(async()=>{
+    if(changed && !available){await tick();restoreScroll(next)}
    });
   });
   navigation.start();
   const nativeWindow=window as Window & {__raringBack?:()=>boolean};
   nativeWindow.__raringBack=back;
-  const resume=()=>{if(document.visibilityState==='visible')void refresh(true)};
+  const resume=()=>{if(document.visibilityState==='visible')void refresh(true,true);else finishTouch()};
   document.addEventListener('visibilitychange',resume);
   window.addEventListener('raring:resume',resume);
   void api.onStatusChanged(resume).then(fn=>{if(disposed)fn();else unlisten=fn});
   const poll=window.setInterval(resume,CACHE_POLL_MS);
   return()=>{disposed=true;requestId++;navigation.destroy();delete nativeWindow.__raringBack;window.clearInterval(poll);document.removeEventListener('visibilitychange',resume);window.removeEventListener('raring:resume',resume);unlisten()};
  });
- async function pullEnd(e:TouchEvent){if(route==='today' && startedAtTop && e.changedTouches[0].clientY-startY>75)await syncNow()}
+ function restoreScroll(next:string[]){
+  if(route===next[next.length-1] && scroll)scroll.scrollTop=scrollPositions.get(route)??0;
+ }
+ function finishTouch(){
+  touching=false;
+  if(pendingSwap?.route===route)data=pendingSwap.data;
+  pendingSwap=null;
+ }
+ async function pullEnd(e:TouchEvent){
+  finishTouch();
+  if(route==='today' && startedAtTop && e.changedTouches[0].clientY-startY>75)await syncNow();
+ }
  async function saveSettings(){try{await api.set_settings(settings)}catch(e){error=String(e)}}
 
  const driverScale=(key:string):[number,number]=>({vo2max:[20,70],restingHr:[35,85],bmi:[15,35],bodyFat:[5,40],vigorousMinutes:[0,200],vigorousDays:[0,7]} as Record<string,[number,number]>)[key]??[0,100];
@@ -112,7 +171,7 @@
  const fitnessAgeColor=(age:number,actual:number|null)=>actual==null?colors.ink:age<actual?colors.good:age===actual?colors.fair:colors.poor;
  let glow=$derived(route==='today' && todayData?.readiness?toneColor(todayData.readiness.tone):route==='sleep' && sleepData?.score?toneColor(sleepData.score.tone):route==='training' && trainingData?.acute?toneColor(trainingData.acute.tone):route==='health' && healthData?.fitnessAge.fitnessAge!=null && healthData.fitnessAge.chronologicalAge!=null?fitnessAgeColor(healthData.fitnessAge.fitnessAge,healthData.fitnessAge.chronologicalAge):null);
 </script>
-<div class="phone"><div class="glow" style:--glow={glow?`color-mix(in srgb, ${glow} 12%, transparent)`:'transparent'}></div><main class="scroll" bind:this={scroll} ontouchstart={(e)=>{startY=e.touches[0].clientY;startedAtTop=e.currentTarget.scrollTop===0}} ontouchend={pullEnd}><div class="page" class:reading={route==='checkin'||route==='onboarding'}>
+<div class="phone"><div class="glow" style:--glow={glow?`color-mix(in srgb, ${glow} 12%, transparent)`:'transparent'}></div><main class="scroll" bind:this={scroll} ontouchstart={(e)=>{touching=true;startY=e.touches[0].clientY;startedAtTop=e.currentTarget.scrollTop===0}} ontouchend={pullEnd} ontouchcancel={finishTouch}><div class="page" class:reading={route==='checkin'||route==='onboarding'}>
 {#if error && (data || route==='settings')}<p class="warning" role="status">{error}</p>{/if}
 {#if route==='onboarding'}
  <section class="welcome" class:intro={onboardStep===0}>
@@ -129,8 +188,9 @@
   {#if error || status?.lastError}<p class="small" role="alert">{error || status?.lastError}</p>{/if}
  </section>
 {:else if route==='settings'}
- <Header title="Settings" eyebrow="RARING" back={back} backLabel={parentLabel}/><div class="dashboard" {@attach masonry}><Card title="Notifications">{#each Object.keys(settings) as key}<label class="setting"><span>{({notifyMorningReadiness:'Morning readiness',notifyWeeklyCheckin:'Weekly check-in',notifyMetricChanges:'VO₂ max or Fitness Age changed',notifyVitals:'Vitals off',notifyTrainingStatus:'Training status changed',notifyBedtime:'Bedtime'} as Record<string,string>)[key]}</span><input type="checkbox" checked={settings[key as keyof api.Settings]} onchange={(e)=>{settings={...settings,[key]:e.currentTarget.checked};void saveSettings()}}/></label>{/each}</Card><Card title="Permission"><button class="secondary" onclick={async()=>{try{await api.request_notification_permission()}catch(e){error=String(e)}}}>Enable notifications</button></Card><Card title="Garmin history"><div class="big n">{status?.historyFrom?`Since ${monthLabel(status.historyFrom)}`:'—'}</div><p class="small">{status?.historyComplete?'All of your Garmin history is on this phone.':'Downloading older history in the background.'}</p></Card><Card title="Account"><button class="signout" onclick={async()=>{if(confirm('Sign out and erase all local Garmin history?')){try{await api.sign_out();localStorage.removeItem('notifications-step-done');onboardStep=0;navigate('onboarding')}catch(e){error=String(e)}}}}>Sign out</button></Card><Card title="How Raring works"><AboutRaring/></Card></div>
-{:else if loading}<div class="empty"><BrandMark/><h2>{status?.lastSync?'Loading your day…':'Syncing your Garmin data…'}</h2></div>
+ <Header title="Settings" eyebrow="RARING" back={back} backLabel={parentLabel}/><div class="dashboard" {@attach masonry}><Card title="Notifications">{#each Object.keys(settings) as key}<label class="setting"><span>{({notifyMorningReadiness:'Morning readiness',notifyWeeklyCheckin:'Weekly check-in',notifyMetricChanges:'VO₂ max or Fitness Age changed',notifyVitals:'Vitals off',notifyTrainingStatus:'Training status changed',notifyBedtime:'Bedtime'} as Record<string,string>)[key]}</span><input type="checkbox" checked={settings[key as keyof api.Settings]} onchange={(e)=>{settings={...settings,[key]:e.currentTarget.checked};void saveSettings()}}/></label>{/each}</Card><Card title="Permission"><button class="secondary" onclick={async()=>{try{await api.request_notification_permission()}catch(e){error=String(e)}}}>Enable notifications</button></Card><Card title="Garmin history"><div class="big n">{status?.historyFrom?`Since ${monthLabel(status.historyFrom)}`:'—'}</div><p class="small">{status?.historyComplete?'All of your Garmin history is on this phone.':'Downloading older history in the background.'}</p></Card><Card title="Account"><button class="signout" onclick={async()=>{if(confirm('Sign out and erase all local Garmin history?')){try{await api.sign_out();clearViews();data=null;localStorage.removeItem('notifications-step-done');onboardStep=0;navigate('onboarding')}catch(e){error=String(e)}}}}>Sign out</button></Card><Card title="How Raring works"><AboutRaring/></Card></div>
+{:else if loading && !hasRendered}<div class="empty"><BrandMark/><h2>{status?.lastSync?'Loading your day…':'Syncing your Garmin data…'}</h2></div>
+{:else if !data && hasRendered}<Header title={route[0].toUpperCase()+route.slice(1)} eyebrow="RARING"/><p class="small">{error || (loading?'Preparing this view…':'No data for this view yet.')}</p>
 {:else if !data}<div class="empty"><BrandMark/><h2>Syncing your Garmin data…</h2><p>{error && !error.includes('not_ready')?error:'Your day will appear here soon.'}</p><button class="secondary" disabled={syncBusy} onclick={syncNow}>{syncBusy?'Syncing…':'Sync now'}</button>{#if syncError}<p>{syncError}</p>{/if}</div>
 {:else if todayData && route==='today'}
  <div class="page-hero today-hero"><Header title="Today" eyebrow={dateLabel(todayData.date)} onSettings={()=>navigate('settings')}/>
