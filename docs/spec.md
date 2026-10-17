@@ -183,6 +183,8 @@ Sent by the phone itself.
   least 14. HRV uses Garmin's own baseline instead.
 - **Stress bars**: the Today card averages each 15 minutes of Garmin's
   readings; the detail shows every reading. Colors follow Garmin's categories.
+- **Body Battery color**: good at 70 and above, fair from 30, poor below 30.
+  Garmin rates no level, so only the display color is bucketed.
 - **Weekly focus**: the biggest gap among sleep against need, load-focus
   shortage, falling readiness, and vigorous minutes against the Fitness Age
   target.
