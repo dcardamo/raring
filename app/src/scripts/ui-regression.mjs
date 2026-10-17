@@ -710,6 +710,11 @@ function trendFixture(q){
  assert.equal(await live.getByText('Within your ranges',{exact:true}).count(),0);
  assert.equal(await live.locator('.signal-grid').getByText('Not recorded',{exact:true}).count(),3);
  await live.screenshot({path:resolve(output,'health-partial.png')});
+ await live.getByRole('button',{name:'View Resting HR',exact:true}).click();
+ await live.getByText('Your resting heart rate from Garmin. The shaded band shows your usual range, not a medical target.',{exact:true}).waitFor();
+ assert.equal(await live.getByText('Garmin’s average heart rate during sleep, compared with its Health Status baseline. This is not your resting heart rate or a medical target.',{exact:true}).count(),0,'fallback resting HR must not claim to be Sleep HR');
+ await live.getByRole('navigation').getByRole('button',{name:'Health',exact:true}).click();
+ await live.getByText('1 reading in range',{exact:true}).waitFor();
  await live.evaluate(()=>{
   const v=window.testBackend.samples.health.vitals.readings;
   Object.assign(v[0],{value:74,tone:'poor'});
