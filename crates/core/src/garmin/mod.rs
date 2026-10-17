@@ -302,6 +302,41 @@ impl Client {
         }
         Err(Error::NeedsSignIn)
     }
+    /// Execute a read-only GraphQL query through Garmin's gateway. Errors in a 200
+    /// response are failures, not a missing metric to cache as an empty day.
+    pub async fn graphql(&self, query: &str, variables: Value) -> Result<Value> {
+        let mut guard = self.state.lock().await;
+        if guard.0.is_expiring(Utc::now(), Duration::minutes(5)) {
+            guard.0 = refresh_at(&self.http, &self.auth, &guard.0).await?;
+        }
+        for attempt in 0..2 {
+            if let Some(last) = guard.1 {
+                if let Some(wait) = self.interval.checked_sub(last.elapsed()) {
+                    tokio::time::sleep(wait).await;
+                }
+            }
+            guard.1 = Some(Instant::now());
+            let r = native(self.http.post(format!("{}/graphql-gateway/graphql", self.api)))
+                .bearer_auth(&guard.0.access_token)
+                .json(&serde_json::json!({"query": query, "variables": variables}))
+                .send()
+                .await
+                .map_err(map_network)?;
+            if r.status() == StatusCode::UNAUTHORIZED && attempt == 0 {
+                guard.0 = refresh_at(&self.http, &self.auth, &guard.0).await?;
+                continue;
+            }
+            if !r.status().is_success() {
+                return Err(http_error(&r));
+            }
+            let value: Value = r.json().await.map_err(|_| Error::Decode)?;
+            if value.get("errors").is_some() || !value["data"].is_object() {
+                return Err(Error::Decode);
+            }
+            return Ok(value["data"].clone());
+        }
+        Err(Error::NeedsSignIn)
+    }
     pub async fn endpoint(&self, kind: &str, key: &str, display: Option<&str>) -> Result<Value> {
         let d = display.unwrap_or("");
         // display names are URL path segments; never allow them to alter the route.
