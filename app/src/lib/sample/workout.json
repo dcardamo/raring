@@ -29,7 +29,7 @@
       "unit": "km"
     },
     {
-      "key": "time",
+      "key": "duration",
       "label": "Time",
       "value": 3134,
       "unit": "s"
