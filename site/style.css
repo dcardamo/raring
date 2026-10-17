@@ -39,11 +39,6 @@ nav a{color:var(--muted);text-decoration:none;font-size:14px;padding:10px 0}
 .app-preview{width:100%;max-width:320px;justify-self:center}
 .phone-frame{padding:7px;background:#19212d;border:1px solid #354255;border-radius:32px;box-shadow:0 28px 80px #0006}
 .phone-frame img{border-radius:25px;width:100%}
-.screen-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:32px;margin-top:32px}
-.screen-gallery:focus-visible{outline:2px solid var(--mint);outline-offset:6px;border-radius:8px}
-.screen-gallery figure{min-width:0;max-width:300px;justify-self:center}
-.screen-gallery figcaption{margin-bottom:24px;min-height:100px}
-.screen-gallery figcaption p{font-size:14px;margin-top:10px}
 .sleep-label{color:var(--violet)}.training-label{color:var(--orange)}.health-label,.readiness-label{color:var(--mint)}.stress-label{color:var(--sky)}
 .benefits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;list-style:none;padding:0;margin:32px 0 22px}
 .benefits li{background:var(--card);padding:26px;border:1px solid var(--line);border-radius:20px}
@@ -87,7 +82,6 @@ code{display:block;overflow-wrap:anywhere;padding:14px 16px;background:var(--car
 @media(max-width:900px){
  .hero{gap:30px;grid-template-columns:minmax(0,1fr) 270px}
  .steps{gap:12px}.steps li{padding:20px}
- .screen-gallery{gap:20px}
  .benefits{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.benefits li{padding:20px}
  .spotlight{grid-template-columns:minmax(0,1fr) 260px;gap:40px}.spotlight.reverse{grid-template-columns:260px minmax(0,1fr)}
  .privacy-card,.install{gap:32px}
@@ -100,9 +94,6 @@ code{display:block;overflow-wrap:anywhere;padding:14px 16px;background:var(--car
  .hero{grid-template-columns:1fr;gap:40px;padding-top:40px;padding-bottom:48px}
  .lead{font-size:17px}.actions{gap:12px 24px}.highlights{margin-top:28px;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 12px}
  .app-preview{max-width:290px}
- .screen-gallery{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:min(82%,290px);overflow-x:auto;gap:20px;padding:6px 4px 20px;scroll-snap-type:x proximity;scrollbar-color:var(--line) var(--bg);scrollbar-width:thin}
- .screen-gallery figure{scroll-snap-align:start}
- .screen-gallery .phone-frame{box-shadow:none}
  .section{padding:42px 0}
  .steps{grid-template-columns:1fr;gap:14px;margin-top:26px}
  .benefits{grid-template-columns:1fr;margin-top:26px}
