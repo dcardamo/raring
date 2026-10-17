@@ -136,6 +136,69 @@ try {
  await page.setViewportSize({width:390,height:844});await waitRoute('metric/hrv');
  console.log('Phone, unfolded and live resize layouts: passed');
 
+ // Why sheets list Garmin's inputs and close by button, scrim, Escape and Android Back.
+ await page.goto(`${url}/#readiness`);await waitRoute('readiness');
+ await page.getByRole('button',{name:'Why High?',exact:true}).click();
+ const whySheet=page.getByRole('dialog',{name:'Why readiness is High'});
+ await whySheet.waitFor();
+ assert.equal(await whySheet.locator('.why-row').count(),6);
+ assert.ok((await whySheet.textContent()).includes('Garmin · Well recovered'));
+ assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')),'Close','focus moves into the sheet');
+ await page.evaluate(()=>document.fonts.ready);
+ assert.deepEqual(await contrastFailures(page),[],'Why sheet text contrast');
+ await page.screenshot({path:resolve(output,'390-why-readiness.png')});
+ await page.keyboard.press('Escape');await whySheet.waitFor({state:'detached'});
+ assert.equal(await page.evaluate(()=>document.activeElement?.textContent),'Why High?','focus returns to the button');
+ await page.getByRole('button',{name:'Why High?',exact:true}).click();await whySheet.waitFor();
+ assert.equal(await page.evaluate(()=>window.__raringBack()),true);
+ await whySheet.waitFor({state:'detached'});
+ assert.ok(page.url().endsWith('#readiness'),'Back closes the sheet before leaving the screen');
+ await page.goto(`${url}/#metric/bodyBattery`);await waitRoute('metric/bodyBattery');
+ await page.getByRole('button',{name:'Why 78?',exact:true}).click();
+ const batterySheet=page.getByRole('dialog',{name:'Why Body Battery is 78'});
+ assert.ok((await batterySheet.textContent()).includes('Sleep charged it by 62'));
+ await page.screenshot({path:resolve(output,'390-why-body-battery.png')});
+ await batterySheet.getByRole('button',{name:'Close'}).click();await batterySheet.waitFor({state:'detached'});
+ await page.goto(`${url}/#training`);await waitRoute('training');
+ await page.getByRole('button',{name:'Why Productive?',exact:true}).click();
+ const statusSheet=page.getByRole('dialog',{name:'Why Productive'});
+ await statusSheet.waitFor();
+ await page.screenshot({path:resolve(output,'390-why-training.png')});
+ await page.locator('.why-scrim').click({position:{x:20,y:20}});await statusSheet.waitFor({state:'detached'});
+ for(const width of [840,1024]){
+  await page.setViewportSize({width,height:900});
+  await page.getByRole('button',{name:'Why Productive?',exact:true}).click();await statusSheet.waitFor();
+  const box=await statusSheet.boundingBox();
+  assert.ok(box.y>=0 && box.y+box.height<=900,`${width}: sheet fits the window`);
+  if(width>=1000)assert.ok(Math.abs(box.x+box.width/2-width/2)<2,'desktop shows a centred dialog');
+  await page.screenshot({path:resolve(output,`${width}-why-training.png`)});
+  await page.keyboard.press('Escape');await statusSheet.waitFor({state:'detached'});
+ }
+ await page.setViewportSize({width:390,height:844});
+ // Scores that differ: one line on Today behind a tap. Vite serves JSON imports as modules.
+ const differ=JSON.parse(await readFile(resolve('src/lib/sample/today.json'),'utf8'));
+ Object.assign(differ,{readiness:{...differ.readiness,value:34,label:'Low',tone:'poor'},headline:'Take it easy',call:'easy',
+  reconcile:{key:'bodyBattery',label:'Why Body Battery and readiness differ',tones:['good','poor'],line:'Body Battery charged to 87 overnight, but readiness is held back by acute load.'}});
+ const todaySample=u=>u.pathname==='/src/lib/sample/today.json';
+ await page.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(differ)}`}));
+ // A new query string forces a full load, so the module graph refetches the sample.
+ await page.goto(`${url}/?differ#today`);await page.waitForURL(`${url}/?differ#today`);await page.locator('h1').waitFor();
+ const reconcile=page.getByRole('button',{name:'Why Body Battery and readiness differ'});
+ assert.equal(await reconcile.getAttribute('aria-expanded'),'false');
+ assert.equal(await page.getByText(differ.reconcile.line).isVisible(),false,'the line sits behind a tap');
+ await reconcile.click();
+ assert.equal(await reconcile.getAttribute('aria-expanded'),'true');
+ await page.getByText(differ.reconcile.line).waitFor();
+ await page.evaluate(()=>document.fonts.ready);
+ assert.deepEqual(await contrastFailures(page),[],'reconciliation text contrast');
+ await page.screenshot({path:resolve(output,'390-today-reconcile.png')});
+ await page.setViewportSize({width:840,height:900});
+ await page.screenshot({path:resolve(output,'840-today-reconcile.png')});
+ await page.setViewportSize({width:390,height:844});
+ await page.unroute(todaySample);
+ await page.goto(`${url}/#today`);await waitRoute('today');
+ console.log('Why sheets and scores that differ: passed');
+
  const samples={};
  for(const name of ['today','sleep','training','health','status','workout'])samples[name]=JSON.parse(await readFile(resolve(`src/lib/sample/${name}.json`),'utf8'));
  const onboarding=await browser.newPage({viewport:{width:390,height:844}});

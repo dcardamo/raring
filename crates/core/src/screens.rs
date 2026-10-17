@@ -3,6 +3,8 @@ use crate::{rules, store::Store, view::*};
 use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, Timelike};
 use serde_json::Value;
 
+mod explain;
+
 fn at<'a>(v: &'a Value, keys: &[&str]) -> &'a Value {
     keys.iter().fold(v, |v, k| &v[*k])
 }
@@ -864,14 +866,14 @@ pub fn today(store: &Store, date: &str) -> TodayView {
         ),
         (
             "recovery",
-            "Recovery",
+            "Recovery time",
             "recoveryTimeFactorPercent",
             "recoveryTimeFactorFeedback",
         ),
         ("hrv", "HRV", "hrvFactorPercent", "hrvFactorFeedback"),
         (
             "acuteLoad",
-            "Load",
+            "Acute load",
             "acwrFactorPercent",
             "acwrFactorFeedback",
         ),
@@ -883,7 +885,7 @@ pub fn today(store: &Store, date: &str) -> TodayView {
         ),
         (
             "stressHistory",
-            "Stress",
+            "Stress history",
             "stressHistoryFactorPercent",
             "stressHistoryFactorFeedback",
         ),
@@ -892,17 +894,25 @@ pub fn today(store: &Store, date: &str) -> TodayView {
         .iter()
         .filter_map(|(key, name, field, feedback_field)| {
             let snapshot = readiness(&r);
-            let percent = num(snapshot, &[&[*field]]);
             let feedback = snapshot[*feedback_field].as_str().filter(|s| !s.is_empty());
-            (percent.is_some() || feedback.is_some()).then(|| Factor {
+            // Garmin sends NONE with a 0% when it couldn't rate a factor
+            // (no valid sleep, too little stress data): a gap, not a zero.
+            let unrated = feedback.is_some_and(|f| f.eq_ignore_ascii_case("NONE"));
+            let feedback = feedback.filter(|_| !unrated);
+            let percent = num(snapshot, &[&[*field]]).filter(|_| !unrated);
+            (percent.is_some() || feedback.is_some() || unrated).then(|| Factor {
                 key: (*key).into(),
                 name: (*name).into(),
                 percent,
-                tone: factor_tone(feedback, percent),
+                tone: if unrated {
+                    Tone::Neutral
+                } else {
+                    factor_tone(feedback, percent)
+                },
                 detail: feedback
                     .map(|s| label(Some(s.into())))
                     .or_else(|| percent.map(|p| format!("Garmin rates your {name} at {p:.0}%.")))
-                    .unwrap_or_default(),
+                    .unwrap_or_else(|| "Garmin didn't rate this today.".into()),
             })
         })
         .collect();
@@ -956,7 +966,7 @@ pub fn today(store: &Store, date: &str) -> TodayView {
     let b = b.as_array().and_then(|a| a.first()).unwrap_or(&b);
     let summary = store.get("summary", date).unwrap_or(Value::Null);
     let hstatus = string(hs, &[&["status"]]);
-    TodayView {
+    let mut view = TodayView {
         date: date.into(),
         sleep_plan: sleep_plan(store, date),
         readiness_trend: (0..30)
@@ -1014,6 +1024,9 @@ pub fn today(store: &Store, date: &str) -> TodayView {
         .into(),
         chips,
         factors,
+        readiness_why: None,
+        body_battery_why: None,
+        reconcile: None,
         call,
         // A finished workout comes first, then Garmin's own readiness feedback
         // (sent as codes such as LET_YOUR_BODY_RECOVER), then the biggest drag.
@@ -1071,7 +1084,21 @@ pub fn today(store: &Store, date: &str) -> TodayView {
         checkin_ready: NaiveDate::parse_from_str(date, "%Y-%m-%d")
             .is_ok_and(|d| d.weekday() == chrono::Weekday::Mon)
             && store.get("summary", &date_sub(date, 1)).is_some(),
-    }
+    };
+    view.readiness_why = explain::readiness_why(&r, &view.factors, rl.as_deref());
+    view.body_battery_why =
+        explain::body_battery_why(b, &summary, view.body_battery.now, &view.stress);
+    view.reconcile = explain::reconcile(explain::Scores {
+        readiness: view.readiness.as_ref(),
+        level: rl.as_deref(),
+        factors: &view.factors,
+        sleep: view.sleep.as_ref(),
+        battery_at_wake: num(&summary, &[&["bodyBatteryAtWakeTime"]])
+            .filter(|v| (0. ..=100.).contains(v)),
+        hrv_status: hstatus.as_deref(),
+        training_status: status(&t).as_deref(),
+    });
+    view
 }
 pub fn sleep_view(store: &Store, date: &str) -> SleepView {
     let raw = store.get("sleep", date).unwrap_or(Value::Null);
@@ -1342,7 +1369,7 @@ pub fn training(store: &Store, date: &str) -> TrainingView {
         })
     })
     .collect();
-    TrainingView {
+    let mut view = TrainingView {
         acute: load.map(|amount| {
             gauge(
                 amount,
@@ -1364,6 +1391,7 @@ pub fn training(store: &Store, date: &str) -> TrainingView {
         }),
         status: status.clone().map(|s| label(Some(s))),
         status_tone: status.as_ref().map(|s| rules::level(&label(Some(s.clone())))).unwrap_or(Tone::Neutral),
+        status_why: None,
         headline: match (load, band(&v)) {
             (Some(amount), Some([lo, _])) if amount < lo => "Room to build".into(),
             (Some(amount), Some([_, hi])) if amount > hi => "Load high".into(),
@@ -1413,7 +1441,19 @@ pub fn training(store: &Store, date: &str) -> TrainingView {
                     .or_else(|| num(&v, &[&["runningTolerance"], &["tolerance"]]))
             }),
         workouts,
-    }
+    };
+    view.status_why = explain::training_why(explain::TrainingInputs {
+        training: &v,
+        focus: &focus,
+        hrv: &store.get("hrv", date).unwrap_or(Value::Null),
+        status: self::status(&v).as_deref(),
+        acute: view.acute.as_ref(),
+        ratio: ratio(&v),
+        load_focus: &view.load_focus,
+        vo2max: view.vo2max,
+        vo2max_change_30d: view.vo2max_change_30d,
+    });
+    view
 }
 pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
     let summary = activity(store, id)?;

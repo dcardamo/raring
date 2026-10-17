@@ -176,6 +176,21 @@ pub fn seed(store: &Store, day: NaiveDate) -> rusqlite::Result<()> {
         } else {
             45 + days_ago % 22
         });
+        values["summary"]["bodyBatteryAtWakeTime"] = json!(if days_ago == 0 {
+            87
+        } else {
+            70 + days_ago % 25
+        });
+        if days_ago == 0 {
+            values["summary"]["bodyBatteryActivityEventList"] = json!([
+                {"eventType":"SLEEP","bodyBatteryImpact":62,"timezoneOffset":0,
+                 "eventStartTimeGmt":bed.format("%Y-%m-%dT%H:%M:%S").to_string(),
+                 "durationInMilliseconds":(wake - bed).num_milliseconds(),"shortFeedback":"NONE"},
+                {"eventType":"ACTIVITY","activityName":"Morning Run","bodyBatteryImpact":-9,"timezoneOffset":0,
+                 "eventStartTimeGmt":format!("{date}T06:12:00"),"durationInMilliseconds":3_134_000,
+                 "shortFeedback":"IMPROVING_TEMPO"}
+            ]);
+        }
         values["hrv"]["hrvSummary"]["lastNightAvg"] = json!(if days_ago == 0 {
             58
         } else {

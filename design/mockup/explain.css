@@ -1,0 +1,23 @@
+/* "Why" sheets and the reconciliation line on Today. */
+.why-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line);font:500 13px Inter;color:var(--text)}
+.why-btn svg{width:15px;height:15px}
+.why-sheet{max-height:82%;overflow-y:auto}
+.why-feedback{font:600 11px Inter;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-top:-2px}
+.why-summary{font-size:16px;line-height:1.45;color:var(--text);margin:10px 0 6px}
+.why-list{display:grid}
+.why-row{padding:12px 0;border-top:1px solid var(--line)}
+.why-row:first-child{border-top:0}
+.why-top{display:flex;align-items:center;gap:10px}
+.why-top b{flex:1;font:600 15px Inter}
+.why-top .n{font-size:17px;color:var(--text)}
+.why-row p{font-size:12px;line-height:1.45;color:var(--text2);margin-top:4px;max-width:85%}
+.why-source{font-size:11px;color:var(--text3);margin-top:8px}
+.recon{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:7px 12px;border-radius:999px;background:none;border:1px dashed rgba(255,255,255,.22);font:500 13px Inter;color:var(--text)}
+.recon svg{width:15px;height:15px;color:var(--text2)}
+.recon.open svg{transform:rotate(180deg)}
+.recon-dots{display:inline-flex;gap:3px}.recon-dots i{width:7px;height:7px;border-radius:50%}
+.recon-line{max-width:320px;margin:10px auto 0;font-size:14px;line-height:1.45;color:var(--text2)}
+@container (min-width:1000px){
+  .why-sheet{left:50%;right:auto;bottom:auto;top:50%;transform:translate(-50%,-50%);width:520px;border-radius:26px;border:1px solid var(--line)}
+  .why-sheet .grab{display:none}
+}

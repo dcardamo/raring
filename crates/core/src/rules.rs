@@ -32,6 +32,16 @@ pub fn score(score: f64) -> Tone {
         Tone::Poor
     }
 }
+/// Body Battery's display bucket: Garmin rates no level, so only the color is ours.
+pub fn battery(value: f64) -> Tone {
+    if value >= 70.0 {
+        Tone::Good
+    } else if value >= 30.0 {
+        Tone::Fair
+    } else {
+        Tone::Poor
+    }
+}
 pub fn normal(values: &[f64]) -> Option<[f64; 2]> {
     if values.len() < 14 {
         return None;

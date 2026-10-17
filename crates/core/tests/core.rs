@@ -54,6 +54,11 @@ fn demo_seeds_current_day_and_screen_details() {
     assert_eq!(today.chips[2].text.as_deref(), Some("On track"));
     assert_eq!(today.factors.len(), 6);
     assert_eq!(today.body_battery.now, Some(78.));
+    assert!(today.body_battery_why.as_ref().unwrap().summary.starts_with(
+        "Sleep charged it by 62, to 87 at wake. Since then: Morning Run"
+    ));
+    assert_eq!(today.readiness_why.as_ref().unwrap().inputs.len(), 6);
+    assert_eq!(today.reconcile, None);
     assert_eq!(today.headline, "Ready to push");
     assert_eq!(
         today.call_note.as_deref(),

@@ -5,7 +5,8 @@ full-window: resize it to walk through phone, unfolded (660 px and up) and
 desktop (1000 px and up, side rail instead of tabs). Screens: `language`,
 `plan`, `plan-setup`, `checkin`, `intro-1` to `intro-4`, `strength-workout`,
 `fix`, `strength-history`, `builder`, `catalog`, `help`, `help-sheet`,
-`widget`. The compatibility page is `site/compatibility.html`. Screenshots
+`widget`, `reconcile`, `reconcile-closed`, `why-readiness`, `why-battery`,
+`why-training`. The compatibility page is `site/compatibility.html`. Screenshots
 are in `shots/`; regenerate them and `screens.png` with
 `node design/mockup/shoot.mjs`. All data is synthetic.
 
@@ -56,6 +57,18 @@ rose strength); the spec's Look section now describes it.
   by sets per muscle in the amount blue. On the workout detail (this
   session), strength history (this week or four weeks), the Training card and
   the intro's setup.
+
+## Explain the numbers
+
+- **Why sheets** reuse the help sheet: a bottom sheet on phones and unfolded
+  screens, a centred dialog on desktop. A "Why High?" button under the
+  readiness headline, "Why 46?" under the Body Battery gauge and "Why
+  Productive?" under Training's chips open it. Rows: Garmin's name, the
+  value it used, Garmin's rating as a status pill, and one line on what the
+  input is. Unrated inputs have no pill.
+- **Scores that differ** is a dashed pill under Today's chips, with a dot in
+  each score's status color; tapping it unfolds one sentence in place. It is
+  one small component so Today's hierarchy can move it.
 
 ## Decided
 

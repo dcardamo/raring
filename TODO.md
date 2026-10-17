@@ -133,19 +133,6 @@ Today · Sleep · Training · Health and metric access predictable.
   (item 1).
 - Spec: update the Rules section's normal range and the Health vitals copy.
 
-### 6. Explain the numbers
-
-Users' most common complaint after clutter: scores without a why, and
-scores that seem to disagree.
-
-- On Readiness, Body Battery and Training Status details, a "Why" sheet
-  that names the inputs behind each, from Garmin's own factors and feedback:
-  for example, "Body Battery charged well overnight, but readiness is held
-  back by a high acute load." No new scores.
-- When two scores point different ways, a one-line reconciliation on Today,
-  behind a tap.
-- Spec: list any new wording rules under Rules.
-
 ## Next
 
 ### 7. Weekly plan, intensity minutes and goals
@@ -339,6 +326,40 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **6. Explain the numbers** (commit "Explain readiness, Body Battery and
+  training status"). Why sheets on the Readiness, Body Battery and Training
+  details, and a one-line reconciliation on Today when readiness and another
+  score point different ways; rules and wording in the spec. Built from
+  stored responses, no new requests. Verified on a real account:
+  - Readiness: each `*FactorFeedback` is POOR, MODERATE, GOOD, VERY_GOOD or
+    NONE; NONE comes with a 0% and means unrated (now a gap). The snapshot
+    carries the values behind the factors: `sleepScore`, `recoveryTime`
+    (minutes), `hrvWeeklyAverage`, `acuteLoad`. `feedbackShort` codes seen:
+    TAKE_IT_EASY, LISTEN_TO_YOUR_BODY, WELL_RECOVERED, EXCELLENT_RECOVERY,
+    LET_YOUR_BODY_RECOVER, TIME_TO_RECHARGE, ENERGIZING_NAP,
+    GOOD_SLEEP_LAST_NIGHT.
+  - Daily summary: `bodyBatteryAtWakeTime`, `bodyBatteryDuringSleep` and
+    `bodyBatteryActivityEventList` (SLEEP, ACTIVITY, NAP, RECOVERY events
+    with `bodyBatteryImpact`, a GMT start plus `timezoneOffset` in ms,
+    duration, `activityName` and `shortFeedback`); the Body Battery report
+    has the same events without names. `bodyBatteryDynamicFeedbackEvent.
+    feedbackShortType` reads `{DAY|SLEEP_PREPARATION|SLEEP_TIME_PASSED}_
+    {STRESSFUL|BALANCED|RECOVERING|NOT_STRESS_DATA}_AND_{INACTIVE|ACTIVE}
+    [_AND_EXERCISE|_AND_INTENSIVE_EXERCISE][_AND_BB_LOW]`.
+  - Training status: `acuteTrainingLoadDTO.acwrStatus` (LOW, OPTIMAL, HIGH),
+    `trainingStatusFeedbackPhrase` (PRODUCTIVE_6) beside a numeric
+    `trainingStatus`, and the load balance's `trainingBalanceFeedbackPhrase`
+    (AEROBIC_LOW_SHORTAGE, AEROBIC_HIGH_SHORTAGE). STRAINED days coincided
+    with HRV status LOW.
+  - Follow-ups, in priority order: compare the sheets' wording with Garmin
+    Connect on a phone; readiness `feedbackLong` (MOD_HRV_LOW,
+    POOR_RT_HIGH_SS_POOR) seems to encode Garmin's main reason but needs a
+    mapping checked against Connect before use; training status
+    `fitnessTrend` (the VO2max trend input) was always 0 with sport NONE,
+    so the sheet shows the 30-day VO2max change instead; the end-of-day
+    Body Battery feedback event can carry the previous evening's event, so
+    only the live one is used; sheets for past days wait for item 11.
 
 - **1. Full history backfill** (commit "Download the whole Garmin history
   in the background"). After the per-day sync of the last 90 days, each run

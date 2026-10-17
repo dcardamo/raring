@@ -11,6 +11,46 @@
   },
   "status": "Productive",
   "statusTone": "good",
+  "statusWhy": {
+    "title": "Why Productive",
+    "summary": "Your load is building fitness. Load focus shows an anaerobic shortage.",
+    "feedback": null,
+    "source": "From Garmin's training status inputs. Raring adds no score.",
+    "inputs": [
+      {
+        "key": "loadFocus",
+        "name": "Load focus",
+        "value": null,
+        "rating": "Anaerobic shortage",
+        "tone": "fair",
+        "detail": "How your last 4 weeks split across low aerobic, high aerobic and anaerobic."
+      },
+      {
+        "key": "acuteLoad",
+        "name": "Acute load",
+        "value": "612 · ratio 1.1",
+        "rating": "Optimal",
+        "tone": "good",
+        "detail": "Your last 7 days of load against your 4-week load."
+      },
+      {
+        "key": "hrvStatus",
+        "name": "HRV status",
+        "value": "53 ms",
+        "rating": "Balanced",
+        "tone": "good",
+        "detail": "Your 7-day HRV average against your baseline."
+      },
+      {
+        "key": "vo2max",
+        "name": "VO₂ max",
+        "value": "52",
+        "rating": null,
+        "tone": "neutral",
+        "detail": "Garmin's fitness estimate. +1 in 30 days."
+      }
+    ]
+  },
   "headline": "Room to build",
   "chips": [
     {

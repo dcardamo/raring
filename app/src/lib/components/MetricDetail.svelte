@@ -13,6 +13,7 @@
  import RangeBar from './RangeBar.svelte';
  import Sparkline from './Sparkline.svelte';
  import StressTimeline from './StressTimeline.svelte';
+ import WhySheet from './WhySheet.svelte';
  let {metric,data}:{metric:string,data:TodayView|HealthView|TrainingView}=$props();
  let source=$derived(metricSource(metric));
  let battery=$derived(metric==='bodyBattery'?(data as TodayView).bodyBattery:null);
@@ -30,6 +31,7 @@
   {#if stress.qualifier}<span class="pill" style:color={toneColor(stress.tone)}>{stress.qualifier}</span>{/if}
  {:else if battery}
   <Gauge size={210} stroke={15} value={battery.now} caption="Latest synced" color={battery.now!=null?batteryColor(battery.now):colors.secondary}/>
+  {#if (data as TodayView).bodyBatteryWhy}<WhySheet why={(data as TodayView).bodyBatteryWhy!} label={battery.now!=null?`Why ${num(battery.now)}?`:'Why?'}/>{/if}
  {:else if vital}
   <div class="metric-value n" style:color={toneColor(vital.tone)}>{num(vital.value,decimals)}<span class="unit">{vital.unit}</span></div>
   <p class="small">{dateLabel((data as HealthView).date)} · latest synced</p>

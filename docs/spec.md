@@ -71,6 +71,10 @@ optional after sign-in.
   against Garmin's optimal range) on the right.
 - A few-word headline ("Ready to push", "Take it easy") and three reason
   chips: sleep time, HRV and load.
+- When readiness and another score point different ways, a small line under
+  the chips ("Why Body Battery and readiness differ"); tapping it shows one
+  sentence naming Garmin's factors. It's a self-contained piece Today's
+  layout can move.
 - **Today's focus**: Rest, Easy, Steady or Push, with the suggestion lit up,
   followed by the lowest recorded Garmin readiness factor. Tap to see all six
   factors and their feedback.
@@ -79,7 +83,9 @@ optional after sign-in.
   wake time. The same plan appears on Sleep; a historical-average need is
   explicitly labeled, along with the number of recorded wake times. Hide the plan if the need is unavailable, or if both the window and wake history are.
 - Body Battery as a battery with its overnight charge; HRV with a 7-day line
-  over Garmin's baseline band.
+  over Garmin's baseline band. The Body Battery detail has a Why sheet: the
+  overnight charge and level at wake, today's stress, and each workout, nap
+  or rest period with Garmin's impact, plus Garmin's feedback on the day.
 - **Stress**: Garmin's average so far today, its category and day word, and
   the day in 15-minute bars. Tap for the full day of three-minute readings
   with sleep and activity marked, Garmin's time in each category, and 7-/30-day
@@ -95,7 +101,12 @@ optional after sign-in.
 
 - Large gauge with Garmin's level (Prime/High green, Moderate amber, Low/Poor
   red) and a few-word headline from Garmin's own feedback.
-- Factor bars worst first; tapping one explains it in a sentence.
+- Factor bars worst first; tapping one explains it in a sentence. A factor
+  Garmin didn't rate (it sends NONE, for example without valid sleep) is a
+  gap, never 0.
+- A Why sheet lists the six factors worst first, each with the value Garmin
+  used (sleep score, recovery hours, 7-day HRV, acute load) and Garmin's
+  rating, under one line naming what holds readiness back and what helps.
 - Interactive 7-/30-day trend chart and today's call. Tap the chart or use
   the date slider to inspect a reading. Dates are anchored to the stored
   Garmin day, missing days remain gaps, and readiness uses Garmin's level
@@ -115,6 +126,9 @@ optional after sign-in.
 
 - Large semicircle acute-load gauge with Garmin's optimal band, training
   status chip (Productive, Maintaining, …), load ratio and recovery time.
+- A Why sheet behind the status: acute load with Garmin's load-ratio status,
+  load focus, HRV status and VO2max, with a plain line on what the status
+  means.
 - Daily load bars for the week.
 - Load focus bars (low aerobic, high aerobic, anaerobic) against Garmin's
   target ranges, with a shortage flag.
@@ -190,6 +204,26 @@ Sent by the phone itself.
   readings; the detail shows every reading. Colors follow Garmin's categories.
 - **Body Battery color**: good at 70 and above, fair from 30, poor below 30.
   Garmin rates no level, so only the display color is bucketed.
+- **Why sheets**: only Garmin's inputs, ratings and feedback, worst first.
+  Readiness is *held back by* the factors Garmin rates Poor (Moderate ones
+  when none is Poor and readiness isn't High or Prime) and *helped by* the
+  ones it rates Good or better, at most two each, ordered by Garmin's
+  percentage. Body Battery's line names the overnight charge, the level at
+  wake, the workouts that drained it and Garmin's stress word for the day.
+  Training status sorts its inputs Poor, Fair, Good, then unrated, and names
+  up to two that aren't Good.
+- **Scores that differ**: readiness and another score point different ways
+  when one is good and the other poor. Readiness, Sleep Score, HRV status
+  and training status use their usual colors; Body Battery uses its level at
+  wake, since readiness is a morning reading and the battery drains through
+  the day. Fair or missing scores never count. Check sleep, Body Battery, HRV
+  status, then training status, and show only the first. The line names the
+  other score, then the readiness factors as in the Why sheet: "held back
+  by" when readiness is poor, "held up by" when it's good.
+- **Wording**: name Garmin's inputs and ratings and stop there: "held back
+  by" and "helping", never "because" or a cause Garmin didn't give. Numbers
+  are Garmin's; the only arithmetic is hours from Garmin's recovery minutes
+  and the existing 30-day VO2max change. No new scores, no medical claims.
 - **Weekly focus**: the biggest gap among sleep against need, load-focus
   shortage, falling readiness, and vigorous minutes against the Fitness Age
   target.
