@@ -8,6 +8,7 @@ import android.content.Intent
 import android.webkit.WebView
 import android.webkit.CookieManager
 import android.webkit.WebStorage
+import org.json.JSONObject
 import app.tauri.PermissionState
 import app.tauri.annotation.Command
 import app.tauri.annotation.Permission
@@ -86,6 +87,23 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
                 if (completed?.state == WorkInfo.State.SUCCEEDED) invoke.resolve(JSObject())
                 else invoke.reject("sync pending — try again later")
             } catch (e: Exception) { invoke.reject("sync failed — try again", e) }
+        }
+    }
+    @Command fun heartRateDay(invoke: Invoke) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val date = invoke.getArgs().getString("date")
+                val result = SyncGate.mutex.withLock {
+                    val tokens = TokenVault.loadOrClear(activity) ?: ""
+                    val db = java.io.File(activity.filesDir, "raring.db").absolutePath
+                    val response = JSONObject(NativeBridge.heartRateDay(db, tokens, date))
+                    if (response.optBoolean("authFailed")) throw IllegalStateException("sign in again")
+                    response.optString("tokensJson").takeIf { it.isNotEmpty() }?.let { TokenVault.save(activity, it) }
+                    if (!response.isNull("error")) throw IllegalStateException(response.getString("error"))
+                    response.getJSONObject("day")
+                }
+                invoke.resolve(JSObject().apply { put("day", result) })
+            } catch (e: Exception) { invoke.reject("Heart rate unavailable — try again later", e) }
         }
     }
     @Command fun prepareExport(invoke: Invoke) {

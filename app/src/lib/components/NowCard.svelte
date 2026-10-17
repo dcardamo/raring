@@ -19,6 +19,9 @@
   {#if today.stress.average!=null}
    <button class="now-tile" onclick={()=>open('metric/stress')}><span class="ring" style:color={today.stress.level?stressColors[today.stress.level]:undefined}><Icon name="pulse" size={18}/></span><span><b class="n">{num(today.stress.average)}</b><small>Stress{today.stress.level?` · ${stressNames[today.stress.level].toLowerCase()}`:''} avg</small></span></button>
   {/if}
+  {#if today.heartRateDay.timeline.some(v=>v!=null)}
+   <button class="now-tile" onclick={()=>open('metric/heartRate')}><span class="ring"><Icon name="heart" size={18}/></span><span><b class="n">{num(today.heartRateDay.timeline.findLast(v=>v!=null))}</b><small>Heart rate · latest recorded bpm</small></span></button>
+  {/if}
  </div>
  {#if done}
   <button class="context" onclick={()=>open('workout/'+done.id)}><span class="icon"><Icon name={done.icon} size={20}/></span><span><small>Done today</small><b>{done.name}{#if done.load!=null} · <span class="n">{num(done.load)}</span> load{/if}</b></span></button>

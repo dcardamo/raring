@@ -422,6 +422,10 @@ impl Client {
                 format!("/wellness-service/wellness/dailyStress/{key}"),
                 vec![],
             ),
+            "daily_hr" => (
+                format!("/wellness-service/wellness/dailyHeartRate/{d}"),
+                vec![("date", key)],
+            ),
             "max_metrics" => (
                 format!("/metrics-service/metrics/maxmet/daily/{key}/{key}"),
                 vec![],

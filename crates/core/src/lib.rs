@@ -109,6 +109,26 @@ impl Raring {
     pub fn health(&self, date: &str) -> view::HealthView {
         screens::health(&self.store, date)
     }
+    pub fn heart_rate_day(&self, date: &str) -> view::HeartRateDay {
+        screens::heart_rate_day(&self.store, date)
+    }
+    pub fn cached_heart_rate_day(&self, date: &str) -> Option<view::HeartRateDay> {
+        self.store.get("daily_hr", date).map(|_| self.heart_rate_day(date))
+    }
+    pub async fn fetch_heart_rate_day(
+        &self,
+        tokens: Tokens,
+        date: &str,
+    ) -> Result<(view::HeartRateDay, Tokens, SyncReport)> {
+        let client = garmin::Client::new(tokens)?;
+        let mut report = sync::heart_rate_on_demand(&self.store, &client, date).await;
+        if report.rate_limited {
+            report.error = Some("Garmin is rate limiting reads; try again later".into());
+        } else if !report.auth_failed && report.error.is_none() && self.cached_heart_rate_day(date).is_none() {
+            report.error = Some("Heart rate not available yet; try again later".into());
+        }
+        Ok((self.heart_rate_day(date), client.tokens().await, report))
+    }
     pub fn checkin(&self, monday: &str) -> view::CheckinView {
         screens::checkin(&self.store, monday)
     }

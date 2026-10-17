@@ -525,6 +525,9 @@ async fn activity_scan_tracks_only_fresh_complete_listed_days() {
 }
 
 fn put_for_scan(store: &Store, today: chrono::NaiveDate) {
+    for i in 0..2 {
+        store.set_cursor(&format!("retry:daily_hr:{}", today - chrono::Duration::days(i)), &(chrono::Utc::now().timestamp() + 3600).to_string()).unwrap();
+    }
     store
         .put(
             "profile",
@@ -581,6 +584,9 @@ async fn garmin_intensity_weeks_are_read_daily() {
         .and_then(|t| chrono::Local.from_local_datetime(&t).single())
         .unwrap();
     let rows: Value = serde_json::from_str(include_str!("fixtures/intensity_weeks.json")).unwrap();
+    for i in 0..2 {
+        store.set_cursor(&format!("retry:daily_hr:{}", afternoon.date_naive() - chrono::Duration::days(i)), &(chrono::Utc::now().timestamp() + 3600).to_string()).unwrap();
+    }
     // The weekly reply is the last of the run; earlier requests get "{}".
     let mut replies = vec!["{}".to_owned(); 20];
     replies.push(rows.to_string());

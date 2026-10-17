@@ -270,7 +270,7 @@ async fn absent_device_list_is_checked_only_hourly() {
     handle.join().unwrap();
     let seen = seen.lock().unwrap();
     assert!(seen[0].contains("/deviceregistration/devices"));
-    assert!(seen[1].contains("/usersummary/"));
+    assert!(seen[1].contains("/wellness-service/wellness/dailyHeartRate/"));
     assert!(seen[2].contains("/deviceregistration/devices"));
 }
 

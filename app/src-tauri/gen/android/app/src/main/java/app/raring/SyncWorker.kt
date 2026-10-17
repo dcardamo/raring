@@ -36,6 +36,7 @@ object NativeBridge {
     init { System.loadLibrary("raring_app_lib") }
     @JvmStatic external fun prepareTokens(tokensJson: String): String
     @JvmStatic external fun sync(dbPath: String, tokensJson: String, nowIso: String): String
+    @JvmStatic external fun heartRateDay(dbPath: String, tokensJson: String, date: String): String
     @JvmStatic external fun markSent(dbPath: String, tagsJson: String, nowIso: String): String
     @JvmStatic external fun bedtime(dbPath: String, nowLocal: String): String
 }

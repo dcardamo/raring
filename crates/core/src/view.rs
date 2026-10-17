@@ -209,6 +209,25 @@ pub struct StressCard {
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
+pub struct HeartRateDay {
+    pub date: String,
+    /// Garmin's daily resting value; not Health Status's overnight mean.
+    pub resting: Option<f64>,
+    pub minimum: Option<f64>,
+    pub maximum: Option<f64>,
+    /// Two-minute elapsed slots from the source day's UTC start. Gaps are not zero.
+    pub timeline: Vec<Option<f64>>,
+    /// Actual length of the source day, in elapsed minutes (23, 24 or 25 hours).
+    pub duration_min: f64,
+    /// Recorded sleep intervals clipped to this day, in elapsed minutes.
+    pub sleep: Vec<[f64; 2]>,
+    /// Recorded activities clipped to this day, in elapsed minutes.
+    pub activities: Vec<[f64; 2]>,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct HrvCard {
     /// Last night's average, ms.
     pub last_night: Option<f64>,
@@ -406,6 +425,7 @@ pub struct TodayView {
     pub call_note: Option<String>,
     pub body_battery: BodyBatteryCard,
     pub stress: StressCard,
+    pub heart_rate_day: HeartRateDay,
     pub hrv: HrvCard,
     pub vitals: VitalsCard,
     pub activities: Vec<ActivityCard>,
@@ -1022,6 +1042,7 @@ pub struct HealthView {
     pub drivers: Vec<Driver>,
     pub vitals: VitalsCard,
     pub stress: StressCard,
+    pub heart_rate_day: HeartRateDay,
     pub body_weight: Option<BodyWeightCard>,
     /// This week's intensity minutes, when Garmin reported any day of it.
     pub intensity: Option<IntensityCard>,

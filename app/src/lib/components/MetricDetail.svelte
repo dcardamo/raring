@@ -1,5 +1,8 @@
 <script lang="ts">
  import {masonry} from '../masonry';
+ import {addDays} from '../history';
+ import * as api from '../api';
+ import type {HeartRateDay} from '../generated/HeartRateDay';
  import type {TodayView} from '../generated/TodayView';
  import type {HealthView} from '../generated/HealthView';
  import type {TrainingView} from '../generated/TrainingView';
@@ -26,9 +29,24 @@
  // Health Status's HR is Garmin's sleep average, so its history is Sleep HR, not resting HR.
  const vitalTrend=(v:VitalReading):TrendMetric=>v.kind==='restingHr'?(v.status || v.rangeSource==='garmin'?'sleepHr':'restingHr'):v.kind;
  let decimals=$derived(metric==='skinTemp'||metric==='respiration'?1:0);
+ let initial=$derived(metric==='heartRate'?(data as HealthView).heartRateDay:null);
+ let heartRate=$state<HeartRateDay|null>(null);
+ let hrDate=$state(''),hrBusy=$state(false),hrError=$state('');
+ let shown=$derived(heartRate??initial);
+ async function changeHrDate(date:string){
+  hrBusy=true;hrError='';
+  try { heartRate=await api.heart_rate_day(date);hrDate=date; }
+  catch { hrError='Could not load that day. Try again later.'; }
+  finally { hrBusy=false; }
+ }
 </script>
 <div class="metric-hero">
- {#if stress}
+ {#if metric==='heartRate' && shown}
+  <div class="metric-value n">{num(shown.resting)}<span class="unit">bpm</span></div>
+  <p class="small">Garmin daily resting HR · {dateLabel(hrDate||shown.date)}</p>
+  <div class="hr-days"><button disabled={hrBusy} onclick={()=>changeHrDate(addDays(hrDate||shown!.date,-1))}>← Previous</button><span>{dateLabel(hrDate||shown.date)}</span><button disabled={hrBusy || (hrDate||shown.date)>=(data as HealthView).date} onclick={()=>changeHrDate(addDays(hrDate||shown!.date,1))}>Next →</button></div>
+  {#if hrError}<p class="small">{hrError}</p>{/if}
+ {:else if stress}
   <div class="metric-value n" style:color={stress.level?stressColors[stress.level]:toneColor('neutral')}>{num(stress.average)}</div>
   <p class="small">{stress.level?stressNames[stress.level]+' · ':''}average so far today{#if stress.max!=null}{` · peak ${num(stress.max)}`}{/if}</p>
   {#if stress.qualifier}<span class="pill" style:color={toneColor(stress.tone)}>{stress.qualifier}</span>{/if}
@@ -45,7 +63,10 @@
  {/if}
 </div>
 <div class="dashboard" {@attach masonry}>
- {#if stress}
+ {#if metric==='heartRate' && shown}
+  <Card title="Through the day">{#if shown.timeline.length}{#key shown.date}<StressTimeline heartRate={shown}/>{/key}{:else}<p class="small">No heart-rate samples for this day.</p>{/if}</Card>
+  <Card title="Daily values"><div class="battery-totals"><div><b class="big n">{num(shown.resting)}</b><span>Garmin resting HR · bpm</span></div><div><b class="big n">{num(shown.minimum)}</b><span>Minimum · bpm</span></div><div><b class="big n">{num(shown.maximum)}</b><span>Maximum · bpm</span></div></div></Card>
+ {:else if stress}
   {#if stress.timeline.length}<Card title="Through the day"><StressTimeline {stress}/></Card>{/if}
   {#if stress.time.length}<Card title="Time in each level">{#each stress.time as t}<div class="stress-row"><b>{stressNames[t.level]}</b><div class="bar"><i style:width={t.seconds/Math.max(stressTotal,1)*100+'%'} style:background={stressColors[t.level]}></i></div><span class="n">{duration(t.seconds/60)}</span><small>{Math.round(t.seconds/Math.max(stressTotal,1)*100)}%</small></div>{/each}{#if stress.activeS}<div class="stress-row"><b>Active</b><div class="bar"><i style:width={stress.activeS/Math.max(stressTotal,1)*100+'%'} style:background={colors.secondary}></i></div><span class="n">{duration(stress.activeS/60)}</span><small>{Math.round(stress.activeS/Math.max(stressTotal,1)*100)}%</small></div>{/if}</Card>{/if}
   <Card title="Daily average">
@@ -68,3 +89,8 @@
  {/if}
  <Card title="About this metric"><p class="metric-copy">{vital?.kind==='restingHr' && (vital.status || vital.rangeSource==='garmin') ? 'Garmin’s average heart rate during sleep, compared with its Health Status baseline. This is not your resting heart rate or a medical target.' : metricDescriptions[metric]}</p></Card>
 </div>
+<style>
+ .hr-days{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 4px;color:var(--text2);font-size:12px}
+ .hr-days button{background:rgba(255,255,255,.07);border:0;border-radius:10px;padding:8px 10px;color:var(--text);font-size:12px}
+ .hr-days button:disabled{opacity:.4;cursor:default}
+</style>

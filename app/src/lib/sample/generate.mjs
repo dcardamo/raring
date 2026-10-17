@@ -118,6 +118,17 @@ for(const id of historyIds){
 }
 writeFileSync(new URL('strengthWorkoutHistory.json',import.meta.url),JSON.stringify(strengthWorkoutHistory,null,2)+'\n');
 
+// Synthetic daily HR with sleep, an activity and two missing intervals.
+const heartTimeline=Array.from({length:720},(_,i)=>{
+ const minute=i*2;
+ if((minute>=450 && minute<510)||(minute>=800 && minute<844))return null;
+ return Math.round(minute<370?52+Math.sin(i/13)*3:minute>=510 && minute<565?122+Math.sin(i/5)*10:66+Math.sin(i/17)*8);
+});
+const recordedHeart=heartTimeline.filter(value=>value!==null);
+const heartRateDay={date:today.date,resting:54,minimum:Math.min(...recordedHeart),maximum:Math.max(...recordedHeart),durationMin:1440,sleep:[[0,370]],activities:[[510,565]],timeline:heartTimeline};
+today.heartRateDay=heartRateDay;
+health.heartRateDay=heartRateDay;
+
 for(const [name,obj] of Object.entries({today,sleep,training,workout,strengthWorkout,strength,health,checkin,status,plan})){writeFileSync(new URL(`${name}.json`,import.meta.url),JSON.stringify(obj,null,2)+'\n')}
 // `satisfies` checks the exact fixtures against the generated Rust contract at build time.
 const types={today:'TodayView',sleep:'SleepView',training:'TrainingView',workout:'WorkoutView',strengthWorkout:'WorkoutView',strength:'StrengthView',health:'HealthView',checkin:'CheckinView',status:'AppStatus',plan:'PlanView'};

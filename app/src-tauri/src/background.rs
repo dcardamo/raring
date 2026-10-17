@@ -200,6 +200,57 @@ pub extern "system" fn Java_app_raring_NativeBridge_sync(
     }
 }
 
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_app_raring_NativeBridge_heartRateDay(
+    mut env: JNIEnv<'_>,
+    _class: JClass<'_>,
+    db_path: JString<'_>,
+    tokens_json: JString<'_>,
+    date: JString<'_>,
+) -> jni::sys::jstring {
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(
+        || -> Result<String, String> {
+            let db = env
+                .get_string(&db_path)
+                .map_err(|e| e.to_string())?
+                .to_string_lossy()
+                .into_owned();
+            let tokens = env
+                .get_string(&tokens_json)
+                .map_err(|e| e.to_string())?
+                .to_string_lossy()
+                .into_owned();
+            let date = env
+                .get_string(&date)
+                .map_err(|e| e.to_string())?
+                .to_string_lossy()
+                .into_owned();
+            let core = Raring::open(db).map_err(|e| e.to_string())?;
+            if let Some(day) = core.cached_heart_rate_day(&date) {
+                return Ok(serde_json::json!({"day":day}).to_string());
+            }
+            let tokens: Tokens = serde_json::from_str(&tokens).map_err(|e| e.to_string())?;
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .map_err(|e| e.to_string())?;
+            let (day, tokens, report) = rt
+                .block_on(core.fetch_heart_rate_day(tokens, &date))
+                .map_err(|e| e.to_string())?;
+            Ok(serde_json::json!({"day":day,"tokensJson":serde_json::to_string(&tokens).map_err(|e| e.to_string())?,"authFailed":report.auth_failed,"error":report.error}).to_string())
+        },
+    ));
+    let json = result
+        .ok()
+        .and_then(Result::ok)
+        .unwrap_or_else(|| "{\"error\":\"heart rate read failed\"}".into());
+    match env.new_string(json) {
+        Ok(v) => v.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct BedtimeResult {

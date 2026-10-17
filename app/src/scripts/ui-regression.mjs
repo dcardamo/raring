@@ -1096,6 +1096,57 @@ function trendFixture(q){
  assert.equal(await followSwitch().isChecked(),true,'the switch and store agree on the last accepted change');
  await layout.close();
  console.log('Follow my day: slow save, rapid clicks, navigation, failure and retry: passed');
+ for(const width of [390,700,1100]){
+  const hr=await browser.newPage({viewport:{width,height:844}});
+  await hr.goto(`${url}/?fixture=heart-rate#health`);
+  await hr.getByText('Heart rate · all day').waitFor();
+  assert.equal(await hr.getByText('Garmin resting HR',{exact:true}).count(),1);
+  await hr.screenshot({path:resolve(output,`heart-rate-health-${width}.png`)});
+  await hr.getByText('Heart rate · all day').click();
+  await hr.getByRole('slider',{name:/Heart rate through the day/}).waitFor();
+  assert.equal(await hr.getByText('Garmin daily resting HR',{exact:false}).count(),1);
+  assert.ok(await hr.getByText('Asleep',{exact:true}).count());
+  await hr.screenshot({path:resolve(output,`heart-rate-detail-${width}.png`)});
+  await hr.getByRole('button',{name:'Previous'}).click();
+  await hr.waitForFunction(()=>document.querySelector('.metric-hero')?.textContent?.includes('15 Oct'));
+  assert.ok(await hr.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`heart-rate detail overflow at ${width}`);
+  await hr.close();
+ }
+ console.log('All-day heart rate at phone, unfolded and desktop widths: passed');
+ const hrSwitch=await browser.newPage({viewport:{width:390,height:844}});
+ hrSwitch.on('pageerror',e=>errors.push(e.message));
+ await hrSwitch.addInitScript(samples=>{
+  localStorage.setItem('notifications-step-done','1');
+  window.isTauri=true;
+  window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
+   if(command.startsWith('plugin:event|'))return 1;
+   if(command==='app_status')return {...samples.status,signedIn:true,lastSync:new Date().toISOString()};
+   if(command==='heart_rate_day'){
+    const day=structuredClone(samples.health.heartRateDay);day.date=args.date;
+    if(args.date===samples.health.date){day.timeline=Array(120).fill(70);day.timeline[118]=null;day.timeline[119]=90}
+    return day;
+   }
+   if(command in samples)return structuredClone(samples[command]);
+   throw Error('Unexpected HR command '+command);
+  }};
+ },samples);
+ await hrSwitch.goto(`${url}/#health`);
+ await hrSwitch.getByText('Heart rate · all day').click();
+ await hrSwitch.getByRole('button',{name:'Previous'}).click();
+ const hrSlider=hrSwitch.getByRole('slider',{name:/Heart rate through the day/});
+ await hrSlider.focus();await hrSwitch.keyboard.press('End');
+ assert.equal(await hrSlider.getAttribute('aria-valuenow'),'719','late old-day sample selected');
+ await hrSwitch.getByRole('button',{name:'Next'}).click();
+ await hrSwitch.waitForFunction(()=>document.querySelector('[role="slider"]')?.getAttribute('aria-valuemax')==='119');
+ assert.equal(await hrSlider.getAttribute('aria-valuenow'),'119','new day resets to its real latest reading');
+ assert.match(await hrSlider.getAttribute('aria-valuetext'),/90 bpm/);
+ await hrSlider.focus();await hrSwitch.keyboard.press('ArrowLeft');
+ assert.equal(await hrSlider.getAttribute('aria-valuenow'),'118');
+ assert.match(await hrSlider.getAttribute('aria-valuetext'),/no reading/,'known gap stays a gap');
+ const trace=hrSwitch.locator('[role="slider"] path[fill]');
+ assert.equal(await trace.first().getAttribute('fill'),'#E4E8F0','ungraded HR uses neutral ink');
+ await hrSwitch.close();
+ console.log('Heart-rate date change resets selection; gaps and ungraded palette: passed');
  assert.deepEqual(errors,[],'no browser errors');
 } finally {
  await browser?.close();

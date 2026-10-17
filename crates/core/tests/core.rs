@@ -556,6 +556,12 @@ fn token_import_and_redaction() {
     assert!(t.is_expiring(Utc::now() + Duration::days(2000), Duration::minutes(5)));
 }
 // Local-only HTTP server; records requests and returns scripted responses. No Garmin traffic.
+fn defer_hr(store: &Store, now: chrono::DateTime<Local>) {
+    for i in 0..2 {
+        let key = (now.date_naive() - Duration::days(i)).to_string();
+        store.set_cursor(&format!("retry:daily_hr:{key}"), &(Utc::now().timestamp() + 3600).to_string()).unwrap();
+    }
+}
 fn mock(
     replies: Vec<(u16, String)>,
 ) -> (String, Arc<Mutex<Vec<String>>>, std::thread::JoinHandle<()>) {
@@ -640,6 +646,7 @@ async fn health_status_caches_explicit_null_but_retries_missing_or_malformed_sum
             &url,
             std::time::Duration::ZERO,
         ).unwrap();
+        defer_hr(&store, now);
         let report = raring_core::sync::sync(&store, &client, now, 5).await;
         thread.join().unwrap();
         assert_eq!(report.requests, 5);
@@ -690,6 +697,7 @@ async fn no_content_is_cached_and_bad_item_does_not_stop_readiness() {
         std::time::Duration::ZERO,
     )
     .unwrap();
+    defer_hr(&store, Local::now());
     let report = raring_core::sync::sync(&store, &c, Local::now(), 4).await;
     thread.join().unwrap();
     assert_eq!(report.requests, 4);
@@ -783,6 +791,7 @@ async fn backfill_includes_yesterday_and_scans_existing_days_to_fill_older_gaps(
             std::time::Duration::ZERO,
         )
         .unwrap();
+        defer_hr(&s, now);
         let report = raring_core::sync::sync(&s, &c, now, 15).await;
         thread.join().unwrap();
         assert_eq!(report.requests, 15);
@@ -832,6 +841,7 @@ async fn backfill_skips_old_health_status_days_and_still_fetches_history_ranges(
         &url,
         std::time::Duration::ZERO,
     ).unwrap();
+    defer_hr(&store, now);
     let report = raring_core::sync::sync(&store, &client, now, 15).await;
     thread.join().unwrap();
     assert_eq!(report.requests, 15);
@@ -901,6 +911,7 @@ async fn sleep_stats_refetch_until_they_include_last_night() {
             std::time::Duration::ZERO,
         )
         .unwrap();
+        defer_hr(&s, now);
         raring_core::sync::sync(&s, &c, now, 14).await;
         thread.join().unwrap();
         let last = seen.lock().unwrap()[13].clone();
@@ -947,6 +958,7 @@ async fn empty_or_missing_sleep_stats_are_asked_for_at_most_hourly() {
                 std::time::Duration::ZERO,
             )
             .unwrap();
+            defer_hr(&s, now);
             raring_core::sync::sync(&s, &c, now, 14).await;
             thread.join().unwrap();
             let last = seen.lock().unwrap()[13].clone();

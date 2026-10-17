@@ -101,6 +101,26 @@ pub async fn sync(
     // Watch freshness takes priority over backfill; a small budget must not
     // leave today's upload time hidden behind activity history.
     sync_watch(store, client, &mut report, budget, now).await;
+    for i in 0..2 {
+        if report.error.is_some() || report.rate_limited || report.requests >= budget {
+            break;
+        }
+        let key = date(today - Duration::days(i));
+        if !fetch(
+            store,
+            client,
+            &mut report,
+            "daily_hr",
+            &key,
+            Some(name),
+            budget,
+            now,
+        )
+        .await
+        {
+            break;
+        }
+    }
     for i in 0..(if (4..=10).contains(&now_local.hour()) {
         2
     } else {
@@ -228,11 +248,12 @@ pub async fn sync(
             };
             let Some(items) = list.as_array() else { break };
             // A page served from the cache (retry wait) says nothing new.
-            let fresh = report.stored > before && items.iter().all(|item| {
-                item["startTimeLocal"].as_str().and_then(day).is_some()
-                    && (item["activityId"].as_u64().is_some()
-                        || item["activityId"].as_str().is_some_and(|s| !s.is_empty()))
-            });
+            let fresh = report.stored > before
+                && items.iter().all(|item| {
+                    item["startTimeLocal"].as_str().and_then(day).is_some()
+                        && (item["activityId"].as_u64().is_some()
+                            || item["activityId"].as_str().is_some_and(|s| !s.is_empty()))
+                });
             let mut reached_old = false;
             for item in items {
                 if item["startTimeLocal"]
@@ -567,7 +588,18 @@ async fn sync_intensity_weeks(
         return;
     }
     let key = date(today);
-    let rows = match request(store, client, report, "intensity_weeks", &key, None, budget, now).await {
+    let rows = match request(
+        store,
+        client,
+        report,
+        "intensity_weeks",
+        &key,
+        None,
+        budget,
+        now,
+    )
+    .await
+    {
         Some(Got::Value(v))
             if v.as_array().is_some_and(|rows| {
                 rows.iter()
@@ -583,12 +615,13 @@ async fn sync_intensity_weeks(
         Some(Got::Absent) => None,
         Some(Got::Later) | None => return,
     };
-    if rows
-        .as_ref()
-        .is_some_and(|v| store.put("intensity_weeks", "me", &now.to_rfc3339(), v).is_err())
-        || store
-            .set_cursor("intensity_weeks_checked", &now.timestamp().to_string())
+    if rows.as_ref().is_some_and(|v| {
+        store
+            .put("intensity_weeks", "me", &now.to_rfc3339(), v)
             .is_err()
+    }) || store
+        .set_cursor("intensity_weeks_checked", &now.timestamp().to_string())
+        .is_err()
     {
         report.error = Some("local storage failed".into());
         return;
@@ -845,6 +878,44 @@ async fn fetch(
     true
 }
 
+/// One explicitly opened older day. Cached empty days stay cached; transient
+/// failures use the same retry cursor, budget and 429 backoff as normal sync.
+pub async fn heart_rate_on_demand(store: &Store, client: &Client, key: &str) -> SyncReport {
+    let mut report = SyncReport::default();
+    let now = Utc::now();
+    let valid = NaiveDate::parse_from_str(key, "%Y-%m-%d")
+        .ok()
+        .is_some_and(|d| d.to_string() == key && d <= Local::now().date_naive());
+    if !valid || store.get("daily_hr", key).is_some() {
+        return report;
+    }
+    if store
+        .cursor("backoff_until")
+        .and_then(|v| v.parse::<i64>().ok())
+        .is_some_and(|t| t > now.timestamp())
+    {
+        report.rate_limited = true;
+        return report;
+    }
+    let name = store
+        .get("profile", "me")
+        .and_then(|v| v["displayName"].as_str().map(str::to_owned));
+    if let Some(name) = name {
+        fetch(
+            store,
+            client,
+            &mut report,
+            "daily_hr",
+            key,
+            Some(&name),
+            1,
+            now,
+        )
+        .await;
+    }
+    report
+}
+
 /// Days older than the recent window come from range requests, one row per day.
 struct Series {
     name: &'static str,
@@ -966,9 +1037,9 @@ pub fn activities_listed(store: &Store, from: NaiveDate, to: NaiveDate) -> bool 
         ))
     };
     let spans: Vec<(NaiveDate, NaiveDate)> = [span("listed:lo", "listed:hi")]
-    .into_iter()
-    .flatten()
-    .collect();
+        .into_iter()
+        .flatten()
+        .collect();
     from.iter_days()
         .take_while(|d| *d <= to)
         .all(|d| spans.iter().any(|(lo, hi)| (*lo..=*hi).contains(&d)))

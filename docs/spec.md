@@ -100,8 +100,9 @@ optional after sign-in.
   order. One advice card leads, chosen by where the person is in their own
   day (see Time of day under Rules): after waking, "This morning" shows last
   night's sleep against its need, the limiting factor and then the effort;
-  during the day, "Right now" shows the latest synced Body Battery and stress,
-  labeled with the watch's upload time, with today's workout or Garmin's
+  during the day, "Right now" shows the latest synced Body Battery, stress and
+  available heart rate (not a live reading), labeled with the watch's upload time,
+  with today's workout or Garmin's
   recovery time; from two hours before tonight's window the sleep plan leads
   with a strip placing now against wind-down and the window, then a calm
   wind-down card and, after the window, a late-night card. Earlier in the day
@@ -267,6 +268,16 @@ Questions go to GitHub; the address is shown as text.
   method behind a tap; personal ranges are not medical targets.
 - **Stress**: today's average with a 30-day line of daily averages, opening
   the same detail as Today.
+- **All-day heart rate**: Garmin's daily resting HR (bpm) and a tappable day
+  chart in two-minute elapsed slots, with recorded sleep and activities shaded
+  or marked. Include the next morning's sleep as the previous evening's
+  interval, clipped to each displayed day. Missing timestamps, null and
+  off-wrist readings are gaps, never zero. The latest sample is synced, not
+  live. The daily resting value is distinct from Health Status's Sleep HR
+  (the overnight average); name both. Today and yesterday refresh with every
+  sync under its request budget; older days are fetched only when opened and
+  kept, including empty days. Retry failures and 429s follow the shared
+  backoff. Older days open from the previous/next day controls on the detail.
 - **Weight and body composition**: show the last dated weigh-in, a sparse
   12-week trend and Garmin's BMI/body fat if recorded. Weight follows Garmin's
   measurement setting (kg or lb), not the activity set's unit in isolation.
@@ -469,6 +480,17 @@ Sent by the phone itself.
   medical targets.
 - **Stress bars**: the Today card averages each 15 minutes of Garmin's
   readings; the detail shows every reading. Colors follow Garmin's categories.
+- **Heart-rate chart**: the compact card averages only present samples in
+  16-minute bars for legibility; the detail plots the two-minute readings.
+  An empty bar remains a gap, not a zero or an inferred resting value.
+  Use Garmin's UTC start and completed-day end as elapsed bounds: a source day
+  can span 23 or 25 hours. A partial day reserves a 24-hour axis (and extends
+  it if later real samples require it). The axis explicitly says elapsed
+  hours from day start, not wall-clock time; source-local travel/DST clocks
+  cannot be reconstructed from a single start offset. Sleep and activities
+  use their GMT instants, or local-only times only when start/end source
+  offsets agree for a completed day. Their intervals clip at day bounds.
+  Ungraded heart rate uses neutral ink, not a poor-status color.
 - **Trends**: one value per Garmin day, from the recent per-day rows and the
   history rows behind them. Readiness is the morning score; Body Battery the
   day's high; acute load the day's last readiness snapshot; vitals use Health
@@ -634,8 +656,9 @@ Sent by the phone itself.
   status), weekly intensity minutes (dates of Garmin's intensity weeks, read
   daily), training status, max metrics, Fitness Age, endurance and hill
   scores, race predictions, running
-  tolerance, personal records, and activities (summary, splits, heart-rate
-  zones, charts and GPS routes), plus strength sets for strength activities.
+  tolerance, personal records, all-day heart-rate samples and Garmin daily
+  resting HR, and activities (summary, splits, heart-rate zones, charts and
+  GPS routes), plus strength sets for strength activities.
   Weight and body composition use `/weight-service/weight/latest?date=` and
   `/weight-service/weight/dateRange?startDate=&endDate=`; raw and per-day
   readings stay local. The already reduced user-settings preferences supply

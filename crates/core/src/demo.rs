@@ -78,6 +78,8 @@ pub fn seed(store: &Store, day: NaiveDate) -> rusqlite::Result<()> {
             json!(bed.format("%Y-%m-%dT%H:%M:%S").to_string());
         sleep["dailySleepDTO"]["sleepEndTimestampLocal"] =
             json!(wake.format("%Y-%m-%dT%H:%M:%S").to_string());
+        sleep["dailySleepDTO"]["sleepStartTimestampGMT"] = json!(bed.and_utc().timestamp_millis() + 5 * 3_600_000);
+        sleep["dailySleepDTO"]["sleepEndTimestampGMT"] = json!(wake.and_utc().timestamp_millis() + 5 * 3_600_000);
         sleep["dailySleepDTO"]["sleepTimeSeconds"] = json!(if days_ago == 0 {
             28080
         } else {
@@ -189,8 +191,10 @@ pub fn seed(store: &Store, day: NaiveDate) -> rusqlite::Result<()> {
         } else {
             45 + days_ago % 22
         });
-        values["summary"]["moderateIntensityMinutes"] = json!([12, 30, 8, 0, 25, 18, 0][days_ago as usize % 7]);
-        values["summary"]["vigorousIntensityMinutes"] = json!([20, 14, 0, 0, 22, 6, 0][days_ago as usize % 7]);
+        values["summary"]["moderateIntensityMinutes"] =
+            json!([12, 30, 8, 0, 25, 18, 0][days_ago as usize % 7]);
+        values["summary"]["vigorousIntensityMinutes"] =
+            json!([20, 14, 0, 0, 22, 6, 0][days_ago as usize % 7]);
         values["summary"]["intensityMinutesGoal"] = json!(150);
         values["summary"]["bodyBatteryAtWakeTime"] = json!(if days_ago == 0 {
             87
@@ -276,6 +280,35 @@ pub fn seed(store: &Store, day: NaiveDate) -> rusqlite::Result<()> {
         });
         let (stress, summary) = stress(date, days_ago);
         store.put("stress", &key, "synthetic", &stress)?;
+        if days_ago < 2 {
+            let start = date
+                .and_hms_opt(5, 0, 0)
+                .unwrap()
+                .and_utc()
+                .timestamp_millis();
+            let samples: Vec<Value> = (0..if days_ago == 0 { 400 } else { 720 })
+                .map(|i| {
+                    json!([
+                        start + i * 120_000,
+                        if (210..235).contains(&i) {
+                            Value::Null
+                        } else {
+                            json!(
+                                60 + (i as f64 / 15.).sin().round() as i64 * 8
+                                    + if (260..290).contains(&i) { 45 } else { 0 }
+                            )
+                        }
+                    ])
+                })
+                .collect();
+            store.put("daily_hr", &key, "synthetic", &json!({
+                "startTimestampGMT":format!("{date}T05:00:00.0"),
+                "startTimestampLocal":format!("{date}T00:00:00.0"),
+                "endTimestampGMT":format!("{}T05:00:00.0",date + Duration::days(1)),
+                "endTimestampLocal":format!("{}T00:00:00.0",date + Duration::days(1)),
+                "restingHeartRate":54,"minHeartRate":49,"maxHeartRate":132,"heartRateValues":samples
+            }))?;
+        }
         for (field, value) in summary.as_object().unwrap() {
             values["summary"][field] = value.clone();
         }
@@ -382,6 +415,7 @@ pub fn seed(store: &Store, day: NaiveDate) -> rusqlite::Result<()> {
         activity["activityName"] = json!(name);
         activity["activityType"]["typeKey"] = json!(kind);
         activity["startTimeLocal"] = json!(format!("{when}T06:12:00"));
+        activity["startTimeGMT"] = json!(format!("{when}T11:12:00"));
         activity["distance"] = json!(distance);
         activity["duration"] = json!(seconds);
         activity["activityTrainingLoad"] = json!(load);

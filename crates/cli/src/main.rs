@@ -205,6 +205,14 @@ async fn main() -> Result<()> {
         Some("sync")=>{let tokens=read_tokens()?;let budget=args.windows(2).find(|v|v[0]=="--budget").map(|v|v[1].parse::<usize>()).transpose()?.unwrap_or(60);
             let result=core.sync(tokens,now,budget).await?;save_tokens(&result.tokens)?;show(&result.report)?;},
         Some("status")=>show(&core.status())?,
+        Some("heart-rate-day")=>{
+            let date=args.get(1).context("heart-rate-day YYYY-MM-DD")?;
+            let (day,tokens,report)=core.fetch_heart_rate_day(read_tokens()?,date).await?;
+            save_tokens(&tokens)?;if report.auth_failed{bail!("sign in again")};
+            if report.rate_limited{bail!("rate limited")};
+            if let Some(error)=report.error{bail!("{error}")};
+            show(&serde_json::json!({"requests":report.requests,"day":day}))?;
+        },
         Some("export")=>{let path=Path::new(args.get(1).context("export FILE.zip")?);if path.exists(){bail!("export file already exists")};core.export(path, env!("CARGO_PKG_VERSION"))?;println!("Exported {}",path.display());},
         // Synthetic QA data for a scratch RARING_HOME; never mixed into a signed-in account's history.
         Some("demo")=>{if core.status().signed_in{bail!("demo needs an empty RARING_HOME, not a signed-in one")}
@@ -222,7 +230,9 @@ async fn main() -> Result<()> {
             let started=std::time::Instant::now();let view=core.trend(&query,&current).map_err(anyhow::Error::msg)?;eprintln!("trend read in {} ms",started.elapsed().as_millis());show(&view)?},
         // One raw read-only request, unscrubbed: for checking an endpoint's shape locally.
         Some("fetch")=>{let kind=args.get(1).context("fetch KIND [KEY]")?;let key=args.get(2).map(String::as_str).unwrap_or("");
-            let client=garmin::Client::new(read_tokens()?)?;let result=client.endpoint(kind,key,None).await;save_tokens(&client.tokens().await)?;show(&result?)?;},
+            let client=garmin::Client::new(read_tokens()?)?;
+            let display=if kind=="daily_hr" {raring_core::store::Store::open(&db)?.get("profile","me").and_then(|v|v["displayName"].as_str().map(str::to_owned))}else{None};
+            let result=client.endpoint(kind,key,display.as_deref()).await;save_tokens(&client.tokens().await)?;show(&result?)?;},
         Some("capture")=>{let out=Path::new(args.windows(2).find(|a|a[0]=="--out").map(|a|a[1].as_str()).context("capture --out DIR")?).to_path_buf();
             fs::create_dir_all(&out)?;let client=garmin::Client::new(read_tokens()?)?;
             // Capture explicitly fetches; it is never called during tests or normal sync.

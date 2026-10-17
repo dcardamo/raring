@@ -865,7 +865,9 @@ fn activity_payload(store: &Store, id: &str) -> Option<ActivityPayload> {
     (!detail.is_null() || !listed.is_null()).then_some(ActivityPayload { detail, listed })
 }
 pub(crate) fn activity_kind(store: &Store, id: &str) -> Option<String> {
-    activity_payload(store, id).map(|p| p.kind()).filter(|k| !k.is_empty())
+    activity_payload(store, id)
+        .map(|p| p.kind())
+        .filter(|k| !k.is_empty())
 }
 
 pub(crate) fn activity(store: &Store, id: &str) -> Option<ActivityCard> {
@@ -1198,6 +1200,123 @@ fn stress_timeline(v: &Value) -> (Vec<Option<f64>>, Vec<[f64; 2]>) {
     }
     (slots, active)
 }
+fn utc_millis(value: &Value) -> Option<i64> {
+    if let Some(n) = value.as_i64() {
+        return Some(if n.abs() < 100_000_000_000 { n * 1000 } else { n });
+    }
+    let text = value.as_str()?;
+    chrono::DateTime::parse_from_rfc3339(text)
+        .map(|d| d.timestamp_millis())
+        .ok()
+        .or_else(|| NaiveDateTime::parse_from_str(text, "%Y-%m-%dT%H:%M:%S%.f")
+            .ok().map(|d| d.and_utc().timestamp_millis()))
+}
+fn local_millis(v: &Value, field: &str) -> Option<i64> {
+    let local = local_time(v, &[field])?;
+    NaiveDateTime::parse_from_str(&local, "%Y-%m-%dT%H:%M:%S%.f")
+        .ok().map(|d| d.and_utc().timestamp_millis())
+}
+fn clip_elapsed(from: i64, to: i64, start: i64, duration_min: f64) -> Option<[f64; 2]> {
+    let left = ((from - start) as f64 / 60_000.).max(0.);
+    let right = ((to - start) as f64 / 60_000.).min(duration_min);
+    (right > left).then_some([left, right])
+}
+
+pub fn heart_rate_day(store: &Store, date: &str) -> HeartRateDay {
+    let raw = store.get("daily_hr", date).unwrap_or(Value::Null);
+    let start = utc_millis(&raw["startTimestampGMT"]);
+    let index = |key: &str, fallback: usize| {
+        raw["heartRateValueDescriptors"]
+            .as_array()
+            .and_then(|fields| fields.iter().find(|field| field["key"] == key))
+            .and_then(|field| field["index"].as_u64())
+            .map(|i| i as usize)
+            .unwrap_or(fallback)
+    };
+    let timestamp_index = index("timestamp", 0);
+    let value_index = index("heartrate", 1);
+    let samples = raw["heartRateValues"].as_array();
+    let end = utc_millis(&raw["endTimestampGMT"]);
+    let date_end = NaiveDate::parse_from_str(date, "%Y-%m-%d")
+        .ok().and_then(|d| (d + Duration::days(1)).and_hms_opt(0, 0, 0))
+        .map(|d| d.and_utc().timestamp_millis());
+    // Garmin's GMT end is the last upload on a partial day, even when its
+    // "local end" claims next midnight. Only trust a completed past day's
+    // GMT end as the actual boundary (23/24/25 elapsed hours).
+    let completed = NaiveDate::parse_from_str(date, "%Y-%m-%d")
+        .is_ok_and(|day| day < Local::now().date_naive());
+    let full_end = start.zip(end).filter(|(start, end)| {
+        completed
+            && date_end == local_millis(&raw, "endTimestampLocal")
+            && (1380 * 60_000..=1500 * 60_000).contains(&(end - start))
+    });
+    let mut duration_min = full_end.map(|(start, end)| (end - start) as f64 / 60_000.).unwrap_or(1440.);
+    if let (Some(start), Some(samples)) = (start, samples) {
+        if let Some(last) = samples.iter().filter_map(|s| s.get(timestamp_index).and_then(Value::as_i64))
+            .filter(|t| *t >= start && *t < start + 1560 * 60_000).max() {
+            duration_min = duration_min.max((((last - start) / 120_000 + 1) * 2) as f64);
+        }
+    }
+    // Only a complete, unchanged source offset can map local-only activity
+    // or sleep fields onto the elapsed UTC axis. Across DST/travel, use GMT
+    // timestamps or leave the overlay unknown rather than shift it by an hour.
+    let offset = full_end.and_then(|(start, end)| {
+        let first = local_millis(&raw, "startTimestampLocal")? - start;
+        let last = local_millis(&raw, "endTimestampLocal")? - end;
+        (first == last).then_some(first)
+    });
+    let mut timeline = Vec::new();
+    if let (Some(start), Some(samples)) = (start, samples) {
+        for sample in samples {
+            let (Some(timestamp), Some(value)) =
+                (sample.get(timestamp_index).and_then(Value::as_i64), sample.get(value_index))
+            else { continue };
+            if timestamp < start { continue }
+            let minute = (timestamp - start) / 60_000;
+            if minute as f64 >= duration_min { continue }
+            let slot = minute as usize / 2;
+            if timeline.len() <= slot { timeline.resize(slot + 1, None); }
+            timeline[slot] = value.as_f64().filter(|n| (1. ..300.).contains(n));
+        }
+    }
+    let mut sleep_intervals = Vec::new();
+    let mut activities = Vec::new();
+    if let Some(start) = start {
+        for wake_day in [date.to_owned(), date_sub(date, -1)] {
+            let Some(record) = store.get("sleep", &wake_day) else { continue };
+            let night = sleep(&record);
+            let field = |kind: &str| utc_millis(&night[format!("sleep{kind}TimestampGMT")])
+                .or_else(|| offset.and_then(|zone| local_millis(night, &format!("sleep{kind}TimestampLocal")).map(|t| t-zone)));
+            if let Some(range) = field("Start").zip(field("End"))
+                .and_then(|(from,to)| clip_elapsed(from,to,start,duration_min)) {
+                sleep_intervals.push(range);
+            }
+        }
+        for (id, _) in store.activities_between(&date_sub(date, 1), date) {
+            let Some(a) = activity(store, &id) else { continue };
+            let payload = activity_payload(store, &id);
+            let from = payload.as_ref().and_then(|p| {
+                [&p.detail["summaryDTO"]["startTimeGMT"], &p.detail["startTimeGMT"],
+                 &p.listed["summaryDTO"]["startTimeGMT"], &p.listed["startTimeGMT"]]
+                    .iter().find_map(|v| utc_millis(v))
+            }).or_else(|| offset.and_then(|zone| NaiveDateTime::parse_from_str(&a.start_local, "%Y-%m-%dT%H:%M:%S%.f")
+                .ok().map(|t| t.and_utc().timestamp_millis()-zone)));
+            if let Some(range) = from.and_then(|from| clip_elapsed(from, from + (a.duration_s * 1000.) as i64, start, duration_min)) {
+                activities.push(range);
+            }
+        }
+    }
+    HeartRateDay {
+        date: date.into(),
+        resting: num(&raw, &[&["restingHeartRate"]]).filter(|n| *n > 0.),
+        minimum: num(&raw, &[&["minHeartRate"]]).filter(|n| *n > 0.),
+        maximum: num(&raw, &[&["maxHeartRate"]]).filter(|n| *n > 0.),
+        timeline,
+        duration_min,
+        sleep: sleep_intervals,
+        activities,
+    }
+}
 pub fn stress(store: &Store, date: &str) -> StressCard {
     let raw = store.get("stress", date).unwrap_or(Value::Null);
     let summary = store.get("summary", date).unwrap_or(Value::Null);
@@ -1268,9 +1387,7 @@ fn has_night(store: &Store, date: &str) -> bool {
     store
         .get("readiness", date)
         .is_some_and(|r| current_rscore(&r).is_some())
-        || store
-            .get("sleep", date)
-            .is_some_and(|s| recorded_sleep(&s))
+        || store.get("sleep", date).is_some_and(|s| recorded_sleep(&s))
 }
 /// The day the screens show. Garmin files a night under the day you wake, so
 /// the calendar day is empty until you wake and the watch syncs; until then
@@ -1539,7 +1656,11 @@ pub fn today_at(store: &Store, date: &str, now: DateTime<FixedOffset>) -> TodayV
         Tone::Good => 2,
         Tone::Neutral => 3,
     };
-    let worst = factors.iter().map(|f| rank(f.tone)).filter(|r| *r < 3).min();
+    let worst = factors
+        .iter()
+        .map(|f| rank(f.tone))
+        .filter(|r| *r < 3)
+        .min();
     let drag = factors
         .iter()
         .filter(|f| Some(rank(f.tone)) == worst)
@@ -1605,7 +1726,8 @@ pub fn today_at(store: &Store, date: &str, now: DateTime<FixedOffset>) -> TodayV
         adaptive: store.settings().adaptive_today,
         // Garmin has sent JET_LAG for a night without recorded sleep, which
         // is a missing night, not travel.
-        jet_lag: recorded.is_some_and(|s| s["sleepAlignment"]["status"].as_str() == Some("JET_LAG")),
+        jet_lag: recorded
+            .is_some_and(|s| s["sleepAlignment"]["status"].as_str() == Some("JET_LAG")),
         zone_shift_min: zone_shift(&nights, now),
         vitals_off: vitals.off_count,
     });
@@ -1728,6 +1850,7 @@ pub fn today_at(store: &Store, date: &str, now: DateTime<FixedOffset>) -> TodayV
             .or_else(|| biggest_drag.map(|d| format!("{d} is your biggest drag today."))),
         body_battery,
         stress,
+        heart_rate_day: heart_rate_day(store, date),
         hrv: HrvCard {
             last_night: num(hs, &[&["lastNightAvg"]]),
             status: hstatus.clone().map(|s| label(Some(s))),
@@ -2304,7 +2427,9 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
 /// Strength history; none without any strength activity with sets.
 pub fn strength(store: &Store, date: &str) -> Option<StrengthView> {
     let since = crate::strength::history_start(store, date)?;
-    let before = NaiveDate::parse_from_str(date, "%Y-%m-%d").ok()?.succ_opt()?;
+    let before = NaiveDate::parse_from_str(date, "%Y-%m-%d")
+        .ok()?
+        .succ_opt()?;
     let workouts = store
         .strength_activity_ids(&since.to_string(), &before.to_string())
         .iter()
@@ -2481,6 +2606,7 @@ pub fn health(store: &Store, date: &str) -> HealthView {
         drivers,
         vitals: vitals(store, date),
         stress: stress(store, date),
+        heart_rate_day: heart_rate_day(store, date),
         body_weight,
         intensity: NaiveDate::parse_from_str(date, "%Y-%m-%d").ok().and_then(|d| {
             plan::intensity(store, plan::week_start(d, plan::week_starts_on(store)), d)

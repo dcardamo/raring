@@ -6,6 +6,7 @@ import type { Effort } from "./Effort";
 import type { Factor } from "./Factor";
 import type { FitnessAgeCard } from "./FitnessAgeCard";
 import type { Gauge } from "./Gauge";
+import type { HeartRateDay } from "./HeartRateDay";
 import type { HrvCard } from "./HrvCard";
 import type { PlanWeek } from "./PlanWeek";
 import type { Reconciliation } from "./Reconciliation";
@@ -49,7 +50,7 @@ reconcile: Reconciliation | null, call: Effort | null,
 /**
  * For example "Morning Run done · 186 load".
  */
-callNote: string | null, bodyBattery: BodyBatteryCard, stress: StressCard, hrv: HrvCard, vitals: VitalsCard, activities: Array<ActivityCard>, fitnessAge: FitnessAgeCard, 
+callNote: string | null, bodyBattery: BodyBatteryCard, stress: StressCard, heartRateDay: HeartRateDay, hrv: HrvCard, vitals: VitalsCard, activities: Array<ActivityCard>, fitnessAge: FitnessAgeCard, 
 /**
  * True on Mondays once the weekly check-in exists.
  */

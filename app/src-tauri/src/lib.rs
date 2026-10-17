@@ -1,5 +1,9 @@
 use chrono::{Datelike, Local};
 #[cfg(not(target_os = "android"))]
+mod desktop_credentials;
+#[cfg(not(target_os = "android"))]
+use desktop_credentials::DesktopCredentials;
+#[cfg(not(target_os = "android"))]
 use raring_core::Tokens;
 use raring_core::{garmin::sso, view::*, Raring};
 #[cfg(target_os = "android")]
@@ -130,6 +134,33 @@ fn clear_tokens(app: &tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(not(target_os = "android"))]
+async fn with_desktop_tokens<T, F, Fut>(
+    app: &tauri::AppHandle,
+    operation: F,
+) -> Result<Option<T>, String>
+where
+    F: FnOnce(Tokens) -> Fut,
+    Fut: std::future::Future<Output = Result<(T, Tokens), String>>,
+{
+    app.state::<DesktopCredentials>()
+        .use_tokens(
+            || {
+                load_tokens(app)?
+                    .map(|json| serde_json::from_str(&json).map_err(|e| e.to_string()))
+                    .transpose()
+            },
+            |tokens| {
+                save_tokens(
+                    app,
+                    &serde_json::to_string(tokens).map_err(|e| e.to_string())?,
+                )
+            },
+            operation,
+        )
+        .await
+}
+
 fn status_read(app: tauri::AppHandle) -> Result<AppStatus, String> {
     let mut status = core(&app)?.status();
     status.signed_in = load_tokens(&app)?.is_some();
@@ -162,7 +193,8 @@ async fn read_view<T: Send + 'static>(
 async fn today(app: tauri::AppHandle, date: Option<String>) -> Result<TodayView, String> {
     read_view(app, move |core| {
         if date.is_none() {
-            core.capture_sleep_plan(Local::now()).map_err(|e| e.to_string())?;
+            core.capture_sleep_plan(Local::now())
+                .map_err(|e| e.to_string())?;
         }
         Ok(core.today(&date.unwrap_or_else(|| core.current_date(Local::now()))))
     })
@@ -172,7 +204,8 @@ async fn today(app: tauri::AppHandle, date: Option<String>) -> Result<TodayView,
 async fn sleep(app: tauri::AppHandle, date: Option<String>) -> Result<SleepView, String> {
     read_view(app, move |core| {
         if date.is_none() {
-            core.capture_sleep_plan(Local::now()).map_err(|e| e.to_string())?;
+            core.capture_sleep_plan(Local::now())
+                .map_err(|e| e.to_string())?;
         }
         Ok(core.sleep(&date.unwrap_or_else(|| core.current_date(Local::now()))))
     })
@@ -210,6 +243,46 @@ async fn health(app: tauri::AppHandle, date: Option<String>) -> Result<HealthVie
     .await
 }
 #[tauri::command]
+async fn heart_rate_day(app: tauri::AppHandle, date: String) -> Result<HeartRateDay, String> {
+    #[cfg(target_os = "android")]
+    {
+        #[derive(Deserialize)]
+        struct Response {
+            day: HeartRateDay,
+        }
+        return vault(&app)
+            .0
+            .run_mobile_plugin_async::<Response>("heartRateDay", serde_json::json!({"date":date}))
+            .await
+            .map(|r| r.day)
+            .map_err(|e| e.to_string());
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let core = core(&app)?;
+        if let Some(day) = core.cached_heart_rate_day(&date) {
+            return Ok(day);
+        }
+        let (day, report) = with_desktop_tokens(&app, |tokens| async move {
+            let (day, tokens, report) = core
+                .fetch_heart_rate_day(tokens, &date)
+                .await
+                .map_err(|e| e.to_string())?;
+            Ok(((day, report), tokens))
+        })
+        .await?
+        .ok_or("sign in again")?;
+        if report.auth_failed {
+            return Err("sign in again".into());
+        }
+        if let Some(error) = report.error {
+            return Err(error);
+        }
+        Ok(day)
+    }
+}
+
+#[tauri::command]
 async fn checkin(app: tauri::AppHandle, week_start: Option<String>) -> Result<CheckinView, String> {
     read_view(app, move |core| {
         Ok(core.checkin(&week_start.unwrap_or_else(monday)))
@@ -243,6 +316,8 @@ async fn set_plan(app: tauri::AppHandle, update: PlanUpdate) -> Result<(), Strin
 
 #[tauri::command]
 fn begin_sign_in(app: tauri::AppHandle) -> Result<(), String> {
+    #[cfg(not(target_os = "android"))]
+    app.state::<DesktopCredentials>().invalidate_sign_in();
     *app.state::<SignInPending>()
         .0
         .lock()
@@ -253,16 +328,29 @@ fn begin_sign_in(app: tauri::AppHandle) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
-fn exchange_ticket_and_store(app: &tauri::AppHandle, ticket: String) {
-    let outcome = runtime()
-        .and_then(|rt| {
-            rt.block_on(Raring::sign_in_with_ticket(&ticket))
-                .map_err(|_| "Garmin sign-in failed — try again".to_owned())
-        })
-        .and_then(|tokens| {
-            let json = serde_json::to_string(&tokens).map_err(|e| e.to_string())?;
-            save_tokens(app, &json)
-        });
+fn exchange_ticket_and_store(app: &tauri::AppHandle, ticket: String, generation: Option<u64>) {
+    let outcome = runtime().and_then(|rt| {
+        let tokens = rt
+            .block_on(Raring::sign_in_with_ticket(&ticket))
+            .map_err(|_| "Garmin sign-in failed — try again".to_owned())?;
+        let json = serde_json::to_string(&tokens).map_err(|e| e.to_string())?;
+        #[cfg(not(target_os = "android"))]
+        return rt.block_on(
+            app.state::<DesktopCredentials>()
+                .save_sign_in(generation.ok_or("missing sign-in generation")?, || {
+                    save_tokens(app, &json)
+                }),
+        );
+        #[cfg(target_os = "android")]
+        {
+            let _ = generation;
+            save_tokens(app, &json).map(|_| true)
+        }
+    });
+    if outcome.as_ref().is_ok_and(|saved| !saved) {
+        return;
+    }
+    let outcome = outcome.map(|_| ());
     if let Ok(mut error) = app.state::<SignInState>().0.lock() {
         *error = outcome.as_ref().err().cloned();
     }
@@ -280,9 +368,19 @@ fn exchange_ticket_and_store(app: &tauri::AppHandle, ticket: String) {
 }
 
 #[tauri::command]
-fn sign_out(app: tauri::AppHandle) -> Result<(), String> {
-    clear_tokens(&app)?;
-    core(&app)?.forget_account().map_err(|e| e.to_string())?;
+async fn sign_out(app: tauri::AppHandle) -> Result<(), String> {
+    #[cfg(not(target_os = "android"))]
+    app.state::<DesktopCredentials>()
+        .sign_out(|| {
+            clear_tokens(&app)?;
+            core(&app)?.forget_account().map_err(|e| e.to_string())
+        })
+        .await?;
+    #[cfg(target_os = "android")]
+    {
+        clear_tokens(&app)?;
+        core(&app)?.forget_account().map_err(|e| e.to_string())?;
+    }
     if let Ok(cache) = app.path().app_cache_dir() {
         let _ = std::fs::remove_dir_all(cache.join("exports"));
     }
@@ -302,19 +400,21 @@ async fn sync_now(app: tauri::AppHandle) -> Result<AppStatus, String> {
         .await
         .map_err(|e| e.to_string())?;
     #[cfg(not(target_os = "android"))]
-    if let Some(json) = load_tokens(&app)? {
-        let tokens: Tokens = serde_json::from_str(&json).map_err(|e| e.to_string())?;
-        let outcome = core(&app)?
-            .sync(tokens, Local::now(), 60)
-            .await
-            .map_err(|e| e.to_string())?;
-        save_tokens(
-            &app,
-            &serde_json::to_string(&outcome.tokens).map_err(|e| e.to_string())?,
-        )?;
-        core(&app)?
-            .mark_notifications_sent(&outcome.notifications, Local::now())
-            .map_err(|e| e.to_string())?;
+    {
+        let sync_core = core(&app)?;
+        if let Some(notifications) = with_desktop_tokens(&app, |tokens| async move {
+            let outcome = sync_core
+                .sync(tokens, Local::now(), 60)
+                .await
+                .map_err(|e| e.to_string())?;
+            Ok((outcome.notifications, outcome.tokens))
+        })
+        .await?
+        {
+            core(&app)?
+                .mark_notifications_sent(&notifications, Local::now())
+                .map_err(|e| e.to_string())?;
+        }
     }
     let status = app_status(app.clone()).await?;
     let _ = app.emit("status-changed", &status);
@@ -539,8 +639,7 @@ fn set_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String>
 #[tauri::command]
 fn load_demo_data(app: tauri::AppHandle) -> Result<String, String> {
     let date = Local::now().date_naive().to_string();
-    let store =
-        raring_core::store::Store::open(database_path(&app)?).map_err(|e| e.to_string())?;
+    let store = raring_core::store::Store::open(database_path(&app)?).map_err(|e| e.to_string())?;
     raring_core::demo::seed(&store, Local::now().date_naive()).map_err(|e| e.to_string())?;
     let _ = app.emit("status-changed", status_read(app.clone())?);
     Ok(format!("{}:{}", date, raring_core::demo::WORKOUT_ID))
@@ -551,9 +650,12 @@ mod background;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .manage(SignInState::default())
-        .manage(SignInPending::default())
+        .manage(SignInPending::default());
+    #[cfg(not(target_os = "android"))]
+    let builder = builder.manage(DesktopCredentials::default());
+    builder
         .plugin(
             tauri::plugin::Builder::<tauri::Wry>::new("vault")
                 .setup(|app, api| {
@@ -583,9 +685,19 @@ pub fn run() {
                         }
                         let window = webview.clone();
                         let app = webview.app_handle().clone();
+                        let generation = {
+                            #[cfg(not(target_os = "android"))]
+                            {
+                                Some(app.state::<DesktopCredentials>().generation())
+                            }
+                            #[cfg(target_os = "android")]
+                            {
+                                None
+                            }
+                        };
                         std::thread::spawn(move || {
                             let _ = window.navigate(home_url());
-                            exchange_ticket_and_store(&app, ticket);
+                            exchange_ticket_and_store(&app, ticket, generation);
                         });
                         return false;
                     }
@@ -620,6 +732,7 @@ pub fn run() {
                     request_notification_permission,
                     get_settings,
                     set_settings,
+                    heart_rate_day,
                     export_archive,
                     load_demo_data
                 ]
@@ -645,6 +758,7 @@ pub fn run() {
                     request_notification_permission,
                     get_settings,
                     set_settings,
+                    heart_rate_day,
                     export_archive
                 ]
             }

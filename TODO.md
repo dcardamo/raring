@@ -117,6 +117,15 @@ From item 11, in priority order.
   is distinct from `sessionsWithSets`; missing lap presses must not reduce
   credit toward the weekly activity goal.
 
+### 14a. All-day heart rate follow-ups
+
+- Compare one day's resting value, activity markers and off-wrist gaps with
+  Garmin Connect and the watch on a real phone; the current device review is
+  emulator-only.
+- Compare the elapsed-time chart with a real DST change or travel day. Synthetic
+  23-/25-hour transitions retain their readings and GMT-based overlays, but a
+  physical watch's source-zone behavior is still unverified.
+
 ### 9. Persistent status notification (opt-in)
 
 A silent, ongoing notification that always shows the latest values, like
@@ -163,9 +172,6 @@ separate export. The offline JSON/CSV export does not make network requests.
 
 Each is a tile or detail in an existing screen first.
 
-14. **All-day heart rate**:
-    `/wellness-service/wellness/dailyHeartRate/{displayName}?date=`. Day chart
-    with sleep and activities marked, like the stress detail.
 15. **Planned training**: Garmin Coach plans
     (`/trainingplan-service/trainingplan/active-plans`, `/tasks/{id}`),
     scheduled workouts
@@ -261,6 +267,33 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **14. All-day heart rate** (commit "Show all-day heart rate and daily resting HR").
+  Health and Today's Right now link to the day chart. It marks recorded sleep
+  and activities, preserving off-wrist and absent samples as gaps. The chart
+  and daily resting HR use Garmin's daily endpoint; Sleep HR remains the
+  separate overnight Health Status mean. Today and yesterday refresh on each
+  sync within the budget; older days load once when opened and stay cached,
+  including absent answers. On-demand reads use the shared retry and 429
+  backoff. The chart includes the following morning's recorded sleep for the
+  preceding evening, clips both sleep intervals and activities to the displayed
+  day, and labels its 23-/25-hour axis as elapsed time rather than an invented
+  wall clock. On desktop, one credential gate serializes sync, detail fetch,
+  sign-in and sign-out around rotating-token writes. Verified with three
+  read-only real-account reads and a budgeted sync, without 429 or auth failure:
+  - `GET /wellness-service/wellness/dailyHeartRate/{displayName}?date=YYYY-MM-DD`
+    returns an object with `calendarDate`, `startTimestampGMT` and
+    `startTimestampLocal` (local midnight), `endTimestampGMT` and
+    `endTimestampLocal`, `heartRateValueDescriptors` indexing `timestamp`
+    and `heartrate`, `heartRateValues` pairs of Unix milliseconds and beats
+    per minute, `restingHeartRate`, `lastSevenDaysAvgRestingHeartRate`,
+    `minHeartRate` and `maxHeartRate` (bpm). A profile identifier may also
+    appear and is never copied into fixtures.
+  - Samples are normally two minutes apart; null readings and omitted
+    timestamps occur in gaps, sometimes much longer than a slot. Neither
+    is zero. Today's GMT end may precede the end of the day even while
+    `endTimestampLocal` names the next local midnight; don't infer freshness
+    from the local end field.
 
 - **13. Weight and body composition** (commit "Show weight and body composition on Health").
   Health shows the latest weigh-in, a 12-week sparse trend and recorded BMI/body
