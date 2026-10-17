@@ -273,7 +273,7 @@ async fn sync_now(app: tauri::AppHandle) -> Result<AppStatus, String> {
             .mark_notifications_sent(&outcome.notifications, Local::now())
             .map_err(|e| e.to_string())?;
     }
-    let status = status_read(app.clone())?;
+    let status = app_status(app.clone()).await?;
     let _ = app.emit("status-changed", &status);
     Ok(status)
 }

@@ -390,37 +390,122 @@ try {
 
  const cached=await browser.newPage({viewport:{width:390,height:844}});
  cached.on('pageerror',e=>errors.push(e.message));
+ await cached.clock.install({time:new Date('2026-10-16T14:00:00Z')});
  await cached.addInitScript(samples=>{
   localStorage.setItem('notifications-step-done','1');
-  const state=window.testViews={statusReads:0,reads:{},hold:new Set(),release:{}};
+  const state=window.testViews={samples,reads:{},completed:{},pending:{},holdNext:{},statusReads:0,syncCalls:0};
+  samples.status.lastSync=new Date().toISOString();
   window.isTauri=true;
   window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command)=>{
    if(command.startsWith('plugin:event|'))return 1;
-   if(command==='app_status'){state.statusReads++;return {...samples.status,lastSync:new Date().toISOString()}}
-   if(command==='sync_now')return;
-   if(command in samples){state.reads[command]=(state.reads[command]??0)+1;
-    if(state.hold.has(command))await new Promise(resolve=>{state.release[command]=resolve});
-    return structuredClone(samples[command]);
+   if(command==='app_status'){state.statusReads++;return structuredClone(samples.status)}
+   if(command==='sync_now'){state.syncCalls++;return;}
+   if(command in samples){
+    state.reads[command]=(state.reads[command]??0)+1;
+    const snapshot=structuredClone(samples[command]);
+    if(state.holdNext[command]){
+     state.holdNext[command]--;
+     await new Promise(resolve=>{(state.pending[command]??=[]).push(resolve)});
+    }
+    state.completed[command]=(state.completed[command]??0)+1;
+    return snapshot;
    }
    throw Error('Unexpected view command '+command);
   }};
  },samples);
+ const tabCached=async name=>cached.getByRole('navigation').getByRole('button',{name,exact:true}).click();
+ const hold=command=>cached.evaluate(command=>{window.testViews.holdNext[command]=(window.testViews.holdNext[command]??0)+1},command);
+ const release=command=>cached.evaluate(command=>window.testViews.pending[command].shift()(),command);
+ const pending=command=>cached.waitForFunction(command=>window.testViews.pending[command]?.length,command);
  await cached.goto(`${url}/#today`);
  await cached.locator('.dials').waitFor();
- await cached.waitForFunction(()=>['sleep','training','health'].every(key=>window.testViews.reads[key]));
+ await cached.waitForFunction(()=>['sleep','training','health'].every(key=>window.testViews.completed[key]>=1));
  const statusReads=await cached.evaluate(()=>window.testViews.statusReads);
- await cached.evaluate(()=>window.testViews.hold.add('sleep'));
- await cached.getByRole('navigation').getByRole('button',{name:'Sleep',exact:true}).click();
- await cached.locator('.sleep-hero').waitFor();
+ const todayOffset=await cached.locator('.scroll').evaluate(el=>{el.scrollTop=350;return el.scrollTop});
+ assert.ok(todayOffset>100,'Today can be scrolled for restoration');
+ await hold('sleep');
+ await tabCached('Sleep');
+ await pending('sleep');
+ assert.equal(await cached.locator('.sleep-hero').isVisible(),true,'prefetched Sleep appears before navigation read finishes');
  assert.equal(await cached.locator('.empty').count(),0,'cached tab switches without loading state');
  assert.equal(await cached.evaluate(()=>window.testViews.statusReads),statusReads,'navigation does not query app status');
- await cached.waitForFunction(()=>window.testViews.release.sleep);
- await cached.evaluate(()=>window.testViews.release.sleep());
- await cached.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();
+ await release('sleep');
+ await cached.locator('.scroll').evaluate(el=>{el.scrollTop=120});
+ await hold('today');
+ await tabCached('Today');
+ await pending('today');
+ assert.equal(await cached.locator('.dials').isVisible(),true,'cached Today is visible before its read finishes');
+ await cached.waitForFunction(expected=>document.querySelector('.scroll').scrollTop===expected,todayOffset);
+ await release('today');
+
+ const touch=()=>cached.evaluate(()=>{
+  const main=document.querySelector('main');
+  const point=new Touch({identifier:1,target:main,clientY:100});
+  main.dispatchEvent(new TouchEvent('touchstart',{bubbles:true,touches:[point]}));
+ });
+ await cached.evaluate(()=>{window.testViews.samples.today.headline='After touch cancel'});
+ await hold('today');await touch();
+ await cached.evaluate(()=>window.dispatchEvent(new Event('raring:resume')));
+ await pending('today');await release('today');
+ await cached.waitForFunction(()=>window.testViews.completed.today>=3);
+ assert.notEqual(await cached.locator('.headline h2').textContent(),'After touch cancel','view swap is deferred while touching');
+ await cached.locator('main').evaluate(el=>el.dispatchEvent(new TouchEvent('touchcancel',{bubbles:true})));
+ await cached.getByRole('heading',{name:'After touch cancel'}).waitFor();
+ await cached.evaluate(()=>{window.testViews.samples.today.headline='After hide'});
+ await hold('today');await touch();
+ await cached.evaluate(()=>window.dispatchEvent(new Event('raring:resume')));
+ await pending('today');await release('today');
+ await cached.waitForFunction(()=>window.testViews.completed.today>=4);
+ assert.notEqual(await cached.locator('.headline h2').textContent(),'After hide','hidden-page swap is deferred while touching');
+ await cached.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});document.dispatchEvent(new Event('visibilitychange'));delete document.visibilityState});
+ await cached.getByRole('heading',{name:'After hide'}).waitFor();
+
+ // A pre-sync request must neither be reused nor overwrite a post-sync reading.
+ await hold('today');
+ await cached.evaluate(()=>window.dispatchEvent(new Event('raring:resume')));
+ await pending('today');
+ await cached.evaluate(()=>{const s=window.testViews.samples;s.today.headline='After sync';s.status.lastSync='2026-10-16T14:01:00Z'});
+ await cached.getByRole('button',{name:'Refresh',exact:true}).click();
+ await cached.getByRole('heading',{name:'After sync'}).waitFor();
+ const completedBeforeOld=await cached.evaluate(()=>window.testViews.completed.today);
+ await release('today');
+ await cached.waitForFunction(previous=>window.testViews.completed.today>previous,completedBeforeOld);
+ assert.equal(await cached.locator('.headline h2').textContent(),'After sync','old in-flight result cannot replace synced view');
+ const previousSleep=await cached.evaluate(()=>window.testViews.completed.sleep);
+ await cached.evaluate(()=>{const s=window.testViews.samples;s.today.headline='Background sync';s.sleep.score.value=51;s.status.lastSync='2026-10-16T14:02:00Z';window.dispatchEvent(new Event('raring:resume'))});
+ await cached.getByRole('heading',{name:'Background sync'}).waitFor();
+ await cached.waitForFunction(previous=>window.testViews.completed.sleep>previous,previousSleep);
+ await hold('sleep');await tabCached('Sleep');await pending('sleep');
+ assert.equal(await cached.locator('.sleep-hero .gauge-center b').textContent(),'51','changed lastSync refreshes cached tabs');
+ await release('sleep');await tabCached('Today');
+ await cached.getByRole('heading',{name:'Background sync'}).waitFor();
+
+ // Midnight on resume invalidates both current data and in-flight reads; prefetch runs again.
+ await hold('today');
+ await cached.evaluate(()=>window.dispatchEvent(new Event('raring:resume')));
+ await pending('today');
+ const sleepReads=await cached.evaluate(()=>window.testViews.completed.sleep);
+ await cached.clock.setFixedTime(new Date('2026-10-17T14:00:00Z'));
+ await cached.evaluate(()=>{const s=window.testViews.samples;s.status.syncing=true;s.today.headline='Next day';s.sleep.score.value=42;window.dispatchEvent(new Event('raring:resume'))});
+ await cached.getByRole('heading',{name:'Next day'}).waitFor();
+ await cached.waitForFunction(previous=>window.testViews.completed.sleep>previous,sleepReads);
+ await release('today');
+ await cached.waitForFunction(()=>window.testViews.pending.today?.length===0);
+ assert.equal(await cached.locator('.headline h2').textContent(),'Next day','previous-day result cannot replace next day');
+ await hold('sleep');await tabCached('Sleep');await pending('sleep');
+ assert.equal(await cached.locator('.sleep-hero .gauge-center b').textContent(),'42','next-day prefetch is visible before navigation read');
+ await release('sleep');
+ await tabCached('Today');
  await cached.locator('.dials').waitFor();
- assert.equal(await cached.locator('.empty').count(),0,'returning to Today keeps its view visible');
+ const pollReads=await cached.evaluate(()=>window.testViews.completed.sleep);
+ await cached.clock.setFixedTime(new Date('2026-10-18T14:00:00Z'));
+ await cached.evaluate(()=>{const s=window.testViews.samples;s.today.headline='Poll rollover';s.sleep.score.value=43});
+ await cached.clock.fastForward(30_000);
+ await cached.getByRole('heading',{name:'Poll rollover'}).waitFor();
+ await cached.waitForFunction(previous=>window.testViews.completed.sleep>previous,pollReads);
+ assert.equal(await cached.evaluate(()=>window.testViews.syncCalls),1,'day rollover never needs a Garmin sync');
  await cached.close();
- console.log('Cached view switching without loading or status IPC: passed');
+ console.log('Cached switching, sync/rollover invalidation, scroll and touch cancellation: passed');
  assert.deepEqual(errors,[],'no browser errors');
 } finally {
  await browser?.close();

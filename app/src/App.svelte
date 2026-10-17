@@ -26,25 +26,37 @@
  const views=new Map<string,PageData>();
  const pendingViews=new Map<string,Promise<PageData>>();
  let cacheDay=new Date().toDateString();
- function clearViews(){views.clear();pendingViews.clear();prefetched=false;cacheGeneration++}
+ function clearViews(){views.clear();pendingViews.clear();pendingSwap=null;prefetched=false;cacheGeneration++}
  const scrollPositions=new Map<string,number>();
- function cached(current:string){
+ function checkDay(){
   const day=new Date().toDateString();
   if(day!==cacheDay){clearViews();cacheDay=day}
-  return views.get(current)??null;
  }
- function readView(current:string):Promise<PageData>{
-  const pending=pendingViews.get(current);
-  if(pending)return pending;
-  const generation=cacheGeneration;
-  const read=loadView(current).then(next=>{if(generation===cacheGeneration)views.set(current,next);return next}).finally(()=>{if(pendingViews.get(current)===read)pendingViews.delete(current)});
-  pendingViews.set(current,read);
-  return read;
+ function cached(current:string){checkDay();return views.get(current)??null}
+ async function readView(current:string):Promise<PageData>{
+  for(;;){
+   checkDay();
+   const generation=cacheGeneration;
+   let read=pendingViews.get(current);
+   if(!read){
+    read=loadView(current).then(next=>{if(generation===cacheGeneration)views.set(current,next);return next})
+     .finally(()=>{if(pendingViews.get(current)===read)pendingViews.delete(current)});
+    pendingViews.set(current,read);
+   }
+   try{
+    const next=await read;
+    checkDay();
+    if(generation===cacheGeneration)return next;
+   }catch(e){
+    if(generation===cacheGeneration)throw e;
+   }
+  }
  }
  function prefetchTabs(){
   if(prefetched)return;
   prefetched=true;
-  void tick().then(()=>Promise.allSettled(tabs.filter(tab=>tab!==route).map(tab=>readView(tab))));
+  const generation=cacheGeneration;
+  void tick().then(()=>{if(generation===cacheGeneration)return Promise.allSettled(tabs.filter(tab=>tab!==route).map(tab=>readView(tab)))});
  }
  const fixture=new URLSearchParams(location.search).get('fixture');
  const live=isTauri() && fixture===null;
@@ -66,6 +78,7 @@
   }
  }
  async function refresh(silent=false,withStatus=false){
+  checkDay();
   const current=route,request=++requestId;
   if(!silent)loading=!data;
   try {
@@ -74,7 +87,9 @@
     if(request!==requestId)return;
     // A queued or slow Android sync can succeed after the foreground wait ends.
     if(lastSyncAttempt!==null && nextStatus.lastSync && Date.parse(nextStatus.lastSync)>=lastSyncAttempt && !nextStatus.lastError)syncError='';
+    if(status && status.lastSync!==nextStatus.lastSync)clearViews();
     status=nextStatus;
+    checkDay();
     if(live){
      if(!status.signedIn){onboardStep=0;clearViews();data=null;if(current!=='onboarding')navigate('onboarding');return}
      if(localStorage.getItem('notifications-step-done')!=='1'){onboardStep=1;if(current!=='onboarding')navigate('onboarding');return}
@@ -95,6 +110,7 @@
     else data=updated;
     if(data){hasRendered=true;prefetchTabs()}
    }
+   if(hasRendered && !prefetched && current!=='onboarding')prefetchTabs();
    if(request===requestId)error='';
   }catch(e){
    if(request===requestId){error=String(e)}
@@ -106,7 +122,7 @@
  async function syncNow(){
   if(syncing || status?.syncing)return;
   syncing=true;syncError='';lastSyncAttempt=Date.now();
-  try{await api.sync_now();await refresh(true,true)}catch(e){syncError=String(e)}
+  try{await api.sync_now();clearViews();await refresh(true,true)}catch(e){syncError=String(e)}
   finally{syncing=false}
  }
  onMount(()=>{
@@ -116,26 +132,35 @@
    const changed=next[next.length-1]!==route;
    if(changed){scrollPositions.set(route,scroll?.scrollTop??0);pendingSwap=null;selectedFactor='';checkinIndex=0}
    trail=next;route=next[next.length-1];
-   if(changed)data=cached(route);
+   const available=changed?cached(route):null;
+   if(changed){
+    data=available;
+    if(available)void tick().then(()=>restoreScroll(next));
+   }
    void refresh(false,status===null || from==='onboarding' && route!=='onboarding').then(async()=>{
-    await tick();
-    if(changed && route===next[next.length-1] && scroll)scroll.scrollTop=scrollPositions.get(route)??0;
+    if(changed && !available){await tick();restoreScroll(next)}
    });
   });
   navigation.start();
   const nativeWindow=window as Window & {__raringBack?:()=>boolean};
   nativeWindow.__raringBack=back;
-  const resume=()=>{if(document.visibilityState==='visible')void refresh(true,true)};
+  const resume=()=>{if(document.visibilityState==='visible')void refresh(true,true);else finishTouch()};
   document.addEventListener('visibilitychange',resume);
   window.addEventListener('raring:resume',resume);
   void api.onStatusChanged(resume).then(fn=>{if(disposed)fn();else unlisten=fn});
   const poll=window.setInterval(resume,CACHE_POLL_MS);
   return()=>{disposed=true;requestId++;navigation.destroy();delete nativeWindow.__raringBack;window.clearInterval(poll);document.removeEventListener('visibilitychange',resume);window.removeEventListener('raring:resume',resume);unlisten()};
  });
- async function pullEnd(e:TouchEvent){
+ function restoreScroll(next:string[]){
+  if(route===next[next.length-1] && scroll)scroll.scrollTop=scrollPositions.get(route)??0;
+ }
+ function finishTouch(){
   touching=false;
   if(pendingSwap?.route===route)data=pendingSwap.data;
   pendingSwap=null;
+ }
+ async function pullEnd(e:TouchEvent){
+  finishTouch();
   if(route==='today' && startedAtTop && e.changedTouches[0].clientY-startY>75)await syncNow();
  }
  async function saveSettings(){try{await api.set_settings(settings)}catch(e){error=String(e)}}
@@ -146,7 +171,7 @@
  const fitnessAgeColor=(age:number,actual:number|null)=>actual==null?colors.ink:age<actual?colors.good:age===actual?colors.fair:colors.poor;
  let glow=$derived(route==='today' && todayData?.readiness?toneColor(todayData.readiness.tone):route==='sleep' && sleepData?.score?toneColor(sleepData.score.tone):route==='training' && trainingData?.acute?toneColor(trainingData.acute.tone):route==='health' && healthData?.fitnessAge.fitnessAge!=null && healthData.fitnessAge.chronologicalAge!=null?fitnessAgeColor(healthData.fitnessAge.fitnessAge,healthData.fitnessAge.chronologicalAge):null);
 </script>
-<div class="phone"><div class="glow" style:--glow={glow?`color-mix(in srgb, ${glow} 12%, transparent)`:'transparent'}></div><main class="scroll" bind:this={scroll} ontouchstart={(e)=>{touching=true;startY=e.touches[0].clientY;startedAtTop=e.currentTarget.scrollTop===0}} ontouchend={pullEnd}><div class="page" class:reading={route==='checkin'||route==='onboarding'}>
+<div class="phone"><div class="glow" style:--glow={glow?`color-mix(in srgb, ${glow} 12%, transparent)`:'transparent'}></div><main class="scroll" bind:this={scroll} ontouchstart={(e)=>{touching=true;startY=e.touches[0].clientY;startedAtTop=e.currentTarget.scrollTop===0}} ontouchend={pullEnd} ontouchcancel={finishTouch}><div class="page" class:reading={route==='checkin'||route==='onboarding'}>
 {#if error && (data || route==='settings')}<p class="warning" role="status">{error}</p>{/if}
 {#if route==='onboarding'}
  <section class="welcome" class:intro={onboardStep===0}>

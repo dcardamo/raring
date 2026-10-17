@@ -21,7 +21,9 @@ The visual reference is [design/mockup](../design/mockup/): open
   below.
 - **Fast.** Opens from local data and syncs in the background. After the first
   view renders, the four tabs are prefetched; switching to a cached tab draws
-  it immediately while an off-thread database read refreshes it. The full-screen
+  it immediately while an off-thread database read refreshes it. A completed
+  sync, changed sync timestamp or local day rollover invalidates in-flight
+  reads and the tab cache without clearing the visible view. The full-screen
   loading state is reserved for the first view without data. Status is read on
   start, resume and sync, not before every navigation.
 - **Private.** Data stays on the device. No accounts, analytics, or services

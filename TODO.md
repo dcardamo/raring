@@ -343,12 +343,16 @@ faces, screens, sensors and audio prompts stay in Connect.
 - **Instant view switching** (commit "Switch cached views immediately").
   Tab views are prefetched after the first render and cached by route for the
   current day; navigation displays cached data before a background refresh,
-  without a status IPC. Status refreshes on start, resume and sync. Rust view
-  and status commands now read SQLite off the WebView thread. On emulator-5572
+  without a status IPC. Successful syncs, changed last-sync timestamps and
+  local day rollover invalidate in-flight reads and cached tabs while keeping
+  the visible view until fresh data arrives. Scroll position is restored on
+  the cached render; touch cancellation and backgrounding flush deferred
+  updates. Status refreshes on start, resume and sync. Rust view and status
+  commands now read SQLite off the WebView thread. On emulator-5572
   with a 37 MB full-history database (debug APK, 10 warm tab activations):
   tab activation-to-first-paint was 87–521 ms before, with the full-screen
-  loading state on every switch; after it was 9–32 ms, with no full-screen
-  loading state.
+  loading state on every switch; after cache-invalidation fixes it was
+  8–53 ms, with no full-screen loading state.
   Direct Today IPC still took ~480–500 ms on Android debug, but animation
   frames continued (~29–30 frames instead of 0–1); no persistent connection
   was needed. No Garmin endpoints or account requests were involved.
