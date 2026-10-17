@@ -339,3 +339,169 @@ fn reconciliation_lines_name_garmins_factors() {
         "Sleep scored 52, but readiness is held up by HRV and stress history."
     );
 }
+
+#[test]
+fn reconciliation_stays_generic_without_a_suitably_rated_factor() {
+    let line = |level, feedback, sleep: f64| {
+        let items = [
+            ("readiness", readiness(level, 50., feedback)),
+            (
+                "sleep",
+                json!({"dailySleepDTO": {"sleepScores": {"overall": {"value": sleep}}}}),
+            ),
+        ];
+        screens::today(&store_with(&items), DAY)
+            .reconcile
+            .unwrap()
+            .line
+    };
+    assert_eq!(
+        line("LOW", ["GOOD"; 6], 85.),
+        "Sleep scored 85, but readiness is low.",
+        "a Good factor never holds readiness back"
+    );
+    assert_eq!(
+        line(
+            "HIGH",
+            ["POOR", "MODERATE", "POOR", "MODERATE", "MODERATE", "POOR"],
+            50.
+        ),
+        "Sleep scored 50, but readiness is high.",
+        "a Poor or Moderate factor never holds readiness up"
+    );
+}
+
+/// Each score's own boundaries: readiness by Garmin's level (Moderate from 50,
+/// High from 75), Sleep Score 60 and 80, Body Battery 30 and 70.
+#[test]
+fn scores_that_differ_at_level_boundaries() {
+    let differs = |score: f64, level: &str, sleep: Option<f64>, wake: Option<f64>| {
+        let mut items = vec![(
+            "readiness",
+            readiness(
+                level,
+                score,
+                ["MODERATE", "POOR", "GOOD", "VERY_GOOD", "MODERATE", "GOOD"],
+            ),
+        )];
+        if let Some(sleep) = sleep {
+            items.push((
+                "sleep",
+                json!({"dailySleepDTO": {"sleepScores": {"overall": {"value": sleep}}}}),
+            ));
+        }
+        if let Some(wake) = wake {
+            items.push(("summary", json!({"bodyBatteryAtWakeTime": wake})));
+        }
+        screens::today(&store_with(&items), DAY)
+            .reconcile
+            .map(|r| r.key)
+    };
+    let some = |key: &str| Some(key.to_owned());
+    // Readiness against a good sleep, then a poor one.
+    assert_eq!(differs(49., "LOW", Some(85.), None), some("sleep"));
+    assert_eq!(differs(50., "MODERATE", Some(85.), None), None);
+    assert_eq!(differs(74., "MODERATE", Some(50.), None), None);
+    assert_eq!(differs(75., "HIGH", Some(50.), None), some("sleep"));
+    // Sleep Score against poor, then high, readiness.
+    assert_eq!(differs(40., "LOW", Some(79.), None), None);
+    assert_eq!(differs(40., "LOW", Some(80.), None), some("sleep"));
+    assert_eq!(differs(85., "HIGH", Some(59.), None), some("sleep"));
+    assert_eq!(differs(85., "HIGH", Some(60.), None), None);
+    // Body Battery at wake against poor, then high, readiness.
+    assert_eq!(differs(40., "LOW", None, Some(69.)), None);
+    assert_eq!(differs(40., "LOW", None, Some(70.)), some("bodyBattery"));
+    assert_eq!(differs(85., "HIGH", None, Some(29.)), some("bodyBattery"));
+    assert_eq!(differs(85., "HIGH", None, Some(30.)), None);
+}
+
+#[test]
+fn training_status_inputs_are_unrated_without_garmins_rating() {
+    let store = store_with(&[
+        (
+            "training",
+            json!({"trainingStatus": "PRODUCTIVE", "acuteTrainingLoad": 612,
+                   "optimalRangeMin": 420, "optimalRangeMax": 760}),
+        ),
+        (
+            "load_focus",
+            json!({"lowAerobic": {"value": 450}, "anaerobic": {"value": 60}}),
+        ),
+    ]);
+    let why = screens::training(&store, DAY).status_why.unwrap();
+    let input = |key: &str| why.inputs.iter().find(|i| i.key == key).unwrap();
+    assert_eq!(input("acuteLoad").value.as_deref(), Some("612"));
+    assert_eq!(input("acuteLoad").rating, None, "no acwrStatus, no rating");
+    assert_eq!(input("acuteLoad").tone, Tone::Neutral);
+    assert_eq!(
+        input("loadFocus").rating,
+        None,
+        "no balance phrase, no rating"
+    );
+    assert_eq!(input("loadFocus").tone, Tone::Neutral);
+    assert_eq!(why.summary, "Your load is building fitness.");
+}
+
+fn event(kind: &str, start: &str, impact: f64, name: Option<&str>) -> Value {
+    let mut e = json!({"eventType": kind, "eventStartTimeGmt": start, "bodyBatteryImpact": impact,
+        "timezoneOffset": 0, "durationInMilliseconds": 1_800_000, "shortFeedback": "NONE"});
+    if let Some(name) = name {
+        e["activityName"] = json!(name);
+    }
+    e
+}
+
+#[test]
+fn body_battery_merges_partial_event_lists() {
+    // The summary has only sleep and one named workout; the report has every
+    // event, without names and with fractional seconds on the times.
+    let summary = json!({"bodyBatteryActivityEventList": [
+        event("SLEEP", "2025-03-04T04:00:00", 40., None),
+        event("ACTIVITY", "2025-03-04T12:00:00", -8., Some("Lunch Ride")),
+    ]});
+    let report = json!({"bodyBatteryActivityEvent": [
+        event("SLEEP", "2025-03-04T04:00:00.0", 40., None),
+        event("ACTIVITY", "2025-03-04T12:00:00.0", -8., None),
+        event("NAP", "2025-03-04T14:00:00.0", 3., None),
+        event("ACTIVITY", "2025-03-04T17:00:00.0", -5., None),
+    ]});
+    let store = store_with(&[("summary", summary), ("battery", report)]);
+    let why = screens::today(&store, DAY).body_battery_why.unwrap();
+    let names: Vec<&str> = why.inputs.iter().map(|i| i.name.as_str()).collect();
+    assert_eq!(names, ["Overnight", "Lunch Ride", "Nap", "Workout"]);
+    assert!(
+        why.summary.ends_with("Since then: 2 workouts."),
+        "{}",
+        why.summary
+    );
+}
+
+#[test]
+fn body_battery_ignores_absurd_offsets_and_durations() {
+    let mut sleep = event("SLEEP", "2025-03-04T04:00:00", 40., None);
+    sleep["timezoneOffset"] = json!(1e300);
+    sleep["durationInMilliseconds"] = json!(1e300);
+    let mut late = event("ACTIVITY", "+262142-12-31T23:59:59", -3., Some("Edge"));
+    late["timezoneOffset"] = json!(18 * 3_600_000);
+    late["durationInMilliseconds"] = json!(-5);
+    let mut huge = event("NAP", "2025-03-04T13:00:00", 1., None);
+    huge["timezoneOffset"] = json!(-9.2e18);
+    huge["durationInMilliseconds"] = json!(i64::MAX);
+    let store = store_with(&[(
+        "summary",
+        json!({"bodyBatteryActivityEventList": [sleep, late, huge]}),
+    )]);
+    let why = screens::today(&store, DAY).body_battery_why.unwrap();
+    let overnight = &why.inputs[0];
+    assert_eq!(
+        overnight.detail, "Charge while you slept.",
+        "no window from bad numbers"
+    );
+    for input in &why.inputs[1..] {
+        assert_eq!(
+            input.detail, "",
+            "{}: no time or length from bad numbers",
+            input.name
+        );
+    }
+}

@@ -211,7 +211,8 @@ Sent by the phone itself.
   percentage. Body Battery's line names the overnight charge, the level at
   wake, the workouts that drained it and Garmin's stress word for the day.
   Training status sorts its inputs Poor, Fair, Good, then unrated, and names
-  up to two that aren't Good.
+  up to two that aren't Good. An input Garmin sent no rating for stays
+  unrated; Raring never rates it from its own ranges.
 - **Scores that differ**: readiness and another score point different ways
   when one is good and the other poor. Readiness, Sleep Score, HRV status
   and training status use their usual colors; Body Battery uses its level at
@@ -219,7 +220,8 @@ Sent by the phone itself.
   the day. Fair or missing scores never count. Check sleep, Body Battery, HRV
   status, then training status, and show only the first. The line names the
   other score, then the readiness factors as in the Why sheet: "held back
-  by" when readiness is poor, "held up by" when it's good.
+  by" when readiness is poor, "held up by" when it's good. Without a factor
+  Garmin rated that way, it just says readiness is low or high.
 - **Wording**: name Garmin's inputs and ratings and stop there: "held back
   by" and "helping", never "because" or a cause Garmin didn't give. Numbers
   are Garmin's; the only arithmetic is hours from Garmin's recovery minutes

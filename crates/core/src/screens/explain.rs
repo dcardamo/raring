@@ -191,28 +191,46 @@ struct BatteryEvent {
     feedback: Option<String>,
 }
 
+/// Garmin's offsets stay within ±18 h; anything else is not a time zone.
+const MAX_OFFSET_MS: f64 = 18. * 3_600_000.;
+/// No Body Battery event Garmin reports spans more than a day.
+const MAX_EVENT_MS: f64 = 24. * 3_600_000.;
+
 fn battery_events(battery: &Value, summary: &Value) -> Vec<BatteryEvent> {
-    // The daily summary's list names each activity; the report's does not.
-    let list = summary["bodyBatteryActivityEventList"]
-        .as_array()
-        .filter(|a| !a.is_empty())
-        .or_else(|| battery["bodyBatteryActivityEvent"].as_array());
-    let mut events: Vec<BatteryEvent> = list
-        .into_iter()
+    // The daily summary's list names each activity, but it can be partial;
+    // the report's list has no names. Merge both, the summary's entry first.
+    let lists = [
+        &summary["bodyBatteryActivityEventList"],
+        &battery["bodyBatteryActivityEvent"],
+    ];
+    let mut seen = std::collections::HashSet::new();
+    let mut events: Vec<BatteryEvent> = lists
+        .iter()
+        .filter_map(|list| list.as_array())
         .flatten()
         .filter_map(|e| {
-            let impact = num(e, &[&["bodyBatteryImpact"]])?;
+            let impact = num(e, &[&["bodyBatteryImpact"]]).filter(|v| v.is_finite())?;
+            let gmt = string(e, &[&["eventStartTimeGmt"]])
+                .and_then(|s| NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%.f").ok());
+            let kind = string(e, &[&["eventType"]]).unwrap_or_default();
+            // The same event appears in both lists with the same type and start.
+            let identity = (kind.clone(), gmt, gmt.is_none().then(|| impact.to_bits()));
+            if !seen.insert(identity) {
+                return None;
+            }
             // Garmin's event times are GMT with the wearer's offset alongside.
-            let start = string(e, &[&["eventStartTimeGmt"]])
-                .and_then(|s| NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%.f").ok())
-                .map(|t| {
-                    t + Duration::milliseconds(num(e, &[&["timezoneOffset"]]).unwrap_or(0.) as i64)
-                });
+            let offset = within(num(e, &[&["timezoneOffset"]]).unwrap_or(0.), MAX_OFFSET_MS);
+            let start = gmt.zip(offset).and_then(|(t, offset)| {
+                t.checked_add_signed(Duration::milliseconds(offset as i64))
+            });
             Some(BatteryEvent {
-                kind: string(e, &[&["eventType"]]).unwrap_or_default(),
+                kind,
                 impact,
                 start,
-                minutes: num(e, &[&["durationInMilliseconds"]]).map(|ms| ms / 60_000.),
+                minutes: num(e, &[&["durationInMilliseconds"]])
+                    .and_then(|ms| within(ms, MAX_EVENT_MS))
+                    .filter(|ms| *ms >= 0.)
+                    .map(|ms| ms / 60_000.),
                 name: string(e, &[&["activityName"]]).filter(|n| !n.trim().is_empty()),
                 feedback: string(e, &[&["shortFeedback"]]),
             })
@@ -220,6 +238,11 @@ fn battery_events(battery: &Value, summary: &Value) -> Vec<BatteryEvent> {
         .collect();
     events.sort_by_key(|e| e.start);
     events
+}
+
+/// The value when finite and within ±limit; anything else is unusable.
+fn within(value: f64, limit: f64) -> Option<f64> {
+    (value.is_finite() && value.abs() <= limit).then_some(value)
 }
 
 /// Garmin's dynamic Body Battery feedback ("DAY_STRESSFUL_AND_INACTIVE",
@@ -285,11 +308,8 @@ pub(super) fn body_battery_why(
     if let Some(charge) = overnight {
         let window = sleep.and_then(|e| {
             let start = e.start?;
-            Some(format!(
-                ", {}–{}",
-                clock(start),
-                clock(start + Duration::minutes(e.minutes? as i64))
-            ))
+            let end = start.checked_add_signed(Duration::minutes(e.minutes? as i64))?;
+            Some(format!(", {}–{}", clock(start), clock(end)))
         });
         inputs.push(WhyInput {
             key: "overnight".into(),
@@ -473,7 +493,7 @@ pub(super) fn training_why(t: TrainingInputs) -> Option<Why> {
             Some("OPTIMAL") => Tone::Good,
             Some("LOW") => Tone::Fair,
             Some("HIGH" | "VERY_HIGH") => Tone::Poor,
-            _ => t.acute.map(|g| g.tone).unwrap_or(Tone::Neutral),
+            _ => Tone::Neutral,
         };
         let value = [
             t.acute.map(|g| format!("{:.0}", g.value)),
@@ -487,8 +507,7 @@ pub(super) fn training_why(t: TrainingInputs) -> Option<Why> {
             key: "acuteLoad".into(),
             name: "Acute load".into(),
             value: (!value.is_empty()).then_some(value),
-            rating: rating(acwr.as_deref())
-                .or_else(|| t.acute.map(|g| g.label.clone()).filter(|l| !l.is_empty())),
+            rating: rating(acwr.as_deref()),
             tone,
             detail: "Your last 7 days of load against your 4-week load.".into(),
         });
@@ -501,27 +520,17 @@ pub(super) fn training_why(t: TrainingInputs) -> Option<Why> {
             )
         })
         .and_then(|p| focus_phrase(&p));
-    let shortages: Vec<String> = t
-        .load_focus
-        .iter()
-        .filter(|b| b.shortage)
-        .map(|b| format!("{} shortage", b.name))
-        .collect();
-    let focus = phrase.or_else(|| {
-        (!t.load_focus.is_empty()).then(|| {
-            if shortages.is_empty() {
-                ("In range".into(), Tone::Good)
-            } else {
-                (capitalize(&lower(&and_list(&shortages))), Tone::Fair)
-            }
-        })
-    });
-    if let Some((text, tone)) = focus {
+    // Without Garmin's phrase the input is shown unrated, never judged by Raring.
+    if phrase.is_some() || !t.load_focus.is_empty() {
+        let (rating, tone) = match phrase {
+            Some((text, tone)) => (Some(text), tone),
+            None => (None, Tone::Neutral),
+        };
         inputs.push(WhyInput {
             key: "loadFocus".into(),
             name: "Load focus".into(),
             value: None,
-            rating: Some(text),
+            rating,
             tone,
             detail: "How your last 4 weeks split across low aerobic, high aerobic and anaerobic."
                 .into(),
@@ -657,38 +666,15 @@ pub(super) fn reconcile(s: Scores) -> Option<Reconciliation> {
     };
     let (key, name, tone, text) = others.into_iter().find(|o| o.2 == opposite)?;
     let (down, up) = pulls(s.factors, s.level);
-    let rated: Vec<&Factor> = s.factors.iter().filter(|f| f.percent.is_some()).collect();
-    let line = if readiness == Tone::Poor {
-        let names = if down.is_empty() {
-            rated
-                .first()
-                .map(|f| vec![lower(&f.name)])
-                .unwrap_or_default()
-        } else {
-            down
-        };
-        if names.is_empty() {
-            format!("{text}, but readiness is low.")
-        } else {
-            format!(
-                "{text}, but readiness is held back by {}.",
-                and_list(&names)
-            )
+    // Only a factor Garmin rated the right way may explain the gap; otherwise
+    // the line stays generic rather than blaming a Good factor.
+    let line = match (readiness, down.is_empty(), up.is_empty()) {
+        (Tone::Poor, false, _) => {
+            format!("{text}, but readiness is held back by {}.", and_list(&down))
         }
-    } else {
-        let names = if up.is_empty() {
-            rated
-                .last()
-                .map(|f| vec![lower(&f.name)])
-                .unwrap_or_default()
-        } else {
-            up
-        };
-        if names.is_empty() {
-            format!("{text}, but readiness is high.")
-        } else {
-            format!("{text}, but readiness is held up by {}.", and_list(&names))
-        }
+        (Tone::Poor, true, _) => format!("{text}, but readiness is low."),
+        (_, _, false) => format!("{text}, but readiness is held up by {}.", and_list(&up)),
+        _ => format!("{text}, but readiness is high."),
     };
     Some(Reconciliation {
         key: key.into(),
@@ -738,6 +724,20 @@ mod tests {
         ] {
             assert_eq!(battery_feedback(code).as_deref(), text, "{code}");
         }
+    }
+
+    #[test]
+    fn event_times_near_the_calendar_limit_do_not_overflow() {
+        let last = NaiveDateTime::MAX.format("%Y-%m-%dT%H:%M:%S").to_string();
+        assert!(NaiveDateTime::parse_from_str(&last, "%Y-%m-%dT%H:%M:%S%.f").is_ok());
+        let summary = serde_json::json!({"bodyBatteryActivityEventList": [{
+            "eventType": "ACTIVITY", "eventStartTimeGmt": last, "bodyBatteryImpact": -3,
+            "timezoneOffset": 18 * 3_600_000, "durationInMilliseconds": 3_600_000
+        }]});
+        let events = battery_events(&Value::Null, &summary);
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].start, None);
+        assert_eq!(events[0].minutes, Some(60.));
     }
 
     #[test]

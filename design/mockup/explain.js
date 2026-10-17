@@ -70,6 +70,11 @@ function reconcile() {
     .replace(arc({size: 156, value: 82, color: C.good, stroke: 13}), arc({size: 156, value: 34, color: C.poor, stroke: 13}))
     .replace(`<b class="n">82</b><span>Readiness</span><em style="color:${C.good}">High</em>`, `<b class="n">34</b><span>Readiness</span><em style="color:${C.poor}">Low</em>`)
     .replace(`<h2>Ready to push</h2>`, `<h2>Take it easy</h2>`)
+    // Garmin's factors and the call agree with the low score: recovery time and acute load hold it back.
+    .replace(`<span>Recovery<b>92</b></span><div class="bar"><i style="width:92%;background:${C.good}">`, `<span>Recovery<b>22</b></span><div class="bar"><i style="width:22%;background:${C.poor}">`)
+    .replace(`<span>Acute load<b>58</b></span><div class="bar"><i style="width:58%;background:${C.fair}">`, `<span>Acute load<b>31</b></span><div class="bar"><i style="width:31%;background:${C.poor}">`)
+    .replace(`<span class="pill ok">5 of 6 good</span>`, `<span class="pill ok">4 of 6 good</span>`)
+    .replace(`<span>Easy</span><span>Steady</span><span class="on">Push</span>`, `<span class="on">Easy</span><span>Steady</span><span>Push</span>`)
     .replace(`<span class="chip">${ico.flame}Room to build</span></div>`, `<span class="chip">${ico.flame}Load high</span></div>${row}`);
 }
 
