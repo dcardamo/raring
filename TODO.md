@@ -15,43 +15,26 @@ availability on every account or watch.
 
 ## Now
 
-### 4. Today that fits the time of day
+### Time-of-day follow-ups
 
-Change emphasis, not navigation. Put one timely action first while keeping
-Today · Sleep · Training · Health and metric access predictable.
+From item 4, in priority order.
 
-- Keep stable metric shortcuts alongside a changing highlight. Bedtime
-  guidance stays collapsed earlier in the day, rises about an hour before
-  its window, and opens timing history. Keep longer-term rhythm separate
-  from tonight's recommendation. Sources are in the maintainer's private
-  research notes; use no other app's branding, assets, copy or scoring.
-- **After waking:** last night's sleep and readiness, the main limiting
-  factor, then today's effort suggestion. Missing sleep is neutral: show
-  freshness and the known missing-data reason, not a bad-night verdict.
-- **During the day:** current Body Battery/stress and activity or recovery
-  context, using the latest synced readiness. Do not imply live watch data
-  or invent a planned workout before planned-training support exists.
-- **Approaching sleep:** promote the shared bedtime plan from item 3,
-  emphasizing wind-down and bedtime timing rather than yesterday's sleep
-  score. Prototype promotion two hours before the window starts, followed
-  by a calm wind-down state. Once the window has passed, avoid a red
-  countdown or pressure to exercise; do not assume the person is asleep.
-- Anchor phases to the person's main sleep/wake pattern and upcoming plan,
-  not universal morning/evening clock cutoffs. Allow automatic emphasis to
-  be disabled for shift work or irregular schedules; without a credible
-  schedule retain the stable overview. Re-evaluate locally on open/resume,
-  time boundaries and sync, including offline; crossing midnight must not
-  discard a still-relevant sleep plan.
-- Adapt one leading area, not a constantly reshuffling dashboard. Keep
-  compact score access, freshness and vitals notices visible; Sleep still
-  holds the full history. Never switch tabs or move content under someone's
-  finger. Use the same plan and source labels across Today, Sleep and
-  reminders; no separate competing advice engine.
-- Spec: update Today's hierarchy and define phase boundaries, fallback and
-  advice priority under Rules. Check clock-controlled phone screenshots
-  for wake/day/wind-down/late-night using the same data, plus missing/stale
-  data, post-workout updates, shift work, travel, DST and overnight dates.
-  Confirm fast offline rendering and unchanged access to all metrics.
+- Live with it on the maintainer's phone for a few days: the morning,
+  daytime, evening, wind-down and late-night cards at the real times, the
+  switch after resuming from the background, and a night that syncs late.
+- Check the first daylight-saving night (2026-11-01 for the maintainer): the
+  late-night card should hold until the usual wake on the new wall clock,
+  and the one-hour offset change must not switch to the fixed layout.
+- Check travel on a real trip: more than an hour of offset change should
+  show the fixed layout until a night is recorded in the new zone.
+- Without enough recorded nights, Garmin's own sleep schedule (`userSleep`
+  in `/userprofile-service/userprofile/user-settings`, verified readable)
+  could anchor the phases instead of the fixed layout.
+- On desktop widths the masonry columns can place the leading card beside a
+  notice rather than first in reading order; check it once desktop ships.
+- "Timing history" opens Sleep at its top; scroll it to Consistency.
+- Item 9's notification focus can reuse `TodayFocus` rather than another
+  phase rule.
 
 ### Sleep rhythm follow-ups
 
@@ -270,6 +253,28 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **4. Today that fits the time of day** (commit "Lead Today with the card
+  that fits the time of day"). The hero (gauges, headline, chips and item
+  6's reconciliation line) and the metric cards stay put; one advice card
+  leads, chosen in Rust (`phase.rs`, `TodayView.focus`) from the displayed
+  night's wake and the shared sleep plan: this morning, right now, tonight's
+  plan two hours before the window, wind-down and late night. No effort call
+  or countdown after wind-down; an unsynced night is neutral. A Settings
+  switch turns it off; few or scattered wake times, travel or a plan that
+  doesn't fit fall back to the fixed layout with a one-line reason.
+  Boundaries, fallback and advice order are under Rules in the spec. A
+  cached Today past its phase is read again, and the visible one is re-read
+  at the boundary, deferred while touching. `raring show today --at` and
+  `raring demo` give clock-controlled views; the mockup is `tod-*` in
+  `design/mockup/`. No new endpoints. A real-account sync (60 requests, no
+  429s or auth failures) gave a Garmin plan that ran through every phase. A
+  jet-lag rating counts toward the travel fallback only on a recorded
+  night. Review fixes: the neutral wait for an unsynced night holds in every
+  fallback; the displayed day follows the usual wake (day sleepers keep their
+  night through an afternoon wake) instead of a noon cutoff; wake times are
+  read on a clock circle (see Usual wake and Displayed day under Rules).
+  Not yet checked on a phone (see follow-ups).
 
 - **6. Explain the numbers** (commit "Explain readiness, Body Battery and
   training status"). Why sheets on the Readiness, Body Battery and Training

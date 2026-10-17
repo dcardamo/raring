@@ -10,6 +10,7 @@ import type { HrvCard } from "./HrvCard";
 import type { Reconciliation } from "./Reconciliation";
 import type { SleepPlan } from "./SleepPlan";
 import type { StressCard } from "./StressCard";
+import type { TodayFocus } from "./TodayFocus";
 import type { VitalsCard } from "./VitalsCard";
 import type { Why } from "./Why";
 
@@ -51,4 +52,4 @@ callNote: string | null, bodyBattery: BodyBatteryCard, stress: StressCard, hrv: 
 /**
  * True on Mondays once the weekly check-in exists.
  */
-checkinReady: boolean, };
+checkinReady: boolean, focus: TodayFocus, };

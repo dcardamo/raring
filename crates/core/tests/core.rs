@@ -44,7 +44,13 @@ fn demo_seeds_current_day_and_screen_details() {
     let date = chrono::NaiveDate::from_ymd_opt(2026, 10, 16).unwrap();
     raring_core::demo::seed(&store, date).unwrap();
     assert!(store.days() >= 42);
-    let today = raring_core::screens::today(&store, &date.to_string());
+    // Mid-morning on the seeded day, so the headline is readiness's.
+    let now = chrono::TimeZone::from_local_datetime(
+        &chrono::FixedOffset::east_opt(0).unwrap(),
+        &date.and_hms_opt(10, 0, 0).unwrap(),
+    )
+    .unwrap();
+    let today = raring_core::screens::today_at(&store, &date.to_string(), now);
     assert_eq!(today.readiness.as_ref().unwrap().value, 82.);
     assert_eq!(today.sleep.as_ref().unwrap().value, 84.);
     assert_eq!(today.load.as_ref().unwrap().value, 612.);

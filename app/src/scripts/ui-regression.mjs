@@ -89,12 +89,13 @@ try {
  await waitRoute('today');
  console.log('Hierarchical browser, header and native Back: passed');
 
- await page.getByRole('button',{name:/^Today's focus/}).click();await waitRoute('readiness');
+ await page.getByRole('button',{name:/^This morning/}).click();await waitRoute('readiness');
  await page.getByText('Readiness history',{exact:true}).waitFor();
  await page.getByRole('button',{name:'30 days',exact:true}).click();
  assert.equal(await page.locator('.history-bar').count(),30);
  await back('today');
- await page.getByRole('button',{name:/^Tonight's sleep/}).click();await waitRoute('sleep');
+ // After waking, tonight's plan is one line that opens Sleep.
+ await page.getByRole('button',{name:/^Tonight · Garmin plan/}).click();await waitRoute('sleep');
  assert.ok((await page.locator('.sleep-plan').textContent()).includes('23:06'));
  assert.ok((await page.locator('.sleep-plan').textContent()).includes('22:30–23:06'));
  const plan=page.locator('.sleep-plan');
@@ -252,8 +253,65 @@ try {
  await page.goto(`${url}/#today`);await waitRoute('today');
  console.log('Why sheets and scores that differ: passed');
 
+ // Today through the day: the same data at different clocks. Only the leading card changes; the hero,
+ // its reconciliation pill and the metric cards stay put, and nothing invites effort after wind-down.
+ const base=JSON.parse(await readFile(resolve('src/lib/sample/today.json'),'utf8'));
+ base.reconcile=differ.reconcile;
+ const night={asleepMin:468,needMin:450,woke:'06:39'};
+ const phases=[
+  ['wake','07:10',{phase:'wake',cards:['focus','sleepPlan'],until:'2025-10-16T09:39:00',effort:true,planOpen:false},'Ready to push','.daily-focus'],
+  ['day','14:20',{phase:'day',cards:['now','focus','sleepPlan'],until:'2025-10-16T20:30:00',effort:true,planOpen:false},'Ready to push','.now-card'],
+  ['evening','20:45',{phase:'evening',cards:['sleepPlan','focus'],until:'2025-10-16T22:00:00',effort:true,planOpen:true},'Wind down at 22:00','.sleep-plan'],
+  ['winddown','22:10',{phase:'windDown',cards:['sleepPlan','focus'],until:'2025-10-16T23:06:00',effort:false,planOpen:true},'Time to wind down','.sleep-plan'],
+  ['late','23:40',{phase:'lateNight',cards:['sleepPlan','focus'],until:'2025-10-17T06:36:00',effort:false,planOpen:true},"Rest when you're ready",'.sleep-plan'],
+  ['missing','2025-10-17T07:30',{phase:'wake',cards:['focus'],until:'2025-10-17T12:00:00',effort:false,planOpen:false,sleepMissing:true,lastNight:null},"Waiting for last night's sleep",'.daily-focus'],
+  ['overview','14:20',{phase:'overview',cards:['focus','sleepPlan'],until:null,effort:true,planOpen:true,note:'Fixed layout: your wake times vary too much to plan the day around.'},'Ready to push','.daily-focus'],
+ ];
+ const phasePage=await browser.newPage({viewport:{width:390,height:844},hasTouch:true});
+ phasePage.on('pageerror',e=>errors.push(e.message));
+ let heroTop=null;
+ for(const [name,time,focus,headline,leader] of phases){
+  const clock=new Date(time.includes('T')?time:`2025-10-16T${time}:00`);
+  // A recent upload, so the watch notice (which stays above the leading card) is absent.
+  const view={...structuredClone(base),headline,watchLastUpload:new Date(clock.getTime()-15*60_000).toISOString(),focus:{sleepMissing:false,lastNight:night,note:null,recoveryHours:18,...focus}};
+  await phasePage.clock.setFixedTime(clock);
+  await phasePage.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(view)}`}));
+  await phasePage.setViewportSize({width:390,height:844});
+  await phasePage.goto(`${url}/?phase=${name}#today`);await phasePage.getByRole('heading',{name:headline}).waitFor();
+  await phasePage.evaluate(()=>document.fonts.ready);
+  const first=await phasePage.locator('.dashboard > *').first().evaluate(el=>el.className);
+  assert.ok(first.includes(leader.slice(1)) && first.includes('lead'),`${name}: ${leader} leads (${first})`);
+  const top=await phasePage.locator('.dials').evaluate(el=>Math.round(el.getBoundingClientRect().top));
+  heroTop??=top;
+  assert.equal(top,heroTop,`${name}: the scores stay where they are`);
+  const pill=phasePage.getByRole('button',{name:differ.reconcile.label});
+  await pill.click();
+  await phasePage.getByText(differ.reconcile.line).waitFor();
+  assert.equal(await phasePage.locator('.daily-focus .segments').count(),focus.effort?1:0,`${name}: effort call ${focus.effort?'shown':'hidden'}`);
+  const text=await phasePage.locator('.dashboard').textContent();
+  assert.ok(!/\bin \d+ ?(min|h)\b|left\b/i.test(text),`${name}: no countdown`);
+  if(name==='evening')assert.equal(await phasePage.locator('.sleep-plan .strip-bar u').count(),1,'the strip marks now against the window');
+  if(name==='late')assert.ok(text.includes("Tonight's window was"));
+  if(name==='missing')assert.ok(text.includes('Not synced yet') && !text.includes('Lowest readiness factor'),'an unsynced night is neutral');
+  if(name==='day')assert.ok(text.includes('As of watch sync') && text.includes('Done today'),'the day card is labeled as synced data');
+  if(name==='overview')await phasePage.getByText(focus.note).waitFor();
+  if(['wake','day'].includes(name))await phasePage.locator('.plan-line').waitFor();
+  assert.deepEqual(await contrastFailures(phasePage),[],`${name}: text contrast`);
+  for(const width of [390,...(['day','evening'].includes(name)?[700,1100]:[])]){
+   await phasePage.setViewportSize({width,height:844});
+   const overflow=await phasePage.locator('.scroll').evaluate(el=>el.scrollWidth-el.clientWidth);
+   assert.ok(overflow<=1,`${name} at ${width}: ${overflow}px horizontal overflow`);
+   await phasePage.screenshot({path:resolve(output,`${width}-today-phase-${name}.png`),fullPage:true});
+  }
+  await phasePage.unroute(todaySample);
+ }
+ await phasePage.close();
+ console.log('Today through the day: one leading card, stable hero and pill, calm nights at 390/700/1100: passed');
+
  const samples={};
  for(const name of ['today','sleep','training','health','status','workout'])samples[name]=JSON.parse(await readFile(resolve(`src/lib/sample/${name}.json`),'utf8'));
+ // The sample's phase ended long ago; phase expiry has its own check below.
+ samples.today.focus.until=null;
  const onboarding=await browser.newPage({viewport:{width:390,height:844}});
  onboarding.on('pageerror',e=>errors.push(e.message));
  await onboarding.addInitScript(samples=>{
@@ -435,7 +493,8 @@ try {
  assert.equal(await live.locator('.history .history-bar').count(),0);
  assert.equal(await live.locator('.history input').getAttribute('aria-valuetext'),'Thu 16 Oct: Not recorded','history is anchored to stored data, not the system clock');
  await live.screenshot({path:resolve(output,'history-missing.png')});
- await live.evaluate(()=>{Object.assign(window.testBackend.samples.today.sleepPlan,{bedtimeStart:null,bedtimeStartAt:null,bedtimeSource:'wakeHistory',source:'latest',reason:null})});
+ // The fixed layout shows the plan in full.
+ await live.evaluate(()=>{const t=window.testBackend.samples.today;Object.assign(t.focus,{phase:'overview',planOpen:true,until:null});Object.assign(t.sleepPlan,{bedtimeStart:null,bedtimeStartAt:null,bedtimeSource:'wakeHistory',source:'latest',reason:null})});
  await live.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();
  await live.locator('.sleep-plan').waitFor();
  const fallback=await live.locator('.sleep-plan').textContent();
@@ -446,7 +505,7 @@ try {
  assert.equal(await live.locator('.sleep-plan').count(),0,'no inferred sleep plan without Garmin need');
  await live.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();
  await live.locator('.dials').waitFor();
- assert.equal(await live.locator('.sleep-plan').count(),0);
+ assert.equal(await live.locator('.sleep-plan, .plan-line').count(),0);
  console.log('Partial baselines, outliers, missing history and unavailable sleep plans: passed');
  await live.evaluate(()=>{Object.assign(window.testBackend.samples.training.acute,{label:'',tone:'neutral',band:null})});
  await live.getByRole('navigation').getByRole('button',{name:'Training',exact:true}).click();
@@ -585,6 +644,16 @@ try {
  await cached.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});document.dispatchEvent(new Event('visibilitychange'));delete document.visibilityState});
  await cached.getByRole('heading',{name:'After hide'}).waitFor();
 
+ // A cached Today whose phase has ended is read again rather than shown, so its leading card can't swap after appearing.
+ await cached.evaluate(()=>{Object.assign(window.testViews.samples.today,{headline:'Old phase'});window.testViews.samples.today.focus.until='2000-01-01T00:00:00';window.dispatchEvent(new Event('raring:resume'))});
+ await cached.getByRole('heading',{name:'Old phase'}).waitFor();
+ await tabCached('Sleep');await cached.locator('.sleep-hero').waitFor();
+ await cached.evaluate(()=>{Object.assign(window.testViews.samples.today,{headline:'New phase'});window.testViews.samples.today.focus.until=null});
+ await hold('today');await tabCached('Today');await pending('today');
+ assert.equal(await cached.getByRole('heading',{name:'Old phase'}).count(),0,'an ended phase is not served from the cache');
+ await release('today');
+ await cached.getByRole('heading',{name:'New phase'}).waitFor();
+
  // A pre-sync request must neither be reused nor overwrite a post-sync reading.
  await hold('today');
  await cached.evaluate(()=>window.dispatchEvent(new Event('raring:resume')));
@@ -664,6 +733,80 @@ try {
  assert.equal(new URL(cached.url()).hash,'#onboarding','older signed-in status cannot undo a newer sign-out');
  await cached.close();
  console.log('Cached switching, sync/rollover invalidation, scroll, touch cancellation and status races: passed');
+
+ // "Follow my day": a slow save must not leave Today in the layout that was just switched off.
+ const layout=await browser.newPage({viewport:{width:390,height:844}});
+ layout.on('pageerror',e=>errors.push(e.message));
+ await layout.addInitScript(samples=>{
+  localStorage.setItem('notifications-step-done','1');
+  samples.status.lastSync=new Date().toISOString();
+  const stored={notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,bedtimeLeadMin:30,adaptiveToday:true};
+  const state=window.testLayout={stored,saves:[],failNext:false};
+  const focus=()=>stored.adaptiveToday
+   ?{...samples.today.focus,phase:'day',cards:['now','focus','sleepPlan'],planOpen:false}
+   :{...samples.today.focus,phase:'overview',cards:['focus','sleepPlan'],planOpen:true};
+  window.isTauri=true;
+  window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
+   if(command.startsWith('plugin:event|'))return 1;
+   if(command==='sync_now')return;
+   if(command==='app_status')return structuredClone(samples.status);
+   if(command==='get_settings')return structuredClone(stored);
+   if(command==='set_settings'){
+    await new Promise(resolve=>state.saves.push(resolve));
+    if(state.failNext){state.failNext=false;throw Error('Synthetic save failure')}
+    Object.assign(stored,args.settings);return;
+   }
+   if(command==='today')return {...structuredClone(samples.today),focus:focus()};
+   if(command in samples)return structuredClone(samples[command]);
+   throw Error('Unexpected command '+command);
+  }};
+ },samples);
+ const leader=()=>layout.locator('.dashboard > *').first().evaluate(el=>el.className);
+ const followSwitch=()=>layout.locator('label.setting',{hasText:'Follow my day'}).locator('input');
+ const saved=()=>layout.evaluate(()=>window.testLayout.saves.shift()());
+ await layout.goto(`${url}/#today`);
+ await layout.locator('.now-card').waitFor();
+ await layout.evaluate(()=>{location.hash='#settings'});
+ await followSwitch().waitFor();
+ await followSwitch().uncheck();
+ await layout.waitForFunction(()=>window.testLayout.saves.length===1);
+ assert.equal(await followSwitch().isDisabled(),true,'the switch is locked until its save finishes');
+ // A quick second click must not enqueue an opposing save that can finish out of order.
+ await followSwitch().evaluate(el=>el.click());
+ assert.equal(await followSwitch().isChecked(),false);
+ assert.equal(await layout.evaluate(()=>window.testLayout.saves.length),1,'only one layout save is in flight');
+ await layout.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();
+ await layout.locator('.now-card').waitFor();
+ assert.ok((await leader()).includes('now-card'),'before the save lands, Today still has the stored layout');
+ await saved();
+ // Well inside the 30-second cache poll, so the save itself must bring the new layout.
+ await layout.waitForFunction(()=>!document.querySelector('.now-card') && document.querySelector('.dashboard > *')?.className.includes('daily-focus'),null,{timeout:5000});
+ assert.equal(await layout.evaluate(()=>location.hash),'#today','the user stays where they went');
+ // A failed save is reported and the switch returns to the stored choice.
+ await layout.evaluate(()=>{location.hash='#settings'});
+ await followSwitch().waitFor();
+ assert.equal(await followSwitch().isChecked(),false);
+ await layout.evaluate(()=>{window.testLayout.failNext=true});
+ await followSwitch().check();
+ await layout.waitForFunction(()=>window.testLayout.saves.length===1);
+ await saved();
+ await layout.getByText('Synthetic save failure').waitFor();
+ assert.equal(await followSwitch().isChecked(),false,'a failed save is not treated as success');
+ assert.equal(await followSwitch().isEnabled(),true,'a failed save unlocks the switch');
+ await layout.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();
+ await layout.locator('.dashboard > *').first().waitFor();
+ assert.ok((await leader()).includes('daily-focus') && await layout.locator('.now-card').count()===0,'Today keeps the stored fixed layout');
+ // A later change is accepted after the pending save has finished.
+ await layout.evaluate(()=>{location.hash='#settings'});
+ await followSwitch().waitFor();
+ await followSwitch().check();
+ await layout.waitForFunction(()=>window.testLayout.saves.length===1);
+ assert.equal(await followSwitch().isDisabled(),true);
+ await saved();
+ await layout.waitForFunction(()=>window.testLayout.stored.adaptiveToday && ![...document.querySelectorAll('label.setting')].find(l=>l.textContent.includes('Follow my day')).querySelector('input').disabled);
+ assert.equal(await followSwitch().isChecked(),true,'the switch and store agree on the last accepted change');
+ await layout.close();
+ console.log('Follow my day: slow save, rapid clicks, navigation, failure and retry: passed');
  assert.deepEqual(errors,[],'no browser errors');
 } finally {
  await browser?.close();

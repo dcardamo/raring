@@ -95,3 +95,5 @@ button:disabled{cursor:default}
  .dial-button.large .gauge{transform:scale(.9)}
  .factors{gap:12px 8px}
 }
+.card.lead{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.12)}.phase-note{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;font-size:12px;color:var(--text2)}
+.setting-note{display:block;max-width:300px;margin-top:4px;font-size:12px;line-height:1.4;color:var(--text2)}

@@ -59,19 +59,59 @@ pub fn normal(values: &[f64]) -> Option<[f64; 2]> {
     };
     Some([quantile(0.1), quantile(0.9)])
 }
-/// Minutes from the wake day's midnight to the median wake time minus the
-/// need; negative is the evening before.
-pub fn bedtime_minutes(wakes: &[f64], need: f64) -> Option<i64> {
-    if wakes.is_empty() || !need.is_finite() {
-        return None;
-    }
-    let mut v: Vec<f64> = wakes.iter().copied().filter(|x| x.is_finite()).collect();
+/// Recorded wake times read as clock times on a 24-hour circle, so a steady
+/// 23:55/00:05 pattern is one cluster rather than a noon median.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct WakeClock {
+    /// The usual wake, hours from the wake day's midnight, between 18:00 the
+    /// evening before (-6) and 18:00 (18): a midnight cluster stays on one
+    /// side of the date line instead of flipping a whole day.
+    pub median: f64,
+    /// The middle half's width, hours.
+    pub spread: f64,
+    pub count: usize,
+}
+/// Each time is unwrapped to within 12 hours of the circular mean before the
+/// median and quartiles are taken, which leaves ordinary mornings unchanged.
+pub fn wake_clock(hours: &[f64]) -> Option<WakeClock> {
+    let v: Vec<f64> = hours
+        .iter()
+        .copied()
+        .filter(|h| h.is_finite())
+        .map(|h| h.rem_euclid(24.))
+        .collect();
     if v.is_empty() {
         return None;
     }
-    v.sort_by(f64::total_cmp);
-    let middle = (v[(v.len() - 1) / 2] + v[v.len() / 2]) / 2.0;
-    Some((middle * 60.0 - need).round() as i64)
+    let angle = |h: f64| h / 24. * std::f64::consts::TAU;
+    let (sin, cos) = v
+        .iter()
+        .fold((0., 0.), |(s, c), h| (s + angle(*h).sin(), c + angle(*h).cos()));
+    let mean = sin.atan2(cos).rem_euclid(std::f64::consts::TAU) / std::f64::consts::TAU * 24.;
+    let mut unwrapped: Vec<f64> = v
+        .iter()
+        .map(|h| mean - 12. + (h - (mean - 12.)).rem_euclid(24.))
+        .collect();
+    unwrapped.sort_by(f64::total_cmp);
+    let quantile = |p: f64| {
+        let index = (unwrapped.len() - 1) as f64 * p;
+        let (lo, hi) = (index.floor() as usize, index.ceil() as usize);
+        unwrapped[lo] + (unwrapped[hi] - unwrapped[lo]) * (index - lo as f64)
+    };
+    Some(WakeClock {
+        median: (quantile(0.5) + 6.).rem_euclid(24.) - 6.,
+        spread: quantile(0.75) - quantile(0.25),
+        count: v.len(),
+    })
+}
+/// Minutes from the wake day's midnight to the usual wake time minus the
+/// need; negative is the evening before.
+pub fn bedtime_minutes(wakes: &[f64], need: f64) -> Option<i64> {
+    if !need.is_finite() {
+        return None;
+    }
+    let usual = wake_clock(wakes)?;
+    Some((usual.median * 60.0 - need).round() as i64)
 }
 pub fn clock(minutes: i64) -> String {
     let minute = minutes.rem_euclid(1440);
@@ -188,6 +228,25 @@ mod tests {
         assert_eq!(bedtime_minutes(&[10.5], 440.), Some(190));
         assert_eq!(clock(-45), "23:15");
         assert_eq!(clock(1450), "00:10");
+    }
+    #[test]
+    fn wake_times_are_read_on_a_clock_circle() {
+        let near = |a: f64, b: f64| (a - b).abs() < 1e-6;
+        // An ordinary morning: the plain median and middle half.
+        let morning = wake_clock(&[6.5, 7., 7.25, 7.5, 8.]).unwrap();
+        assert!(near(morning.median, 7.25) && near(morning.spread, 0.5));
+        // A steady pattern around midnight is one tight cluster.
+        let midnight = wake_clock(&[23.9, 0.1, 23.95, 0.05, 0.]).unwrap();
+        assert!(near(midnight.median, 0.) && midnight.spread < 0.2, "{midnight:?}");
+        assert_eq!(bedtime(&[23.9, 0.1, 23.95, 0.05, 0.], 480.), Some("16:00".into()));
+        assert_eq!(bedtime_minutes(&[23.9, 0.1, 23.95, 0.05, 0.], 480.), Some(-480));
+        // Late-evening wakes sit on the evening before; afternoons stay on the day.
+        assert!(near(wake_clock(&[23.5]).unwrap().median, -0.5));
+        assert!(near(wake_clock(&[15.]).unwrap().median, 15.));
+        // A truly broad spread stays broad.
+        let broad = wake_clock(&[5., 5.5, 9., 13., 14., 6., 15., 10.]).unwrap();
+        assert!(broad.spread > 3., "{broad:?}");
+        assert_eq!(wake_clock(&[f64::NAN]), None);
     }
     #[test]
     fn timing_coaching_prefers_steady_wake() {

@@ -2,6 +2,7 @@
 pub mod demo;
 pub mod garmin;
 pub mod notifications;
+pub mod phase;
 pub mod rules;
 pub mod screens;
 pub mod store;
@@ -75,6 +76,10 @@ impl Raring {
     }
     pub fn today(&self, date: &str) -> view::TodayView {
         screens::today(&self.store, date)
+    }
+    /// Today as of `now`, which sets the time-of-day phase.
+    pub fn today_at(&self, date: &str, now: DateTime<Local>) -> view::TodayView {
+        screens::today_at(&self.store, date, now.fixed_offset())
     }
     pub fn sleep(&self, date: &str) -> view::SleepView {
         screens::sleep_view(&self.store, date)

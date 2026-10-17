@@ -83,6 +83,25 @@ optional after sign-in.
   the chips ("Why Body Battery and readiness differ"); tapping it shows one
   sentence naming Garmin's factors. It's a self-contained piece Today's
   layout can move.
+- **Through the day**: the header, gauges, headline, chips and the
+  reconciliation line stay in place, and the metric cards below keep their
+  order. One advice card leads, chosen by where the person is in their own
+  day (see Time of day under Rules): after waking, "This morning" shows last
+  night's sleep against its need, the limiting factor and then the effort;
+  during the day, "Right now" shows the latest synced Body Battery and stress,
+  labeled with the watch's upload time, with today's workout or Garmin's
+  recovery time; from two hours before tonight's window the sleep plan leads
+  with a strip placing now against wind-down and the window, then a calm
+  wind-down card and, after the window, a late-night card. Earlier in the day
+  the plan is one line. Wind-down and late night show no effort call, no
+  countdown and no verdict. A night that hasn't synced says so neutrally,
+  with the watch's upload time or the known reason. The headline follows the
+  phase ("Wind down at 22:00", "Time to wind down", "Rest when you're
+  ready"). Watch and missing-reading notices stay above the leading card;
+  two outside-range vitals move vitals to the top. Settings → Today → "Follow
+  my day" turns this off (shift work); then, and without a credible
+  schedule, Today keeps the fixed order below and says why in one line.
+  Changes never switch tabs and wait until a finger lifts.
 - **Today's focus**: Rest, Easy, Steady or Push, with the suggestion lit up,
   followed by the readiness factor Garmin rates worst (nothing when Garmin
   rated none). Tap to see all six factors and their feedback.
@@ -246,8 +265,8 @@ Sent by the phone itself.
   breaking ties. Unrated factors never count; with none rated there is no
   drag.
 - **Bedtime**: Garmin's recommended bedtime window for tonight when it sends
-  one; the asleep-by time is its end. Otherwise usual wake time (14-day
-  median) minus tonight's sleep need (Garmin's next-night adjusted need when
+  one; the asleep-by time is its end. Otherwise the next usual wake (see
+  Usual wake) minus tonight's sleep need (Garmin's next-night adjusted need when
   present, otherwise its latest adjusted need or the 14-day average). Label
   the source and wake-history count. Garmin's optimal sleep window (Sleep
   Alignment) is never used as tonight's bedtime.
@@ -263,6 +282,43 @@ Sent by the phone itself.
   when no recorded sleep (a duration, start or end) has synced for the
   current day. Times are local wall-clock times, so the platform reschedules
   when the timezone changes.
+- **Usual wake**: recorded wake times of the last 14 nights read as clock
+  times on a 24-hour circle: each is unwrapped to within 12 hours of their
+  circular mean, then the median and the middle half's spread are taken, so
+  a steady 23:55/00:05 pattern is one cluster. The median is placed between
+  18:00 the evening before and 18:00 on the morning's date. It is credible
+  with at least four wake times and a spread of three hours or less. The
+  next expected wake after a displayed day is the first usual wake more than
+  12 hours after that day's recorded wake (or its own usual wake), since
+  Garmin files a night under the day it ends. The sleep plan, Today's phases,
+  the weekly timing review and the displayed day share this rule.
+- **Displayed day**: the calendar day once its night (a recorded sleep or
+  readiness) has synced. Until then the latest night of the previous two
+  days stays shown until its handover: three hours after the credible next
+  expected wake, otherwise noon of the next calendar day. Stored date keys
+  are never changed and no future dates are fetched.
+- **Time of day**: phases are local wall-clock times anchored to the
+  displayed night's recorded wake (otherwise its usual wake) and tonight's
+  shared sleep plan, never fixed clock hours. After waking lasts three hours,
+  or until the plan rises if that comes first; the day runs until two hours
+  before Garmin's window starts (Raring's asleep-by time without one); the
+  evening until the plan's wind-down time; wind-down until the window ends;
+  late night until the next expected wake, so crossing midnight keeps
+  tonight's plan. From that wake (or, without a credible usual wake, from the
+  calendar rollover) until the handover, whatever the layout or fallback,
+  Today waits neutrally for the night: no effort call, no previous plan and
+  no verdict. After the handover the calendar day shows with its missing
+  night stated. Advice order: after waking, this morning then the one-line
+  plan; during the day, right now, today's focus, the one-line plan; from
+  the evening on, the plan then today's focus. Two or more outside-range
+  vitals go first in every phase. The fixed layout (today's focus, then the
+  full plan) applies when the setting is off, with fewer than four recorded
+  wake times in 14 nights, a usual-wake spread over three hours, Garmin's
+  jet-lag rating for a recorded night, the phone's UTC offset more than an
+  hour from the latest recorded night's (a daylight-saving change keeps the
+  schedule), no plan, or a plan that doesn't fit the wake time. The phase
+  is re-evaluated from local data on open, resume, every view refresh, sync
+  and at each phase boundary, offline included.
 - **Timing review**: the week's earliest and latest bed and wake times, the
   wake-time spread (latest minus earliest) against the week before, and
   counts of Garmin's alignment ratings. The focus follows the majority rating
@@ -357,7 +413,9 @@ Sent by the phone itself.
   and the cache without clearing the visible view. Status is read on start,
   resume and sync, not before every navigation, and is applied independently
   of navigation so a tab switch can't discard a newer sync or sign-out. View
-  commands read SQLite off the WebView thread.
+  commands read SQLite off the WebView thread. Today carries the end of its
+  time-of-day phase: a cached Today past it is read again instead of shown,
+  and the visible Today is read again when it passes.
 - **Bedtime reminder**: the core returns tonight's wind-down time as a local
   wall-clock time; Android sets an alarm with a ten-minute window for it after
   every sync, on app start, on settings changes, after a reboot or update and

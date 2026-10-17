@@ -1,6 +1,8 @@
 //! Tolerant projections of raw Garmin responses. Unknown and absent fields stay absent.
-use crate::{rules, store::Store, sync::selected_watch, view::*};
-use chrono::{DateTime, Datelike, Duration, Local, NaiveDate, NaiveDateTime, Timelike, Utc};
+use crate::{phase, rules, store::Store, sync::selected_watch, view::*};
+use chrono::{
+    DateTime, Datelike, Duration, FixedOffset, Local, NaiveDate, NaiveDateTime, Timelike, Utc,
+};
 use serde_json::Value;
 use std::collections::BTreeMap;
 
@@ -210,16 +212,33 @@ fn need_reason(need: f64, baseline: Option<f64>, adjustments: &[NeedAdjustment])
         format!("Garmin took off {}{because}.", minutes_text(diff))
     })
 }
-pub(crate) fn sleep_plan(store: &Store, date: &str) -> Option<SleepPlan> {
-    let nights: Vec<Value> = (0..14)
-        .filter_map(|i| store.get("sleep", &date_sub(date, i)))
-        .collect();
-    let wakes: Vec<f64> = nights
+/// Recorded wake times of the 14 nights ending on `date`, hours after midnight.
+fn wake_hours(nights: &[Value]) -> Vec<f64> {
+    nights
         .iter()
         .filter_map(|night| local_time(sleep(night), &["sleepEndTimestampLocal"]))
         .filter_map(|time| hour(&time))
         .filter(|hour| hour.is_finite() && (0.0..24.0).contains(hour))
-        .collect();
+        .collect()
+}
+fn recent_nights(store: &Store, date: &str) -> Vec<Value> {
+    (0..14)
+        .filter_map(|i| store.get("sleep", &date_sub(date, i)))
+        .collect()
+}
+/// Minutes between the phone's UTC offset now and the latest recorded night's.
+fn zone_shift(nights: &[Value], now: DateTime<FixedOffset>) -> Option<i32> {
+    nights.iter().find_map(|night| {
+        let s = sleep(night);
+        let local = s["sleepEndTimestampLocal"].as_i64()?;
+        let gmt = s["sleepEndTimestampGMT"].as_i64()?;
+        let night_offset = ((local - gmt) as f64 / 60_000.).round() as i32;
+        Some(now.offset().local_minus_utc() / 60 - night_offset)
+    })
+}
+pub(crate) fn sleep_plan(store: &Store, date: &str) -> Option<SleepPlan> {
+    let nights = recent_nights(store, date);
+    let wakes = wake_hours(&nights);
     let record = sleep_record(store, date);
     let current = record.clone().unwrap_or(Value::Null);
     let next = &sleep(&current)["nextSleepNeed"];
@@ -257,17 +276,27 @@ pub(crate) fn sleep_plan(store: &Store, date: &str) -> Option<SleepPlan> {
     } else {
         None
     };
-    let (start_at, bedtime_at, bedtime_source) = match window {
+    let (start_at, bedtime_at, bedtime_source, night) = match window {
         Some((start, end)) => (
             Some(evening + Duration::minutes(start)),
             evening + Duration::minutes(end),
             BedtimeSource::Garmin,
+            night,
         ),
-        None => (
-            None,
-            midnight(night) + Duration::minutes(rules::bedtime_minutes(&wakes, need_min)?),
-            BedtimeSource::WakeHistory,
-        ),
+        // The reminder key and bedtime must describe the same selected wake.
+        None => {
+            let wake = phase::next_wake(
+                base,
+                recorded_wake(store, date),
+                rules::wake_clock(&wakes).as_ref(),
+            )?;
+            (
+                None,
+                wake - Duration::minutes(need_min.round() as i64),
+                BedtimeSource::WakeHistory,
+                wake.date(),
+            )
+        }
     };
     let lead = store.settings().bedtime_lead_min;
     let wind_down_at = start_at.unwrap_or(bedtime_at) - Duration::minutes(lead.into());
@@ -1186,22 +1215,36 @@ fn has_night(store: &Store, date: &str) -> bool {
         .is_some_and(|r| current_rscore(&r).is_some())
         || store
             .get("sleep", date)
-            .is_some_and(|s| num(sleep(&s), &[&["sleepTimeSeconds"]]).is_some_and(|t| t > 0.))
+            .is_some_and(|s| recorded_sleep(&s))
 }
 /// The day the screens show. Garmin files a night under the day you wake, so
-/// after midnight the calendar day is empty until you wake and the watch syncs;
-/// until then (or noon) the previous day stays current.
+/// the calendar day is empty until you wake and the watch syncs; until then
+/// the latest earlier night stays current up to its handover (three hours
+/// after its credible expected wake, otherwise noon). A midnight waker's
+/// filing can skip a date, so two days back are checked.
 pub fn current_date(store: &Store, now: NaiveDateTime) -> NaiveDate {
     let today = now.date();
-    let yesterday = today - Duration::days(1);
-    if now.hour() < 12
-        && !has_night(store, &today.to_string())
-        && has_night(store, &yesterday.to_string())
-    {
-        yesterday
-    } else {
-        today
+    if has_night(store, &today.to_string()) {
+        return today;
     }
+    for back in 1..=2 {
+        let date = today - Duration::days(back);
+        let key = date.to_string();
+        if has_night(store, &key) {
+            let usual = rules::wake_clock(&wake_hours(&recent_nights(store, &key)));
+            return if now < phase::handover(date, recorded_wake(store, &key), usual.as_ref()) {
+                date
+            } else {
+                today
+            };
+        }
+    }
+    today
+}
+/// The recorded wake of the night filed under `date`, when it has synced.
+fn recorded_wake(store: &Store, date: &str) -> Option<NaiveDateTime> {
+    let raw = sleep_record(store, date).filter(recorded_sleep)?;
+    local_time(sleep(&raw), &["sleepEndTimestampLocal"]).and_then(|t| parse_local(&t))
 }
 fn watch_info(store: &Store) -> (Value, Option<DateTime<Utc>>) {
     let list = store.get("devices", "me").unwrap_or(Value::Null);
@@ -1353,6 +1396,10 @@ mod watch_tests {
 }
 
 pub fn today(store: &Store, date: &str) -> TodayView {
+    today_at(store, date, Local::now().fixed_offset())
+}
+/// Today as of `now`, which sets the time-of-day phase.
+pub fn today_at(store: &Store, date: &str, now: DateTime<FixedOffset>) -> TodayView {
     let r = store.get("readiness", date).unwrap_or(Value::Null);
     let s = store.get("sleep", date).unwrap_or(Value::Null);
     let t = store.get("training", date).unwrap_or(Value::Null);
@@ -1362,10 +1409,11 @@ pub fn today(store: &Store, date: &str) -> TodayView {
     let missing_metric_reasons = missing_metric_reasons(&watch, &s, &r, &h);
     // Before noon Today can still show yesterday's recorded night; check the
     // current calendar day's missing upload rather than the displayed day.
+    let local_now = now.with_timezone(&Local);
     let watch_sleep_upload_stale = sleep_upload_stale(
         store,
-        &Local::now().date_naive().to_string(),
-        Local::now(),
+        &local_now.date_naive().to_string(),
+        local_now,
         uploaded,
     );
     let rl = string(readiness(&r), &[&["level"], &["trainingReadinessLevel"]]);
@@ -1490,12 +1538,67 @@ pub fn today(store: &Store, date: &str) -> TodayView {
     let b = b.as_array().and_then(|a| a.first()).unwrap_or(&b);
     let summary = store.get("summary", date).unwrap_or(Value::Null);
     let hstatus = string(hs, &[&["status"]]);
+    let plan = sleep_plan(store, date);
+    let vitals = vitals(store, date);
+    let nights = recent_nights(store, date);
+    let recorded = recorded_sleep(&s).then(|| sleep(&s));
+    let woke_at = recorded_wake(store, date);
+    let mut focus = phase::focus(&phase::PhaseInput {
+        now: now.naive_local(),
+        date: NaiveDate::parse_from_str(date, "%Y-%m-%d").unwrap_or(now.date_naive()),
+        plan: plan.as_ref(),
+        wakes: &wake_hours(&nights),
+        last_night: recorded.map(|s| LastNight {
+            asleep_min: num(s, &[&["sleepTimeSeconds"]]).map(|t| t / 60.),
+            need_min: sleep_need_minutes(&s["sleepNeed"]),
+            woke: woke_at.map(|t| t.format("%H:%M").to_string()),
+        }),
+        woke_at,
+        adaptive: store.settings().adaptive_today,
+        // Garmin has sent JET_LAG for a night without recorded sleep, which
+        // is a missing night, not travel.
+        jet_lag: recorded.is_some_and(|s| s["sleepAlignment"]["status"].as_str() == Some("JET_LAG")),
+        zone_shift_min: zone_shift(&nights, now),
+        vitals_off: vitals.off_count,
+    });
+    let body_battery = BodyBatteryCard {
+        // Daily stats can be more recent than the sparsely sampled report.
+        now: num(&summary, &[&["bodyBatteryMostRecentValue"]])
+            .or_else(|| num(b, &[&["bodyBatteryValue"], &["currentValue"]]))
+            .or_else(|| battery_latest(b)),
+        charged: num(b, &[&["charged"], &["chargedValue"]])
+            .or_else(|| num(&summary, &[&["bodyBatteryChargedValue"]])),
+        drained: num(b, &[&["drained"], &["drainedValue"]])
+            .or_else(|| num(&summary, &[&["bodyBatteryDrainedValue"]])),
+    };
+    let stress = stress(store, date);
+    let activities = activities(store, date);
+    // "Right now" needs something synced today to show.
+    if body_battery.now.is_none()
+        && stress.average.is_none()
+        && !activities.iter().any(|a| a.start_local.starts_with(date))
+    {
+        focus.cards.retain(|c| *c != TodayCard::Now);
+    }
+    focus.recovery_hours = num(readiness(&r), &[&["recoveryTime"]])
+        .filter(|m| m.is_finite() && *m > 0.)
+        .map(|m| m / 60.);
+    let headline = phase::headline(
+        &focus,
+        plan.as_ref(),
+        match call {
+            Some(Effort::Push) => "Ready to push",
+            Some(Effort::Steady) => "Room to build",
+            Some(Effort::Easy) | Some(Effort::Rest) => "Take it easy",
+            None => "Waiting for readiness",
+        },
+    );
     let mut view = TodayView {
         date: date.into(),
         watch_last_upload: uploaded.map(|t| t.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)),
         watch_sleep_upload_stale,
         missing_metric_reasons,
-        sleep_plan: sleep_plan(store, date),
+        sleep_plan: plan,
         readiness_trend: (0..30)
             .rev()
             .map(|i| {
@@ -1546,13 +1649,7 @@ pub fn today(store: &Store, date: &str) -> TodayView {
                 band(&t),
             )
         }),
-        headline: match call {
-            Some(Effort::Push) => "Ready to push",
-            Some(Effort::Steady) => "Room to build",
-            Some(Effort::Easy) | Some(Effort::Rest) => "Take it easy",
-            None => "Waiting for readiness",
-        }
-        .into(),
+        headline,
         chips,
         factors,
         readiness_why: None,
@@ -1561,7 +1658,7 @@ pub fn today(store: &Store, date: &str) -> TodayView {
         call,
         // A finished workout comes first, then Garmin's own readiness feedback
         // (sent as codes such as LET_YOUR_BODY_RECOVER), then the biggest drag.
-        call_note: activities(store, date)
+        call_note: activities
             .first()
             .filter(|a| a.start_local.starts_with(date))
             .map(|a| {
@@ -1581,17 +1678,8 @@ pub fn today(store: &Store, date: &str) -> TodayView {
                 .and_then(|code| humanize_code(&code))
             })
             .or_else(|| biggest_drag.map(|d| format!("{d} is your biggest drag today."))),
-        body_battery: BodyBatteryCard {
-            // Daily stats can be more recent than the sparsely sampled report.
-            now: num(&summary, &[&["bodyBatteryMostRecentValue"]])
-                .or_else(|| num(b, &[&["bodyBatteryValue"], &["currentValue"]]))
-                .or_else(|| battery_latest(b)),
-            charged: num(b, &[&["charged"], &["chargedValue"]])
-                .or_else(|| num(&summary, &[&["bodyBatteryChargedValue"]])),
-            drained: num(b, &[&["drained"], &["drainedValue"]])
-                .or_else(|| num(&summary, &[&["bodyBatteryDrainedValue"]])),
-        },
-        stress: stress(store, date),
+        body_battery,
+        stress,
         hrv: HrvCard {
             last_night: num(hs, &[&["lastNightAvg"]]),
             status: hstatus.clone().map(|s| label(Some(s))),
@@ -1599,7 +1687,7 @@ pub fn today(store: &Store, date: &str) -> TodayView {
                 .as_deref()
                 .map(rules::level)
                 .unwrap_or(Tone::Neutral),
-            baseline: vitals(store, date)
+            baseline: vitals
                 .readings
                 .iter()
                 .find(|v| v.kind == VitalKind::Hrv)
@@ -1609,12 +1697,13 @@ pub fn today(store: &Store, date: &str) -> TodayView {
                 .map(|i| vital_value(store, VitalKind::Hrv, &date_sub(date, i)))
                 .collect(),
         },
-        vitals: vitals(store, date),
-        activities: activities(store, date),
+        vitals,
+        activities,
         fitness_age: age(store, date),
         checkin_ready: NaiveDate::parse_from_str(date, "%Y-%m-%d")
             .is_ok_and(|d| d.weekday() == chrono::Weekday::Mon)
             && store.get("summary", &date_sub(date, 1)).is_some(),
+        focus,
     };
     view.readiness_why = explain::readiness_why(&r, &view.factors, rl.as_deref());
     view.body_battery_why =
@@ -2407,7 +2496,17 @@ fn timing_review(store: &Store, monday: &str) -> Option<TimingReview> {
             }
         })
         .collect();
-    let wakes: Vec<f64> = week.iter().map(|(n, _)| n.wake_hour).collect();
+    // Compare both weeks on their own circular wake axis, including midnight.
+    let unwrap_wakes = |hours: Vec<f64>| {
+        let Some(clock) = rules::wake_clock(&hours) else {
+            return hours;
+        };
+        hours
+            .iter()
+            .map(|h| clock.median - 12. + (h - clock.median + 12.).rem_euclid(24.))
+            .collect()
+    };
+    let wakes = unwrap_wakes(week.iter().map(|(n, _)| n.wake_hour).collect());
     let range = |hours: &[f64]| {
         let low = hours.iter().copied().reduce(f64::min)?;
         let high = hours.iter().copied().reduce(f64::max)?;
@@ -2420,10 +2519,12 @@ fn timing_review(store: &Store, monday: &str) -> Option<TimingReview> {
     };
     let (aligned, ahead, behind) = (count("ALIGNED"), count("AHEAD"), count("BEHIND"));
     let wake_spread_min = spread_min(&wakes);
-    let previous: Vec<f64> = week_nights(store, monday, 1)
-        .iter()
-        .map(|(n, _)| n.wake_hour)
-        .collect();
+    let previous = unwrap_wakes(
+        week_nights(store, monday, 1)
+            .iter()
+            .map(|(n, _)| n.wake_hour)
+            .collect(),
+    );
     let usual = rules::bedtime(&wakes, 0.);
     Some(TimingReview {
         bed_range: range(&beds),

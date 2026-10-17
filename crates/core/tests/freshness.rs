@@ -6,7 +6,13 @@ fn today(readiness: Value) -> raring_core::view::TodayView {
     store
         .put("readiness", "2025-01-02", "now", &readiness)
         .unwrap();
-    screens::today(&store, "2025-01-02")
+    // The evening of the stored day, so the view isn't a later morning's.
+    let now = chrono::TimeZone::from_local_datetime(
+        &chrono::FixedOffset::east_opt(0).unwrap(),
+        &chrono::NaiveDateTime::parse_from_str("2025-01-02T18:30", "%Y-%m-%dT%H:%M").unwrap(),
+    )
+    .unwrap();
+    screens::today_at(&store, "2025-01-02", now)
 }
 
 #[test]

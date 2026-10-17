@@ -117,6 +117,30 @@ rose strength); the spec's Look section now describes it.
   workout-push spike confirms the watch syncs before the session. *Rules:
   add the brake to the spec when the builder ships.*
 
+## Today through the day
+
+Screens `tod-rules`, `tod-wake`, `tod-day`, `tod-evening`, `tod-winddown`,
+`tod-late`, `tod-missing` and `tod-overview` (`time-of-day.js`) show one
+synthetic day at different clock times. Only the leading card changes; the
+hero (scores, freshness line, headline, chips) and the metric cards stay
+where they are.
+
+- **After waking:** "This morning": last night (asleep, need, wake time),
+  the lowest readiness factor, then the effort. Before last night syncs,
+  the card says so neutrally with the watch's last upload, without a
+  verdict or yesterday's effort.
+- **During the day:** "Right now": the latest synced Body Battery and
+  stress, labeled with the watch's upload time, and today's activity or
+  Garmin's recovery time. The readiness focus follows it.
+- **Tonight's plan rises** two hours before Garmin's window: wind-down,
+  window and need, with a strip placing now against them. A position, never
+  a countdown. Earlier in the day the plan is one line.
+- **Wind down** and **late night** are calm, ink-only cards without the
+  effort segments; late night says the window has passed and nothing more.
+- **Fixed layout** (today's order) when adaptation is off in Settings or the
+  schedule isn't credible; an automatic fallback names its reason in one
+  line.
+
 Not mocked: empty states, saving offline, a failed save. For a failed save,
 recommend keeping edits on the device, fetching the sets again before writing
 in case they changed in Connect, and saying plainly what was rejected.

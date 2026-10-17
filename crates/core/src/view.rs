@@ -308,6 +308,71 @@ pub struct FitnessAgeCard {
     pub change_12m: Option<f64>,
 }
 
+/// Where the person is in their own day, anchored to their wake time and
+/// tonight's sleep plan. `Overview` is the fixed layout.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum DayPhase {
+    Overview,
+    Wake,
+    Day,
+    Evening,
+    WindDown,
+    LateNight,
+}
+
+/// Today's advice cards. Metric cards follow them in a fixed order.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum TodayCard {
+    /// Today's focus: effort and the limiting readiness factor.
+    Focus,
+    /// The latest synced Body Battery and stress, and the day's activity.
+    Now,
+    SleepPlan,
+    /// Vitals, moved up when two or more are outside their range.
+    Vitals,
+}
+
+/// The displayed night's recorded sleep.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct LastNight {
+    pub asleep_min: Option<f64>,
+    /// Garmin's need for that night.
+    pub need_min: Option<f64>,
+    /// Recorded wake time, HH:MM.
+    pub woke: Option<String>,
+}
+
+/// What leads Today right now.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct TodayFocus {
+    pub phase: DayPhase,
+    /// Advice cards in order; the first one leads.
+    pub cards: Vec<TodayCard>,
+    /// When the phase next changes, local ISO 8601 without offset; Today is
+    /// read again then.
+    pub until: Option<String>,
+    /// Show the effort call. Off once winding down, and before a night that
+    /// hasn't synced.
+    pub effort: bool,
+    /// Tonight's plan in full; otherwise folded to one line.
+    pub plan_open: bool,
+    /// The displayed night has no recorded sleep. Neutral, never a verdict.
+    pub sleep_missing: bool,
+    pub last_night: Option<LastNight>,
+    /// Why Today keeps its fixed layout, one line.
+    pub note: Option<String>,
+    /// Garmin's recovery time at the latest readiness, hours.
+    pub recovery_hours: Option<f64>,
+}
+
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -347,6 +412,7 @@ pub struct TodayView {
     pub fitness_age: FitnessAgeCard,
     /// True on Mondays once the weekly check-in exists.
     pub checkin_ready: bool,
+    pub focus: TodayFocus,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
@@ -790,10 +856,16 @@ pub struct Settings {
     /// Minutes between the wind-down reminder and the bedtime window.
     #[serde(default = "default_bedtime_lead")]
     pub bedtime_lead_min: u32,
+    /// Let Today's leading card follow the time of day; off for shift work.
+    #[serde(default = "default_adaptive_today")]
+    pub adaptive_today: bool,
 }
 
 fn default_bedtime_lead() -> u32 {
     30
+}
+fn default_adaptive_today() -> bool {
+    true
 }
 
 impl Default for Settings {
@@ -806,6 +878,7 @@ impl Default for Settings {
             notify_training_status: false,
             notify_bedtime: false,
             bedtime_lead_min: default_bedtime_lead(),
+            adaptive_today: default_adaptive_today(),
         }
     }
 }

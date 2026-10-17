@@ -12,4 +12,8 @@ notifyMetricChanges: boolean, notifyVitals: boolean, notifyTrainingStatus: boole
 /**
  * Minutes between the wind-down reminder and the bedtime window.
  */
-bedtimeLeadMin: number, };
+bedtimeLeadMin: number, 
+/**
+ * Let Today's leading card follow the time of day; off for shift work.
+ */
+adaptiveToday: boolean, };

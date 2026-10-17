@@ -410,6 +410,27 @@ fn checkin_reviews_an_irregular_week_without_scoring_it() {
 }
 
 #[test]
+fn checkin_unwraps_both_weeks_wakes_across_midnight() {
+    let store = Store::open(":memory:").unwrap();
+    for (date, wake) in [
+        ("2025-03-10", "23:55"), ("2025-03-11", "00:05"),
+        ("2025-03-12", "00:00"), ("2025-03-13", "23:55"),
+        ("2025-03-14", "00:05"), ("2025-03-15", "00:00"),
+        ("2025-03-16", "00:00"),
+        ("2025-03-05", "23:50"), ("2025-03-06", "00:10"),
+    ] {
+        put(&store, date, &night(date, "16:00", wake));
+    }
+    let timing = screens::checkin(&store, "2025-03-17").timing.unwrap();
+    assert_eq!(timing.wake_range, Some(["23:55".into(), "00:05".into()]));
+    assert_eq!(timing.wake_spread_min, Some(10.));
+    assert_eq!(timing.previous_wake_spread_min, Some(20.));
+    // Chart values keep Garmin's clock hours; only the range/spread unwrap.
+    assert_eq!(timing.nights[0].wake_hour, 23. + 55. / 60.);
+    assert!(timing.focus.contains("00:00"));
+}
+
+#[test]
 fn settings_saved_before_the_lead_existed_keep_their_switches() {
     let store = Store::open(":memory:").unwrap();
     store

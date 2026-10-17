@@ -1,5 +1,5 @@
 use anyhow::{bail, Context, Result};
-use chrono::Local;
+use chrono::{Local, TimeZone};
 use raring_core::{garmin, Raring, Tokens};
 use serde_json::Value;
 use std::{
@@ -191,7 +191,7 @@ async fn main() -> Result<()> {
     if let Some(parent) = db.parent() {
         fs::create_dir_all(parent)?;
     }
-    let core = Raring::open(db)?;
+    let core = Raring::open(&db)?;
     match args.first().map(String::as_str){
         Some("login")=>{
             let tokens=if args.get(1).is_some_and(|s|s=="--import") {Tokens::import_python(&fs::read_to_string(args.get(2).context("login --import FILE")?)?)?}
@@ -202,8 +202,15 @@ async fn main() -> Result<()> {
         Some("sync")=>{let tokens=read_tokens()?;let budget=args.windows(2).find(|v|v[0]=="--budget").map(|v|v[1].parse::<usize>()).transpose()?.unwrap_or(60);
             let result=core.sync(tokens,now,budget).await?;save_tokens(&result.tokens)?;show(&result.report)?;},
         Some("status")=>show(&core.status())?,
-        Some("show")=>{let current=core.current_date(now);let date=args.windows(2).find(|v|v[0]=="--date").map(|v|v[1].as_str()).unwrap_or(&current);
-            match args.get(1).map(String::as_str){Some("today")=>show(&core.today(date))?,Some("sleep")=>show(&core.sleep(date))?,Some("training")=>show(&core.training(date))?,Some("health")=>show(&core.health(date))?,Some("checkin")=>show(&core.checkin(date))?,Some("workout")=>show(&core.workout(args.get(2).context("show workout ID")?))?,_=>bail!("show today|sleep|training|health|checkin|workout ID")}},
+        // Synthetic QA data for a scratch RARING_HOME; never mixed into a signed-in account's history.
+        Some("demo")=>{if core.status().signed_in{bail!("demo needs an empty RARING_HOME, not a signed-in one")}
+            let day=match args.windows(2).find(|v|v[0]=="--date"){Some(v)=>chrono::NaiveDate::parse_from_str(&v[1],"%Y-%m-%d").context("--date YYYY-MM-DD")?,None=>now.date_naive()};
+            raring_core::demo::seed(&raring_core::store::Store::open(&db)?,day)?;println!("Demo data through {day}.");},
+        Some("show")=>{
+            // --at YYYY-MM-DDTHH:MM sets the clock, for checking Today's time-of-day phases.
+            let now=match args.windows(2).find(|v|v[0]=="--at"){Some(v)=>Local.from_local_datetime(&chrono::NaiveDateTime::parse_from_str(&v[1],"%Y-%m-%dT%H:%M").context("--at YYYY-MM-DDTHH:MM")?).earliest().context("--at: no such local time")?,None=>now};
+            let current=core.current_date(now);let date=args.windows(2).find(|v|v[0]=="--date").map(|v|v[1].as_str()).unwrap_or(&current);
+            match args.get(1).map(String::as_str){Some("today")=>show(&core.today_at(date,now))?,Some("sleep")=>show(&core.sleep(date))?,Some("training")=>show(&core.training(date))?,Some("health")=>show(&core.health(date))?,Some("checkin")=>show(&core.checkin(date))?,Some("workout")=>show(&core.workout(args.get(2).context("show workout ID")?))?,_=>bail!("show today|sleep|training|health|checkin|workout ID")}},
         Some("notifications")=>show(&core.notifications(now))?,
         Some("capture")=>{let out=Path::new(args.windows(2).find(|a|a[0]=="--out").map(|a|a[1].as_str()).context("capture --out DIR")?).to_path_buf();
             fs::create_dir_all(&out)?;let client=garmin::Client::new(read_tokens()?)?;
@@ -250,7 +257,7 @@ async fn main() -> Result<()> {
             save_tokens(&client.tokens().await)?;
             println!("Scrubbed capture at {}. Review it manually before sharing.",out.display());
         },
-        _=>bail!("usage: raring login [--import FILE] | sync [--budget N] | status | show SCREEN [--date YYYY-MM-DD] | notifications | capture --out DIR")
+        _=>bail!("usage: raring login [--import FILE] | sync [--budget N] | status | demo [--date YYYY-MM-DD] | show SCREEN [--date YYYY-MM-DD] [--at YYYY-MM-DDTHH:MM] | notifications | capture --out DIR")
     }
     Ok(())
 }

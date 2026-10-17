@@ -11,6 +11,8 @@
  import DailyFocus from './lib/components/DailyFocus.svelte';
  import AboutRaring from './lib/components/AboutRaring.svelte';
  import SleepPlanCard from './lib/components/SleepPlanCard.svelte';
+ import NowCard from './lib/components/NowCard.svelte';
+ import {phaseEnded} from './lib/tonight';
  import AlignmentCard from './lib/components/AlignmentCard.svelte';
  import WorkoutSplits from './lib/components/WorkoutSplits.svelte';
  import VitalsMonitor from './lib/components/VitalsMonitor.svelte';
@@ -39,7 +41,13 @@
   const day=new Date().toDateString();
   if(day!==cacheDay){clearViews();cacheDay=day}
  }
- function cached(current:string){checkDay();return views.get(current)??null}
+ function cached(current:string){
+  checkDay();
+  const view=views.get(current)??null;
+  // A Today whose phase has ended would swap its leading card right after showing.
+  if(current==='today' && view && phaseEnded(view as TodayView)){views.delete(current);return null}
+  return view;
+ }
  async function readView(current:string):Promise<PageData>{
   for(;;){
    checkDay();
@@ -116,7 +124,7 @@
     let next=await readView(current);
     if(request!==requestId)return;
     if(fixture==='missing' && current==='today'){
-     next={...(next as TodayView),readiness:null,readinessTrend:[],sleep:null,sleepPlan:null,load:null,chips:[],factors:[],readinessWhy:null,bodyBatteryWhy:null,reconcile:null,call:null,callNote:null,bodyBattery:{now:null,charged:null,drained:null},stress:{average:null,max:null,level:null,qualifier:null,tone:'neutral',timeline:[],active:[],sleep:null,time:[],activeS:null,trend:[]},hrv:{lastNight:null,status:null,tone:'neutral',baseline:null,week:[]},vitals:{readings:[],offCount:0,baselineReady:false},activities:[],fitnessAge:{fitnessAge:null,chronologicalAge:null,trend:[],change12m:null},headline:''};
+     next={...(next as TodayView),readiness:null,readinessTrend:[],sleep:null,sleepPlan:null,load:null,chips:[],factors:[],readinessWhy:null,bodyBatteryWhy:null,reconcile:null,call:null,callNote:null,bodyBattery:{now:null,charged:null,drained:null},stress:{average:null,max:null,level:null,qualifier:null,tone:'neutral',timeline:[],active:[],sleep:null,time:[],activeS:null,trend:[]},hrv:{lastNight:null,status:null,tone:'neutral',baseline:null,week:[]},vitals:{readings:[],offCount:0,baselineReady:false},activities:[],fitnessAge:{fitnessAge:null,chronologicalAge:null,trend:[],change12m:null},headline:'',focus:{...(next as TodayView).focus,phase:'wake',cards:['focus'],effort:false,sleepMissing:true,lastNight:null}};
     }
     if(fixture==='stale' && current==='today')next={...(next as TodayView),watchLastUpload:new Date(Date.now()-7*3600_000).toISOString(),missingMetricReasons:{skinTemp:"Your watch doesn't record skin temperature"}};
     if(fixture==='fresh' && current==='today')next={...(next as TodayView),watchLastUpload:new Date(Date.now()-2*3600_000-120_000).toISOString()};
@@ -168,6 +176,13 @@
   const clockTick=window.setInterval(()=>now=new Date(),60_000);
   return()=>{disposed=true;requestId++;navigation.destroy();delete nativeWindow.__raringBack;window.clearInterval(poll);window.clearInterval(clockTick);document.removeEventListener('visibilitychange',resume);window.removeEventListener('raring:resume',resume);unlisten()};
  });
+ // Read Today again when its phase ends; a touch defers the swap like any refresh.
+ $effect(()=>{
+  const until=todayData?.focus.until,wait=until?Date.parse(until)-Date.now()+1000:NaN;
+  if(!(wait>0 && wait<2**31))return;
+  const timer=window.setTimeout(()=>{if(route==='today')void refresh(true);else views.delete('today')},wait);
+  return()=>window.clearTimeout(timer);
+ });
  function restoreScroll(next:string[]){
   if(route===next[next.length-1] && scroll)scroll.scrollTop=scrollPositions.get(route)??0;
  }
@@ -180,7 +195,21 @@
   finishTouch();
   if(route==='today' && startedAtTop && e.changedTouches[0].clientY-startY>75)await syncNow();
  }
- async function saveSettings(){try{await api.set_settings($state.snapshot(settings))}catch(e){error=String(e)}}
+ async function saveSettings():Promise<boolean>{try{await api.set_settings($state.snapshot(settings));return true}catch(e){error=String(e);return false}}
+ // Today's layout depends on this switch: once it is stored, drop every view read before it and read
+ // the visible Today again, wherever the user has gone meanwhile. A failed save puts the switch back.
+ let savingTodayLayout=$state(false);
+ async function saveTodayLayout(on:boolean){
+  if(savingTodayLayout)return;
+  savingTodayLayout=true;
+  const previous=settings.adaptiveToday;
+  settings={...settings,adaptiveToday:on};
+  try{
+   if(!await saveSettings()){settings={...settings,adaptiveToday:previous};return}
+   clearViews();
+   if(route==='today')void refresh(true);
+  }finally{savingTodayLayout=false}
+ }
  async function openConnect(){try{connectUnavailable=!(await api.open_garmin_connect())}catch{connectUnavailable=true}}
 
  const driverScale=(key:string):[number,number]=>({vo2max:[20,70],restingHr:[35,85],bmi:[15,35],bodyFat:[5,40],vigorousMinutes:[0,200],vigorousDays:[0,7]} as Record<string,[number,number]>)[key]??[0,100];
@@ -207,7 +236,7 @@
   {#if error || status?.lastError}<p class="small" role="alert">{error || status?.lastError}</p>{/if}
  </section>
 {:else if route==='settings'}
- <Header title="Settings" eyebrow="RARING" back={back} backLabel={parentLabel}/><div class="dashboard" {@attach masonry}><Card title="Notifications">{#each (Object.keys(settings) as (keyof api.Settings)[]).filter(key=>typeof settings[key]==='boolean') as key}<label class="setting"><span>{({notifyMorningReadiness:'Morning readiness',notifyWeeklyCheckin:'Weekly check-in',notifyMetricChanges:'VO₂ max or Fitness Age changed',notifyVitals:'Vitals off',notifyTrainingStatus:'Training status changed',notifyBedtime:'Bedtime'} as Record<string,string>)[key]}</span><input type="checkbox" checked={settings[key]===true} onchange={(e)=>{settings={...settings,[key]:e.currentTarget.checked};void saveSettings()}}/></label>{#if key==='notifyBedtime' && settings.notifyBedtime}<label class="setting lead"><span>Wind-down reminder</span><select value={settings.bedtimeLeadMin} onchange={(e)=>{settings={...settings,bedtimeLeadMin:Number(e.currentTarget.value)};void saveSettings()}}>{#each [15,30,45,60,90] as lead}<option value={lead}>{lead} min before</option>{/each}</select></label>{/if}{/each}</Card><Card title="Permission"><button class="secondary" onclick={async()=>{try{await api.request_notification_permission()}catch(e){error=String(e)}}}>Enable notifications</button></Card><Card title="Garmin history"><div class="big n">{status?.historyFrom?`Since ${monthLabel(status.historyFrom)}`:'—'}</div><p class="small">{status?.historyComplete?'All of your Garmin history is on this phone.':'Downloading older history in the background.'}</p></Card><Card title="Account"><button class="signout" onclick={async()=>{if(confirm('Sign out and erase all local Garmin history?')){try{await api.sign_out();clearViews();data=null;localStorage.removeItem('notifications-step-done');onboardStep=0;navigate('onboarding')}catch(e){error=String(e)}}}}>Sign out</button></Card><Card title="How Raring works"><AboutRaring/></Card></div>
+ <Header title="Settings" eyebrow="RARING" back={back} backLabel={parentLabel}/><div class="dashboard" {@attach masonry}><Card title="Notifications">{#each (Object.keys(settings) as (keyof api.Settings)[]).filter(key=>typeof settings[key]==='boolean' && key!=='adaptiveToday') as key}<label class="setting"><span>{({notifyMorningReadiness:'Morning readiness',notifyWeeklyCheckin:'Weekly check-in',notifyMetricChanges:'VO₂ max or Fitness Age changed',notifyVitals:'Vitals off',notifyTrainingStatus:'Training status changed',notifyBedtime:'Bedtime'} as Record<string,string>)[key]}</span><input type="checkbox" checked={settings[key]===true} onchange={(e)=>{settings={...settings,[key]:e.currentTarget.checked};void saveSettings()}}/></label>{#if key==='notifyBedtime' && settings.notifyBedtime}<label class="setting lead"><span>Wind-down reminder</span><select value={settings.bedtimeLeadMin} onchange={(e)=>{settings={...settings,bedtimeLeadMin:Number(e.currentTarget.value)};void saveSettings()}}>{#each [15,30,45,60,90] as lead}<option value={lead}>{lead} min before</option>{/each}</select></label>{/if}{/each}</Card><Card title="Today"><label class="setting"><span>Follow my day<small class="setting-note">Lead with this morning, the day so far or tonight's sleep. Turn off for shift work or an irregular schedule.</small></span><input type="checkbox" checked={settings.adaptiveToday} disabled={savingTodayLayout} onchange={(e)=>void saveTodayLayout(e.currentTarget.checked)}/></label></Card><Card title="Permission"><button class="secondary" onclick={async()=>{try{await api.request_notification_permission()}catch(e){error=String(e)}}}>Enable notifications</button></Card><Card title="Garmin history"><div class="big n">{status?.historyFrom?`Since ${monthLabel(status.historyFrom)}`:'—'}</div><p class="small">{status?.historyComplete?'All of your Garmin history is on this phone.':'Downloading older history in the background.'}</p></Card><Card title="Account"><button class="signout" onclick={async()=>{if(confirm('Sign out and erase all local Garmin history?')){try{await api.sign_out();clearViews();data=null;localStorage.removeItem('notifications-step-done');onboardStep=0;navigate('onboarding')}catch(e){error=String(e)}}}}>Sign out</button></Card><Card title="How Raring works"><AboutRaring/></Card></div>
 {:else if loading && !hasRendered}<div class="empty"><BrandMark/><h2>{status?.lastSync?'Loading your day…':'Syncing your Garmin data…'}</h2></div>
 {:else if !data && hasRendered}<Header title={route[0].toUpperCase()+route.slice(1)} eyebrow="RARING"/><p class="small">{error || (loading?'Preparing this view…':'No data for this view yet.')}</p>
 {:else if !data}<div class="empty"><BrandMark/><h2>Syncing your Garmin data…</h2><p>{error && !error.includes('not_ready')?error:'Your day will appear here soon.'}</p><button class="secondary" disabled={syncBusy} onclick={syncNow}>{syncBusy?'Syncing…':'Sync now'}</button>{#if syncError}<p>{syncError}</p>{/if}</div>
@@ -215,15 +244,19 @@
  <div class="page-hero today-hero"><Header title="Today" eyebrow={dateLabel(todayData.date)} onSettings={()=>navigate('settings')}/>
  <div class="sync-indicator"><span class="small" aria-live="polite">{#if todayData.watchLastUpload}{watchLabel(todayData.watchLastUpload,now)}{:else}Watch upload time unavailable{/if}{#if syncBusy} · Refreshing…{:else if syncError || status?.lastError} · Raring sync delayed · {syncError || status?.lastError}{/if}</span><button class="sync-button" disabled={syncBusy} onclick={syncNow}>Refresh</button></div>
  <section class="dials"><button class="dial-button" onclick={()=>navigate('sleep')}>{#if todayData.sleep}<Gauge size={100} value={todayData.sleep.value} max={todayData.sleep.max} color={toneColor(todayData.sleep.tone)} caption="Sleep"/>{:else}<Gauge size={100} value={null} caption="Sleep"/>{/if}</button><button class="dial-button large" onclick={()=>navigate('readiness')}>{#if todayData.readiness}<Gauge size={156} stroke={13} value={todayData.readiness.value} max={todayData.readiness.max} color={toneColor(todayData.readiness.tone)} caption="Readiness" label={todayData.readiness.label}/>{:else}<Gauge size={156} stroke={13} value={null} caption="Readiness"/>{/if}</button><button class="dial-button" onclick={()=>navigate('training')}>{#if todayData.load}<Gauge size={100} value={todayData.load.value} max={todayData.load.max} color={toneColor(todayData.load.tone)} caption="Load" band={todayData.load.band} marker/>{:else}<Gauge size={100} value={null} caption="Load"/>{/if}</button></section>
- <div class="headline"><h2>{todayData.headline||'Your day is taking shape'}</h2><div class="chips">{#each todayData.chips as chip}<Chip {chip} label={chip.icon==='moon'?'View sleep':chip.icon==='hrv'?'View HRV':'View training'} onclick={()=>navigate(chip.icon==='moon'?'sleep':chip.icon==='hrv'?'metric/hrv':'training')}/>{/each}</div>{#if todayData.reconcile}<Reconcile reconcile={todayData.reconcile}/>{/if}</div></div><div class="dashboard" {@attach masonry}>
+ <div class="headline"><h2>{todayData.headline||'Your day is taking shape'}</h2><div class="chips">{#each todayData.chips as chip}<Chip {chip} label={chip.icon==='moon'?'View sleep':chip.icon==='hrv'?'View HRV':'View training'} onclick={()=>navigate(chip.icon==='moon'?'sleep':chip.icon==='hrv'?'metric/hrv':'training')}/>{/each}</div>{#if todayData.reconcile}<Reconcile reconcile={todayData.reconcile}/>{/if}{#if todayData.focus.note}<p class="phase-note"><Icon name="clock" size={14}/>{todayData.focus.note}</p>{/if}</div></div><div class="dashboard" {@attach masonry}>
  {#if watchNeedsSync(todayData,now)}<Card title="Watch upload" extra="watch-notice"><p>Open Garmin Connect to sync your watch</p>{#if todayData.watchSleepUploadStale}<p class="small">Last night's sleep hasn't uploaded yet.</p>{/if}{#if connectUnavailable}<p class="small" role="status">Open Garmin Connect on your phone, then sync your watch there.</p>{:else}<button class="watch-open" onclick={openConnect}>Open Garmin Connect <Icon name="arrow-right" size={16}/></button>{/if}</Card>{/if}
  {#if Object.keys(todayData.missingMetricReasons).length}<Card title="About missing readings" extra="watch-notice"><div class="missing-reasons">{#each Object.values(todayData.missingMetricReasons) as reason}<p>{reason}</p>{/each}</div></Card>{/if}
- {#if todayData.call || todayData.factors.length}<DailyFocus today={todayData} open={()=>navigate('readiness')}/>{/if}
- {#if todayData.sleepPlan}<SleepPlanCard plan={todayData.sleepPlan} open={()=>navigate('sleep')}/>{/if}
+ {#each todayData.focus.cards as card,i (card)}
+  {#if card==='focus' && (todayData.call || todayData.factors.length || todayData.focus.phase==='wake')}<DailyFocus today={todayData} {now} lead={i===0} open={()=>navigate('readiness')}/>
+  {:else if card==='now'}<NowCard today={todayData} lead={i===0} open={navigate}/>
+  {:else if card==='sleepPlan' && todayData.sleepPlan}<SleepPlanCard plan={todayData.sleepPlan} {now} lead={i===0} mode={todayData.focus.planOpen?(({evening:'evening',windDown:'windDown',lateNight:'lateNight'} as const)[todayData.focus.phase as 'evening']??'full'):'line'} open={()=>navigate('sleep')}/>
+  {:else if card==='vitals' && todayData.vitals.readings.length}<VitalsMonitor vitals={todayData.vitals} compact open={(kind)=>navigate('metric/'+kind)}/>{/if}
+ {/each}
 
  {#if todayData.bodyBattery.now!=null || todayData.hrv.lastNight!=null}<div class="row">{#if todayData.bodyBattery.now!=null}<Card title="Body Battery" onclick={()=>navigate('metric/bodyBattery')}><div class="bb"><div class="battery"><i style:height={Math.max(0,Math.min(100,todayData.bodyBattery.now))+'%'} style:background={batteryColor(todayData.bodyBattery.now)}></i></div><div><div class="big n" style:color={batteryColor(todayData.bodyBattery.now)}>{num(todayData.bodyBattery.now)}</div>{#if todayData.bodyBattery.charged!=null}<div class="small"><b>+{num(todayData.bodyBattery.charged)}</b> charged today</div>{/if}</div></div></Card>{/if}{#if todayData.hrv.lastNight!=null}<Card title="HRV" onclick={()=>navigate('metric/hrv')}>{#snippet aside()}{#if todayData.hrv.status}<span class="pill" style:color={toneColor(todayData.hrv.tone)}>{todayData.hrv.status}</span>{/if}{/snippet}<div class="big n">{num(todayData.hrv.lastNight)}<span class="unit">ms</span></div><div class="spark-space"><Sparkline values={todayData.hrv.week} band={todayData.hrv.baseline} w={138} h={34} color={toneColor(todayData.hrv.tone)}/></div></Card>{/if}</div>{/if}
  {#if todayData.stress.average!=null || todayData.stress.timeline.length}{@const stress=todayData.stress}<Card title="Stress" onclick={()=>navigate('metric/stress')}>{#snippet aside()}{#if stress.qualifier}<span class="pill" style:color={toneColor(stress.tone)}>{stress.qualifier}</span>{/if}{/snippet}<div class="stress-summary"><div><div class="big n" style:color={stress.level?stressColors[stress.level]:undefined}>{num(stress.average)}</div><div class="small">{stress.level?stressNames[stress.level]+' · ':''}average</div></div>{#if stress.timeline.length}<StressTimeline {stress} compact/>{/if}</div></Card>{/if}
- {#if todayData.vitals.readings.length}<VitalsMonitor vitals={todayData.vitals} compact open={(kind)=>navigate('metric/'+kind)}/>{/if}
+ {#if todayData.vitals.readings.length && !todayData.focus.cards.includes('vitals')}<VitalsMonitor vitals={todayData.vitals} compact open={(kind)=>navigate('metric/'+kind)}/>{/if}
  {#if todayData.activities.length}<Card title="Activities">{#each todayData.activities as a}<ActivityRow activity={a} open={()=>navigate('workout/'+a.id)}/>{#if a.aerobicTe!=null || a.benefit}<div class="tags">{#if a.aerobicTe!=null}<span class="pill">Aerobic {a.aerobicTe} · {a.aerobicLabel}</span>{/if}{#if a.benefit}<span class="pill">{a.benefit}</span>{/if}</div>{/if}{/each}</Card>{/if}
  {#if todayData.fitnessAge.fitnessAge!=null}<Card title="Fitness Age" onclick={()=>navigate('health')}><div class="age-small"><div><div class="big n" style:color={fitnessAgeColor(todayData.fitnessAge.fitnessAge,todayData.fitnessAge.chronologicalAge)}>{num(todayData.fitnessAge.fitnessAge)}</div>{#if todayData.fitnessAge.chronologicalAge!=null}<span class="pill" style:color={fitnessAgeColor(todayData.fitnessAge.fitnessAge!,todayData.fitnessAge.chronologicalAge)}>{num(todayData.fitnessAge.chronologicalAge-todayData.fitnessAge.fitnessAge)} yrs younger</span>{/if}</div><Sparkline values={todayData.fitnessAge.trend} w={160} h={64} color={colors.ink}/></div></Card>{/if}
  {#if todayData.checkinReady}<Card title="Weekly check-in" onclick={()=>navigate('checkin')}><div class="checkin-tease"><span>See your week at a glance</span><b><Icon name="arrow-right" size={18}/></b></div></Card>{/if}

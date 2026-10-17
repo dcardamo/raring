@@ -891,5 +891,23 @@
     ],
     "change12m": -3
   },
-  "checkinReady": true
+  "checkinReady": true,
+  "focus": {
+    "phase": "wake",
+    "cards": [
+      "focus",
+      "sleepPlan"
+    ],
+    "until": "2025-10-16T09:39:00",
+    "effort": true,
+    "planOpen": false,
+    "sleepMissing": false,
+    "lastNight": {
+      "asleepMin": 468,
+      "needMin": 450,
+      "woke": "06:39"
+    },
+    "note": null,
+    "recoveryHours": 18
+  }
 }
