@@ -803,10 +803,7 @@ impl ActivityPayload {
 fn activity_payload(store: &Store, id: &str) -> Option<ActivityPayload> {
     let detail = store.get("activity", id).unwrap_or(Value::Null);
     let listed = store
-        .history("activities", "999999", 100)
-        .into_iter()
-        .flat_map(|(_, v)| v.as_array().cloned().unwrap_or_default())
-        .find(|a| a["activityId"].to_string().trim_matches('"') == id)
+        .listed_activity(id)
         .or_else(|| store.get("listed", id))
         .unwrap_or(Value::Null);
     (!detail.is_null() || !listed.is_null()).then_some(ActivityPayload { detail, listed })
@@ -1907,6 +1904,15 @@ pub fn training(store: &Store, date: &str) -> TrainingView {
     let load = acute(&v);
     let status = status(&v);
     let workouts = activities(store, &date_sub(date, 30));
+    let strength = crate::strength::week(
+        store,
+        date,
+        &workouts
+            .iter()
+            .filter(|a| a.icon == Icon::Strength)
+            .map(|a| a.start_local.clone())
+            .collect::<Vec<_>>(),
+    );
     let week = (0..7)
         .rev()
         .filter_map(|i| {
@@ -2070,6 +2076,7 @@ pub fn training(store: &Store, date: &str) -> TrainingView {
                 .or_else(|| num(&v, &[&["runningTolerance"], &["tolerance"]]))
         }),
         workouts,
+        strength,
     };
     view.status_why = explain::training_why(explain::TrainingInputs {
         training: &v,
@@ -2245,7 +2252,19 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
                     .collect()
             })
             .unwrap_or_default(),
+        strength: crate::strength::session(store, id),
     })
+}
+/// Strength history; none without any strength activity with sets.
+pub fn strength(store: &Store, date: &str) -> Option<StrengthView> {
+    let since = crate::strength::history_start(store, date)?;
+    let before = NaiveDate::parse_from_str(date, "%Y-%m-%d").ok()?.succ_opt()?;
+    let workouts = store
+        .strength_activity_ids(&since.to_string(), &before.to_string())
+        .iter()
+        .filter_map(|id| activity(store, id))
+        .collect();
+    crate::strength::history(store, date, workouts)
 }
 pub fn health(store: &Store, date: &str) -> HealthView {
     let v = store.get("fitness_age", date).unwrap_or(Value::Null);

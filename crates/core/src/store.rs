@@ -103,6 +103,97 @@ impl Store {
             .map(|it| it.flatten().collect())
             .unwrap_or_default()
     }
+    /// All strength activity IDs in [since, before), newest first. Filter by
+    /// sport before returning IDs; busy weeks in other sports must not hide
+    /// strength history. Read all three cached activity shapes, including
+    /// recent list pages whose detail has not downloaded yet.
+    pub fn strength_activity_ids(&self, since: &str, before: &str) -> Vec<String> {
+        let db = self.db.lock().unwrap();
+        let Ok(mut stmt) = db.prepare(
+            "WITH page_items AS (
+                SELECT CAST(json_extract(item.value, '$.activityId') AS TEXT) AS id,
+                       json_extract(item.value, '$.activityType.typeKey') AS kind, r.key AS page
+                FROM raw r, json_each(CASE WHEN r.endpoint='activities' AND json_type(r.json)='array' THEN r.json ELSE '[]' END) item
+            ), pages AS (
+                SELECT id, kind, row_number() OVER (PARTITION BY id ORDER BY page DESC) AS rank
+                FROM page_items
+            )
+            SELECT DISTINCT a.id FROM activities a
+            LEFT JOIN raw d ON d.endpoint='activity' AND d.key=a.id
+            LEFT JOIN raw l ON l.endpoint='listed' AND l.key=a.id
+            LEFT JOIN pages p ON p.id=a.id AND p.rank=1
+            WHERE a.start_local>=?1 AND a.start_local<?2
+              AND lower(coalesce(json_extract(d.json, '$.activityTypeDTO.typeKey'),
+                                 json_extract(d.json, '$.activityType.typeKey'),
+                                 p.kind, json_extract(l.json, '$.activityType.typeKey')))='strength_training'
+            ORDER BY replace(a.start_local, ' ', 'T') DESC, a.id DESC",
+        ) else {
+            return vec![];
+        };
+        stmt.query_map(params![since, before], |r| r.get(0))
+            .map(|rows| rows.flatten().collect())
+            .unwrap_or_default()
+    }
+    /// A recent activity list item, without a page-count cap. Detail and
+    /// historical `listed` rows are handled by the caller.
+    pub fn listed_activity(&self, id: &str) -> Option<Value> {
+        let db = self.db.lock().unwrap();
+        db.query_row(
+            "SELECT item.value FROM raw r,
+             json_each(CASE WHEN r.endpoint='activities' AND json_type(r.json)='array' THEN r.json ELSE '[]' END) item
+             WHERE CAST(json_extract(item.value, '$.activityId') AS TEXT)=?1
+             ORDER BY r.key DESC LIMIT 1",
+            [id],
+            |r| r.get::<_, String>(0),
+        )
+        .optional()
+        .ok()
+        .flatten()
+        .and_then(|s| serde_json::from_str(&s).ok())
+    }
+    /// Stored exercise sets with each activity's local start, oldest first.
+    pub fn exercise_sets(&self) -> Vec<(String, String, Value)> {
+        let db = self.db.lock().unwrap();
+        let Ok(mut stmt) = db.prepare(
+            "SELECT a.id, a.start_local, r.json FROM raw r JOIN activities a ON a.id=r.key WHERE r.endpoint='exercise_sets' AND r.json!='null' ORDER BY replace(a.start_local, ' ', 'T')",
+        ) else {
+            return vec![];
+        };
+        stmt.query_map([], |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?))
+        })
+        .map(|rows| {
+            rows.flatten()
+                .filter_map(|(id, start, s)| serde_json::from_str(&s).ok().map(|v| (id, start, v)))
+                .collect()
+        })
+        .unwrap_or_default()
+    }
+    /// Older listed strength activities without stored sets, newest first.
+    pub fn strength_without_sets(&self, limit: usize) -> Vec<String> {
+        let db = self.db.lock().unwrap();
+        let Ok(mut stmt) = db.prepare(
+            "SELECT key FROM raw WHERE endpoint='listed' AND json_extract(json,'$.activityType.typeKey')='strength_training' AND key NOT IN (SELECT key FROM raw WHERE endpoint='exercise_sets') ORDER BY replace(json_extract(json,'$.startTimeLocal'), ' ', 'T') DESC LIMIT ?1",
+        ) else {
+            return vec![];
+        };
+        stmt.query_map([limit as i64], |r| r.get(0))
+            .map(|it| it.flatten().collect())
+            .unwrap_or_default()
+    }
+    pub fn fetched_at(&self, endpoint: &str, key: &str) -> Option<String> {
+        self.db
+            .lock()
+            .unwrap()
+            .query_row(
+                "SELECT fetched_at FROM raw WHERE endpoint=?1 AND key=?2",
+                params![endpoint, key],
+                |r| r.get(0),
+            )
+            .optional()
+            .ok()
+            .flatten()
+    }
     pub fn oldest_activity(&self) -> Option<String> {
         self.db
             .lock()

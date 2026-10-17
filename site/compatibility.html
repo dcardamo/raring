@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Which Garmin watches work with Raring's weekly plan and strength features: tested, expected to work, or unknown. Report your watch on GitHub.">
+  <meta name="description" content="Which Garmin watches work with Raring's strength sets: tested, partly tested, expected to work, or unknown. Report your watch on GitHub.">
   <meta name="theme-color" content="#0b0f1a">
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'">
@@ -20,37 +20,34 @@
   <main id="main" class="wrap compat-page">
     <p class="eyebrow">Compatibility</p>
     <h1>Will it work with my watch?</h1>
-    <p class="lead">Raring reads your Garmin account, not your watch. The weekly plan works with most watches that sync to Garmin Connect. Strength features depend on what your watch records and downloads.</p>
+    <p class="lead">Raring reads your Garmin account, not your watch. Strength sets depend on what your watch records: start a Strength activity and press lap after each set.</p>
 
     <ul class="tiers" aria-label="What each label means">
       <li><span class="tier tested">Tested</span><p>We’ve used it on this watch.</p></li>
+      <li><span class="tier partial">Partly tested</span><p>Some of it works on this watch. The rest hasn’t been checked yet.</p></li>
       <li><span class="tier expected">Expected to work</span><p>The watch has the Garmin features it needs. Nobody has confirmed it yet.</p></li>
       <li><span class="tier unknown">Unknown</span><p>No reports yet. Yours would help.</p></li>
     </ul>
 
     <section class="section compat-section" aria-labelledby="features-title">
       <h2 id="features-title">What each feature needs</h2>
-      <ul class="needs">
-        <li><h3>Weekly plan</h3><p>Intensity minutes, heart-rate zones and sleep in Garmin Connect.</p></li>
-        <li><h3>Set read-back</h3><p>A Strength activity that records sets, reps and weights.</p></li>
-        <li><h3>Set correction</h3><p>Edits sets on the activity in your Garmin account. Works wherever read-back does.</p></li>
-        <li><h3>Workout push</h3><p>Downloads workouts from Garmin’s calendar. Up to about 100 steps each, rests included.</p></li>
+      <ul class="needs single">
+        <li><h3>Set read-back</h3><p>A Strength activity that records sets, reps and weights. Raring shows them, flags sets that look miscounted and counts sets per muscle.</p></li>
       </ul>
 
       <table class="compat">
         <caption>Watch compatibility by feature</caption>
-        <thead><tr><th scope="col">Watch</th><th scope="col">Weekly plan</th><th scope="col">Set read-back</th><th scope="col">Set correction</th><th scope="col">Workout push</th></tr></thead>
+        <thead><tr><th scope="col">Watch</th><th scope="col">Set read-back</th></tr></thead>
         <tbody>
           <tr><th scope="row">Forerunner 970<small>Our test watch</small></th>
-            <td data-label="Weekly plan"><span class="tier tested">Tested</span></td><td data-label="Set read-back"><span class="tier tested">Tested</span></td><td data-label="Set correction"><span class="tier tested">Tested</span></td><td data-label="Workout push"><span class="tier tested">Tested</span></td></tr>
-          <tr><th scope="row">Watches with Strength workouts<small>Records sets and downloads workouts from the calendar</small></th>
-            <td data-label="Weekly plan"><span class="tier expected">Expected</span></td><td data-label="Set read-back"><span class="tier expected">Expected</span></td><td data-label="Set correction"><span class="tier expected">Expected</span></td><td data-label="Workout push"><span class="tier expected">Expected</span></td></tr>
-          <tr><th scope="row">Watches with a Strength activity only<small>Records sets, but no downloaded workouts</small></th>
-            <td data-label="Weekly plan"><span class="tier expected">Expected</span></td><td data-label="Set read-back"><span class="tier expected">Expected</span></td><td data-label="Set correction"><span class="tier expected">Expected</span></td><td data-label="Workout push"><span class="tier unknown">Unknown</span></td></tr>
+            <td data-label="Set read-back"><span class="tier partial">Partly tested</span><small class="limit">Sets, rests, reps and miscount flags read back. Not yet checked: a session with named exercises and weights recorded on the watch, or one from a structured workout.</small></td></tr>
+          <tr><th scope="row">Watches with a Strength activity<small>Records sets, reps and weights</small></th>
+            <td data-label="Set read-back"><span class="tier expected">Expected</span><small class="limit">May work the same way; nobody has confirmed it.</small></td></tr>
           <tr><th scope="row">Other Garmin watches and trackers<small>Syncs to Garmin Connect</small></th>
-            <td data-label="Weekly plan"><span class="tier expected">Expected</span></td><td data-label="Set read-back"><span class="tier unknown">Unknown</span></td><td data-label="Set correction"><span class="tier unknown">Unknown</span></td><td data-label="Workout push"><span class="tier unknown">Unknown</span></td></tr>
+            <td data-label="Set read-back"><span class="tier unknown">Unknown</span></td></tr>
         </tbody>
       </table>
+      <p class="note compat-note">Without a lap press after each set, a watch records the whole session as one set with no reps or exercise. Activities entered without a watch may have no sets at all.</p>
       <p class="note compat-note">Garmin decides what each watch records, and it can change its service at any time. A watch that works today could stop.</p>
     </section>
 

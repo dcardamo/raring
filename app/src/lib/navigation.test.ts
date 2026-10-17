@@ -4,13 +4,13 @@ import { createNavigation, normalizeRoute, routeTrail, tabs } from './navigation
 describe('routes', () => {
   it('accepts known routes and rejects invalid or malformed fragments', () => {
     expect(tabs).toEqual(['today', 'sleep', 'training', 'health']);
-    for (const route of [...tabs, 'readiness', 'checkin', 'plan', 'plan-setup', 'settings', 'onboarding',
+    for (const route of [...tabs, 'readiness', 'checkin', 'plan', 'plan-setup', 'settings', 'onboarding', 'strength', 'help', 'help/strength-sets',
       'workout/123_abc-2', ...['bodyBattery', 'stress', 'restingHr', 'hrv', 'respiration', 'spo2',
         'skinTemp', 'vo2max', 'endurance', 'hill', 'runningTolerance'].map(id => `metric/${id}`)]) {
       expect(normalizeRoute(`#${route}`)).toBe(route);
     }
     for (const route of ['#metric/unknown', '#workout/', '#workout/a/b', '#%ZZ',
-      '#sleep/other', '#https://bad.example', '#onboarding/next']) {
+      '#sleep/other', '#https://bad.example', '#onboarding/next', '#help/unknown', '#strength/x']) {
       expect(normalizeRoute(route)).toBe('today');
     }
   });
@@ -35,6 +35,16 @@ describe('routes', () => {
     expect(routeTrail('metric/vo2max')).toEqual(['today', 'training', 'metric/vo2max']);
     expect(routeTrail('metric/hrv', ['today', 'sleep'])).toEqual(['today', 'sleep', 'metric/hrv']);
     expect(routeTrail('onboarding', ['today', 'settings'])).toEqual(['onboarding']);
+  });
+
+  it('nests strength under Training and help over its caller', () => {
+    expect(routeTrail('strength', ['today'])).toEqual(['today', 'training', 'strength']);
+    expect(routeTrail('workout/7', ['today', 'training', 'strength'])).toEqual(['today', 'training', 'strength', 'workout/7']);
+    expect(routeTrail('help', ['today', 'training', 'strength'])).toEqual(['today', 'training', 'strength', 'help']);
+    expect(routeTrail('help/strength-sets', ['today', 'training', 'strength', 'help'])).toEqual(['today', 'training', 'strength', 'help', 'help/strength-sets']);
+    expect(routeTrail('help/strength-sets', ['today', 'training', 'workout/7'])).toEqual(['today', 'training', 'workout/7', 'help/strength-sets']);
+    expect(routeTrail('help', ['today', 'help', 'help/strength-sets'])).toEqual(['today', 'help']);
+    expect(routeTrail('help')).toEqual(['today', 'help']);
   });
 });
 

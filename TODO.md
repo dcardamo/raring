@@ -72,22 +72,31 @@ From item 3, in priority order.
   124) but "Mon 5 Oct" in desktop browsers; build it by hand as `plan.ts`
   does for week ranges.
 
-### 8. Read-only strength view
+### 8a. Strength follow-ups
 
-- First read real strength activities from the maintainer's Forerunner 970
-  and check the quality of `/activity-service/activity/{id}/exerciseSets`.
-  Do not call the endpoint verified until a real-account read succeeds.
-- Show recorded sets, reps and weights per activity, last time, PRs, weekly
-  sets per muscle, a body map and miscount flags. See `design/mockup/` screens
-  `strength-workout` and `strength-history`.
-- Decisions in `design/mockup/NOTES.md`: count a set once for each primary
-  muscle in Garmin's catalog (use a small mapping if absent); flag zero
-  reps, reps at least 1.8 times the exercise's other-set median, or an
-  unnamed exercise, without auto-correction. Body map art gets an
-  illustration pass when strength ships; ship its offline help pages then.
-  Publish compatibility only for tested models when features ship, after
-  creating a `compatibility` issue label. Add Raring's set-count and flag
-  math to the spec's Rules section when this ships.
+- **Explicit detail refresh**: add a budgeted way to refresh older strength
+  sets through the existing worker and serialized token access. Automatic
+  rechecks stop 48 hours after a workout starts; Refresh and reopening an
+  older workout do not retrieve later Connect edits. Coordinate any shared
+  on-demand refresh with the integration lane rather than adding another path.
+- **Confirm a full Forerunner 970 session.** Read-back is only partly
+  verified on the watch: no watch-recorded session with named, weighted sets
+  (or one run from a structured workout) has been read yet. Record one with
+  a lap press after each set and weights entered, compare Raring's workout
+  screen with Connect, then decide whether the compatibility page can move
+  from partial to Tested.
+- **Strength intro and figure choice** (`intro-1` to `intro-4` in
+  `design/mockup/`): the four first-run steps and the female/male figure
+  override. The figure follows the Garmin profile until then.
+- **Exercise display names**: Raring title-cases Garmin's keys
+  ("One Arm Dumbbell Row"). Look for Garmin's own localized names before
+  adding a table.
+- **Bodyweight exercises**: bests and records need a weight, so bodyweight
+  sets (Garmin's weight 0 or null) get none. Consider most reps instead.
+- The weekly plan's strength target (item 7) counts Garmin strength
+  activities, including ones timed without sets. `StrengthWeek.strengthActivities`
+  is distinct from `sessionsWithSets`; missing lap presses must not reduce
+  credit toward the weekly activity goal.
 
 ### 9. Persistent status notification (opt-in)
 
@@ -251,6 +260,54 @@ faces, screens, sensors and audio prompts stay in Connect.
 
 ## Done
 
+- **8. Read-only strength view** (commit "Show strength sets, history and the
+  body map"). Strength activities show Garmin's sets per exercise with
+  last time, records and miscount flags; Training has a this-week card;
+  Strength history has phone, unfolded and desktop layouts with the body map,
+  bests, sessions, sets per muscle and a 12-week heatmap. Raring's own body
+  map figures replace the mockup placeholders. Offline help pages and a help
+  sheet ship with it. `site/compatibility.html` covers set read-back only,
+  with partial evidence on the Forerunner 970, and is still unlinked:
+  publish it and create the `compatibility` issue label at merge. Verified
+  read-only on a real account (no 429 or auth failures):
+  - `/activity-service/activity/{id}/exerciseSets` returns
+    `{activityId, exerciseSets}`; `exerciseSets` is `null` for activities
+    without sets (such as ones from non-Garmin sources). Each set has
+    `setType` `ACTIVE` or `REST`, `startTime` (UTC, no offset), `duration` in
+    seconds, `repetitionCount` (may be null), `weight` in grams (0 or null
+    when none), `messageIndex`, `wktStepIndex` (null without a structured
+    workout) and about 20 velocity/power fields, null on the Forerunner 970.
+    `exercises` ranks Garmin's guesses by `probability`, each
+    `{category, name}`; `name` may be null with a known category, and an
+    unrecognized set has category `UNKNOWN`.
+  - Testing limits: the Forerunner 970 reads covered sessions timed without
+    lap presses (one `ACTIVE` set, no reps, `UNKNOWN`), 0-rep unrecognized
+    sets, `REST` sets and a category-only guess without a weight. Complete
+    named, weighted sets were only seen from a source other than the watch.
+    Doubled sets were not seen in real data; they are covered by synthetic
+    tests.
+  - The activity list rejects `activityType=strength_training` with HTTP 400;
+    filter on `activityType.typeKey` locally.
+  - Garmin's exercise catalog
+    (`connect.garmin.com/web-data/exercises/Exercises.json`, public, no
+    token) lists categories and exercises with primary and secondary
+    muscles; some categories carry muscles of their own. Raring keeps only
+    primary muscles.
+  - `/userprofile-service/userprofile/user-settings` gives
+    `measurementSystem`, `timeFormat`, `firstDayOfWeek.dayName` and `gender`;
+    only those safe preferences are stored, never the full `userData`.
+  Scrubbed, synthetic-valued fixtures are `crates/core/tests/fixtures/
+  exercise_sets*.json` and `exercise_catalog.json`.
+  Review fixes separate timer-only workouts from sessions-with-sets aggregates,
+  preserve partial/missing rep totals, and expose complete history lists.
+  Strength activity queries share the chart's first-week boundary and filter
+  by sport without the general list's cap. Synthetic history links resolve
+  ID-matched workout details; browser tests check the rendered date and sets.
+  Screenshot investigation on synthetic data: viewport/document/body/main
+  widths all match at 390, 720 and 1280 px. The old 535 px phone image came
+  from capture code disabling shell clipping, exposing the decorative glow
+  to x=535. Plain viewport captures in `app/src/scripts/strength-screens.mjs`
+  preserve normal clipping and write measurements to `widths.json`.
 - **7. Weekly plan, intensity minutes and goals** (commit "Add the weekly plan
   and intensity minutes"). A weekly plan on Today, its own screen and
   setup (presets, four targets, rest days, pause, last week on these
@@ -325,7 +382,6 @@ faces, screens, sensors and audio prompts stay in Connect.
   night through an afternoon wake) instead of a noon cutoff; wake times are
   read on a clock circle (see Usual wake and Displayed day under Rules).
   Not yet checked on a phone (see follow-ups).
-
 - **6. Explain the numbers** (commit "Explain readiness, Body Battery and
   training status"). Why sheets on the Readiness, Body Battery and Training
   details, and a one-line reconciliation on Today when readiness and another

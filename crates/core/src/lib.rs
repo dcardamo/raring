@@ -7,6 +7,7 @@ pub mod plan;
 pub mod rules;
 pub mod screens;
 pub mod store;
+pub mod strength;
 pub mod sync;
 pub mod view;
 
@@ -99,6 +100,9 @@ impl Raring {
     }
     pub fn workout(&self, id: &str) -> Option<view::WorkoutView> {
         screens::workout(&self.store, id)
+    }
+    pub fn strength(&self, date: &str) -> Option<view::StrengthView> {
+        screens::strength(&self.store, date)
     }
     pub fn health(&self, date: &str) -> view::HealthView {
         screens::health(&self.store, date)

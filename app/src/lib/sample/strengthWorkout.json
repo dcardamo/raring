@@ -1,0 +1,1128 @@
+{
+  "summary": {
+    "id": "9000000000002",
+    "icon": "strength",
+    "name": "Lower A",
+    "startLocal": "2025-10-15T17:12:00",
+    "durationS": 2882,
+    "distanceKm": null,
+    "load": 74,
+    "zoneSeconds": [
+      840,
+      1320,
+      540,
+      180,
+      2
+    ],
+    "aerobicTe": null,
+    "aerobicLabel": null,
+    "anaerobicTe": null,
+    "anaerobicLabel": null,
+    "benefit": null
+  },
+  "recoveryHours": 14,
+  "stats": [
+    {
+      "key": "duration",
+      "label": "Time",
+      "value": 2882,
+      "unit": "s"
+    },
+    {
+      "key": "avgHr",
+      "label": "Avg HR",
+      "value": 118,
+      "unit": "bpm"
+    },
+    {
+      "key": "maxHr",
+      "label": "Max HR",
+      "value": 151,
+      "unit": "bpm"
+    },
+    {
+      "key": "calories",
+      "label": "Calories",
+      "value": 312,
+      "unit": "kcal"
+    }
+  ],
+  "route": [],
+  "heartRate": [
+    {
+      "tS": 0,
+      "bpm": 104
+    },
+    {
+      "tS": 15,
+      "bpm": 111
+    },
+    {
+      "tS": 30,
+      "bpm": 111
+    },
+    {
+      "tS": 45,
+      "bpm": 112
+    },
+    {
+      "tS": 60,
+      "bpm": 120
+    },
+    {
+      "tS": 75,
+      "bpm": 124
+    },
+    {
+      "tS": 90,
+      "bpm": 123
+    },
+    {
+      "tS": 105,
+      "bpm": 126
+    },
+    {
+      "tS": 120,
+      "bpm": 133
+    },
+    {
+      "tS": 135,
+      "bpm": 134
+    },
+    {
+      "tS": 150,
+      "bpm": 132
+    },
+    {
+      "tS": 165,
+      "bpm": 136
+    },
+    {
+      "tS": 180,
+      "bpm": 140
+    },
+    {
+      "tS": 195,
+      "bpm": 137
+    },
+    {
+      "tS": 210,
+      "bpm": 135
+    },
+    {
+      "tS": 225,
+      "bpm": 139
+    },
+    {
+      "tS": 240,
+      "bpm": 140
+    },
+    {
+      "tS": 255,
+      "bpm": 135
+    },
+    {
+      "tS": 270,
+      "bpm": 133
+    },
+    {
+      "tS": 285,
+      "bpm": 135
+    },
+    {
+      "tS": 300,
+      "bpm": 133
+    },
+    {
+      "tS": 315,
+      "bpm": 126
+    },
+    {
+      "tS": 330,
+      "bpm": 125
+    },
+    {
+      "tS": 345,
+      "bpm": 126
+    },
+    {
+      "tS": 360,
+      "bpm": 120
+    },
+    {
+      "tS": 375,
+      "bpm": 113
+    },
+    {
+      "tS": 390,
+      "bpm": 113
+    },
+    {
+      "tS": 405,
+      "bpm": 112
+    },
+    {
+      "tS": 420,
+      "bpm": 104
+    },
+    {
+      "tS": 435,
+      "bpm": 104
+    },
+    {
+      "tS": 450,
+      "bpm": 112
+    },
+    {
+      "tS": 465,
+      "bpm": 116
+    },
+    {
+      "tS": 480,
+      "bpm": 115
+    },
+    {
+      "tS": 495,
+      "bpm": 120
+    },
+    {
+      "tS": 510,
+      "bpm": 127
+    },
+    {
+      "tS": 525,
+      "bpm": 128
+    },
+    {
+      "tS": 540,
+      "bpm": 127
+    },
+    {
+      "tS": 555,
+      "bpm": 132
+    },
+    {
+      "tS": 570,
+      "bpm": 137
+    },
+    {
+      "tS": 585,
+      "bpm": 135
+    },
+    {
+      "tS": 600,
+      "bpm": 134
+    },
+    {
+      "tS": 615,
+      "bpm": 139
+    },
+    {
+      "tS": 630,
+      "bpm": 140
+    },
+    {
+      "tS": 645,
+      "bpm": 136
+    },
+    {
+      "tS": 660,
+      "bpm": 136
+    },
+    {
+      "tS": 675,
+      "bpm": 139
+    },
+    {
+      "tS": 690,
+      "bpm": 136
+    },
+    {
+      "tS": 705,
+      "bpm": 131
+    },
+    {
+      "tS": 720,
+      "bpm": 131
+    },
+    {
+      "tS": 735,
+      "bpm": 132
+    },
+    {
+      "tS": 750,
+      "bpm": 126
+    },
+    {
+      "tS": 765,
+      "bpm": 121
+    },
+    {
+      "tS": 780,
+      "bpm": 122
+    },
+    {
+      "tS": 795,
+      "bpm": 120
+    },
+    {
+      "tS": 810,
+      "bpm": 112
+    },
+    {
+      "tS": 825,
+      "bpm": 108
+    },
+    {
+      "tS": 840,
+      "bpm": 109
+    },
+    {
+      "tS": 855,
+      "bpm": 107
+    },
+    {
+      "tS": 870,
+      "bpm": 107
+    },
+    {
+      "tS": 885,
+      "bpm": 112
+    },
+    {
+      "tS": 900,
+      "bpm": 120
+    },
+    {
+      "tS": 915,
+      "bpm": 120
+    },
+    {
+      "tS": 930,
+      "bpm": 120
+    },
+    {
+      "tS": 945,
+      "bpm": 127
+    },
+    {
+      "tS": 960,
+      "bpm": 132
+    },
+    {
+      "tS": 975,
+      "bpm": 130
+    },
+    {
+      "tS": 990,
+      "bpm": 131
+    },
+    {
+      "tS": 1005,
+      "bpm": 137
+    },
+    {
+      "tS": 1020,
+      "bpm": 138
+    },
+    {
+      "tS": 1035,
+      "bpm": 135
+    },
+    {
+      "tS": 1050,
+      "bpm": 137
+    },
+    {
+      "tS": 1065,
+      "bpm": 141
+    },
+    {
+      "tS": 1080,
+      "bpm": 138
+    },
+    {
+      "tS": 1095,
+      "bpm": 134
+    },
+    {
+      "tS": 1110,
+      "bpm": 136
+    },
+    {
+      "tS": 1125,
+      "bpm": 137
+    },
+    {
+      "tS": 1140,
+      "bpm": 131
+    },
+    {
+      "tS": 1155,
+      "bpm": 127
+    },
+    {
+      "tS": 1170,
+      "bpm": 129
+    },
+    {
+      "tS": 1185,
+      "bpm": 127
+    },
+    {
+      "tS": 1200,
+      "bpm": 119
+    },
+    {
+      "tS": 1215,
+      "bpm": 116
+    },
+    {
+      "tS": 1230,
+      "bpm": 117
+    },
+    {
+      "tS": 1245,
+      "bpm": 112
+    },
+    {
+      "tS": 1260,
+      "bpm": 104
+    },
+    {
+      "tS": 1275,
+      "bpm": 105
+    },
+    {
+      "tS": 1290,
+      "bpm": 111
+    },
+    {
+      "tS": 1305,
+      "bpm": 111
+    },
+    {
+      "tS": 1320,
+      "bpm": 113
+    },
+    {
+      "tS": 1335,
+      "bpm": 121
+    },
+    {
+      "tS": 1350,
+      "bpm": 125
+    },
+    {
+      "tS": 1365,
+      "bpm": 123
+    },
+    {
+      "tS": 1380,
+      "bpm": 126
+    },
+    {
+      "tS": 1395,
+      "bpm": 133
+    },
+    {
+      "tS": 1410,
+      "bpm": 134
+    },
+    {
+      "tS": 1425,
+      "bpm": 132
+    },
+    {
+      "tS": 1440,
+      "bpm": 136
+    },
+    {
+      "tS": 1455,
+      "bpm": 140
+    },
+    {
+      "tS": 1470,
+      "bpm": 138
+    },
+    {
+      "tS": 1485,
+      "bpm": 135
+    },
+    {
+      "tS": 1500,
+      "bpm": 139
+    },
+    {
+      "tS": 1515,
+      "bpm": 140
+    },
+    {
+      "tS": 1530,
+      "bpm": 134
+    },
+    {
+      "tS": 1545,
+      "bpm": 132
+    },
+    {
+      "tS": 1560,
+      "bpm": 135
+    },
+    {
+      "tS": 1575,
+      "bpm": 132
+    },
+    {
+      "tS": 1590,
+      "bpm": 125
+    },
+    {
+      "tS": 1605,
+      "bpm": 124
+    },
+    {
+      "tS": 1620,
+      "bpm": 125
+    },
+    {
+      "tS": 1635,
+      "bpm": 119
+    },
+    {
+      "tS": 1650,
+      "bpm": 112
+    },
+    {
+      "tS": 1665,
+      "bpm": 112
+    },
+    {
+      "tS": 1680,
+      "bpm": 111
+    },
+    {
+      "tS": 1695,
+      "bpm": 103
+    },
+    {
+      "tS": 1710,
+      "bpm": 105
+    },
+    {
+      "tS": 1725,
+      "bpm": 113
+    },
+    {
+      "tS": 1740,
+      "bpm": 117
+    },
+    {
+      "tS": 1755,
+      "bpm": 116
+    },
+    {
+      "tS": 1770,
+      "bpm": 120
+    },
+    {
+      "tS": 1785,
+      "bpm": 128
+    },
+    {
+      "tS": 1800,
+      "bpm": 128
+    },
+    {
+      "tS": 1815,
+      "bpm": 127
+    },
+    {
+      "tS": 1830,
+      "bpm": 133
+    },
+    {
+      "tS": 1845,
+      "bpm": 137
+    },
+    {
+      "tS": 1860,
+      "bpm": 135
+    },
+    {
+      "tS": 1875,
+      "bpm": 134
+    },
+    {
+      "tS": 1890,
+      "bpm": 139
+    },
+    {
+      "tS": 1905,
+      "bpm": 140
+    },
+    {
+      "tS": 1920,
+      "bpm": 136
+    },
+    {
+      "tS": 1935,
+      "bpm": 136
+    },
+    {
+      "tS": 1950,
+      "bpm": 139
+    },
+    {
+      "tS": 1965,
+      "bpm": 136
+    },
+    {
+      "tS": 1980,
+      "bpm": 130
+    },
+    {
+      "tS": 1995,
+      "bpm": 131
+    },
+    {
+      "tS": 2010,
+      "bpm": 132
+    },
+    {
+      "tS": 2025,
+      "bpm": 126
+    },
+    {
+      "tS": 2040,
+      "bpm": 120
+    },
+    {
+      "tS": 2055,
+      "bpm": 121
+    },
+    {
+      "tS": 2070,
+      "bpm": 119
+    },
+    {
+      "tS": 2085,
+      "bpm": 111
+    },
+    {
+      "tS": 2100,
+      "bpm": 107
+    },
+    {
+      "tS": 2115,
+      "bpm": 108
+    },
+    {
+      "tS": 2130,
+      "bpm": 108
+    },
+    {
+      "tS": 2145,
+      "bpm": 107
+    },
+    {
+      "tS": 2160,
+      "bpm": 113
+    },
+    {
+      "tS": 2175,
+      "bpm": 120
+    },
+    {
+      "tS": 2190,
+      "bpm": 121
+    },
+    {
+      "tS": 2205,
+      "bpm": 121
+    },
+    {
+      "tS": 2220,
+      "bpm": 128
+    },
+    {
+      "tS": 2235,
+      "bpm": 132
+    },
+    {
+      "tS": 2250,
+      "bpm": 130
+    },
+    {
+      "tS": 2265,
+      "bpm": 131
+    },
+    {
+      "tS": 2280,
+      "bpm": 138
+    },
+    {
+      "tS": 2295,
+      "bpm": 139
+    },
+    {
+      "tS": 2310,
+      "bpm": 135
+    },
+    {
+      "tS": 2325,
+      "bpm": 137
+    },
+    {
+      "tS": 2340,
+      "bpm": 141
+    },
+    {
+      "tS": 2355,
+      "bpm": 138
+    },
+    {
+      "tS": 2370,
+      "bpm": 134
+    },
+    {
+      "tS": 2385,
+      "bpm": 136
+    },
+    {
+      "tS": 2400,
+      "bpm": 137
+    },
+    {
+      "tS": 2415,
+      "bpm": 131
+    },
+    {
+      "tS": 2430,
+      "bpm": 127
+    },
+    {
+      "tS": 2445,
+      "bpm": 129
+    },
+    {
+      "tS": 2460,
+      "bpm": 126
+    },
+    {
+      "tS": 2475,
+      "bpm": 118
+    },
+    {
+      "tS": 2490,
+      "bpm": 116
+    },
+    {
+      "tS": 2505,
+      "bpm": 117
+    },
+    {
+      "tS": 2520,
+      "bpm": 111
+    },
+    {
+      "tS": 2535,
+      "bpm": 103
+    },
+    {
+      "tS": 2550,
+      "bpm": 105
+    },
+    {
+      "tS": 2565,
+      "bpm": 112
+    },
+    {
+      "tS": 2580,
+      "bpm": 112
+    },
+    {
+      "tS": 2595,
+      "bpm": 114
+    },
+    {
+      "tS": 2610,
+      "bpm": 121
+    },
+    {
+      "tS": 2625,
+      "bpm": 125
+    },
+    {
+      "tS": 2640,
+      "bpm": 124
+    },
+    {
+      "tS": 2655,
+      "bpm": 127
+    },
+    {
+      "tS": 2670,
+      "bpm": 134
+    },
+    {
+      "tS": 2685,
+      "bpm": 135
+    },
+    {
+      "tS": 2700,
+      "bpm": 132
+    },
+    {
+      "tS": 2715,
+      "bpm": 136
+    },
+    {
+      "tS": 2730,
+      "bpm": 140
+    },
+    {
+      "tS": 2745,
+      "bpm": 138
+    },
+    {
+      "tS": 2760,
+      "bpm": 135
+    },
+    {
+      "tS": 2775,
+      "bpm": 139
+    },
+    {
+      "tS": 2790,
+      "bpm": 140
+    },
+    {
+      "tS": 2805,
+      "bpm": 134
+    },
+    {
+      "tS": 2820,
+      "bpm": 132
+    },
+    {
+      "tS": 2835,
+      "bpm": 135
+    },
+    {
+      "tS": 2850,
+      "bpm": 132
+    },
+    {
+      "tS": 2865,
+      "bpm": 125
+    }
+  ],
+  "zoneFloors": [
+    120,
+    138,
+    154,
+    167
+  ],
+  "splits": [],
+  "strength": {
+    "unit": "kg",
+    "figure": "female",
+    "sets": 16,
+    "reps": 161,
+    "unknownRepSets": 0,
+    "restS": 1520,
+    "records": 1,
+    "setsRecorded": true,
+    "zeroRepSets": 1,
+    "missingRepSets": 0,
+    "doubledSets": 1,
+    "unnamedSets": 3,
+    "muscles": [
+      {
+        "muscle": "chest",
+        "sets": 0
+      },
+      {
+        "muscle": "back",
+        "sets": 0
+      },
+      {
+        "muscle": "shoulders",
+        "sets": 0
+      },
+      {
+        "muscle": "arms",
+        "sets": 0
+      },
+      {
+        "muscle": "core",
+        "sets": 0
+      },
+      {
+        "muscle": "hips",
+        "sets": 0
+      },
+      {
+        "muscle": "quads",
+        "sets": 6
+      },
+      {
+        "muscle": "hamstrings",
+        "sets": 3
+      },
+      {
+        "muscle": "glutes",
+        "sets": 9
+      },
+      {
+        "muscle": "calves",
+        "sets": 3
+      }
+    ],
+    "exercises": [
+      {
+        "key": "SQUAT/BARBELL_BACK_SQUAT",
+        "name": "Barbell Back Squat",
+        "muscles": [
+          "quads",
+          "glutes"
+        ],
+        "sets": [
+          {
+            "reps": 8,
+            "weight": 60,
+            "durationS": 36,
+            "flags": [],
+            "record": false
+          },
+          {
+            "reps": 5,
+            "weight": 100,
+            "durationS": 27,
+            "flags": [],
+            "record": true
+          },
+          {
+            "reps": 5,
+            "weight": 100,
+            "durationS": 27,
+            "flags": [],
+            "record": false
+          },
+          {
+            "reps": 5,
+            "weight": 100,
+            "durationS": 27,
+            "flags": [],
+            "record": false
+          }
+        ],
+        "lastDate": "2025-10-08",
+        "lastSets": [
+          {
+            "weight": 60,
+            "reps": 8
+          },
+          {
+            "weight": 97.5,
+            "reps": 5
+          },
+          {
+            "weight": 97.5,
+            "reps": 5
+          },
+          {
+            "weight": 97.5,
+            "reps": 5
+          }
+        ],
+        "record": {
+          "weight": 100,
+          "reps": 5
+        }
+      },
+      {
+        "key": "DEADLIFT/ROMANIAN_DEADLIFT",
+        "name": "Romanian Deadlift",
+        "muscles": [
+          "hamstrings",
+          "glutes"
+        ],
+        "sets": [
+          {
+            "reps": 8,
+            "weight": 80,
+            "durationS": 36,
+            "flags": [],
+            "record": false
+          },
+          {
+            "reps": 8,
+            "weight": 80,
+            "durationS": 36,
+            "flags": [],
+            "record": false
+          },
+          {
+            "reps": 0,
+            "weight": 80,
+            "durationS": 12,
+            "flags": [
+              "zeroReps"
+            ],
+            "record": false
+          },
+          {
+            "reps": 8,
+            "weight": 80,
+            "durationS": 36,
+            "flags": [],
+            "record": false
+          }
+        ],
+        "lastDate": "2025-10-08",
+        "lastSets": [
+          {
+            "weight": 80,
+            "reps": 8
+          },
+          {
+            "weight": 80,
+            "reps": 8
+          },
+          {
+            "weight": 80,
+            "reps": 7
+          }
+        ],
+        "record": null
+      },
+      {
+        "key": "LUNGE/DUMBBELL_WALKING_LUNGE",
+        "name": "Dumbbell Walking Lunge",
+        "muscles": [
+          "quads",
+          "glutes"
+        ],
+        "sets": [
+          {
+            "reps": 12,
+            "weight": 16,
+            "durationS": 48,
+            "flags": [],
+            "record": false
+          },
+          {
+            "reps": 24,
+            "weight": 16,
+            "durationS": 84,
+            "flags": [
+              "doubled"
+            ],
+            "record": false
+          }
+        ],
+        "lastDate": "2025-10-08",
+        "lastSets": [
+          {
+            "weight": 16,
+            "reps": 12
+          },
+          {
+            "weight": 16,
+            "reps": 12
+          },
+          {
+            "weight": 16,
+            "reps": 12
+          }
+        ],
+        "record": null
+      },
+      {
+        "key": null,
+        "name": null,
+        "muscles": [],
+        "sets": [
+          {
+            "reps": 12,
+            "weight": 40,
+            "durationS": 48,
+            "flags": [
+              "unnamed"
+            ],
+            "record": false
+          },
+          {
+            "reps": 12,
+            "weight": 40,
+            "durationS": 48,
+            "flags": [
+              "unnamed"
+            ],
+            "record": false
+          },
+          {
+            "reps": 10,
+            "weight": 40,
+            "durationS": 42,
+            "flags": [
+              "unnamed"
+            ],
+            "record": false
+          }
+        ],
+        "lastDate": null,
+        "lastSets": [],
+        "record": null
+      },
+      {
+        "key": "CALF_RAISE/STANDING_CALF_RAISE",
+        "name": "Standing Calf Raise",
+        "muscles": [
+          "calves"
+        ],
+        "sets": [
+          {
+            "reps": 15,
+            "weight": 40,
+            "durationS": 57,
+            "flags": [],
+            "record": false
+          },
+          {
+            "reps": 15,
+            "weight": 40,
+            "durationS": 57,
+            "flags": [],
+            "record": false
+          },
+          {
+            "reps": 14,
+            "weight": 40,
+            "durationS": 54,
+            "flags": [],
+            "record": false
+          }
+        ],
+        "lastDate": "2025-10-08",
+        "lastSets": [
+          {
+            "weight": 40,
+            "reps": 15
+          },
+          {
+            "weight": 40,
+            "reps": 15
+          },
+          {
+            "weight": 40,
+            "reps": 15
+          }
+        ],
+        "record": null
+      }
+    ]
+  }
+}

@@ -1,6 +1,7 @@
 use crate::{
     garmin::{self, Client, Tokens},
     store::Store,
+    strength,
 };
 use chrono::{DateTime, Duration, Local, NaiveDate, Timelike, Utc};
 use serde::{Deserialize, Serialize};
@@ -265,6 +266,22 @@ pub async fn sync(
                         break;
                     }
                 }
+                if strength::is_strength(item)
+                    && sets_due(store, &id, item, now)
+                    && !fetch(
+                        store,
+                        client,
+                        &mut report,
+                        "exercise_sets",
+                        &id,
+                        None,
+                        budget,
+                        now,
+                    )
+                    .await
+                {
+                    break;
+                }
                 if is_new && store.get("activity", &id).is_some() {
                     report.activities += 1;
                 }
@@ -306,6 +323,9 @@ pub async fn sync(
         }
     }
     if !report.rate_limited && report.error.is_none() && report.requests < budget {
+        strength_reference(store, client, &mut report, budget, now).await;
+    }
+    if !report.rate_limited && report.error.is_none() && report.requests < budget {
         // Outside the morning refresh window, yesterday still needs its first backfill.
         let mut day = today - Duration::days(1);
         while day >= today - Duration::days(RECENT_DAYS - 1) && report.requests < budget {
@@ -341,6 +361,26 @@ pub async fn sync(
     if !report.rate_limited && report.error.is_none() && report.requests < budget {
         history(store, client, &mut report, today, budget, now).await;
     }
+    if !report.rate_limited && report.error.is_none() && report.requests < budget {
+        // Sets of older strength activities, found by the history download.
+        for id in store.strength_without_sets(budget) {
+            if !fetch(
+                store,
+                client,
+                &mut report,
+                "exercise_sets",
+                &id,
+                None,
+                budget,
+                now,
+            )
+            .await
+                || report.requests >= budget
+            {
+                break;
+            }
+        }
+    }
     let key = date(today);
     report.sleep_present = store
         .get("sleep", &key)
@@ -356,6 +396,67 @@ pub async fn sync(
     }
     report.tokens = Some(client.tokens().await);
     report
+}
+/// Sets can be corrected in Connect soon after a workout: fetch them once, and
+/// again at most hourly for two days after the activity starts.
+fn sets_due(store: &Store, id: &str, item: &Value, now: DateTime<Utc>) -> bool {
+    let Some(fetched) = store.fetched_at("exercise_sets", id) else {
+        return true;
+    };
+    let started = item["startTimeGMT"]
+        .as_str()
+        .and_then(|s| chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S").ok())
+        .map(|t| t.and_utc());
+    let fetched = DateTime::parse_from_rfc3339(&fetched).map(|t| t.with_timezone(&Utc));
+    started.is_some_and(|t| now - t < Duration::hours(48))
+        && fetched.is_ok_and(|f| now - f >= Duration::hours(1))
+}
+/// Garmin's exercise catalog (monthly) and the user settings that give weight
+/// units, time format, week start and the body-map figure (weekly), once there are sets.
+async fn strength_reference(
+    store: &Store,
+    client: &Client,
+    report: &mut SyncReport,
+    budget: usize,
+    now: DateTime<Utc>,
+) {
+    if store.history("exercise_sets", "~", 1).is_empty() {
+        return;
+    }
+    let due = |cursor: &str, days: i64| {
+        store
+            .cursor(cursor)
+            .and_then(|s| s.parse::<i64>().ok())
+            .is_none_or(|t| t > now.timestamp() || now.timestamp() - t >= days * 86400)
+    };
+    for (kind, key, cursor, days) in [
+        ("profile_settings", "me", "profile_settings_checked", 7),
+        ("exercise_catalog", "garmin", "exercise_catalog_checked", 30),
+    ] {
+        if !due(cursor, days) {
+            continue;
+        }
+        match request(store, client, report, kind, key, None, budget, now).await {
+            None => return,
+            Some(Got::Value(v)) => {
+                let value = if kind == "profile_settings" {
+                    strength::reduce_settings(&v)
+                } else {
+                    v
+                };
+                if store.put(kind, key, &now.to_rfc3339(), &value).is_err() {
+                    report.error = Some("local storage failed".into());
+                    return;
+                }
+                report.stored += 1;
+                let _ = store.set_cursor(cursor, &now.timestamp().to_string());
+            }
+            Some(Got::Absent) => {
+                let _ = store.set_cursor(cursor, &now.timestamp().to_string());
+            }
+            Some(Got::Later) => {}
+        }
+    }
 }
 /// The list is hourly, but the selected watch's upload time changes on every sync.
 /// Keep the raw list and raw detail separately so a changed selection cannot
@@ -599,6 +700,11 @@ async fn request(
                     valid.then(|| summary.clone()).ok_or(garmin::Error::Decode)
                 })
         }
+    } else if kind == "exercise_catalog" {
+        client
+            .exercise_catalog()
+            .await
+            .and_then(|v| strength::reduce_catalog(&v).ok_or(garmin::Error::Decode))
     } else {
         client.endpoint(kind, key, name).await
     };

@@ -5,3 +5,9 @@ GraphQL calls; they are not captured account readings. They contain no Garmin ac
 `intensity_weeks.json` has invented values in the shape of
 `/usersummary-service/stats/im/weekly/{start}/{end}` checked by a read-only
 call: one row per Garmin intensity week, dated by its first day.
+`exercise_sets*.json` follow the shape of `/activity-service/activity/{id}/exerciseSets`
+verified read-only on a real account: set types, the
+ranked exercise guesses with probabilities, weight in grams and the null
+velocity fields. Exercises, reps, weights and times are invented.
+`exercise_catalog.json` is a short excerpt in the shape of Garmin's public
+catalog (`connect.garmin.com/web-data/exercises/Exercises.json`).

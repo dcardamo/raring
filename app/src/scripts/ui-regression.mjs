@@ -204,9 +204,92 @@ try {
  assert.equal(await page.locator('.setting.lead select').inputValue(),'45');
  console.log('Daily focus, sleep plan, rhythm, timing review, reminder lead and keyboard/touch history: passed');
 
+ await page.setViewportSize({width:390,height:844});
+ await page.goto(`${url}/#training`);await waitRoute('training');
+ await page.getByRole('button',{name:/^Strength · this week/}).click();await waitRoute('strength');
+ await page.getByText('Heaviest set each session',{exact:true}).waitFor();
+ const strengthSample=JSON.parse(await readFile(resolve('src/lib/sample/strength.json'),'utf8'));
+ const historyWorkouts=JSON.parse(await readFile(resolve('src/lib/sample/strengthWorkoutHistory.json'),'utf8'));
+ const assertStrengthWorkout=async(id,date)=>{
+  const expected=historyWorkouts[id];
+  assert.equal(expected.summary.id,id);
+  assert.equal(expected.summary.startLocal.slice(0,10),date);
+  await page.locator('.strength-cols').waitFor();
+  assert.equal(await page.locator('h1').textContent(),expected.summary.name);
+  const label=new Date(date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+  assert.ok((await page.locator('.top .eyebrow').textContent()).includes(label));
+  assert.equal(await page.locator('.strength-cols .hero-n').textContent(),String(expected.strength.sets));
+  const rendered=await page.locator('.strength-cols .ex').evaluateAll(cards=>cards.map(card=>({
+   name:card.querySelector('.ex-h b').textContent,
+   sets:[...card.querySelectorAll('.sbar[role=listitem]')].map(set=>[set.querySelector('b').textContent,set.querySelector('span').textContent])
+  })));
+  assert.deepEqual(rendered,expected.strength.exercises.map(e=>({name:e.name,sets:e.sets.map(s=>[String(s.reps),String(s.weight)])})));
+  await page.locator('.scroll').evaluate(el=>el.scrollTop=0);
+  await page.screenshot({path:resolve(output,`strength-older-${id}.png`),fullPage:false});
+ };
+ assert.ok(strengthSample.exercises[0].sessions.length>=7 && strengthSample.workouts.length>=9);
+ assert.equal(await page.locator('.ses').count(),6);
+ await page.getByRole('button',{name:'Show all 12 sessions',exact:true}).click();
+ assert.equal(await page.locator('.ses').count(),12);
+ const oldSession=strengthSample.exercises[0].sessions[6];
+ await page.locator('.ses').nth(6).click();await waitRoute('workout/'+oldSession.activityId);
+ await assertStrengthWorkout(oldSession.activityId,oldSession.date);
+ await back('strength');
+ assert.equal(await page.locator('.strength-history .workout-item').count(),8);
+ await page.getByRole('button',{name:'Show all 11 workouts',exact:true}).click();
+ assert.equal(await page.locator('.strength-history .workout-item').count(),11);
+ await page.getByText('No sets recorded',{exact:true}).waitFor();
+ const oldWorkout=strengthSample.workouts[9].activity;
+ assert.notEqual(oldWorkout.id,oldSession.activityId,'exercise and workout links cover different older IDs');
+ await page.locator('.strength-history .workout-item').nth(9).getByRole('button').click();await waitRoute('workout/'+oldWorkout.id);
+ await assertStrengthWorkout(oldWorkout.id,oldWorkout.startLocal.slice(0,10));
+ await back('strength');
+ assert.equal(await page.locator('.heat-card').isVisible(),false,'the weekly heatmap waits for wider screens');
+ await page.getByRole('button',{name:'Barbell Bench Press',exact:true}).click();
+ assert.equal(await page.locator('.card h3',{hasText:'Barbell Bench Press'}).count(),1);
+ await page.getByRole('button',{name:'4 weeks',exact:true}).click();
+ await page.getByText('Last 4 weeks',{exact:true}).waitFor();
+ await page.getByRole('button',{name:/^Wed 15 Oct/}).click();await waitRoute('workout/9000000000111');
+ await back('strength');
+ await page.getByRole('button',{name:'Help',exact:true}).click();await waitRoute('help');
+ await page.getByRole('button',{name:'How sets are counted'}).click();await waitRoute('help/strength-sets');
+ await page.getByText(/1\.8 times/).waitFor();
+ await page.getByText(/Later edits will not appear in Raring, even after Refresh/).waitFor();
+ await back('help');await back('strength');await back('training');
+ await page.getByRole('button',{name:/^Lower A/}).click();await waitRoute('workout/9000000000002');
+ await page.getByText('3 things look off',{exact:true}).waitFor();
+ await page.getByText('A 0-rep set, a doubled set and an unnamed exercise',{exact:true}).waitFor();
+ assert.equal(await page.locator('.sbar.flag').count(),5,'one 0-rep, one doubled and three unnamed sets are flagged');
+ assert.equal(await page.getByText('Training load',{exact:true}).count(),0,'strength workouts show sets instead of the effect gauges');
+ await page.getByRole('button',{name:'3 things look off'}).click();
+ await page.getByRole('dialog').getByText('How sets are counted').waitFor();
+ await page.getByRole('button',{name:'More help'}).click();await waitRoute('help/strength-sets');
+ await back('workout/9000000000002');
+ assert.equal(await page.getByRole('dialog').count(),0,'the sheet closes when its page opens');
+ // Synthetic mixed and missing-count responses exercise the hero as well as
+ // the pure formatting helper. No account data or network access to Garmin.
+ const repPage=await browser.newPage({viewport:{width:390,height:844}});
+ repPage.on('pageerror',e=>errors.push(e.message));
+ for(const [reps,unknown,label] of [[14,1,'Reps · 1 set uncounted'],[null,2,'Reps unknown'],[0,0,'Reps']]){
+  await repPage.route(u=>u.pathname==='/src/lib/sample/strengthWorkout.json',async route=>{
+   const v=JSON.parse(await readFile(resolve('src/lib/sample/strengthWorkout.json'),'utf8'));
+   Object.assign(v.strength,{reps,unknownRepSets:unknown,missingRepSets:unknown});
+   await route.fulfill({contentType:'application/javascript',body:`export default ${JSON.stringify(v)}`});
+  });
+  await repPage.goto('about:blank');
+  await repPage.goto(`${url}/#workout/9000000000002`);
+  const cell=repPage.locator('.grid2>div').nth(1);
+  await cell.getByText(label,{exact:true}).waitFor();
+  assert.equal(await cell.locator('b').textContent(),reps==null?'—':String(reps));
+  assert.ok(await repPage.evaluate(()=>document.querySelector('main').scrollWidth<=innerWidth));
+  await repPage.unrouteAll();
+ }
+ await repPage.close();
+ console.log('Strength mixed/unknown reps, complete lists and older links, flags and 48-hour help: passed');
+
  for(const width of [344,360,390,660,707,840,1024]) {
   await page.setViewportSize({width,height:900});
-  for(const route of ['today','sleep','training','health','readiness','workout/9000000000001','metric/hrv','metric/restingHr','metric/bodyBattery','metric/stress','settings','checkin','plan','plan-setup','onboarding']) {
+  for(const route of ['today','sleep','training','health','readiness','workout/9000000000001','workout/9000000000002','strength','help','help/strength-sets','metric/hrv','metric/restingHr','metric/bodyBattery','metric/stress','settings','checkin','plan','plan-setup','onboarding']) {
    await page.goto(`${url}/#${route}`);await waitRoute(route);
    const layout=await page.evaluate(()=>{
     // Largest vertical gap between cards stacked in the same grid column.
@@ -226,7 +309,7 @@ try {
    if(width>=660 && layout.columns)assert.equal(layout.columns,2,`${width}/${route}: two columns`);
    if(route==='today')assert.equal(layout.hero,width>=660,`${width}/today: headline beside dials only when unfolded`);
    assert.ok(layout.holes<=18,`${width}/${route}: ${layout.holes}px hole between cards`);
-   if([390,840].includes(width) && ['today','sleep','training','workout/9000000000001','health','plan','plan-setup'].includes(route)) {
+   if([390,840].includes(width) && ['today','sleep','training','workout/9000000000001','workout/9000000000002','strength','help/strength-sets','health','plan','plan-setup'].includes(route)) {
     await page.evaluate(()=>document.fonts.ready);
     const failures=await contrastFailures(page);
     assert.deepEqual(failures,[],`${width}/${route}: text contrast`);

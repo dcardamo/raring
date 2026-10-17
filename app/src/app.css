@@ -97,3 +97,15 @@ button:disabled{cursor:default}
 }
 .card.lead{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.12)}.phase-note{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;font-size:12px;color:var(--text2)}
 .setting-note{display:block;max-width:300px;margin-top:4px;font-size:12px;line-height:1.4;color:var(--text2)}
+.strength-week{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.help-list{max-width:640px}
+.help-row{display:grid;grid-template-columns:36px 1fr 16px;align-items:center;gap:12px;width:100%;min-height:52px;padding:8px 0;border:0;border-top:1px solid var(--line);background:none;text-align:left;color:var(--text3)}
+.help-row:first-of-type{border-top:0}
+.help-row b{font:500 15px Inter;color:var(--text)}
+.help-icon{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--text2)}
+.help-intro{color:var(--text);font-size:15px;line-height:1.5}
+.help-steps{list-style:none;padding:0;margin:16px 0 0;display:grid;gap:14px}
+.help-steps li{display:grid;grid-template-columns:24px 1fr;gap:12px;color:var(--text2);font-size:14px;line-height:1.5}
+.help-steps li span{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.07);display:grid;place-items:center;font-size:12px;color:var(--text)}
+.help-foot{text-align:center;margin:20px 0}
+.untracked{font-size:13px;line-height:1.5}

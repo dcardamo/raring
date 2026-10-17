@@ -5,6 +5,9 @@ import sampleToday from './sample/today.json';
 import sampleSleep from './sample/sleep.json';
 import sampleTraining from './sample/training.json';
 import sampleWorkout from './sample/workout.json';
+import sampleStrengthWorkout from './sample/strengthWorkout.json';
+import sampleStrengthWorkoutHistory from './sample/strengthWorkoutHistory.json';
+import sampleStrength from './sample/strength.json';
 import sampleHealth from './sample/health.json';
 import sampleCheckin from './sample/checkin.json';
 import sampleStatus from './sample/status.json';
@@ -14,6 +17,7 @@ import type { TodayView } from './generated/TodayView';
 import type { SleepView } from './generated/SleepView';
 import type { TrainingView } from './generated/TrainingView';
 import type { WorkoutView } from './generated/WorkoutView';
+import type { StrengthView } from './generated/StrengthView';
 import type { HealthView } from './generated/HealthView';
 import type { CheckinView } from './generated/CheckinView';
 import type { Settings } from './generated/Settings';
@@ -29,7 +33,16 @@ export const app_status = ():Promise<AppStatus> => call('app_status',undefined,s
 export const today = (date?:string):Promise<TodayView> => call('today',{date},sampleToday as unknown as TodayView);
 export const sleep = (date?:string):Promise<SleepView> => call('sleep',{date},sampleSleep as unknown as SleepView);
 export const training = (date?:string):Promise<TrainingView> => call('training',{date},sampleTraining as unknown as TrainingView);
-export const workout = (id:string):Promise<WorkoutView> => call('workout',{id},sampleWorkout as unknown as WorkoutView);
+export const workout = (id:string):Promise<WorkoutView> => {
+ if(isTauri())return invoke<WorkoutView>('workout',{id});
+ const history=sampleStrengthWorkoutHistory as unknown as Record<string,WorkoutView>;
+ const listed=sampleTraining.workouts.find(a=>a.id===id);
+ // Other listed preview activities keep their own summary, never a run's charts.
+ const summaryOnly=listed?{summary:listed,recoveryHours:null,stats:[],route:[],heartRate:[],zoneFloors:[],splits:[],strength:null}:null;
+ const value=id===sampleStrengthWorkout.summary.id?sampleStrengthWorkout:id===sampleWorkout.summary.id?sampleWorkout:Object.hasOwn(history,id)?history[id]:summaryOnly;
+ return value?Promise.resolve(copy(value as unknown as WorkoutView)):Promise.reject(new Error('No preview workout for this ID'));
+};
+export const strength = (date?:string):Promise<StrengthView|null> => call('strength',{date},sampleStrength as unknown as StrengthView);
 export const health = (date?:string):Promise<HealthView> => call('health',{date},sampleHealth as unknown as HealthView);
 export const checkin = (weekStart?:string):Promise<CheckinView> => call('checkin',{weekStart},sampleCheckin as unknown as CheckinView);
 // The preview keeps saved targets in memory; only the Rust core measures them.

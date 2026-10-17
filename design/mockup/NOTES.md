@@ -109,8 +109,9 @@ rose strength); the spec's Look section now describes it.
 
 ## Open gates
 
-- **Body map art (question 2).** The figures are hand-drawn placeholders;
-  defer the illustration pass until strength ships.
+- **Body map art (question 2).** Done with strength: the app draws its own
+  female and male front and back figures (`app/src/lib/bodymap.ts`). The
+  mockup's figures remain placeholders.
 - **Readiness brake timing (question 8).** Readiness only exists on the
   morning. Schedule progressed weights and swap in held weights after the
   morning sync on a Rest or Easy day, if the builder's Forerunner 970

@@ -1,0 +1,42 @@
+{
+  "activityId": 123456,
+  "exerciseSets": [
+    {
+      "avgConcentricDuration": null,
+      "avgConcentricMeanPower": null,
+      "avgConcentricMeanVelocity": null,
+      "avgConcentricPeakPower": null,
+      "avgConcentricPeakVelocity": null,
+      "avgConcentricRom": null,
+      "avgEccentricDuration": null,
+      "avgEccentricMeanVelocity": null,
+      "avgEccentricPeakVelocity": null,
+      "avgMeanPropulsiveVelocity": null,
+      "duration": 2400.0,
+      "exercises": [
+        {
+          "category": "UNKNOWN",
+          "name": null,
+          "probability": 98.0
+        }
+      ],
+      "maxConcentricDuration": null,
+      "maxConcentricMeanPower": null,
+      "maxConcentricMeanVelocity": null,
+      "maxConcentricPeakPower": null,
+      "maxConcentricPeakVelocity": null,
+      "maxConcentricRom": null,
+      "maxEccentricDuration": null,
+      "maxEccentricMeanVelocity": null,
+      "maxEccentricPeakVelocity": null,
+      "maxMeanPropulsiveVelocity": null,
+      "messageIndex": 0,
+      "minimalViableThreshold": null,
+      "repetitionCount": null,
+      "setType": "ACTIVE",
+      "startTime": "2025-03-06T18:00:00.0",
+      "weight": null,
+      "wktStepIndex": null
+    }
+  ]
+}

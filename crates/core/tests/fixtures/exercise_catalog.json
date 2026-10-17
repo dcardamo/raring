@@ -1,0 +1,80 @@
+{
+  "categories": {
+    "SQUAT": {
+      "primaryMuscles": [
+        "QUADS",
+        "GLUTES"
+      ],
+      "secondaryMuscles": [
+        "HAMSTRINGS"
+      ],
+      "exercises": {
+        "GOBLET_SQUAT": {
+          "primaryMuscles": [
+            "QUADS"
+          ],
+          "secondaryMuscles": [
+            "GLUTES",
+            "ADDUCTORS"
+          ]
+        },
+        "LEG_PRESS": {
+          "primaryMuscles": [
+            "QUADS"
+          ],
+          "secondaryMuscles": [
+            "GLUTES"
+          ]
+        }
+      }
+    },
+    "ROW": {
+      "primaryMuscles": [
+        "LATS",
+        "TRAPS"
+      ],
+      "secondaryMuscles": [
+        "BICEPS"
+      ],
+      "exercises": {
+        "ONE_ARM_DUMBBELL_ROW": {
+          "primaryMuscles": [
+            "LATS",
+            "BICEPS"
+          ],
+          "secondaryMuscles": [
+            "TRAPS",
+            "SHOULDERS"
+          ]
+        }
+      }
+    },
+    "CRUNCH": {
+      "primaryMuscles": [
+        "ABS"
+      ],
+      "secondaryMuscles": [],
+      "exercises": {
+        "BICYCLE_CRUNCH": {
+          "primaryMuscles": [
+            "ABS",
+            "OBLIQUES"
+          ],
+          "secondaryMuscles": [
+            "HIPS"
+          ]
+        }
+      }
+    },
+    "BANDED_EXERCISES": {
+      "exercises": {
+        "CLAM_SHELLS": {
+          "primaryMuscles": [
+            "ABDUCTORS"
+          ],
+          "secondaryMuscles": []
+        }
+      }
+    }
+  }
+}

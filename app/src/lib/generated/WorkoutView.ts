@@ -3,6 +3,7 @@ import type { ActivityCard } from "./ActivityCard";
 import type { HrSample } from "./HrSample";
 import type { Split } from "./Split";
 import type { Stat } from "./Stat";
+import type { StrengthSession } from "./StrengthSession";
 
 export type WorkoutView = { summary: ActivityCard, recoveryHours: number | null, stats: Array<Stat>, 
 /**
@@ -16,4 +17,8 @@ heartRate: Array<HrSample>,
 /**
  * Lower bounds of zones 2–5, bpm.
  */
-zoneFloors: Array<number>, splits: Array<Split>, };
+zoneFloors: Array<number>, splits: Array<Split>, 
+/**
+ * Garmin's recorded sets, for strength activities that have them.
+ */
+strength: StrengthSession | null, };

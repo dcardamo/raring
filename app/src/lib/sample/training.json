@@ -186,7 +186,7 @@
     {
       "id": "9000000000002",
       "icon": "strength",
-      "name": "Strength",
+      "name": "Lower A",
       "startLocal": "2025-10-15T17:12:00",
       "durationS": 2882,
       "distanceKm": null,
@@ -225,5 +225,55 @@
       "anaerobicLabel": "Minor",
       "benefit": "Base"
     }
-  ]
+  ],
+  "strength": {
+    "figure": "female",
+    "weekStart": "2025-10-13",
+    "sets": 29,
+    "sessionsWithSets": 2,
+    "strengthActivities": 3,
+    "records": 1,
+    "muscles": [
+      {
+        "muscle": "chest",
+        "sets": 3
+      },
+      {
+        "muscle": "back",
+        "sets": 6
+      },
+      {
+        "muscle": "shoulders",
+        "sets": 3
+      },
+      {
+        "muscle": "arms",
+        "sets": 2
+      },
+      {
+        "muscle": "core",
+        "sets": 0
+      },
+      {
+        "muscle": "hips",
+        "sets": 1
+      },
+      {
+        "muscle": "quads",
+        "sets": 6
+      },
+      {
+        "muscle": "hamstrings",
+        "sets": 6
+      },
+      {
+        "muscle": "glutes",
+        "sets": 9
+      },
+      {
+        "muscle": "calves",
+        "sets": 3
+      }
+    ]
+  }
 }

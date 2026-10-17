@@ -1,16 +1,19 @@
 .compat-page{padding-top:48px;padding-bottom:40px}
 .compat-page h1{font-size:clamp(42px,5vw,64px)}
 .compat-page .lead{max-width:640px}
-.tiers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;list-style:none;padding:0;margin:36px 0 56px}
+.tiers{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;list-style:none;padding:0;margin:36px 0 56px}
 .tiers li{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px}
 .tiers p{font-size:14px;margin-top:12px}
 .tier{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;line-height:1.4;white-space:nowrap}
 .tier::before{content:'';flex:none;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;color:var(--bg)}
 .tier.tested{color:var(--mint)}.tier.tested::before{content:'✓';background:var(--mint)}
 .tier.expected{color:var(--text)}.tier.expected::before{background:linear-gradient(90deg,var(--text) 50%,transparent 50%);box-shadow:inset 0 0 0 2px var(--text)}
+.tier.partial{color:var(--text)}.tier.partial::before{content:'✓';color:var(--mint);box-shadow:inset 0 0 0 2px var(--mint)}
+.compat .limit{display:block;max-width:520px;margin-top:6px;font-size:13px;line-height:1.45;color:var(--muted)}
 .tier.unknown{color:var(--quiet)}.tier.unknown::before{content:'?';color:var(--quiet);box-shadow:inset 0 0 0 2px var(--quiet)}
 .compat-section{padding-top:56px}
 .needs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;list-style:none;padding:0;margin:28px 0 0}
+.needs.single{grid-template-columns:minmax(0,640px)}
 .needs li{border-top:2px solid var(--line);padding-top:16px}
 .needs h3{font-size:20px}
 .needs p{font-size:14px;margin-top:8px}
@@ -25,6 +28,7 @@
 .report p:not(.eyebrow){margin-top:16px;font-size:15px}
 .report-action p.quiet{font-size:13px}
 @media(max-width:900px){
+ .tiers{grid-template-columns:repeat(2,minmax(0,1fr))}
  .needs{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 18px}
  .compat th,.compat td{padding:16px 14px}
 }
@@ -36,7 +40,8 @@
  .compat thead{display:none}
  .compat tr{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:6px 18px;margin-top:14px}
  .compat tbody th{width:auto;border-top:0;padding:14px 0 12px}
- .compat td{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0}
+ .compat td{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:4px 12px;padding:12px 0}
+ .compat .limit{flex-basis:100%;margin-top:2px}
  .compat td::before{content:attr(data-label);color:var(--muted);font-size:14px}
  .report{grid-template-columns:1fr;gap:20px;padding:26px}
 }

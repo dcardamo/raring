@@ -695,6 +695,9 @@ pub struct TrainingView {
     pub hill_score: Option<f64>,
     pub running_tolerance_km: Option<f64>,
     pub workouts: Vec<ActivityCard>,
+    /// This week's strength sets, when any strength session has sets in
+    /// the last 12 weeks.
+    pub strength: Option<StrengthWeek>,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
@@ -740,6 +743,231 @@ pub struct WorkoutView {
     /// Lower bounds of zones 2–5, bpm.
     pub zone_floors: Vec<f64>,
     pub splits: Vec<Split>,
+    /// Garmin's recorded sets, for strength activities that have them.
+    pub strength: Option<StrengthSession>,
+}
+
+/// Weights follow Garmin's measurement setting.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum WeightUnit {
+    Kg,
+    Lb,
+}
+
+/// The body map's figure. Defaults from the Garmin profile.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum Figure {
+    Female,
+    Male,
+}
+
+/// Raring's muscle groups: Garmin's catalog muscles, grouped for the body map.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum Muscle {
+    Chest,
+    Back,
+    Shoulders,
+    Arms,
+    Core,
+    Hips,
+    Quads,
+    Hamstrings,
+    Glutes,
+    Calves,
+}
+
+/// Why a set may be miscounted (docs/spec.md, Rules). Flags never change
+/// Garmin's numbers.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum SetFlag {
+    /// Garmin recorded 0 reps.
+    ZeroReps,
+    /// Garmin has no rep count for the set.
+    MissingReps,
+    /// At least 1.8 times the median of the exercise's other sets.
+    Doubled,
+    /// Garmin couldn't name the exercise.
+    Unnamed,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct MuscleSets {
+    pub muscle: Muscle,
+    /// Sets, or an average of weekly sets.
+    pub sets: f64,
+}
+
+/// One set as Garmin recorded it.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct StrengthSet {
+    pub reps: Option<u32>,
+    /// In `unit`; none for bodyweight sets.
+    pub weight: Option<f64>,
+    pub duration_s: Option<f64>,
+    pub flags: Vec<SetFlag>,
+    /// No earlier set of this exercise was as heavy for as many reps.
+    pub record: bool,
+}
+
+/// A weight and rep count, such as a set from last time or a record.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct Lift {
+    pub weight: Option<f64>,
+    pub reps: Option<u32>,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct StrengthExercise {
+    /// Garmin's exercise key, "CATEGORY/NAME" or "CATEGORY"; none when
+    /// Garmin couldn't name it.
+    pub key: Option<String>,
+    pub name: Option<String>,
+    pub muscles: Vec<Muscle>,
+    pub sets: Vec<StrengthSet>,
+    /// The previous session with this exercise.
+    pub last_date: Option<String>,
+    pub last_sets: Vec<Lift>,
+    /// The heaviest record set this session.
+    pub record: Option<Lift>,
+}
+
+/// A strength activity's sets, grouped by exercise in the order done.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct StrengthSession {
+    pub unit: WeightUnit,
+    pub figure: Figure,
+    /// Garmin's active sets; rests are not sets.
+    pub sets: u32,
+    /// The sum of the known rep counts; none when no set has a count.
+    pub reps: Option<u32>,
+    /// Active sets without a rep count, left out of `reps`.
+    pub unknown_rep_sets: u32,
+    pub rest_s: f64,
+    pub records: u32,
+    /// False when no set has reps or a named exercise: the watch timed the
+    /// session without recording sets.
+    pub sets_recorded: bool,
+    pub zero_rep_sets: u32,
+    pub missing_rep_sets: u32,
+    pub doubled_sets: u32,
+    pub unnamed_sets: u32,
+    pub muscles: Vec<MuscleSets>,
+    pub exercises: Vec<StrengthExercise>,
+}
+
+/// The Training card: this week's strength.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct StrengthWeek {
+    pub figure: Figure,
+    /// First day of this week, following Garmin's week-start setting.
+    pub week_start: String,
+    /// Sets, records and muscles count only sessions with sets.
+    pub sets: u32,
+    pub sessions_with_sets: u32,
+    /// Every Garmin strength activity this week, including ones timed
+    /// without sets. The weekly plan counts these.
+    pub strength_activities: u32,
+    pub records: u32,
+    pub muscles: Vec<MuscleSets>,
+}
+
+/// A strength activity in the history list.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct StrengthActivity {
+    pub activity: ActivityCard,
+    /// False for sessions timed without sets, or with no sets from Garmin.
+    pub sets_recorded: bool,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WeekMuscles {
+    pub week_start: String,
+    pub muscles: Vec<MuscleSets>,
+}
+
+/// One session of one exercise.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ExerciseSession {
+    pub activity_id: String,
+    pub date: String,
+    /// The heaviest unflagged set.
+    pub top: Option<Lift>,
+    /// Reps of every set, in order.
+    pub reps: Vec<Option<u32>>,
+    pub record: bool,
+}
+
+/// The heaviest weight lifted for at least `reps` reps.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct RepBest {
+    pub reps: u32,
+    pub weight: Option<f64>,
+    pub date: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ExerciseHistory {
+    pub key: String,
+    pub name: String,
+    pub muscles: Vec<Muscle>,
+    /// The last 12 weeks, newest first.
+    pub sessions: Vec<ExerciseSession>,
+    /// Across all stored sessions.
+    pub bests: Vec<RepBest>,
+}
+
+/// Strength history: the last 12 weeks.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct StrengthView {
+    pub unit: WeightUnit,
+    pub figure: Figure,
+    pub date: String,
+    pub week_start: String,
+    pub this_week: Vec<MuscleSets>,
+    /// Weekly average over the four weeks before this one.
+    pub average_4w: Vec<MuscleSets>,
+    /// Total sets over the four weeks ending with this one.
+    pub last_4w: Vec<MuscleSets>,
+    /// Twelve weeks, oldest first, ending with this week.
+    pub weeks: Vec<WeekMuscles>,
+    pub sessions_with_sets_this_week: u32,
+    /// Exercises done in the last 12 weeks, most recent first.
+    pub exercises: Vec<ExerciseHistory>,
+    /// Strength activities in the last 12 weeks, newest first, including
+    /// ones without sets.
+    pub workouts: Vec<StrengthActivity>,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]

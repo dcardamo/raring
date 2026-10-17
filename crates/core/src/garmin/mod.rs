@@ -229,18 +229,22 @@ pub async fn refresh_at(http: &reqwest::Client, url: &str, old: &Tokens) -> Resu
 pub struct Client {
     http: reqwest::Client,
     api: String,
+    /// Garmin Connect's web host, for static data such as the exercise catalog.
+    web: String,
     auth: String,
     state: Arc<Mutex<(Tokens, Option<Instant>)>>,
     interval: std::time::Duration,
 }
 impl Client {
     pub fn new(tokens: Tokens) -> Result<Self> {
-        Self::with_urls(
+        let mut client = Self::with_urls(
             tokens,
             "https://connectapi.garmin.com",
             "https://diauth.garmin.com/di-oauth2-service/oauth/token",
             std::time::Duration::from_millis(300),
-        )
+        )?;
+        client.web = "https://connect.garmin.com".into();
+        Ok(client)
     }
     pub fn with_urls(
         tokens: Tokens,
@@ -254,6 +258,7 @@ impl Client {
                 .build()
                 .map_err(map_network)?,
             api: api.trim_end_matches('/').into(),
+            web: api.trim_end_matches('/').into(),
             auth: auth.into(),
             state: Arc::new(Mutex::new((tokens, None))),
             interval,
@@ -302,6 +307,28 @@ impl Client {
         }
         Err(Error::NeedsSignIn)
     }
+    /// Garmin's public exercise catalog: categories, exercises and their
+    /// muscles. It needs no account, so no credentials are sent.
+    pub async fn exercise_catalog(&self) -> Result<Value> {
+        let mut guard = self.state.lock().await;
+        if let Some(last) = guard.1 {
+            if let Some(wait) = self.interval.checked_sub(last.elapsed()) {
+                tokio::time::sleep(wait).await;
+            }
+        }
+        guard.1 = Some(Instant::now());
+        let r = self
+            .http
+            .get(format!("{}/web-data/exercises/Exercises.json", self.web))
+            .header(header::ACCEPT, "application/json")
+            .send()
+            .await
+            .map_err(map_network)?;
+        if !r.status().is_success() {
+            return Err(http_error(&r));
+        }
+        r.json().await.map_err(|_| Error::Decode)
+    }
     /// Execute a read-only GraphQL query through Garmin's gateway. Errors in a 200
     /// response are failures, not a missing metric to cache as an empty day.
     pub async fn graphql(&self, query: &str, variables: Value) -> Result<Value> {
@@ -348,6 +375,10 @@ impl Client {
             .replace('+', "%20");
         let (path, params): (String, Vec<(&str, &str)>) = match kind {
             "profile" => ("/userprofile-service/socialProfile".into(), vec![]),
+            "profile_settings" => (
+                "/userprofile-service/userprofile/user-settings".into(),
+                vec![],
+            ),
             "devices" => ("/device-service/deviceregistration/devices".into(), vec![]),
             "device_detail" => (device_detail_path(key)?, vec![]),
             "summary" => (
@@ -489,7 +520,7 @@ impl Client {
                     ),
                 }
             }
-            "activity" | "splits" | "zones" | "details" => {
+            "activity" | "splits" | "zones" | "details" | "exercise_sets" => {
                 if !key.bytes().all(|b| b.is_ascii_digit()) || key.is_empty() {
                     return Err(Error::Decode);
                 }
@@ -497,6 +528,7 @@ impl Client {
                     "splits" => "/splits",
                     "zones" => "/hrTimeInZones",
                     "details" => "/details",
+                    "exercise_sets" => "/exerciseSets",
                     _ => "",
                 };
                 (

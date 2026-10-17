@@ -193,6 +193,16 @@ async fn workout(app: tauri::AppHandle, id: String) -> Result<WorkoutView, Strin
     .await
 }
 #[tauri::command]
+async fn strength(
+    app: tauri::AppHandle,
+    date: Option<String>,
+) -> Result<Option<StrengthView>, String> {
+    read_view(app, move |core| {
+        Ok(core.strength(&date.unwrap_or_else(|| core.current_date(Local::now()))))
+    })
+    .await
+}
+#[tauri::command]
 async fn health(app: tauri::AppHandle, date: Option<String>) -> Result<HealthView, String> {
     read_view(app, move |core| {
         Ok(core.health(&date.unwrap_or_else(|| core.current_date(Local::now()))))
@@ -443,6 +453,7 @@ pub fn run() {
                     sleep,
                     training,
                     workout,
+                    strength,
                     health,
                     checkin,
                     plan,
@@ -465,6 +476,7 @@ pub fn run() {
                     sleep,
                     training,
                     workout,
+                    strength,
                     health,
                     checkin,
                     plan,

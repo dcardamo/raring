@@ -4,7 +4,8 @@ const metrics = new Set([
   'bodyBattery', 'stress', 'restingHr', 'hrv', 'respiration', 'spo2', 'skinTemp',
   'vo2max', 'endurance', 'hill', 'runningTolerance',
 ]);
-const routes = new Set([...tabs, 'readiness', 'checkin', 'plan', 'plan-setup', 'settings', 'onboarding']);
+const routes = new Set([...tabs, 'readiness', 'checkin', 'plan', 'plan-setup', 'settings', 'onboarding', 'strength', 'help']);
+export const helpPages = ['strength-start', 'strength-sets', 'strength-muscles', 'strength-watches'] as const;
 const trainingMetrics = new Set(['vo2max', 'endurance', 'hill', 'runningTolerance']);
 
 export function normalizeRoute(hashOrRoute: string): string {
@@ -13,6 +14,7 @@ export function normalizeRoute(hashOrRoute: string): string {
   if (routes.has(route)) return route;
   if (/^workout\/[\w-]+$/.test(route)) return route;
   if (route.startsWith('metric/') && metrics.has(route.slice(7))) return route;
+  if (route.startsWith('help/') && (helpPages as readonly string[]).includes(route.slice(5))) return route;
   return 'today';
 }
 
@@ -32,7 +34,15 @@ export function routeTrail(target: string, fromTrail: string[] = []): string[] {
     const caller = fromTrail.at(-1) === 'settings' ? fromTrail.slice(0, -1) : fromTrail;
     return [...(caller[0] === 'today' ? caller : ['today']), route];
   }
+  if (route === 'strength') return ['today', 'training', 'strength'];
+  if (route === 'help' || route.startsWith('help/')) {
+    if (route !== 'help' && fromTrail.at(-1) === 'help') return [...fromTrail, route];
+    // Help opens over the page that asked for it; reopening it does not stack.
+    const caller = fromTrail.filter(page => page !== 'help' && !page.startsWith('help/') && page !== 'onboarding');
+    return [...(caller[0] === 'today' ? caller : ['today']), route];
+  }
   if (route.startsWith('workout/')) {
+    if (fromTrail.at(-1) === 'strength') return ['today', 'training', 'strength', route];
     const parent = section(fromTrail) === 'training' ? 'training' :
       fromTrail.some(page => page === 'today') ? 'today' : 'training';
     return parent === 'today' ? ['today', route] : ['today', 'training', route];
