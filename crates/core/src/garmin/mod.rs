@@ -316,12 +316,15 @@ impl Client {
                 }
             }
             guard.1 = Some(Instant::now());
-            let r = native(self.http.post(format!("{}/graphql-gateway/graphql", self.api)))
-                .bearer_auth(&guard.0.access_token)
-                .json(&serde_json::json!({"query": query, "variables": variables}))
-                .send()
-                .await
-                .map_err(map_network)?;
+            let r = native(
+                self.http
+                    .post(format!("{}/graphql-gateway/graphql", self.api)),
+            )
+            .bearer_auth(&guard.0.access_token)
+            .json(&serde_json::json!({"query": query, "variables": variables}))
+            .send()
+            .await
+            .map_err(map_network)?;
             if r.status() == StatusCode::UNAUTHORIZED && attempt == 0 {
                 guard.0 = refresh_at(&self.http, &self.auth, &guard.0).await?;
                 continue;

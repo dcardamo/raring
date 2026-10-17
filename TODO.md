@@ -120,19 +120,6 @@ Today · Sleep · Training · Health and metric access predictable.
 [garmin-sleep-rhythm]: https://www.garmin.com/en-US/blog/fitness/the-difference-between-garmin-venu-3-and-venu-4/
 [garmin-alignment-fields]: https://github.com/cyberjunky/ha-garmin/blob/main/src/ha_garmin/client.py
 
-### 5. Garmin's Health Status
-
-- Verified: `POST /graphql-gateway/graphql` with
-  `query { healthStatusSummary(calendarDate:"YYYY-MM-DD") { calendarDate outliersCount metrics { value baselineUpperLimit baselineLowerLimit status percentage feedbackKey type } } }`
-  returns HRV, HR, SPO2, SKIN_TEMP_C/F and RESPIRATION, each with Garmin's
-  baseline bounds and status (`IN_RANGE`, …).
-- Use Garmin's baseline and status for the Health vitals and the "vitals
-  off" rule. Keep Raring's 80% range only where Garmin returns none, and
-  label which is which.
-- The web app's other GraphQL queries are worth checking for range sync
-  (item 1).
-- Spec: update the Rules section's normal range and the Health vitals copy.
-
 ### 6. Explain the numbers
 
 Users' most common complaint after clutter: scores without a why, and
@@ -223,7 +210,9 @@ Depends on item 1. The analysis Garmin's subscription charges for, free.
 - Display only: averages and overlays, no new scores. Spec: add the
   averaging to Rules.
 - Older days live in the history rows listed under Done (item 1), next to
-  the per-day rows of the last 90 days; each chart reads both.
+  the per-day rows of the last 90 days; each chart reads both. Check the web
+  app's other GraphQL queries for a Health Status range read before adding
+  per-day requests to long-range trends.
 - Opening an old day or workout should fetch its per-day detail (sleep
   stages, stress readings, charts, route) on demand and keep it. Not built.
 
@@ -339,6 +328,22 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **5. Garmin's Health Status** (commit "Use Garmin Health Status for vitals").
+  `POST /graphql-gateway/graphql` with `healthStatusSummary(calendarDate)`
+  returns six metric entries: HRV, HR, SPO2, SKIN_TEMP_C/F and RESPIRATION,
+  with `value`, baseline limits, `status`, `percentage` and `feedbackKey`.
+  Seven real read-only dates: a recent day returned all six `IN_RANGE`, an
+  early-watch day returned all six `ONBOARDING` with provisional numeric
+  limits, and an older day returned a null summary. The GraphQL `HR` value
+  matched sleep's `dailySleepDTO.avgHeartRate`, **not** resting heart rate;
+  SpO2 matched the overnight value. Raring uses the Celsius entry and Garmin's
+  status for comparable readings, including the two-vitals rule; unknown or
+  onboarding statuses remain neutral. The existing 30-night range is labeled
+  as Raring's fallback where Health Status has no metric. Synthetic fixtures
+  cover in-range, outliers, onboarding and missing data. Real outside-range
+  statuses and visual agreement with Connect/watch still need a phone check.
+  Other web GraphQL range queries remain a possible future optimization.
 
 - **1. Full history backfill** (commit "Download the whole Garmin history
   in the background"). After the per-day sync of the last 90 days, each run

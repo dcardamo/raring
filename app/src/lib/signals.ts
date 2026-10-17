@@ -11,17 +11,30 @@ export function rangeStatus(value: number | null, range: [number, number] | null
   return {label: 'Within range', tone: 'good'};
 }
 
+export function vitalStatus(v: VitalReading): {label:string; tone:Tone} {
+  if (v.value == null) return {label:'Not recorded',tone:'neutral'};
+  if (v.status === 'ONBOARDING') return {label:'Garmin baseline building',tone:'neutral'};
+  if (v.status) {
+    const label = ({IN_RANGE:'Within Garmin range',BELOW_RANGE:'Below Garmin range',ABOVE_RANGE:'Above Garmin range',OUT_OF_RANGE:'Outside Garmin range'} as Record<string,string>)[v.status];
+    return label ? {label,tone:v.tone} : {label:'Garmin status unavailable',tone:'neutral'};
+  }
+  return rangeStatus(v.value,v.normal,v.kind);
+}
+
+export const vitalName = (v: VitalReading) => v.kind==='restingHr' && (v.status || v.rangeSource==='garmin') ? 'Sleep HR' : shortVitalNames[v.kind];
+export const rangeName = (v: VitalReading) => v.rangeSource==='garmin' || v.status ? 'Garmin baseline' : v.rangeSource==='raring' ? 'Raring usual range' : 'Personal range';
+
 export function vitalSummary(vitals: VitalsCard) {
   const recorded = vitals.readings.filter(v => v.value != null);
-  const compared = recorded.filter(v => v.normal != null);
-  const outside = compared.filter(v => rangeStatus(v.value, v.normal).tone === 'poor').length;
+  const compared = recorded.filter(v => vitalStatus(v).tone !== 'neutral');
+  const outside = recorded.filter(v => vitalStatus(v).tone === 'poor').length;
   const complete = compared.length === vitals.readings.length && compared.length > 0;
   const headline = outside
-    ? `${outside} outside your usual range`
-    : complete ? 'Within your usual ranges'
+    ? `${outside} outside your ranges`
+    : complete ? 'Within your ranges'
     : compared.length ? `${compared.length} ${compared.length===1?'reading':'readings'} in range`
     : recorded.length ? 'Getting to know your usual' : 'Waiting for readings';
-  const detail = `${recorded.length} of ${vitals.readings.length} recorded · ${compared.length} with a range`;
+  const detail = `${recorded.length} of ${vitals.readings.length} recorded · ${compared.length} comparable`;
   const tone: Tone = outside ? 'fair' : complete ? 'good' : 'neutral';
   return {headline, detail, tone, outside};
 }

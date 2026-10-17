@@ -100,7 +100,7 @@ try {
 
  for(const width of [344,360,390,660,707,840,1024]) {
   await page.setViewportSize({width,height:900});
-  for(const route of ['today','sleep','training','health','readiness','workout/9000000000001','metric/hrv','metric/bodyBattery','metric/stress','settings','checkin','onboarding']) {
+  for(const route of ['today','sleep','training','health','readiness','workout/9000000000001','metric/hrv','metric/restingHr','metric/bodyBattery','metric/stress','settings','checkin','onboarding']) {
    await page.goto(`${url}/#${route}`);await waitRoute(route);
    const layout=await page.evaluate(()=>{
     // Largest vertical gap between cards stacked in the same grid column.
@@ -125,7 +125,7 @@ try {
     const failures=await contrastFailures(page);
     assert.deepEqual(failures,[],`${width}/${route}: text contrast`);
    }
-   if(width===840 || (width===390 && ['today','sleep','training','workout/9000000000001','health','onboarding','settings'].includes(route)))await page.screenshot({path:resolve(output,`${width}-${route.replace('/','-')}.png`)});
+   if(width===840 || (width===390 && ['today','sleep','training','workout/9000000000001','health','metric/restingHr','onboarding','settings'].includes(route)) || ([660,1024].includes(width) && ['health','metric/restingHr'].includes(route)))await page.screenshot({path:resolve(output,`${width}-${route.replace('/','-')}.png`)});
   }
  }
  console.log('Today, Sleep, Training, Workout and Health text contrast at 390/840: passed');
@@ -292,7 +292,7 @@ try {
  // A partially calibrated monitor must not turn missing readings into an all-clear.
  await live.evaluate(()=>{
   const s=window.testBackend;s.failSync=false;
-  for(const v of s.samples.health.vitals.readings){v.value=null;v.normal=null;v.trend=Array(30).fill(null);v.tone='neutral'}
+  for(const v of s.samples.health.vitals.readings){v.value=null;v.normal=null;v.trend=Array(30).fill(null);v.tone='neutral';v.status=null;v.rangeSource='none'}
   Object.assign(s.samples.health.vitals.readings[0],{value:48,normal:[44,52],scale:[30,90],tone:'good'});
   Object.assign(s.samples.health.vitals.readings[1],{value:58});
   s.samples.health.vitals.baselineReady=true;
@@ -300,7 +300,7 @@ try {
  await live.setViewportSize({width:390,height:844});
  await live.getByRole('navigation').getByRole('button',{name:'Health',exact:true}).click();
  await live.getByText('1 reading in range',{exact:true}).waitFor();
- assert.equal(await live.getByText('Within your usual ranges',{exact:true}).count(),0);
+ assert.equal(await live.getByText('Within your ranges',{exact:true}).count(),0);
  assert.equal(await live.getByText('Not recorded',{exact:true}).count(),3);
  await live.screenshot({path:resolve(output,'health-partial.png')});
  await live.evaluate(()=>{
@@ -310,7 +310,7 @@ try {
   v[1].trend[29]=28;
   window.dispatchEvent(new Event('raring:resume'));
  });
- await live.getByText('2 outside your usual range',{exact:true}).waitFor();
+ await live.getByText('2 outside your ranges',{exact:true}).waitFor();
  await live.getByText('Above usual',{exact:true}).waitFor();
  await live.getByText('Below baseline',{exact:true}).waitFor();
  await live.screenshot({path:resolve(output,'health-outliers.png')});

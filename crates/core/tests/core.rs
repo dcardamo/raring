@@ -525,6 +525,30 @@ fn mock(
     (url, seen, thread)
 }
 #[tokio::test]
+async fn graphql_posts_json_and_rejects_graphql_errors() {
+    let (url, seen, thread) = mock(vec![
+        (200, json!({"data":{"healthStatusSummary":null}}).to_string()),
+        (200, json!({"errors":[{"message":"bad query"}]}).to_string()),
+    ]);
+    let client = Client::with_urls(
+        Tokens {
+            access_token: token(1900000000),
+            refresh_token: "refresh".into(),
+            client_id: "TEST_DI".into(),
+            expires_at: Utc::now() + Duration::days(30),
+        },
+        &url,
+        &url,
+        std::time::Duration::ZERO,
+    ).unwrap();
+    assert_eq!(client.graphql("query { healthStatusSummary }", json!({})).await.unwrap()["healthStatusSummary"], Value::Null);
+    assert!(matches!(client.graphql("query { invalid }", json!({})).await, Err(garmin::Error::Decode)));
+    thread.join().unwrap();
+    let requests = seen.lock().unwrap();
+    assert!(requests[0].starts_with("POST /graphql-gateway/graphql "));
+    assert!(requests[0].contains("healthStatusSummary"));
+}
+#[tokio::test]
 async fn no_content_is_cached_and_bad_item_does_not_stop_readiness() {
     let store = Store::open(":memory:").unwrap();
     store
@@ -597,6 +621,7 @@ async fn backfill_includes_yesterday_and_scans_existing_days_to_fill_older_gaps(
                 "sleep",
                 "hrv",
                 "readiness",
+                "health_status",
                 "training",
                 "training_daily",
                 "load_focus",
@@ -615,7 +640,7 @@ async fn backfill_includes_yesterday_and_scans_existing_days_to_fill_older_gaps(
         s.put("records", "all", "now", &Value::Null).unwrap();
         s.set_cursor("records_checked", &Utc::now().timestamp().to_string())
             .unwrap();
-        let mut replies = vec![(200, "{}".into()); 12];
+        let mut replies = vec![(200, "{}".into()); 13];
         replies.extend([(200, "[]".into()), (200, "{}".into())]);
         let (url, seen, thread) = mock(replies);
         let c = Client::with_urls(
@@ -630,11 +655,11 @@ async fn backfill_includes_yesterday_and_scans_existing_days_to_fill_older_gaps(
             std::time::Duration::ZERO,
         )
         .unwrap();
-        let report = raring_core::sync::sync(&s, &c, now, 14).await;
+        let report = raring_core::sync::sync(&s, &c, now, 15).await;
         thread.join().unwrap();
-        assert_eq!(report.requests, 14);
+        assert_eq!(report.requests, 15);
         assert!(s.get("summary", expected).is_some());
-        assert!(seen.lock().unwrap()[13].contains(expected));
+        assert!(seen.lock().unwrap()[14].contains(expected));
     }
 }
 #[tokio::test]

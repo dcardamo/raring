@@ -1,6 +1,6 @@
 <script lang="ts">
  import type {VitalsCard} from '../generated/VitalsCard';
- import {rangeStatus,vitalSummary,vitalDecimals,vitalIcons,shortVitalNames} from '../signals';
+ import {vitalStatus,vitalSummary,vitalDecimals,vitalIcons,vitalName,rangeName} from '../signals';
  import {toneColor} from '../charts';
  import {num} from '../format';
  import Card from './Card.svelte';
@@ -19,24 +19,24 @@
  </div>
  <div class="signal-grid" class:compact>
   {#each vitals.readings as v}
-   {@const state=rangeStatus(v.value,v.normal,v.kind)}
+   {@const state=vitalStatus(v)}
    {@const decimals=vitalDecimals(v.kind)}
-   <button class="signal-tile" aria-label={'View '+shortVitalNames[v.kind]} aria-describedby={id+'-'+v.kind} onclick={()=>open(v.kind)} style:--signal={toneColor(state.tone)}>
+   <button class="signal-tile" aria-label={'View '+vitalName(v)} aria-describedby={id+'-'+v.kind} onclick={()=>open(v.kind)} style:--signal={toneColor(state.tone)}>
     <span id={id+'-'+v.kind} class="sr-only">{num(v.value,decimals)} {v.unit}. {state.label}.</span>
-    <span class="signal-name"><Icon name={vitalIcons[v.kind]} size={16}/><span>{compact?({restingHr:'RHR',hrv:'HRV',respiration:'Resp',spo2:'SpO₂',skinTemp:'Skin'} as Record<string,string>)[v.kind]:shortVitalNames[v.kind]}</span>{#if !compact}<Icon name="arrow-right" size={12}/>{/if}</span>
+    <span class="signal-name"><Icon name={vitalIcons[v.kind]} size={16}/><span>{compact?(v.kind==='restingHr' && (v.status || v.rangeSource==='garmin')?'Sleep HR':({restingHr:'RHR',hrv:'HRV',respiration:'Resp',spo2:'SpO₂',skinTemp:'Skin'} as Record<string,string>)[v.kind]):vitalName(v)}</span>{#if !compact}<Icon name="arrow-right" size={12}/>{/if}</span>
     <span class="signal-value n">{v.kind==='skinTemp' && (v.value??0)>0?'+':''}{num(v.value,decimals)}<small>{v.unit}</small></span>
     {#if compact}<span class="signal-dot" title={state.label}></span>
     {:else}
      <span class="signal-state">{state.label}</span>
      <RangeBar value={v.value} scale={v.scale} range={v.normal} color={toneColor(state.tone)}/>
-     <span class="signal-range">{#if v.normal}{v.kind==='hrv'?'Baseline':'Usual'} {num(v.normal[0],decimals)}–{num(v.normal[1],decimals)} {v.unit}{:else if v.kind==='hrv'}Awaiting Garmin baseline{:else}Needs 14 recorded nights{/if}</span>
+     <span class="signal-range">{#if v.normal}{rangeName(v)} {num(v.normal[0],decimals)}–{num(v.normal[1],decimals)} {v.unit}{:else if v.status==='ONBOARDING'}Garmin baseline building{:else if v.status}Garmin range unavailable{:else if v.kind==='hrv'}Awaiting Garmin baseline{:else}Needs 14 recorded nights{/if}</span>
     {/if}
    </button>
   {/each}
  </div>
- {#if summary.outside>=2}<p class="signal-warning">Several readings are outside your usual range. Take it easy and check how you feel.</p>{/if}
+ {#if summary.outside>=2}<p class="signal-warning">Several readings are outside your personal ranges. Take it easy and check how you feel.</p>{/if}
  {#if !compact}
-  <details><summary>How your ranges work</summary><p>Your usual range is the middle 80% of the last 30 nights, after at least 14 recorded nights. Nightly HRV is compared with Garmin's baseline; Garmin's Balanced status uses a seven-day average, so they can differ. Missing readings are not counted as in range. These are personal comparisons, not medical targets or a diagnosis.</p></details>
+  <details><summary>How your ranges work</summary><p>Garmin's Health Status baseline and status come first. Sleep HR is an overnight average, not resting HR. Where Garmin reports no Health Status metric, Raring uses the middle 80% of the last 30 recorded nights after at least 14 (HRV retains Garmin's own baseline). Garmin's seven-day HRV status can differ from its nightly Health Status. Missing or building readings are never in range. These are personal comparisons, not medical targets or a diagnosis.</p></details>
  {/if}
 </Card>
 

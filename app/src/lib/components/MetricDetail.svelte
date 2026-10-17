@@ -3,9 +3,9 @@
  import type {TodayView} from '../generated/TodayView';
  import type {HealthView} from '../generated/HealthView';
  import type {TrainingView} from '../generated/TrainingView';
- import {metricNames,metricDescriptions,metricSource} from '../metrics';
+ import {metricDescriptions,metricSource} from '../metrics';
  import {num,dateLabel,duration} from '../format';
- import {rangeStatus} from '../signals';
+ import {vitalStatus,rangeName,vitalName} from '../signals';
  import HistoryChart from './HistoryChart.svelte';
  import {toneColor,batteryColor,colors,stressColors,stressNames} from '../charts';
  import Card from './Card.svelte';
@@ -33,7 +33,7 @@
  {:else if vital}
   <div class="metric-value n" style:color={toneColor(vital.tone)}>{num(vital.value,decimals)}<span class="unit">{vital.unit}</span></div>
   <p class="small">{dateLabel((data as HealthView).date)} · latest synced</p>
-  <span class="pill" style:color={toneColor(rangeStatus(vital.value,vital.normal,vital.kind).tone)}>{rangeStatus(vital.value,vital.normal,vital.kind).label}</span>
+  <span class="pill" style:color={toneColor(vitalStatus(vital).tone)}>{vitalStatus(vital).label}</span>
  {:else}
   <div class="metric-value n">{num(trainingValue)}{#if metric==='runningTolerance'}<span class="unit">km</span>{/if}</div>
   <p class="small">Latest synced estimate</p>
@@ -51,14 +51,14 @@
  {:else if vital}
   <Card title="Nightly history">
    {#key metric}
-    <HistoryChart values={vital.trend} endDate={(data as HealthView).date} label={metricNames[metric]} unit={vital.unit} {decimals} band={vital.normal} bandLabel={metric==='hrv'?'Current Garmin baseline':'Current usual range'} nights/>
+    <HistoryChart values={vital.trend} endDate={(data as HealthView).date} label={vitalName(vital)} unit={vital.unit} {decimals} band={vital.normal} bandLabel={'Current '+rangeName(vital)} nights/>
    {/key}
   </Card>
-  <Card title={metric==='hrv'?'Garmin baseline':'Your usual range'}>
-   {#if vital.normal}<RangeBar value={vital.value} scale={vital.scale} range={vital.normal} color={toneColor(vital.tone)}/><p class="metric-copy range-caption">{num(vital.normal[0],decimals)}–{num(vital.normal[1],decimals)} {vital.unit}</p>{:else}<p class="metric-copy">{metric==='hrv'?"Waiting for Garmin to report your HRV baseline.":"At least 14 recorded nights are needed. Missing nights do not count toward your range."}</p>{/if}
+  <Card title={rangeName(vital)}>
+   {#if vital.normal}<RangeBar value={vital.value} scale={vital.scale} range={vital.normal} color={toneColor(vital.tone)}/><p class="metric-copy range-caption">{num(vital.normal[0],decimals)}–{num(vital.normal[1],decimals)} {vital.unit}</p>{:else}<p class="metric-copy">{vital.status==='ONBOARDING'?"Garmin is still building this baseline.":metric==='hrv'?"Waiting for Garmin to report your HRV baseline.":"At least 14 recorded nights are needed for Raring's fallback range."}</p>{/if}
   </Card>
  {:else if training && metric==='vo2max' && training.vo2maxTrend.some(v=>v!=null)}
   <Card title="Weekly trend"><div class="metric-chart"><Sparkline values={training.vo2maxTrend} w={500} h={150}/></div><div class="chart-ends"><span>Earlier</span><span>Latest</span></div></Card>
  {/if}
- <Card title="About this metric"><p class="metric-copy">{metricDescriptions[metric]}</p></Card>
+ <Card title="About this metric"><p class="metric-copy">{vital?.kind==='restingHr' && (vital.status || vital.rangeSource==='garmin') ? 'Garmin’s average heart rate during sleep, compared with its Health Status baseline. This is not your resting heart rate or a medical target.' : metricDescriptions[metric]}</p></Card>
 </div>

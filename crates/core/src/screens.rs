@@ -620,6 +620,35 @@ fn vital_value(store: &Store, kind: VitalKind, date: &str) -> Option<f64> {
     };
     store.get(source, date).and_then(|v| num(&v, paths))
 }
+fn health_metric(store: &Store, kind: VitalKind, date: &str) -> Option<Value> {
+    let name = match kind {
+        VitalKind::RestingHr => "HR", // Garmin's overnight average, not resting HR.
+        VitalKind::Hrv => "HRV",
+        VitalKind::Respiration => "RESPIRATION",
+        VitalKind::Spo2 => "SPO2",
+        VitalKind::SkinTemp => "SKIN_TEMP_C",
+    };
+    store.get("health_status", date)?["metrics"]
+        .as_array()?
+        .iter()
+        .find(|m| m["type"] == name && (m["status"].is_string() || garmin_range(m).is_some()))
+        .cloned()
+}
+fn finite_number(v: &Value) -> Option<f64> {
+    v.as_f64().filter(|n| n.is_finite())
+}
+fn garmin_range(metric: &Value) -> Option<[f64; 2]> {
+    let lo = finite_number(&metric["baselineLowerLimit"])?;
+    let hi = finite_number(&metric["baselineUpperLimit"])?;
+    (lo <= hi).then_some([lo, hi])
+}
+fn garmin_tone(status: &str) -> Tone {
+    match status {
+        "IN_RANGE" => Tone::Good,
+        "ABOVE_RANGE" | "BELOW_RANGE" | "OUT_OF_RANGE" => Tone::Poor,
+        _ => Tone::Neutral,
+    }
+}
 pub fn vitals(store: &Store, date: &str) -> VitalsCard {
     let mut readings = vec![];
     for (kind, unit) in [
@@ -629,12 +658,29 @@ pub fn vitals(store: &Store, date: &str) -> VitalsCard {
         (VitalKind::Spo2, "%"),
         (VitalKind::SkinTemp, "°C"),
     ] {
+        let metric = health_metric(store, kind, date);
+        let status = metric
+            .as_ref()
+            .and_then(|m| m["status"].as_str())
+            .map(str::to_owned);
+        let graph_value = metric.as_ref().and_then(|m| finite_number(&m["value"]));
         let trend: Vec<Option<f64>> = (0..30)
             .rev()
-            .map(|i| vital_value(store, kind, &date_sub(date, i)))
+            .map(|i| {
+                let day = date_sub(date, i);
+                if metric.is_some() {
+                    health_metric(store, kind, &day).and_then(|m| finite_number(&m["value"]))
+                } else {
+                    vital_value(store, kind, &day)
+                }
+            })
             .collect();
-        let value = vital_value(store, kind, date);
-        let normal = if kind == VitalKind::Hrv {
+        let value = if metric.is_some() {
+            graph_value
+        } else {
+            vital_value(store, kind, date)
+        };
+        let fallback = if kind == VitalKind::Hrv {
             store.get("hrv", date).and_then(|v| {
                 let h = hrv(&v);
                 Some([
@@ -659,10 +705,39 @@ pub fn vitals(store: &Store, date: &str) -> VitalsCard {
         } else {
             rules::normal(&trend.iter().flatten().copied().collect::<Vec<_>>())
         };
-        let tone = match (value, normal) {
-            (Some(v), Some([lo, hi])) if v < lo || v > hi => Tone::Poor,
-            (Some(_), Some(_)) => Tone::Good,
-            _ => Tone::Neutral,
+        let garmin = metric.as_ref().and_then(garmin_range);
+        // An onboarding baseline is not calibrated, even when bounds have numbers.
+        let onboarding = status.as_deref() == Some("ONBOARDING");
+        let (normal, range_source) = if onboarding {
+            (None, VitalRangeSource::None)
+        } else if let Some(range) = garmin {
+            (Some(range), VitalRangeSource::Garmin)
+        } else if metric.is_none() || (kind == VitalKind::Hrv && status.is_none()) {
+            (
+                fallback,
+                if fallback.is_some() {
+                    if kind == VitalKind::Hrv {
+                        VitalRangeSource::Garmin
+                    } else {
+                        VitalRangeSource::Raring
+                    }
+                } else {
+                    VitalRangeSource::None
+                },
+            )
+        } else {
+            (None, VitalRangeSource::None)
+        };
+        let tone = if value.is_none() || onboarding {
+            Tone::Neutral
+        } else if let Some(status) = status.as_deref() {
+            garmin_tone(status)
+        } else {
+            match (value, normal) {
+                (Some(v), Some([lo, hi])) if v < lo || v > hi => Tone::Poor,
+                (Some(_), Some(_)) => Tone::Good,
+                _ => Tone::Neutral,
+            }
         };
         let lo = normal
             .map(|r| r[0])
@@ -680,6 +755,8 @@ pub fn vitals(store: &Store, date: &str) -> VitalsCard {
             value,
             unit: unit.into(),
             tone,
+            status,
+            range_source,
             normal,
             scale: [lo - span, hi + span],
             trend,
@@ -688,8 +765,7 @@ pub fn vitals(store: &Store, date: &str) -> VitalsCard {
     let off_count = readings.iter().filter(|r| r.tone == Tone::Poor).count() as u32;
     let baseline_ready = readings
         .iter()
-        .filter(|r| r.kind != VitalKind::Hrv)
-        .any(|r| r.normal.is_some());
+        .any(|r| r.value.is_some() && r.normal.is_some() && r.tone != Tone::Neutral);
     VitalsCard {
         readings,
         off_count,
