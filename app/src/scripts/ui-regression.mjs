@@ -108,13 +108,16 @@ try {
      const cards=[...grid.querySelectorAll(':scope>*,:scope>.row>*')].filter(e=>getComputedStyle(e).display!=='contents').map(e=>e.getBoundingClientRect());
      return Math.max(0,...cards.map(c=>{const above=cards.filter(o=>o!==c && o.left<c.right-1 && o.right>c.left+1 && o.bottom<=c.top+1);return above.length?c.top-Math.max(...above.map(o=>o.bottom)):0}));
     };
+    // On wide screens Today's headline sits beside the dials, not below them.
+    const hero=()=>{const d=document.querySelector('.today-hero>.dials'),h=document.querySelector('.today-hero>.headline');return d&&h?h.getBoundingClientRect().top<d.getBoundingClientRect().bottom:null};
     const main=document.querySelector('main'),grid=document.querySelector('.dashboard'),phone=document.querySelector('.phone');
-    return {viewport:innerWidth,body:document.body.scrollWidth,main:main.clientWidth,content:main.scrollWidth,shell:phone.clientWidth,height:phone.clientHeight,columns:grid?getComputedStyle(grid).gridTemplateColumns.split(' ').length:0,holes:holes(grid)};
+    return {viewport:innerWidth,body:document.body.scrollWidth,main:main.clientWidth,content:main.scrollWidth,shell:phone.clientWidth,height:phone.clientHeight,columns:grid?getComputedStyle(grid).gridTemplateColumns.split(' ').length:0,holes:holes(grid),hero:hero()};
    });
    assert.equal(layout.shell,width,`${width}/${route}: shell uses available width`);
    assert.equal(layout.height,900,`${width}/${route}: shell uses available height`);
    assert.ok(layout.body<=width && layout.content<=layout.main+1,`${width}/${route}: horizontal overflow ${JSON.stringify(layout)}`);
    if(width>=660 && layout.columns)assert.equal(layout.columns,2,`${width}/${route}: two columns`);
+   if(route==='today')assert.equal(layout.hero,width>=660,`${width}/today: headline beside dials only when unfolded`);
    assert.ok(layout.holes<=18,`${width}/${route}: ${layout.holes}px hole between cards`);
    if(width===840 || (width===390 && ['today','onboarding','settings'].includes(route)))await page.screenshot({path:resolve(output,`${width}-${route.replace('/','-')}.png`)});
   }
