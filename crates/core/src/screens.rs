@@ -155,13 +155,36 @@ fn sleep_plan(store: &Store, date: &str) -> Option<SleepPlan> {
     if !need_min.is_finite() || need_min <= 0. {
         return None;
     }
+    // Garmin's window is for the night its need describes, so only tonight's
+    // need carries one. Its end plus the need lands on Garmin's expected wake.
+    let window = if source == SleepNeedSource::Tonight {
+        garmin_bedtime_window(&sleep(&current)["nextSleepNeed"])
+    } else {
+        None
+    };
+    let (bedtime, bedtime_start) = match window {
+        Some((start, end)) => (end, Some(start)),
+        None => (rules::bedtime(&wakes, need_min)?, None),
+    };
     Some(SleepPlan {
-        bedtime: rules::bedtime(&wakes, need_min)?,
-        wake_time: rules::bedtime(&wakes, 0.)?,
+        bedtime,
+        bedtime_start,
+        wake_time: rules::bedtime(&wakes, 0.),
         need_min,
         source,
         wake_nights: wakes.len() as u32,
     })
+}
+fn garmin_bedtime_window(need: &Value) -> Option<(String, String)> {
+    let clock = |key: &str| {
+        let minutes = num(need, &[&[key]]).filter(|n| n.is_finite())?;
+        let minute = (minutes.round() as i64).rem_euclid(1440);
+        Some(format!("{:02}:{:02}", minute / 60, minute % 60))
+    };
+    Some((
+        clock("recommendedBedtimeStartMins")?,
+        clock("recommendedBedtimeEndMins")?,
+    ))
 }
 fn first(v: &Value) -> &Value {
     v.as_array().and_then(|a| a.first()).unwrap_or(v)

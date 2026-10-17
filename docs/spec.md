@@ -64,9 +64,10 @@ optional after sign-in.
 - **Today's focus**: Rest, Easy, Steady or Push, with the suggestion lit up,
   followed by the lowest recorded Garmin readiness factor. Tap to see all six
   factors and their feedback.
-- **Tonight's sleep**: suggested asleep-by time, Garmin sleep need and usual
+- **Tonight's sleep**: Garmin's bedtime window and sleep need for tonight;
+  without Garmin's window, a suggested asleep-by time, the need and usual
   wake time. The same plan appears on Sleep; a historical-average need is
-  explicitly labeled, along with the number of recorded wake times. Hide the plan if need or wake history is unavailable.
+  explicitly labeled, along with the number of recorded wake times. Hide the plan if the need is unavailable, or if both the window and wake history are.
 - Body Battery as a battery with its overnight charge; HRV with a 7-day line
   over Garmin's baseline band.
 - **Stress**: Garmin's average so far today, its category and day word, and
@@ -93,13 +94,12 @@ optional after sign-in.
 ### Sleep
 
 - Score gauge, and a time-asleep bar with a marker at Garmin's sleep need
-  (when the watch reports it).
+  for that night (when the watch reports it), labeled as last night's need.
 - Stage timeline (awake, REM, light, deep) and a stage bar with each stage's
   change against your usual.
 - Overnight tiles with lines: HRV, heart rate, respiration, SpO2.
 - 14-night consistency chart with your bed and wake windows shaded.
-- Tonight's sleep plan, shared with Today: asleep-by time, sleep need and
-  usual wake time. It is a suggestion, not an alarm.
+- Tonight's sleep plan, shared with Today. It is a suggestion, not an alarm.
 
 ### Training
 
@@ -169,9 +169,11 @@ Sent by the phone itself.
 - **Suggested effort**: Garmin's readiness feedback, rephrased. The level sets
   push, steady or easy; a high load ratio caps it at steady.
 - **Biggest drag**: the readiness factor Garmin rates worst.
-- **Bedtime**: usual wake time (14-day median) minus tonight's sleep need
-  (Garmin's next-night adjusted need when present, otherwise its latest
-  adjusted need or the 14-day average). Label the source and wake-history count.
+- **Bedtime**: Garmin's recommended bedtime window for tonight when it sends
+  one; the asleep-by time is its end. Otherwise usual wake time (14-day
+  median) minus tonight's sleep need (Garmin's next-night adjusted need when
+  present, otherwise its latest adjusted need or the 14-day average). Label
+  the source and wake-history count.
 - **Normal range**: the middle 80% of the last 30 nights, once there are at
   least 14. HRV uses Garmin's own baseline instead.
 - **Stress bars**: the Today card averages each 15 minutes of Garmin's

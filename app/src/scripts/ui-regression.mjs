@@ -72,7 +72,7 @@ try {
  await back('today');
  await page.getByRole('button',{name:/^Tonight's sleep/}).click();await waitRoute('sleep');
  assert.ok((await page.locator('.sleep-plan').textContent()).includes('23:06'));
- assert.ok((await page.locator('.sleep-plan').textContent()).includes('Usual wake'));
+ assert.ok((await page.locator('.sleep-plan').textContent()).includes('22:30–23:06'));
  await tab('Health');
  assert.equal(await page.locator('.dashboard>.card').first().locator('h3>span').first().textContent(),'Vitals');
  assert.equal(await page.locator('.signal-tile').count(),5);
@@ -312,12 +312,16 @@ try {
  assert.equal(await live.locator('.history .history-bar').count(),0);
  assert.equal(await live.locator('.history input').getAttribute('aria-valuetext'),'Thu 16 Oct: Not recorded','history is anchored to stored data, not the system clock');
  await live.screenshot({path:resolve(output,'history-missing.png')});
- await live.evaluate(()=>{window.testBackend.samples.today.sleepPlan=null;window.testBackend.samples.sleep.sleepPlan=null});
+ await live.evaluate(()=>{window.testBackend.samples.today.sleepPlan.bedtimeStart=null});
  await live.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();
- await live.locator('.dials').waitFor();
- assert.equal(await live.locator('.sleep-plan').count(),0,'no inferred sleep plan without Garmin need');
+ await live.locator('.sleep-plan').waitFor();
+ assert.ok((await live.locator('.sleep-plan').textContent()).includes('Usual wake'),'without Garmin\'s window the plan falls back to wake history');
+ await live.evaluate(()=>{window.testBackend.samples.today.sleepPlan=null;window.testBackend.samples.sleep.sleepPlan=null});
  await live.getByRole('navigation').getByRole('button',{name:'Sleep',exact:true}).click();
  await live.locator('.sleep-hero').waitFor();
+ assert.equal(await live.locator('.sleep-plan').count(),0,'no inferred sleep plan without Garmin need');
+ await live.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();
+ await live.locator('.dials').waitFor();
  assert.equal(await live.locator('.sleep-plan').count(),0);
  console.log('Partial baselines, outliers, missing history and unavailable sleep plans: passed');
  await live.evaluate(()=>{Object.assign(window.testBackend.samples.training.acute,{label:'',tone:'neutral',band:null})});

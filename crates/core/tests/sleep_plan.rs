@@ -34,7 +34,7 @@ fn today_and_sleep_share_current_garmin_plan_across_midnight() {
     assert_eq!(today.sleep_plan, sleep.sleep_plan);
     let plan = today.sleep_plan.unwrap();
     assert_eq!(plan.bedtime, "23:15");
-    assert_eq!(plan.wake_time, "07:15");
+    assert_eq!(plan.wake_time.as_deref(), Some("07:15"));
     assert_eq!(plan.need_min, 480.);
     assert_eq!(plan.source, SleepNeedSource::Latest);
     assert_eq!(plan.wake_nights, 2);
@@ -71,6 +71,42 @@ fn adjusted_minute_needs_distinguish_last_night_from_tonight() {
     raw["dailySleepDTO"]["nextSleepNeed"]["actual"] = json!(0);
     store.put("sleep", DATE, "now", &raw).unwrap();
     assert_eq!(screens::today(&store, DATE).sleep_plan.unwrap().source, SleepNeedSource::Latest);
+}
+
+#[test]
+fn garmin_bedtime_window_is_used_for_tonight_only() {
+    let store = Store::open(":memory:").unwrap();
+    // Last night's window must not stand in for tonight's.
+    put_sleep(
+        &store,
+        DATE,
+        None,
+        json!({"actual": 480, "recommendedBedtimeStartMins": 1340, "recommendedBedtimeEndMins": 1400}),
+    );
+    assert!(screens::today(&store, DATE).sleep_plan.is_none());
+
+    let mut raw = store.get("sleep", DATE).unwrap();
+    raw["dailySleepDTO"]["nextSleepNeed"] = json!({
+        "actual": 440,
+        "recommendedBedtimeStartMins": 1370,
+        "recommendedBedtimeEndMins": 1450,
+    });
+    store.put("sleep", DATE, "now", &raw).unwrap();
+    let plan = screens::today(&store, DATE).sleep_plan.unwrap();
+    assert_eq!(plan.bedtime_start.as_deref(), Some("22:50"));
+    assert_eq!(plan.bedtime, "00:10");
+    assert_eq!(plan.need_min, 440.);
+    assert_eq!(plan.source, SleepNeedSource::Tonight);
+    assert_eq!(plan.wake_time, None);
+    assert_eq!(plan.wake_nights, 0);
+
+    raw["dailySleepDTO"]["sleepEndTimestampLocal"] = json!(format!("{DATE}T10:30:00"));
+    raw["dailySleepDTO"]["nextSleepNeed"]["recommendedBedtimeEndMins"] = json!("NaN");
+    store.put("sleep", DATE, "now", &raw).unwrap();
+    let plan = screens::sleep_view(&store, DATE).sleep_plan.unwrap();
+    assert_eq!(plan.bedtime_start, None);
+    assert_eq!(plan.bedtime, "03:10");
+    assert_eq!(plan.wake_time.as_deref(), Some("10:30"));
 }
 
 #[test]
@@ -148,7 +184,7 @@ fn historical_fallback_averages_both_aliases_and_ignores_invalid_needs() {
     assert_eq!(plan, screens::sleep_view(&store, DATE).sleep_plan.unwrap());
     assert_eq!(plan.need_min, 480.);
     assert_eq!(plan.bedtime, "23:30");
-    assert_eq!(plan.wake_time, "07:30");
+    assert_eq!(plan.wake_time.as_deref(), Some("07:30"));
     assert_eq!(plan.source, SleepNeedSource::Average);
 }
 
