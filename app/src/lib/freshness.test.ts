@@ -3,7 +3,7 @@ import { shouldSync, SYNC_INTERVAL_MS } from './freshness';
 import type { AppStatus } from './generated/AppStatus';
 
 const now = Date.parse('2026-10-16T14:00:00Z');
-const status: AppStatus = { signedIn: true, syncing: false, lastSync: null, historyDays: 30, lastError: null };
+const status: AppStatus = { signedIn: true, syncing: false, lastSync: null, historyDays: 30, historyFrom: null, historyComplete: false, lastError: null };
 
 describe('foreground freshness', () => {
   it('refreshes missing and stale data, but not a recent background sync', () => {

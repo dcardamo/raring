@@ -92,7 +92,11 @@ impl Raring {
         screens::checkin(&self.store, monday)
     }
     pub fn status(&self) -> view::AppStatus {
+        let (history_from, history_complete) =
+            sync::history_progress(&self.store, Local::now().date_naive());
         view::AppStatus {
+            history_from,
+            history_complete,
             signed_in: self.store.get("profile", "me").is_some(),
             syncing: false,
             last_sync: self.store.cursor("last_sync"),
