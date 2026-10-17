@@ -320,7 +320,18 @@ async fn request(
                     serde_json::json!({}),
                 )
                 .await
-                .map(|v| v["healthStatusSummary"].clone())
+                .and_then(|v| {
+                    let summary = v.get("healthStatusSummary").ok_or(garmin::Error::Decode)?;
+                    if summary.is_null() {
+                        return Ok(Value::Null);
+                    }
+                    let valid = summary["calendarDate"] == key
+                        && summary["outliersCount"].as_u64().is_some()
+                        && summary["metrics"].as_array().is_some_and(|metrics| {
+                            metrics.iter().all(|metric| metric["type"].is_string())
+                        });
+                    valid.then(|| summary.clone()).ok_or(garmin::Error::Decode)
+                })
         }
     } else {
         client.endpoint(kind, key, name).await

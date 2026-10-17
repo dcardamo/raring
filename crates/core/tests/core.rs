@@ -294,6 +294,43 @@ fn notification_log_and_defaults() {
         .any(|v| v.kind == "morning"));
 }
 #[test]
+fn health_status_notifications_name_sleep_hr_and_garmin_outliers() {
+    let store = Store::open(":memory:").unwrap();
+    seed(&store);
+    let day = "2025-01-02";
+    let when = chrono::NaiveDate::from_ymd_opt(2025, 1, 2)
+        .unwrap()
+        .and_hms_opt(9, 0, 0)
+        .unwrap()
+        .and_local_timezone(Local)
+        .single()
+        .unwrap();
+    let mut health: Value = serde_json::from_str(include_str!("fixtures/health_status.json")).unwrap();
+    health["calendarDate"] = json!(day);
+    store.put("health_status", day, "now", &health).unwrap();
+    let items = notifications::notifications(&store, when);
+    let morning = items.iter().find(|n| n.kind == "morning").unwrap();
+    assert!(morning.body.contains("Sleep HR 58"));
+    assert!(!morning.body.contains("resting HR 58"));
+    let vitals = items.iter().find(|n| n.kind == "vitals").unwrap();
+    assert!(vitals.body.contains("Garmin's baselines"));
+    assert!(!vitals.body.contains("your usual range"));
+
+    // One Garmin outlier plus a resting-HR fallback must name both sources.
+    health["metrics"].as_array_mut().unwrap().retain(|m| m["type"] == "SPO2");
+    store.put("health_status", day, "now", &health).unwrap();
+    for i in 1..30 {
+        let previous = (when.date_naive() - Duration::days(i)).to_string();
+        store.put("summary", &previous, "now", &json!({"restingHeartRate":48})).unwrap();
+    }
+    let mut summary = store.get("summary", day).unwrap();
+    summary["restingHeartRate"] = json!(75);
+    store.put("summary", day, "now", &summary).unwrap();
+    let items = notifications::notifications(&store, when);
+    assert!(items.iter().find(|n| n.kind == "morning").unwrap().body.contains("resting HR 75"));
+    assert!(items.iter().find(|n| n.kind == "vitals").unwrap().body.contains("Garmin's baselines or Raring's usual ranges"));
+}
+#[test]
 fn metric_change_notifications_obey_shared_setting() {
     let s = Store::open(":memory:").unwrap();
     seed(&s);
@@ -549,6 +586,56 @@ async fn graphql_posts_json_and_rejects_graphql_errors() {
     assert!(requests[0].contains("healthStatusSummary"));
 }
 #[tokio::test]
+async fn health_status_caches_explicit_null_but_retries_missing_or_malformed_summary() {
+    let now = chrono::NaiveDate::from_ymd_opt(2025, 1, 10)
+        .unwrap()
+        .and_hms_opt(12, 0, 0)
+        .unwrap()
+        .and_local_timezone(Local)
+        .single()
+        .unwrap();
+    let day = now.date_naive().to_string();
+    for (answer, retry, present) in [
+        (json!({"data":{"healthStatusSummary":null}}), false, true),
+        (json!({"data":{}}), true, false),
+        (json!({"data":{"healthStatusSummary":{"calendarDate":day,"outliersCount":0,"metrics":{}}}}), true, false),
+        (json!({"data":{"healthStatusSummary":{"calendarDate":"2025-01-09","outliersCount":0,"metrics":[]}}}), true, false),
+        (json!({"data":{"healthStatusSummary":{"calendarDate":day,"outliersCount":0,"metrics":[{"type":"HR"}]}}}), false, true),
+    ] {
+        let store = Store::open(":memory:").unwrap();
+        store.put("profile", "me", "now", &json!({"displayName":"Sample User"})).unwrap();
+        let mut replies = vec![(200, "{}".into()); 4];
+        replies.push((200, answer.to_string()));
+        let (url, seen, thread) = mock(replies);
+        let client = Client::with_urls(
+            Tokens {
+                access_token: token(1900000000),
+                refresh_token: "refresh".into(),
+                client_id: "TEST_DI".into(),
+                expires_at: Utc::now() + Duration::days(30),
+            },
+            &url,
+            &url,
+            std::time::Duration::ZERO,
+        ).unwrap();
+        let report = raring_core::sync::sync(&store, &client, now, 5).await;
+        thread.join().unwrap();
+        assert_eq!(report.requests, 5);
+        assert_eq!(report.data_failures, usize::from(retry));
+        assert_eq!(store.get("health_status", &day).is_some(), present);
+        let retry_at = store.cursor(&format!("retry:health_status:{day}")).unwrap();
+        if retry {
+            assert!(retry_at.parse::<i64>().unwrap() > Utc::now().timestamp());
+        } else {
+            assert_eq!(retry_at, "0");
+        }
+        let seen = seen.lock().unwrap();
+        assert!(seen[4].starts_with("POST /graphql-gateway/graphql "));
+        let body: Value = serde_json::from_str(seen[4].split("\r\n\r\n").nth(1).unwrap()).unwrap();
+        assert!(body["query"].as_str().unwrap().contains(&format!("calendarDate: \"{day}\"")));
+    }
+}
+#[tokio::test]
 async fn no_content_is_cached_and_bad_item_does_not_stop_readiness() {
     let store = Store::open(":memory:").unwrap();
     store
@@ -661,6 +748,50 @@ async fn backfill_includes_yesterday_and_scans_existing_days_to_fill_older_gaps(
         assert!(s.get("summary", expected).is_some());
         assert!(seen.lock().unwrap()[14].contains(expected));
     }
+}
+#[tokio::test]
+async fn backfill_skips_old_health_status_days_and_still_fetches_history_ranges() {
+    let today = chrono::NaiveDate::from_ymd_opt(2025, 1, 10).unwrap();
+    let now = today.and_hms_opt(12, 0, 0).unwrap().and_local_timezone(Local).single().unwrap();
+    let store = Store::open(":memory:").unwrap();
+    store.put("profile", "me", "now", &json!({"displayName":"Sample User"})).unwrap();
+    for i in 0..90 {
+        let day = (today - Duration::days(i)).to_string();
+        for kind in ["summary", "sleep", "hrv", "readiness", "training", "training_daily", "load_focus", "battery", "spo2", "respiration", "stress", "max_metrics"] {
+            store.put(kind, &day, "now", &Value::Null).unwrap();
+        }
+        if i < 30 {
+            store.put("health_status", &day, "now", &Value::Null).unwrap();
+        }
+    }
+    for kind in ["fitness_age", "races", "endurance", "hill", "tolerance"] {
+        store.put(kind, &today.to_string(), "now", &Value::Null).unwrap();
+    }
+    store.put("records", "all", "now", &Value::Null).unwrap();
+    store.set_cursor("records_checked", &Utc::now().timestamp().to_string()).unwrap();
+    let mut replies = vec![(200, "{}".into()); 13];
+    replies[4] = (200, json!({"data":{"healthStatusSummary":null}}).to_string());
+    replies.extend([(200, "[]".into()), (200, json!({"data":[]}).to_string())]);
+    let (url, seen, thread) = mock(replies);
+    let client = Client::with_urls(
+        Tokens {
+            access_token: token(1900000000),
+            refresh_token: "refresh".into(),
+            client_id: "TEST_DI".into(),
+            expires_at: Utc::now() + Duration::days(30),
+        },
+        &url,
+        &url,
+        std::time::Duration::ZERO,
+    ).unwrap();
+    let report = raring_core::sync::sync(&store, &client, now, 15).await;
+    thread.join().unwrap();
+    assert_eq!(report.requests, 15);
+    assert_eq!(report.data_failures, 0);
+    let seen = seen.lock().unwrap();
+    assert_eq!(seen.iter().filter(|r| r.contains("POST /graphql-gateway/graphql")).count(), 1);
+    assert!(seen[14].contains("/usersummary-service/v2/dailysummaries"));
+    assert!(store.get("health_status", &(today - Duration::days(30)).to_string()).is_none());
 }
 #[tokio::test]
 async fn forbidden_is_not_signout_and_rejected_refresh_is() {

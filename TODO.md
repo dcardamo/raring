@@ -343,6 +343,9 @@ faces, screens, sensors and audio prompts stay in Connect.
   as Raring's fallback where Health Status has no metric. Synthetic fixtures
   cover in-range, outliers, onboarding and missing data. Real outside-range
   statuses and visual agreement with Connect/watch still need a phone check.
+  Health Status costs one extra request on an ordinary sync, two during the
+  morning two-day refresh, and up to 30 for the first 30-night download on a
+  new install; older days are skipped so history range requests retain budget.
   Other web GraphQL range queries remain a possible future optimization.
 
 - **1. Full history backfill** (commit "Download the whole Garmin history

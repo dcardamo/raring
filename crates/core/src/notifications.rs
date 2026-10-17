@@ -1,7 +1,7 @@
 use crate::{
     screens,
     store::Store,
-    view::{Settings, SleepView, TodayView, VitalKind},
+    view::{Settings, SleepView, TodayView, Tone, VitalKind, VitalRangeSource},
 };
 use chrono::{DateTime, Datelike, Local, Timelike};
 use serde::{Deserialize, Serialize};
@@ -54,14 +54,20 @@ fn morning_body(view: &TodayView, sleep: &SleepView) -> String {
             None => format!("HRV {hrv:.0} ms"),
         });
     }
-    if let Some(rhr) = view
+    if let Some(reading) = view
         .vitals
         .readings
         .iter()
-        .find(|r| r.kind == VitalKind::RestingHr)
-        .and_then(|r| r.value)
+        .find(|r| r.kind == VitalKind::RestingHr && r.value.is_some())
     {
-        recovery.push(format!("resting HR {rhr:.0}"));
+        let name = if reading.status.is_some() || reading.range_source == VitalRangeSource::Garmin {
+            "Sleep HR"
+        } else {
+            "resting HR"
+        };
+        if let Some(hr) = reading.value {
+            recovery.push(format!("{name} {hr:.0}"));
+        }
     }
     if let Some(battery) = view.body_battery.now {
         recovery.push(format!("Body Battery {battery:.0}"));
@@ -116,10 +122,21 @@ pub fn notifications(store: &Store, now: DateTime<Local>) -> Vec<Notification> {
         );
     }
     if view.vitals.off_count >= 2 {
+        let mut outliers = view.vitals.readings.iter().filter(|r| r.tone == Tone::Poor);
+        let garmin = outliers.clone().any(|r| {
+            r.status.is_some() || r.range_source == VitalRangeSource::Garmin
+        });
+        let raring = outliers.any(|r| r.range_source == VitalRangeSource::Raring);
+        let source = match (garmin, raring) {
+            (true, true) => "Garmin's baselines or Raring's usual ranges",
+            (true, false) => "Garmin's baselines",
+            (false, true) => "Raring's usual ranges",
+            (false, false) => "personal ranges",
+        };
         add(
             "vitals",
             "Vitals outside range",
-            "Several readings are outside your usual range. Take it easy and check how you feel.".into(),
+            format!("Several readings are outside {source}. Take it easy and check how you feel."),
             day.clone(),
         );
     }
