@@ -199,6 +199,8 @@ async fn main() -> Result<()> {
                     }
                     scrub(&mut v);fs::write(out.join(format!("{kind}.json")),serde_json::to_vec_pretty(&v)?)?;},Err(e)=>eprintln!("{kind}: {e}")}
             }
+            // A capture can refresh the tokens, and Garmin may rotate the refresh token.
+            save_tokens(&client.tokens().await)?;
             println!("Scrubbed capture at {}. Review it manually before sharing.",out.display());
         },
         _=>bail!("usage: raring login [--import FILE] | sync [--budget N] | status | show SCREEN [--date YYYY-MM-DD] | notifications | capture --out DIR")
