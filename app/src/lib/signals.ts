@@ -39,9 +39,12 @@ export function vitalSummary(vitals: VitalsCard) {
   return {headline, detail, tone, outside};
 }
 
+const ratingRank = {poor: 0, fair: 1, good: 2} as Record<string, number>;
+
+/** The factor Garmin rates worst, its percentage breaking ties; unrated factors never count. */
 export function limitingFactor(factors: Factor[]) {
-  return factors.filter(f => f.percent != null && Number.isFinite(f.percent))
-    .sort((a, b) => a.percent! - b.percent!)[0] ?? null;
+  return factors.filter(f => f.tone in ratingRank)
+    .sort((a, b) => ratingRank[a.tone] - ratingRank[b.tone] || (a.percent ?? Infinity) - (b.percent ?? Infinity))[0] ?? null;
 }
 
 export const vitalDecimals = (kind: VitalReading['kind']) => kind === 'skinTemp' || kind === 'respiration' ? 1 : 0;

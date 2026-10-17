@@ -7,9 +7,11 @@ import type { Factor } from "./Factor";
 import type { FitnessAgeCard } from "./FitnessAgeCard";
 import type { Gauge } from "./Gauge";
 import type { HrvCard } from "./HrvCard";
+import type { Reconciliation } from "./Reconciliation";
 import type { SleepPlan } from "./SleepPlan";
 import type { StressCard } from "./StressCard";
 import type { VitalsCard } from "./VitalsCard";
+import type { Why } from "./Why";
 
 export type TodayView = { 
 /**
@@ -37,7 +39,11 @@ readinessTrend: Array<number | null>, sleep: Gauge | null, sleepPlan: SleepPlan 
 /**
  * A few words: "Ready to push", "Take it easy".
  */
-headline: string, chips: Array<Chip>, factors: Array<Factor>, call: Effort | null, 
+headline: string, chips: Array<Chip>, factors: Array<Factor>, readinessWhy: Why | null, bodyBatteryWhy: Why | null, 
+/**
+ * Shown on Today behind a tap when two scores point different ways.
+ */
+reconcile: Reconciliation | null, call: Effort | null, 
 /**
  * For example "Morning Run done · 186 load".
  */

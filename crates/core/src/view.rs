@@ -100,6 +100,56 @@ pub struct Factor {
     pub detail: String,
 }
 
+/// One input behind a score, named from Garmin's own factors, events and
+/// feedback.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WhyInput {
+    /// Stable key: a readiness factor key, overnight, stress, activity, nap,
+    /// rest, acuteLoad, loadFocus, hrvStatus or vo2max.
+    pub key: String,
+    pub name: String,
+    /// The value Garmin used, ready to show ("18 h", "+34"), when it sends one.
+    pub value: Option<String>,
+    /// Garmin's rating or label in words ("Very good", "Optimal"); None when
+    /// Garmin gave none.
+    pub rating: Option<String>,
+    pub tone: Tone,
+    /// What the input is, in one short sentence.
+    pub detail: String,
+}
+
+/// The "Why" sheet behind a score: the inputs Garmin used, worst first.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct Why {
+    pub title: String,
+    /// One line naming what helps the score and what holds it back.
+    pub summary: String,
+    /// Garmin's own feedback, rephrased, when it sends some.
+    pub feedback: Option<String>,
+    pub inputs: Vec<WhyInput>,
+    /// Where the inputs come from.
+    pub source: String,
+}
+
+/// Readiness and another score pointing different ways, explained in one
+/// line (the spec's "Scores that differ" rule).
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct Reconciliation {
+    /// The other score: sleep, bodyBattery, hrvStatus or trainingStatus.
+    pub key: String,
+    /// The tap target: "Why Body Battery and readiness differ".
+    pub label: String,
+    /// The other score's tone, then readiness's.
+    pub tones: [Tone; 2],
+    pub line: String,
+}
+
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -282,6 +332,10 @@ pub struct TodayView {
     pub headline: String,
     pub chips: Vec<Chip>,
     pub factors: Vec<Factor>,
+    pub readiness_why: Option<Why>,
+    pub body_battery_why: Option<Why>,
+    /// Shown on Today behind a tap when two scores point different ways.
+    pub reconcile: Option<Reconciliation>,
     pub call: Option<Effort>,
     /// For example "Morning Run done · 186 load".
     pub call_note: Option<String>,
@@ -558,6 +612,7 @@ pub struct TrainingView {
     /// Garmin's training status: Productive, Maintaining, Recovery…
     pub status: Option<String>,
     pub status_tone: Tone,
+    pub status_why: Option<Why>,
     pub headline: String,
     pub chips: Vec<Chip>,
     /// The last 7 days, oldest first.

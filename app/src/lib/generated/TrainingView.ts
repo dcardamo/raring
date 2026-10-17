@@ -6,6 +6,7 @@ import type { Gauge } from "./Gauge";
 import type { LoadFocusBar } from "./LoadFocusBar";
 import type { RacePrediction } from "./RacePrediction";
 import type { Tone } from "./Tone";
+import type { Why } from "./Why";
 
 export type TrainingView = { 
 /**
@@ -15,7 +16,7 @@ acute: Gauge | null,
 /**
  * Garmin's training status: Productive, Maintaining, Recovery…
  */
-status: string | null, statusTone: Tone, headline: string, chips: Array<Chip>, 
+status: string | null, statusTone: Tone, statusWhy: Why | null, headline: string, chips: Array<Chip>, 
 /**
  * The last 7 days, oldest first.
  */

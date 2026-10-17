@@ -41,6 +41,7 @@ button:disabled{cursor:default}
 .vital{min-width:0}
 .vital-row{width:100%;text-align:left;border-radius:0;border-top:1px solid var(--line);padding:12px 0}
 .status-pill{position:static;display:table;margin:0 auto 8px}
+.why-line{margin-top:12px}
 .metric-hero{text-align:center;margin:32px auto;display:grid;justify-items:center;gap:8px}
 .metric-value{font:600 64px/1 Outfit}
 .metric-value .unit{font-size:18px}

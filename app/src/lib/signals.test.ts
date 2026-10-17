@@ -47,14 +47,16 @@ describe('personal range presentation',()=>{
  });
 });
 
-it('selects the lowest recorded Garmin factor without changing their order',()=>{
+it('selects the factor Garmin rates worst without changing their order',()=>{
  const factors=[
   {key:'sleep',name:'Sleep',percent:80,tone:'good' as const,detail:'Good'},
   {key:'hrv',name:'HRV',percent:null,tone:'neutral' as const,detail:'Pending'},
   {key:'recovery',name:'Recovery',percent:40,tone:'poor' as const,detail:'Low'},
+  {key:'acuteLoad',name:'Acute load',percent:20,tone:'neutral' as const,detail:'Garmin rates your Acute load at 20%.'},
+  {key:'stressHistory',name:'Stress history',percent:35,tone:'fair' as const,detail:'Moderate'},
  ];
- expect(limitingFactor(factors)?.key).toBe('recovery');
+ expect(limitingFactor(factors)?.key,'a Poor rating beats a lower percentage').toBe('recovery');
  expect(factors[0].key).toBe('sleep');
- expect(limitingFactor([factors[1]])).toBeNull();
+ expect(limitingFactor([factors[1],factors[3]])).toBeNull();
  expect(limitingFactor([])).toBeNull();
 });
