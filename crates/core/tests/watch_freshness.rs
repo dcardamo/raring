@@ -101,21 +101,50 @@ fn selected_watch_capabilities_and_upload_are_not_inferred_from_accessories() {
 }
 
 #[test]
-fn only_one_clearly_capable_watch_is_a_fallback() {
+fn fallback_requires_an_unambiguous_watch_not_merely_one_true_capability() {
     let store = Store::open(":memory:").unwrap();
-    put(
-        &store,
-        "devices",
-        "me",
-        json!([
-            {"deviceId": 11, "sleepScoreCapable": true}, {"deviceId": 12}
-        ]),
-    );
     put(
         &store,
         "device_detail",
         "selected",
         json!({"deviceId": 11, "lastUploadTimestamp": 1738659600000_i64}),
+    );
+    // A second device with unknown capabilities might also be a watch.
+    put(
+        &store,
+        "devices",
+        "me",
+        json!([
+            {"deviceId": 11, "sleepScoreCapable": true, "sleepSkinTemperatureCapable": false},
+            {"deviceId": 12}
+        ]),
+    );
+    let ambiguous = screens::today(&store, DAY);
+    assert!(ambiguous.watch_last_upload.is_none());
+    assert!(ambiguous.missing_metric_reasons.is_empty());
+
+    // Explicitly identified accessories do not make the selection ambiguous.
+    put(
+        &store,
+        "devices",
+        "me",
+        json!([
+            {"deviceId": 11, "deviceCategories": ["WELLNESS"], "sleepSkinTemperatureCapable": false},
+            {"deviceId": 12, "deviceCategories": ["DEDICATED_BIKE_COMPUTER"]}
+        ]),
+    );
+    let selected = screens::today(&store, DAY);
+    assert!(selected.watch_last_upload.is_some());
+    assert!(selected.missing_metric_reasons.contains_key("skinTemp"));
+
+    // A sole watch need not advertise any of the three score capabilities.
+    put(
+        &store,
+        "devices",
+        "me",
+        json!([
+            {"deviceId": 11, "deviceCategories": ["WELLNESS"], "sleepSkinTemperatureCapable": false}
+        ]),
     );
     assert!(screens::today(&store, DAY).watch_last_upload.is_some());
     put(
@@ -123,7 +152,7 @@ fn only_one_clearly_capable_watch_is_a_fallback() {
         "devices",
         "me",
         json!([
-            {"deviceId": 11, "sleepScoreCapable": true}, {"deviceId": 12, "hrvStatusCapable": true}
+            {"deviceId": 11, "deviceCategories": ["DEDICATED_BIKE_COMPUTER"]}
         ]),
     );
     assert!(screens::today(&store, DAY).watch_last_upload.is_none());
@@ -209,6 +238,40 @@ async fn list_is_hourly_detail_each_run_and_budget_is_strict() {
     assert!(seen[0].contains("/deviceregistration/devices"));
     assert!(seen[1].contains("/user-device/57"));
     assert!(seen[2].contains("/user-device/57"));
+}
+
+#[tokio::test]
+async fn absent_device_list_is_checked_only_hourly() {
+    let store = Store::open(":memory:").unwrap();
+    profile(&store);
+    let (url, seen, handle) = mock(vec![
+        (404, "{}".into()),
+        (200, "{}".into()), // Next run uses its budget for today's summary.
+        (404, "{}".into()), // At the hour, the device list is retried.
+    ]);
+    let client = client(&url);
+    let first = sync::sync(&store, &client, Local::now(), 1).await;
+    assert_eq!(first.requests, 1);
+    let checked = store.cursor("devices_checked").unwrap();
+    let second = sync::sync(&store, &client, Local::now(), 1).await;
+    assert_eq!(second.requests, 1);
+    assert_eq!(
+        store.cursor("devices_checked").as_deref(),
+        Some(checked.as_str())
+    );
+    store
+        .set_cursor(
+            "devices_checked",
+            &(Utc::now().timestamp() - 3600).to_string(),
+        )
+        .unwrap();
+    let third = sync::sync(&store, &client, Local::now(), 1).await;
+    assert_eq!(third.requests, 1);
+    handle.join().unwrap();
+    let seen = seen.lock().unwrap();
+    assert!(seen[0].contains("/deviceregistration/devices"));
+    assert!(seen[1].contains("/usersummary/"));
+    assert!(seen[2].contains("/deviceregistration/devices"));
 }
 
 #[tokio::test]

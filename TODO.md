@@ -340,6 +340,9 @@ faces, screens, sensors and audio prompts stay in Connect.
   `crates/core/tests/fixtures/`. Today distinguishes watch upload from Raring's
   own fetch, offers an Android Connect launch with plain-guidance fallback, and
   explains unsupported missing metrics only for explicit false capabilities.
+  A 404 device list is checked again after an hour, not on every morning sync;
+  without a primary tracker, ambiguous registrations produce no watch or
+  capability claim. An overdue sleep upload appears only in the upload card.
   Capture used 30 requests (profile, 19 daily/activity kinds, four activity
   details, list and five details); a budget-2 live sync stored both device
   responses and Today showed a watch upload time. Across 32 reads there were

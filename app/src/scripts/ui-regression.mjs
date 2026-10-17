@@ -32,6 +32,12 @@ try {
  assert.equal(await fresh.getByText('Open Garmin Connect to sync your watch',{exact:true}).count(),0);
  await fresh.screenshot({path:resolve(output,'watch-fresh-390.png')});
  await fresh.close();
+ const sleepUpload=await browser.newPage({viewport:{width:390,height:844}});
+ await sleepUpload.goto(`${url}/?fixture=stale-sleep#today`);
+ await sleepUpload.getByText("Last night's sleep hasn't uploaded yet.",{exact:true}).waitFor();
+ assert.equal(await sleepUpload.getByText('Open Garmin Connect to sync your watch',{exact:true}).count(),1,'missing sleep gives one sync prompt in the upload card');
+ assert.equal(await sleepUpload.getByText('About missing readings',{exact:true}).count(),0,'upload delays are not unsupported capabilities');
+ await sleepUpload.close();
  console.log('Watch freshness, missing capability, Connect fallback at 390/700/1100: passed');
  const waitRoute=async(route)=>{
   await page.waitForURL(`${url}/#${route}`);

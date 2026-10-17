@@ -309,7 +309,18 @@ pub(crate) async fn sync_watch(
                 report.data_failures += 1;
                 let _ = store.set_cursor("retry:devices:", &(now.timestamp() + 3600).to_string());
             }
-            Some(Got::Absent | Got::Later) | None => {}
+            Some(Got::Absent) => {
+                // An account without a device list should not retry every
+                // 15-minute morning sync. Recheck after the usual hour.
+                if store
+                    .set_cursor("devices_checked", &now.timestamp().to_string())
+                    .is_err()
+                {
+                    report.error = Some("local storage failed".into());
+                    return;
+                }
+            }
+            Some(Got::Later) | None => {}
         }
     }
     let Some(id) = store
@@ -349,8 +360,9 @@ pub(crate) async fn sync_watch(
     }
 }
 
-/// Never guess from an arbitrary accessory or a historical device. A primary
-/// tracker is authoritative; absent that, one capable watch is unambiguous.
+/// A unique primary tracker is authoritative. Without one, a lone registration
+/// is the only possible watch; with multiple registrations, require one
+/// watch-like candidate and explicit evidence that every other is an accessory.
 pub(crate) fn selected_watch(list: &Value) -> Option<&Value> {
     let items = list.as_array()?;
     let id = |v: &&Value| v["deviceId"].as_u64().filter(|n| *n > 0).is_some();
@@ -365,20 +377,35 @@ pub(crate) fn selected_watch(list: &Value) -> Option<&Value> {
     if !primaries.is_empty() {
         return None;
     }
-    let eligible: Vec<_> = items
-        .iter()
-        .filter(id)
-        .filter(|v| {
-            [
-                "sleepScoreCapable",
-                "hrvStatusCapable",
-                "trainingReadinessCapable",
-            ]
-            .iter()
-            .any(|field| v[*field] == true)
+    let accessory = |v: &Value| {
+        v["deviceCategories"].as_array().is_some_and(|categories| {
+            categories
+                .iter()
+                .any(|category| category == "DEDICATED_BIKE_COMPUTER")
         })
-        .collect();
-    (eligible.len() == 1).then(|| eligible[0])
+    };
+    if items.len() == 1 {
+        return items.first().filter(|v| id(v) && !accessory(v));
+    }
+    let watch_like = |v: &Value| {
+        [
+            "sleepScoreCapable",
+            "hrvStatusCapable",
+            "trainingReadinessCapable",
+        ]
+        .iter()
+        .any(|field| v[*field] == true)
+            || v["deviceCategories"]
+                .as_array()
+                .is_some_and(|categories| categories.iter().any(|category| category == "WELLNESS"))
+    };
+    let candidates: Vec<_> = items.iter().filter(|v| id(v) && !accessory(v)).collect();
+    (candidates.len() == 1
+        && watch_like(candidates[0])
+        && items
+            .iter()
+            .all(|v| std::ptr::eq(v, candidates[0]) || accessory(v)))
+    .then(|| candidates[0])
 }
 
 fn selected_watch_id(list: &Value) -> Option<String> {

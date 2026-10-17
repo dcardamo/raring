@@ -1015,7 +1015,7 @@ pub fn today(store: &Store, date: &str) -> TodayView {
     let h = store.get("hrv", date).unwrap_or(Value::Null);
     let hs = hrv(&h);
     let (watch, uploaded) = watch_info(store);
-    let mut missing_metric_reasons = missing_metric_reasons(&watch, &s, &r, &h);
+    let missing_metric_reasons = missing_metric_reasons(&watch, &s, &r, &h);
     // Before noon Today can still show yesterday's recorded night; check the
     // current calendar day's missing upload rather than the displayed day.
     let watch_sleep_upload_stale = sleep_upload_stale(
@@ -1024,12 +1024,6 @@ pub fn today(store: &Store, date: &str) -> TodayView {
         Local::now(),
         uploaded,
     );
-    if watch_sleep_upload_stale && !missing_metric_reasons.contains_key("sleep") {
-        missing_metric_reasons.insert(
-            "sleep".into(),
-            "Open Garmin Connect to sync your watch".into(),
-        );
-    }
     let rl = string(readiness(&r), &[&["level"], &["trainingReadinessLevel"]]);
     let ratio = ratio(&t).map(|v| if v > 10. { v / 100. } else { v });
     let call = rl.as_deref().map(|s| rules::effort(s, ratio));

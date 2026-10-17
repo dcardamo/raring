@@ -181,19 +181,24 @@ Sent by the phone itself.
 
 ## Rules
 
-- **Watch freshness**: the selected primary activity tracker's
-  `lastUploadTimestamp` is the watch upload time (UTC milliseconds); if there
-  is no unambiguous selected watch or valid timestamp, say the upload time is
-  unavailable, never substitute Raring's fetch time. Display elapsed minutes
+- **Watch freshness**: prefer the unique primary activity tracker. Without one,
+  select a sole registration unless it is explicitly an accessory, or select
+  the only watch-like registration if all others are explicitly accessories;
+  an unknown second device is ambiguous. The selected watch's
+  `lastUploadTimestamp` is its upload time (UTC milliseconds); if there is no
+  unambiguous watch or valid timestamp, say the upload time is unavailable,
+  never substitute Raring's fetch time. Display elapsed minutes
   under an hour, whole hours under a day, then whole days. At six hours without
   an upload between 07:00 and 22:00 local time, suggest opening Garmin Connect;
   never nag overnight. Also suggest it after 10:00 local time when today's
   sleep is absent, yesterday's recorded wake time has passed, and the last
   upload predates that expected wake. Missing sleep alone does not imply a
-  stale watch. Refresh the device list at most hourly and the selected device
-  detail on each budgeted sync. Explicit `false` watch capabilities may explain
-  missing sleep scores, training readiness, HRV status and skin temperature;
-  absent/unknown capabilities do not mean unsupported.
+  stale watch. Refresh the device list at most hourly, including after a 404,
+  and the selected device detail on each budgeted sync. Explicit `false` watch
+  capabilities may explain missing sleep scores, training readiness, HRV status
+  and skin temperature; absent/unknown capabilities do not mean unsupported.
+  An overdue sleep upload belongs only in the upload card, not the unsupported
+  metrics explanation.
 - **Suggested effort**: Garmin's readiness feedback, rephrased. The level sets
   push, steady or easy; a high load ratio caps it at steady.
 - **Biggest drag**: the readiness factor Garmin rates worst.
