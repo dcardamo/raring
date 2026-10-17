@@ -1,0 +1,12 @@
+{
+  "calendarDate": "2025-10-02",
+  "outliersCount": 0,
+  "metrics": [
+    {"type":"HRV","value":54,"baselineLowerLimit":45,"baselineUpperLimit":62,"status":"ONBOARDING","percentage":0.5,"feedbackKey":"LHA_OFF_YOUR_BASELINE_FEEDBACK_HRV_UNKNOWN"},
+    {"type":"HR","value":57,"baselineLowerLimit":51,"baselineUpperLimit":64,"status":"ONBOARDING","percentage":0.5,"feedbackKey":"LHA_OFF_YOUR_BASELINE_FEEDBACK_HEART_RATE_UNKNOWN"},
+    {"type":"SPO2","value":96,"baselineLowerLimit":93,"baselineUpperLimit":99,"status":"ONBOARDING","percentage":0.5,"feedbackKey":"LHA_OFF_YOUR_BASELINE_FEEDBACK_BLOOD_OXYGEN_UNKNOWN"},
+    {"type":"SKIN_TEMP_C","value":0.1,"baselineLowerLimit":-0.5,"baselineUpperLimit":0.5,"status":"ONBOARDING","percentage":0.5,"feedbackKey":"LHA_OFF_YOUR_BASELINE_FEEDBACK_SKIN_TEMPERATURE_UNKNOWN"},
+    {"type":"RESPIRATION","value":14.1,"baselineLowerLimit":13,"baselineUpperLimit":15,"status":"ONBOARDING","percentage":0.5,"feedbackKey":"LHA_OFF_YOUR_BASELINE_FEEDBACK_RESPIRATION_RATE_UNKNOWN"},
+    {"type":"SKIN_TEMP_F","value":0.2,"baselineLowerLimit":-0.9,"baselineUpperLimit":0.9,"status":"ONBOARDING","percentage":0.5,"feedbackKey":"LHA_OFF_YOUR_BASELINE_FEEDBACK_SKIN_TEMPERATURE_UNKNOWN"}
+  ]
+}

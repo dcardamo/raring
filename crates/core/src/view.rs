@@ -181,7 +181,17 @@ pub enum VitalKind {
     SkinTemp,
 }
 
-/// One overnight vital against your normal range.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum VitalRangeSource {
+    Garmin,
+    Raring,
+    None,
+}
+
+/// One overnight vital. Garmin's status takes precedence over range math;
+/// the range source distinguishes Garmin's baseline from Raring's fallback.
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -190,13 +200,14 @@ pub struct VitalReading {
     pub value: Option<f64>,
     pub unit: String,
     pub tone: Tone,
-    /// Your normal range (Garmin's baseline for HRV). None until there is
-    /// enough history.
+    /// Garmin's baseline, or Raring's fallback where Garmin provides none.
     pub normal: Option<[f64; 2]>,
     /// The bar's scale, wide enough to show value and range.
     pub scale: [f64; 2],
     /// Last 30 nights, oldest first.
     pub trend: Vec<Option<f64>>,
+    pub status: Option<String>,
+    pub range_source: VitalRangeSource,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
@@ -204,9 +215,9 @@ pub struct VitalReading {
 #[ts(export)]
 pub struct VitalsCard {
     pub readings: Vec<VitalReading>,
-    /// How many readings are outside their normal range.
+    /// Garmin outliers plus readings outside a fallback range.
     pub off_count: u32,
-    /// False until 14 nights exist; the UI then shows values without flags.
+    /// At least one reading has a comparable range.
     pub baseline_ready: bool,
 }
 

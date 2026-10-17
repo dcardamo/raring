@@ -26,6 +26,7 @@ const DAILY: &[&str] = &[
     "sleep",
     "hrv",
     "readiness",
+    "health_status",
     "training",
     "training_daily",
     "load_focus",
@@ -232,6 +233,11 @@ pub async fn sync(
         while day >= today - Duration::days(RECENT_DAYS - 1) && report.requests < budget {
             let key = date(day);
             for kind in DAILY {
+                // Health Status is only charted for 30 nights; keep older-history
+                // request budget for Garmin's range endpoints.
+                if *kind == "health_status" && day < today - Duration::days(29) {
+                    continue;
+                }
                 if store.get(kind, &key).is_none()
                     && !fetch(
                         store,
@@ -304,7 +310,33 @@ async fn request(
         return Some(Got::Later);
     }
     report.requests += 1;
-    match client.endpoint(kind, key, name).await {
+    let response = if kind == "health_status" {
+        if NaiveDate::parse_from_str(key, "%Y-%m-%d").is_err() {
+            Err(garmin::Error::Decode)
+        } else {
+            client
+                .graphql(
+                    &format!("query {{ healthStatusSummary(calendarDate: \"{key}\") {{ calendarDate outliersCount metrics {{ value baselineUpperLimit baselineLowerLimit status percentage feedbackKey type }} }} }}"),
+                    serde_json::json!({}),
+                )
+                .await
+                .and_then(|v| {
+                    let summary = v.get("healthStatusSummary").ok_or(garmin::Error::Decode)?;
+                    if summary.is_null() {
+                        return Ok(Value::Null);
+                    }
+                    let valid = summary["calendarDate"] == key
+                        && summary["outliersCount"].as_u64().is_some()
+                        && summary["metrics"].as_array().is_some_and(|metrics| {
+                            metrics.iter().all(|metric| metric["type"].is_string())
+                        });
+                    valid.then(|| summary.clone()).ok_or(garmin::Error::Decode)
+                })
+        }
+    } else {
+        client.endpoint(kind, key, name).await
+    };
+    match response {
         Ok(v) => {
             let _ = store.set_cursor(&retry_key, "0");
             Some(Got::Value(v))

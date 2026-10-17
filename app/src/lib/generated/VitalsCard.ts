@@ -3,10 +3,10 @@ import type { VitalReading } from "./VitalReading";
 
 export type VitalsCard = { readings: Array<VitalReading>, 
 /**
- * How many readings are outside their normal range.
+ * Garmin outliers plus readings outside a fallback range.
  */
 offCount: number, 
 /**
- * False until 14 nights exist; the UI then shows values without flags.
+ * At least one reading has a comparable range.
  */
 baselineReady: boolean, };

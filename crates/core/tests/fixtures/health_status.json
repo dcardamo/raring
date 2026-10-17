@@ -1,0 +1,12 @@
+{
+  "calendarDate": "2025-10-16",
+  "outliersCount": 2,
+  "metrics": [
+    {"type":"HRV","value":56,"baselineLowerLimit":48,"baselineUpperLimit":63,"status":"IN_RANGE","percentage":0.5,"feedbackKey":"LHA_OFF_YOUR_BASELINE_FEEDBACK_HRV_IN_RANGE"},
+    {"type":"HR","value":58,"baselineLowerLimit":52,"baselineUpperLimit":62,"status":"IN_RANGE","percentage":0.5,"feedbackKey":"LHA_OFF_YOUR_BASELINE_FEEDBACK_HEART_RATE_IN_RANGE"},
+    {"type":"SPO2","value":93,"baselineLowerLimit":95,"baselineUpperLimit":99,"status":"BELOW_RANGE","percentage":0.1,"feedbackKey":"LHA_OFF_YOUR_BASELINE_FEEDBACK_BLOOD_OXYGEN_BELOW_RANGE"},
+    {"type":"SKIN_TEMP_C","value":0.8,"baselineLowerLimit":-0.4,"baselineUpperLimit":0.4,"status":"ABOVE_RANGE","percentage":0.9,"feedbackKey":"LHA_OFF_YOUR_BASELINE_FEEDBACK_SKIN_TEMPERATURE_ABOVE_RANGE"},
+    {"type":"RESPIRATION","value":14.2,"baselineLowerLimit":13.2,"baselineUpperLimit":15.3,"status":"IN_RANGE","percentage":0.5,"feedbackKey":"LHA_OFF_YOUR_BASELINE_FEEDBACK_RESPIRATION_RATE_IN_RANGE"},
+    {"type":"SKIN_TEMP_F","value":1.4,"baselineLowerLimit":-0.7,"baselineUpperLimit":0.7,"status":"ABOVE_RANGE","percentage":0.9,"feedbackKey":"LHA_OFF_YOUR_BASELINE_FEEDBACK_SKIN_TEMPERATURE_ABOVE_RANGE"}
+  ]
+}

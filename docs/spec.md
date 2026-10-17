@@ -17,15 +17,12 @@ The visual reference is [design/mockup](../design/mockup/): open
   and color. Text is a headline of a few words, labels and numbers. Anything
   longer sits behind a tap.
 - **Garmin's numbers.** Every metric is Garmin's. Raring's own math is
-  limited to your normal ranges, week-over-week changes, and the advice rules
-  below.
-- **Fast.** Opens from local data and syncs in the background. After the first
-  view renders, the four tabs are prefetched; switching to a cached tab draws
-  it immediately while an off-thread database read refreshes it. A completed
-  sync, changed sync timestamp or local day rollover invalidates in-flight
-  reads and the tab cache without clearing the visible view. The full-screen
-  loading state is reserved for the first view without data. Status is read on
-  start, resume and sync, not before every navigation.
+  limited to fallback normal ranges, week-over-week changes, and the advice
+  rules below.
+- **Fast.** Opens instantly from local data and syncs in the background.
+  Switching views draws the last data at once and refreshes it behind the
+  scenes; the full-screen loading state is only for a first launch with no
+  data.
 - **Private.** Data stays on the device. No accounts, analytics, or services
   other than Garmin.
 - **Cross-platform.** One Rust core and one Svelte UI for Android, iOS and
@@ -91,9 +88,9 @@ optional after sign-in.
   with sleep and activity marked, Garmin's time in each category, and 7-/30-day
   daily averages. Times Garmin cannot rate (moving, off-wrist) are gaps, never
   zero.
-- Vitals as five compact readings with units, a range-status indicator and
-  a count of recorded and comparable readings. Missing or uncalibrated data
-  is neutral, never an all-clear.
+- Vitals as five compact readings with units, Garmin Health Status when
+  available, a range-status indicator and a count of recorded and comparable
+  readings. Missing or uncalibrated data is neutral, never an all-clear.
 - Today's workouts with a heart-rate zone strip, and Fitness Age with its
   trend line. The weekly check-in card appears here on Mondays.
 
@@ -138,9 +135,12 @@ optional after sign-in.
 
 ### Health
 
-- **Vitals first**: resting heart rate, HRV, respiration, SpO2 and
-  skin-temperature change as tappable tiles. Show units, the personal range
-  and explicit within/above/below-range or missing/baseline-building labels.
+- **Vitals first**: Garmin's overnight average heart rate (labeled Sleep HR,
+  not resting HR), HRV, respiration, SpO2 and skin-temperature change as
+  tappable tiles when Health Status is available. Without it, use the
+  existing resting-HR and other daily readings. Show units, the personal range,
+  its Garmin or Raring source, and explicit within/above/below-range or
+  missing/baseline-building labels.
   Each detail has interactive 7-/30-night history with the current range
   shaded, actual dates and missing nights left blank. Nightly HRV against the
   baseline is distinct from Garmin's seven-day HRV status. Explain the comparison
@@ -190,8 +190,16 @@ Sent by the phone itself.
   median) minus tonight's sleep need (Garmin's next-night adjusted need when
   present, otherwise its latest adjusted need or the 14-day average). Label
   the source and wake-history count.
-- **Normal range**: the middle 80% of the last 30 nights, once there are at
-  least 14. HRV uses Garmin's own baseline instead.
+- **Normal range and vitals off**: use Garmin Health Status's per-day
+  baseline bounds and status first. A reported outside-range status counts
+  toward the two-vitals warning and notification; `ONBOARDING`, unknown
+  statuses and missing values are neutral, even if provisional bounds exist.
+  When Garmin has no Health Status metric, use the middle 80% of the last 30
+  recorded nights (at least 14) and count readings outside that fallback
+  range too; HRV retains Garmin's existing HRV baseline. Never compare Garmin's overnight
+  average HR to resting-HR history. Health Status's nightly HRV status is
+  separate from Garmin's seven-day HRV status. Personal ranges are not
+  medical targets.
 - **Stress bars**: the Today card averages each 15 minutes of Garmin's
   readings; the detail shows every reading. Colors follow Garmin's categories.
 - **Body Battery color**: good at 70 and above, fair from 30, poor below 30.
@@ -212,8 +220,9 @@ Sent by the phone itself.
   does. Tokens are encrypted with an Android Keystore key and refresh
   themselves.
 - **Data** comes from `connectapi.garmin.com`: daily summary, sleep, HRV,
-  training readiness, Body Battery, stress, SpO2, respiration, training status, max
-  metrics, Fitness Age, endurance and hill scores, race predictions, running
+  training readiness, Body Battery, stress, SpO2, respiration, Health Status
+  (GraphQL baseline and status), training status, max metrics, Fitness Age,
+  endurance and hill scores, race predictions, running
   tolerance, personal records, and activities (summary, splits, heart-rate
   zones, charts and GPS routes).
 - Each sync fetches the last 90 days day by day, then spends its remaining
@@ -237,6 +246,12 @@ Sent by the phone itself.
   hourly, and every 15 minutes in the morning until readiness arrives. A job
   calls the Rust core directly over JNI, without starting the UI, then posts
   any notifications.
+- **View cache**: after the first view renders, the four tabs are
+  prefetched and cached by route for the current day. A completed sync, a
+  changed sync timestamp or a local day rollover invalidates in-flight reads
+  and the cache without clearing the visible view. Status is read on start,
+  resume and sync, not before every navigation, and view commands read
+  SQLite off the WebView thread.
 - **Platform code**: keep each platform's native layer a thin shim over the
   core. Background scheduling is inherently native (WorkManager on Android,
   background refresh on iOS, syncing while the app runs on desktop); secure
