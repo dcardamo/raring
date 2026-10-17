@@ -15,6 +15,32 @@ availability on every account or watch.
 
 ## Now
 
+### Instant view switching
+
+Switching views (Today, Sleep, …) shows "Loading your day…" before the
+view appears. Views should switch instantly.
+
+- Cause, from the code: every navigation clears the current data
+  (`data=null` in `App.svelte`), shows the full-screen loading state, then
+  waits for two IPC calls in turn, `app_status` and then the view; each
+  command opens the SQLite database again. Building views in Rust is not the
+  bottleneck: `raring show` took 10–50 ms per tab in a release build,
+  process start included, on a database with full history, and each view is
+  7–17 KB of JSON.
+- Keep the last view model for each route in memory and render it
+  immediately; refresh in the background and swap new data in without
+  moving content under the finger. Prefetch the four tab views after the
+  first renders. The full-screen loading state is only for a first launch
+  with no data.
+- Don't wait for `app_status` on navigation; refresh it on start, resume and
+  sync.
+- Check whether the synchronous Tauri commands block the UI thread on
+  Android, or wait on the database while a sync writes (5 s busy timeout).
+  If so, run them off the main thread or keep one connection open.
+- Check: a UI test that switching views never shows the loading state once
+  data exists, and the time from tap to new view on the emulator, before and
+  after.
+
 ### 2. Watch sync freshness
 
 Raring is only as fresh as Garmin Connect's last upload from the watch.
