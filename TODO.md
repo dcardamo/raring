@@ -129,7 +129,7 @@ Today · Sleep · Training · Health and metric access predictable.
   or invent a planned workout before planned-training support exists.
 - **Approaching sleep:** promote the shared bedtime plan from item 3,
   emphasizing wind-down and bedtime timing rather than yesterday's sleep
-  score. Prototype promotion about an hour before the window starts, followed
+  score. Prototype promotion two hours before the window starts, followed
   by a calm wind-down state. Once the window has passed, avoid a red
   countdown or pressure to exercise; do not assume the person is asleep.
 - Anchor phases to the person's main sleep/wake pattern and upcoming plan,
