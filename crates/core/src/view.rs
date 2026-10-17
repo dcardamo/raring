@@ -759,6 +759,19 @@ pub struct GearView {
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
+pub struct RecordedTrainingMetric {
+    /// runningHr, runningPace, runningPower, cyclingFtp, heat or altitude.
+    pub kind: String,
+    pub value: f64,
+    /// bpm, s/km, s/mi, W, %, m or ft.
+    pub unit: String,
+    pub recorded_on: String,
+    pub stale: bool,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct TrainingView {
     /// Acute load on a scale, with Garmin's optimal range as the band.
     pub acute: Option<Gauge>,
@@ -779,6 +792,8 @@ pub struct TrainingView {
     pub endurance_score: Option<f64>,
     pub hill_score: Option<f64>,
     pub running_tolerance_km: Option<f64>,
+    /// Garmin's latest recorded readings; absent metrics are not zero.
+    pub thresholds: Vec<RecordedTrainingMetric>,
     pub workouts: Vec<ActivityCard>,
     pub gear: Option<GearView>,
     pub planned: PlannedTraining,

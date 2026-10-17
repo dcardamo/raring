@@ -117,6 +117,15 @@ From item 11, in priority order.
   is distinct from `sessionsWithSets`; missing lap presses must not reduce
   credit toward the weekly activity goal.
 
+### Thresholds follow-ups
+
+- Compare the Training card's HR, pace, running power, FTP and acclimation
+  with Garmin Connect and a real watch after a sync. Verify Garmin's speed
+  seconds-per-meter and acclimated-altitude meters against the displayed
+  units, including a measurement-system change.
+- On another compatible watch/account, check missing/404 threshold responses,
+  null calibration and truly stale power readings; these cases have only
+  synthetic coverage so far.
 ### 14a. All-day heart rate follow-ups
 
 - Compare one day's resting value, activity markers and off-wrist gaps with
@@ -191,12 +200,6 @@ separate export. The offline JSON/CSV export does not make network requests.
 
 Each is a tile or detail in an existing screen first.
 
-17. **Thresholds and acclimation**: lactate threshold, cycling FTP and
-    heat/altitude acclimation
-    (`/biometric-service/biometric/latestLactateThreshold`,
-    `/latestFunctionalThresholdPower/CYCLING`,
-    `/metrics-service/metrics/heataltitudeacclimation/latest/{d}`). Training
-    detail tiles, shown only when the watch records them.
 18. **Naps and journal**: `/sleep-service/sleep/naps/{d}`; the lifestyle
     log (`/lifestylelogging-service/dailyLog/{d}`) as the planned journal.
 19. **Women's health (opt-in)**: cycle and pregnancy views
@@ -278,6 +281,34 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **17. Thresholds and acclimation** (commit "Show Garmin thresholds in Training").
+  Training shows only recorded Garmin running lactate-threshold HR and pace,
+  running threshold power, cycling FTP, heat percentage and acclimated
+  altitude, each dated separately. Four latest-only reads are checked daily
+  within the sync budget, including empty and 404 results; a 404 or failed
+  check retains an earlier valid reading, with bounded retry. Any recorded
+  threshold/acclimation response enables the existing weekly reduced units
+  fetch; the exercise catalog still requires strength sets. No historic day
+  expansion, threshold estimates or writes.
+  Verified with four read-only requests on one account (no 429/auth errors):
+  - `GET /biometric-service/biometric/latestLactateThreshold` (no arguments)
+    returns an array of separately dated `speed`, `hearRate` (Garmin's
+    spelling; `heartRate` also accepted) and possibly `heartRateCycling` rows.
+    `calendarDate` can be a local ISO datetime; `speed` is seconds per meter.
+  - `GET /biometric-service/biometric/powerToWeight/latest/{YYYY-MM-DD}?sport=Running`
+    returns an array with `calendarDate`, `sport`, nullable
+    `functionalThresholdPower` (watts) and `isStale`.
+  - `GET /biometric-service/biometric/latestFunctionalThresholdPower/CYCLING`
+    (no arguments) returns an object or array with `calendarDate`, `sport`,
+    nullable `functionalThresholdPower` (watts) and `isStale`.
+  - `GET /metrics-service/metrics/heataltitudeacclimation/latest/{YYYY-MM-DD}`
+    returns an object with nullable `heatAcclimationPercentage`,
+    `heatAcclimationDate`, `altitudeAcclimation` (meters),
+    `altitudeAcclimationDate`, `acclimationPercentage`, `currentAltitude`
+    and trend/previous fields. An explicit 0% is a recorded value.
+  Other watches, absent endpoint responses, null calibration on a live watch,
+  and Garmin Connect/watch display agreement remain unverified.
 
 - **16. Read-only gear** (commit "Show Garmin gear distance on Training").
   Training has an expandable gear card showing shoes and bikes, including

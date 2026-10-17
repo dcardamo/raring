@@ -485,6 +485,28 @@ impl Client {
                 vec![("numDaysForward", "90"), ("limit", "10")],
             ),
             "fitness_age" => (format!("/fitnessage-service/fitnessage/{key}"), vec![]),
+            "lactate_threshold" => (
+                "/biometric-service/biometric/latestLactateThreshold".into(),
+                vec![],
+            ),
+            "running_power_threshold" => {
+                NaiveDate::parse_from_str(key, "%Y-%m-%d").map_err(|_| Error::Decode)?;
+                (
+                    format!("/biometric-service/biometric/powerToWeight/latest/{key}"),
+                    vec![("sport", "Running")],
+                )
+            }
+            "cycling_ftp" => (
+                "/biometric-service/biometric/latestFunctionalThresholdPower/CYCLING".into(),
+                vec![],
+            ),
+            "acclimation" => {
+                NaiveDate::parse_from_str(key, "%Y-%m-%d").map_err(|_| Error::Decode)?;
+                (
+                    format!("/metrics-service/metrics/heataltitudeacclimation/latest/{key}"),
+                    vec![],
+                )
+            }
             "weight_latest" => {
                 NaiveDate::parse_from_str(key, "%Y-%m-%d").map_err(|_| Error::Decode)?;
                 ("/weight-service/weight/latest".into(), vec![("date", key)])

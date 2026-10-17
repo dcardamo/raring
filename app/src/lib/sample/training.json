@@ -161,6 +161,50 @@
   "enduranceScore": 6800,
   "hillScore": 74,
   "runningToleranceKm": 63,
+  "thresholds": [
+    {
+      "kind": "runningHr",
+      "value": 164,
+      "unit": "bpm",
+      "recordedOn": "2025-10-13",
+      "stale": false
+    },
+    {
+      "kind": "runningPace",
+      "value": 264,
+      "unit": "s/km",
+      "recordedOn": "2025-10-13",
+      "stale": false
+    },
+    {
+      "kind": "runningPower",
+      "value": 280,
+      "unit": "W",
+      "recordedOn": "2025-10-12",
+      "stale": false
+    },
+    {
+      "kind": "cyclingFtp",
+      "value": 230,
+      "unit": "W",
+      "recordedOn": "2025-10-10",
+      "stale": false
+    },
+    {
+      "kind": "heat",
+      "value": 0,
+      "unit": "%",
+      "recordedOn": "2025-10-15",
+      "stale": false
+    },
+    {
+      "kind": "altitude",
+      "value": 850,
+      "unit": "m",
+      "recordedOn": "2025-10-14",
+      "stale": false
+    }
+  ],
   "workouts": [
     {
       "id": "9000000000001",

@@ -220,6 +220,7 @@ pub async fn sync(
         sync_intensity_weeks(store, client, &mut report, today, budget, now).await;
         sync_weight(store, client, &mut report, today, budget, now).await;
         sync_gear(store, client, &mut report, budget, now).await;
+        sync_thresholds(store, client, &mut report, today, budget, now).await;
     }
     // The app uses a 60-request sync. Tiny explicit budgets keep existing daily
     // metrics first; planned data waits for a normal run.
@@ -439,8 +440,8 @@ fn sets_due(store: &Store, id: &str, item: &Value, now: DateTime<Utc>) -> bool {
     started.is_some_and(|t| now - t < Duration::hours(48))
         && fetched.is_ok_and(|f| now - f >= Duration::hours(1))
 }
-/// Garmin's exercise catalog (monthly) and the user settings that give weight
-/// units, time format, week start and the body-map figure (weekly), once there are sets.
+/// Garmin's exercise catalog (monthly) requires sets; reduced user settings
+/// provide display units for strength, weight and recorded Training metrics.
 async fn strength_reference(
     store: &Store,
     client: &Client,
@@ -453,7 +454,10 @@ async fn strength_reference(
         || store
             .get("weight_latest", "me")
             .is_some_and(|v| !v.is_null());
-    if !has_sets && !has_weight {
+    let has_threshold = ["lactate_threshold", "running_power_threshold", "cycling_ftp", "acclimation"]
+        .iter()
+        .any(|kind| store.get(kind, "latest").is_some_and(|v| !v.is_null()));
+    if !has_sets && !has_weight && !has_threshold {
         return;
     }
     let due = |cursor: &str, days: i64| {
@@ -705,6 +709,43 @@ async fn sync_intensity_weeks(
     if rows.is_some() {
         report.stored += 1;
     }
+}
+
+/// Latest-only device metrics: four reads at most once per day, including
+/// empty responses and 404s. Failed reads preserve cached values; the request
+/// helper applies bounded retry and rate-limit backoff.
+async fn sync_thresholds(store: &Store, client: &Client, report: &mut SyncReport, today: NaiveDate, budget: usize, now: DateTime<Utc>) {
+    for kind in ["lactate_threshold", "running_power_threshold", "cycling_ftp", "acclimation"] {
+        let cursor = format!("{kind}_checked");
+        if !threshold_due(store, &cursor, now.timestamp()) { continue; }
+        let value = match request(store, client, report, kind, &date(today), None, budget, now).await {
+            Some(Got::Value(v)) => v,
+            Some(Got::Absent) => {
+                // An unavailable latest endpoint does not invalidate a previously
+                // recorded reading. Cache the check so a 404 cannot poll every sync.
+                if store.get(kind, "latest").is_some_and(|v| !v.is_null()) {
+                    if store.set_cursor(&cursor, &now.timestamp().to_string()).is_err() {
+                        report.error = Some("local storage failed".into());
+                        return;
+                    }
+                    continue;
+                }
+                Value::Null
+            }
+            Some(Got::Later) | None => return,
+        };
+        if store.put(kind, "latest", &now.to_rfc3339(), &value).is_err()
+            || store.set_cursor(&cursor, &now.timestamp().to_string()).is_err() {
+            report.error = Some("local storage failed".into());
+            return;
+        }
+        if !value.is_null() { report.stored += 1; }
+    }
+}
+
+fn threshold_due(store: &Store, cursor: &str, now: i64) -> bool {
+    !store.cursor(cursor).and_then(|v| v.parse::<i64>().ok())
+        .is_some_and(|t| t <= now && now - t < 86400)
 }
 
 /// Weight is sparse. Check the latest entry daily and reread the recent range
@@ -1317,6 +1358,21 @@ fn failure(store: &Store, report: &mut SyncReport, error: garmin::Error, now: Da
     } else {
         report.error = Some(error.to_string());
         let _ = store.set_cursor("last_error", report.error.as_deref().unwrap_or(""));
+    }
+}
+
+#[cfg(test)]
+mod threshold_tests {
+    use super::*;
+    #[test]
+    fn empty_and_not_found_checks_wait_a_day() {
+        let store = Store::open(":memory:").unwrap();
+        let checked = "acclimation_checked";
+        assert!(threshold_due(&store, checked, 100_000));
+        store.set_cursor(checked, "100000").unwrap();
+        assert!(!threshold_due(&store, checked, 100_001));
+        assert!(!threshold_due(&store, checked, 186_399));
+        assert!(threshold_due(&store, checked, 186_400));
     }
 }
 

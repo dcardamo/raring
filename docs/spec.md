@@ -200,6 +200,11 @@ optional after sign-in.
   target ranges, with a shortage flag.
 - VO2max with its trend, race predictions, endurance and hill scores, running
   tolerance.
+- Latest recorded Garmin running lactate-threshold HR and pace, running threshold
+  power, cycling FTP, heat acclimation and acclimated altitude in a compact
+  Training card, each with its own recorded date. Missing, null or stale
+  thresholds are omitted; an explicit heat 0% is shown. Availability depends
+  on the watch and recorded activities. No thresholds are estimated here.
 - **Strength · this week**, when a strength session in the last 12 weeks
   has recorded sets: sets, sessions, records and a small body map. Opens
   Strength.
@@ -651,6 +656,12 @@ Sent by the phone itself.
   shortage, falling readiness, and intensity minutes against Garmin's weekly
   goal for the plan week that just ended (without them, Fitness Age's
   vigorous-minutes average against its target).
+- **Threshold display**: Garmin's lactate-threshold `speed` is seconds per
+  meter; convert to seconds per kilometer or mile with the saved Garmin
+  measurement system. HR is bpm, running power and cycling FTP are watts,
+  heat acclimation is a percentage, and `altitudeAcclimation` is an
+  acclimated elevation in meters (feet for statute units), not a percentage.
+  Display each reading's own recorded date rather than the fetch date.
 - **Strength sets**: Garmin's `ACTIVE` sets are sets; `REST` sets are rest
   time. A set's exercise is Garmin's most probable guess; an `UNKNOWN`
   category is unnamed. Weights are Garmin's grams shown in kilograms or
@@ -708,7 +719,11 @@ Sent by the phone itself.
   GPS routes), plus strength sets for strength activities.
   Weight and body composition use `/weight-service/weight/latest?date=` and
   `/weight-service/weight/dateRange?startDate=&endDate=`; raw and per-day
-  readings stay local. The already reduced user-settings preferences supply
+  readings stay local. Latest running threshold HR/pace, running power,
+  cycling FTP and heat/altitude acclimation are cached daily, including empty
+  and 404 responses, within the shared request budget and backoff; a 404 or
+  failed check preserves a previously recorded reading. No historic per-day
+  threshold scan is made. The weekly reduced user-settings preferences supply
   the measurement system for units; the full profile is not stored.
 - **Strength**: sets come from `/activity-service/activity/{id}/exerciseSets`
   for activities Garmin types `strength_training`: once, then at most hourly
@@ -716,10 +731,11 @@ Sent by the phone itself.
   are not fetched by Refresh or reopening a workout; help states this limit.
   A budgeted explicit detail refresh remains a follow-up. Older strength
   activities found by the history download get their sets after it. Once
-  there are sets, the user settings
-  (`/userprofile-service/userprofile/user-settings`) are read weekly and only
-  the measurement system, time format, start of week and gender (the body-map
-  figure) are stored; the rest of `userData` is discarded. Garmin's public exercise catalog
+  there are sets, weight or a recorded threshold/acclimation response, the
+  user settings (`/userprofile-service/userprofile/user-settings`) are read
+  weekly and only the measurement system, time format, start of week and
+  gender (the body-map figure) are stored; the rest of `userData` is discarded.
+  Garmin's public exercise catalog (only when sets exist)
   (`connect.garmin.com/web-data/exercises/Exercises.json`, no credentials) is
   read monthly and only each exercise's primary muscles are kept.
 - Each sync fetches the last 90 days day by day, then spends its remaining

@@ -7,6 +7,7 @@ use serde_json::Value;
 use std::collections::BTreeMap;
 
 mod explain;
+mod thresholds;
 
 fn at<'a>(v: &'a Value, keys: &[&str]) -> &'a Value {
     keys.iter().fold(v, |v, k| &v[*k])
@@ -2252,6 +2253,7 @@ pub fn training_at_calendar(store: &Store, date: &str, calendar: NaiveDate, now:
         hill_score: store
             .get("hill", date)
             .and_then(|v| num(&v, &[&["overallScore"], &["score"]])),
+        thresholds: thresholds::from_store(store, date),
         running_tolerance_km: store.get("tolerance", date).and_then(|v| {
             // The daily endpoint returns an array and reports acuteTolerance in metres.
             num(first(&v), &[&["acuteTolerance"]])

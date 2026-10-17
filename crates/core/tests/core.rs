@@ -777,6 +777,9 @@ async fn backfill_includes_yesterday_and_scans_existing_days_to_fill_older_gaps(
         for kind in ["weight_latest", "weight_recent"] {
             s.set_cursor(&format!("{kind}_checked"), &Utc::now().timestamp().to_string()).unwrap();
         }
+        for kind in ["lactate_threshold", "running_power_threshold", "cycling_ftp", "acclimation"] {
+            s.set_cursor(&format!("{kind}_checked"), &Utc::now().timestamp().to_string()).unwrap();
+        }
         let mut replies = vec![(200, "{}".into()); 13];
         replies.extend([(200, "[]".into()), (200, "{}".into())]);
         let (url, seen, thread) = mock(replies);
@@ -826,6 +829,9 @@ async fn backfill_skips_old_health_status_days_and_still_fetches_history_ranges(
     store.put("sleep_stats", &today.to_string(), "now", &json!({})).unwrap();
     store.set_cursor("gear_checked", &Utc::now().timestamp().to_string()).unwrap();
     for kind in ["weight_latest", "weight_recent"] {
+        store.set_cursor(&format!("{kind}_checked"), &Utc::now().timestamp().to_string()).unwrap();
+    }
+    for kind in ["lactate_threshold", "running_power_threshold", "cycling_ftp", "acclimation"] {
         store.set_cursor(&format!("{kind}_checked"), &Utc::now().timestamp().to_string()).unwrap();
     }
     let mut replies = vec![(200, "{}".into()); 13];
@@ -1052,6 +1058,138 @@ async fn endpoint_paths_and_query_match_reference() {
     assert!(req[2].contains("nonSleepBufferMinutes=60"));
     assert!(req[3].contains("/trainingstatus/aggregated/2025-01-02"));
 }
+#[tokio::test]
+async fn latest_threshold_routes_are_read_only_and_dated_paths_are_validated() {
+    let (url, seen, thread) = mock(vec![(200, "{}".into()); 4]);
+    let tokens = Tokens {
+        access_token: token(1900000000), refresh_token: "refresh".into(),
+        client_id: "TEST_DI".into(), expires_at: Utc::now() + Duration::days(30),
+    };
+    let client = Client::with_urls(tokens, &url, &url, std::time::Duration::ZERO).unwrap();
+    for kind in ["lactate_threshold", "running_power_threshold", "cycling_ftp", "acclimation"] {
+        client.endpoint(kind, "2025-01-02", None).await.unwrap();
+    }
+    assert!(client.endpoint("acclimation", "2025-01-02/other", None).await.is_err());
+    thread.join().unwrap();
+    let requests = seen.lock().unwrap();
+    for (request, path) in requests.iter().zip([
+        "/biometric-service/biometric/latestLactateThreshold",
+        "/biometric-service/biometric/powerToWeight/latest/2025-01-02?sport=Running",
+        "/biometric-service/biometric/latestFunctionalThresholdPower/CYCLING",
+        "/metrics-service/metrics/heataltitudeacclimation/latest/2025-01-02",
+    ]) {
+        assert!(request.starts_with(&format!("GET {path}")), "{request}");
+    }
+}
+// Isolate the latest-only reads and the activity-list request that precedes
+// weekly profile settings, without seeding sets, weight or lactate threshold.
+fn threshold_sync_store(now: chrono::DateTime<Local>, only: &str, refresh: bool) -> Store {
+    let store = Store::open(":memory:").unwrap();
+    let day = now.date_naive().to_string();
+    store.put("profile", "me", "synthetic", &json!({"displayName":"Synthetic"})).unwrap();
+    for kind in ["summary", "sleep", "hrv", "readiness", "health_status", "training",
+        "training_daily", "load_focus", "battery", "spo2", "respiration", "stress", "max_metrics",
+        "sleep_stats", "fitness_age", "races", "endurance", "hill", "tolerance"] {
+        store.put(kind, &day, "synthetic", &Value::Null).unwrap();
+    }
+    store.put("records", "all", "synthetic", &Value::Null).unwrap();
+    // Today's normal refresh is waiting on its retry window, leaving budget
+    // for the activity scan and the reduced weekly settings request.
+    let retry = (Utc::now().timestamp() + 3600).to_string();
+    for day in [day.clone(), (now.date_naive() - Duration::days(1)).to_string()] {
+        store.set_cursor(&format!("retry:daily_hr:{day}"), &retry).unwrap();
+    }
+    for kind in ["summary", "sleep", "hrv", "readiness", "health_status", "training",
+        "training_daily", "load_focus", "battery", "spo2", "respiration", "stress", "max_metrics"] {
+        store.set_cursor(&format!("retry:{kind}:{day}"), &retry).unwrap();
+    }
+    let checked = Utc::now().timestamp().to_string();
+    for cursor in ["devices_checked", "records_checked", "intensity_weeks_checked",
+        "weight_latest_checked", "weight_recent_checked", "gear_checked"] {
+        store.set_cursor(cursor, &checked).unwrap();
+    }
+    for kind in ["lactate_threshold", "running_power_threshold", "cycling_ftp", "acclimation"] {
+        if !refresh || kind != only {
+            store.set_cursor(&format!("{kind}_checked"), &checked).unwrap();
+        }
+    }
+    let reading = match only {
+        "acclimation" => json!({"altitudeAcclimation":850,"altitudeAcclimationDate":day}),
+        "cycling_ftp" => json!({"sport":"CYCLING","functionalThresholdPower":215,"calendarDate":day}),
+        _ => unreachable!(),
+    };
+    store.put(only, "latest", "synthetic", &reading).unwrap();
+    store
+}
+
+#[tokio::test]
+async fn cycling_or_altitude_alone_fetches_reduced_units_weekly_without_catalog() {
+    let now = chrono::NaiveDate::from_ymd_opt(2025, 1, 10).unwrap()
+        .and_hms_opt(13, 0, 0).unwrap().and_local_timezone(Local).single().unwrap();
+    for (only, expected_unit) in [("acclimation", "m"), ("cycling_ftp", "W")] {
+        let store = threshold_sync_store(now, only, false);
+        let (url, seen, thread) = mock(vec![
+            (200, "[]".into()),
+            (200, json!({"userData":{"measurementSystem":"metric","timeFormat":"time_twelve_hr","gender":"FEMALE"},"userSleep":{"wakeTime":24000}}).to_string()),
+            (200, "[]".into()),
+            (200, "{}".into()),
+        ]);
+        let client = Client::with_urls(Tokens {
+            access_token: token(1900000000), refresh_token: "refresh".into(),
+            client_id: "TEST_DI".into(), expires_at: Utc::now() + Duration::days(30),
+        }, &url, &url, std::time::Duration::ZERO).unwrap();
+        let first = raring_core::sync::sync(&store, &client, now, 2).await;
+        assert_eq!(first.requests, 2);
+        let saved = store.get("profile_settings", "me").unwrap_or_else(|| panic!("no settings after {first:?}; requests: {:?}", seen.lock().unwrap()));
+        assert_eq!(saved["measurementSystem"], "metric");
+        assert!(saved.get("userData").is_none(), "only reduced preferences are retained");
+        let metrics = raring_core::screens::training(&store, &now.date_naive().to_string()).thresholds;
+        assert_eq!(metrics.iter().find(|m| m.kind == if only == "acclimation" { "altitude" } else { "cyclingFtp" }).unwrap().unit, expected_unit);
+        let checked = store.cursor("profile_settings_checked");
+        let again = raring_core::sync::sync(&store, &client, now, 2).await;
+        assert_eq!(again.requests, 2);
+        assert_eq!(store.cursor("profile_settings_checked"), checked);
+        thread.join().unwrap();
+        let requests = seen.lock().unwrap();
+        assert_eq!(requests.len(), 4);
+        assert!(requests[1].starts_with("GET /userprofile-service/userprofile/user-settings"));
+        assert!(requests.iter().filter(|r| r.contains("user-settings")).count() == 1);
+        assert!(!requests.iter().any(|r| r.contains("Exercises.json")));
+    }
+}
+
+#[tokio::test]
+async fn missing_or_failed_latest_check_preserves_a_recorded_reading_and_budget() {
+    let now = chrono::NaiveDate::from_ymd_opt(2025, 1, 10).unwrap()
+        .and_hms_opt(13, 0, 0).unwrap().and_local_timezone(Local).single().unwrap();
+    for status in [404, 500] {
+        let store = threshold_sync_store(now, "acclimation", true);
+        let original = store.get("acclimation", "latest");
+        let (url, seen, thread) = mock(vec![(status, "{}".into()), (200, "[]".into())]);
+        let client = Client::with_urls(Tokens {
+            access_token: token(1900000000), refresh_token: "refresh".into(),
+            client_id: "TEST_DI".into(), expires_at: Utc::now() + Duration::days(30),
+        }, &url, &url, std::time::Duration::ZERO).unwrap();
+        let first = raring_core::sync::sync(&store, &client, now, 1).await;
+        assert_eq!(first.requests, 1);
+        assert_eq!(first.data_failures, usize::from(status == 500));
+        assert_eq!(store.get("acclimation", "latest"), original);
+        if status == 404 {
+            assert!(store.cursor("acclimation_checked").is_some());
+        } else {
+            assert!(store.cursor(&format!("retry:acclimation:{}", now.date_naive())).is_some());
+        }
+        let again = raring_core::sync::sync(&store, &client, now, 1).await;
+        assert_eq!(again.requests, 1);
+        thread.join().unwrap();
+        let requests = seen.lock().unwrap();
+        assert_eq!(requests.len(), 2);
+        assert!(requests[0].contains("heataltitudeacclimation/latest"));
+        assert!(!requests[1].contains("heataltitudeacclimation/latest"));
+        assert_eq!(store.get("acclimation", "latest"), original);
+    }
+}
+
 #[tokio::test]
 async fn exchange_uses_ticket_and_service_url() {
     let (url, seen, thread) = mock(vec![(

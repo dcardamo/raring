@@ -558,6 +558,10 @@ fn put_for_scan(store: &Store, today: chrono::NaiveDate) {
         "weight_latest_checked",
         "weight_recent_checked",
         "gear_checked",
+        "lactate_threshold_checked",
+        "running_power_threshold_checked",
+        "cycling_ftp_checked",
+        "acclimation_checked",
     ] {
         store
             .set_cursor(key, &chrono::Utc::now().timestamp().to_string())
@@ -602,6 +606,10 @@ async fn garmin_intensity_weeks_are_read_daily() {
     assert_eq!(store.get("intensity_weeks", "me"), Some(rows));
 
     // Within a day the run moves on to activities without asking again.
+    // Isolate the intensity-week cadence from the latest threshold reads.
+    for kind in ["lactate_threshold", "running_power_threshold", "cycling_ftp", "acclimation"] {
+        store.set_cursor(&format!("{kind}_checked"), &chrono::Utc::now().timestamp().to_string()).unwrap();
+    }
     let (url, handle) = mock(vec!["{}".to_owned(); 20]);
     let report = raring_core::sync::sync(&store, &client(&url), afternoon, 20).await;
     let seen = handle.join().unwrap();
