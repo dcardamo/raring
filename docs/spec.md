@@ -5,7 +5,7 @@ why, and what should I do today, readable at a glance from dials, charts and
 color. It shows Garmin's own metrics and nudges you to improve. No data dumps,
 no invented scores.
 
-Android first. Web and iOS come after v1.
+Android first. iOS and desktop come next, then web.
 
 The visual reference is [design/mockup](../design/mockup/): open
 `index.html` in a browser (narrow windows behave like the phone app), or see
@@ -20,8 +20,11 @@ The visual reference is [design/mockup](../design/mockup/): open
   limited to your normal ranges, week-over-week changes, and the advice rules
   below.
 - **Fast.** Opens instantly from local data and syncs in the background.
-- **Private.** Data stays on the phone. No accounts, analytics, or services
+- **Private.** Data stays on the device. No accounts, analytics, or services
   other than Garmin.
+- **Cross-platform.** One Rust core and one Svelte UI for Android, iOS and
+  desktop. Native code is limited to what a platform requires, such as
+  background scheduling; everything else lives in the shared code.
 - **Its own identity.** Own name, palette, icons and copy. Garmin's metric
   names describe Garmin data. Nothing copied from other fitness apps.
 
@@ -211,6 +214,11 @@ Sent by the phone itself.
   hourly, and every 15 minutes in the morning until readiness arrives. A job
   calls the Rust core directly over JNI, without starting the UI, then posts
   any notifications.
+- **Platform code**: keep each platform's native layer a thin shim over the
+  core. Background scheduling is inherently native (WorkManager on Android,
+  background refresh on iOS, syncing while the app runs on desktop); secure
+  token storage and other logic belong in Rust where a cross-platform crate
+  exists.
 - **Public website**: `site/` is a static introduction, installation guide and
   privacy page, hosted at raring.app with GitHub Pages. It has no tracking,
   sign-in or access to Garmin data; it is not the future web version of the app.
@@ -229,7 +237,7 @@ Sent by the phone itself.
 4. Health, notifications and the weekly check-in, then a screenshot review.
 5. Polish, first APK release, and the repo goes public after a final review.
 
-After v1: web app, iOS, a home-screen widget, and a journal (Garmin's
+After v1: iOS, desktop apps, web app, a home-screen widget, and a journal (Garmin's
 lifestyle logging is readable through the same API).
 
 ## Testing
