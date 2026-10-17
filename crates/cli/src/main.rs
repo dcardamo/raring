@@ -205,6 +205,7 @@ async fn main() -> Result<()> {
         Some("sync")=>{let tokens=read_tokens()?;let budget=args.windows(2).find(|v|v[0]=="--budget").map(|v|v[1].parse::<usize>()).transpose()?.unwrap_or(60);
             let result=core.sync(tokens,now,budget).await?;save_tokens(&result.tokens)?;show(&result.report)?;},
         Some("status")=>show(&core.status())?,
+        Some("export")=>{let path=Path::new(args.get(1).context("export FILE.zip")?);if path.exists(){bail!("export file already exists")};core.export(path, env!("CARGO_PKG_VERSION"))?;println!("Exported {}",path.display());},
         // Synthetic QA data for a scratch RARING_HOME; never mixed into a signed-in account's history.
         Some("demo")=>{if core.status().signed_in{bail!("demo needs an empty RARING_HOME, not a signed-in one")}
             let day=match args.windows(2).find(|v|v[0]=="--date"){Some(v)=>chrono::NaiveDate::parse_from_str(&v[1],"%Y-%m-%d").context("--date YYYY-MM-DD")?,None=>now.date_naive()};

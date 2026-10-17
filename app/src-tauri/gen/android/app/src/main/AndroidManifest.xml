@@ -32,6 +32,15 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.export"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/export_paths" />
+        </provider>
         <receiver android:name=".BedtimeReceiver" android:exported="false" />
         <!-- Only the system sends these; each reschedules tonight's reminder. -->
         <receiver android:name=".BedtimeRescheduleReceiver" android:exported="true">

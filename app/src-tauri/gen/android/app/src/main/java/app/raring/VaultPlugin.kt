@@ -88,6 +88,24 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
             } catch (e: Exception) { invoke.reject("sync failed — try again", e) }
         }
     }
+    @Command fun prepareExport(invoke: Invoke) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                ExportShare.prepare(activity, invoke.getArgs().getString("filename"))
+                invoke.resolve(JSObject())
+            } catch (e: Exception) {
+                invoke.reject("could not prepare export", e)
+            }
+        }
+    }
+    @Command fun shareExport(invoke: Invoke) {
+        try {
+            ExportShare.share(activity, invoke.getArgs().getString("filename"))
+            invoke.resolve(JSObject())
+        } catch (e: Exception) {
+            invoke.reject("could not share export", e)
+        }
+    }
     @Command fun openGarminConnect(invoke: Invoke) {
         val intent = activity.packageManager.getLaunchIntentForPackage("com.garmin.android.apps.connectmobile")
         val launched = if (intent == null) false else try {

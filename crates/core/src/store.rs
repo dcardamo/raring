@@ -2,14 +2,19 @@
 use crate::view::Settings;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde_json::Value;
-use std::{path::Path, sync::Mutex};
+use std::{
+    path::{Path, PathBuf},
+    sync::Mutex,
+};
 
 pub struct Store {
     db: Mutex<Connection>,
+    path: PathBuf,
 }
 impl Store {
     pub fn open(path: impl AsRef<Path>) -> rusqlite::Result<Self> {
-        let db = Connection::open(path)?;
+        let path = path.as_ref().to_path_buf();
+        let db = Connection::open(&path)?;
         db.busy_timeout(std::time::Duration::from_secs(5))?;
         db.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")?;
         let version: i64 = db.query_row("PRAGMA user_version", [], |r| r.get(0))?;
@@ -23,7 +28,22 @@ impl Store {
                 CREATE TABLE IF NOT EXISTS cursors (key TEXT PRIMARY KEY, value TEXT NOT NULL);
                 PRAGMA user_version=1; COMMIT;")?;
         }
-        Ok(Self { db: Mutex::new(db) })
+        Ok(Self {
+            db: Mutex::new(db),
+            path,
+        })
+    }
+    pub(crate) fn with_export_db<T>(
+        &self,
+        f: impl FnOnce(&Connection) -> T,
+    ) -> rusqlite::Result<T> {
+        if self.path == Path::new(":memory:") {
+            return Ok(f(&self.db.lock().unwrap()));
+        }
+        let db =
+            Connection::open_with_flags(&self.path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+        db.busy_timeout(std::time::Duration::from_secs(5))?;
+        Ok(f(&db))
     }
     pub fn put(&self, endpoint: &str, key: &str, at: &str, value: &Value) -> rusqlite::Result<()> {
         let db = self.db.lock().unwrap();

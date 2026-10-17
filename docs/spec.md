@@ -29,6 +29,16 @@ The visual reference is [design/mockup](../design/mockup/): open
 - **Cross-platform.** One Rust core and one Svelte UI for Android, iOS and
   desktop. Native code is limited to what a platform requires, such as
   background scheduling; everything else lives in the shared code.
+- **Export.** Settings creates a ZIP offline from the local database: indexed raw
+  Garmin JSON responses, CSVs of all per-day response tables (scalar columns
+  plus the full nested JSON), every non-credential Raring settings key, and a
+  manifest with creation time, app version and row counts. Credential fields
+  are excluded recursively, including in CSVs; sign-in tokens are never read.
+  Android offers the completed private-cache file through a read-only share
+  URI and schedules cleanup before writing, 24 hours after export creation,
+  including an interrupted partial file; desktop saves it in Downloads.
+  An export leaves the phone only when the user chooses to share it. FIT
+  originals are not downloaded as part of this offline export.
 - **Its own identity.** Own name, palette, icons and copy. Garmin's metric
   names describe Garmin data. Nothing copied from other fitness apps.
 
@@ -63,9 +73,10 @@ opens its detail.
 Before sign-in, explain that Raring reads a Garmin account, not a watch, and
 that Garmin Connect must keep syncing the watch's data. State that the app
 sends no data to Raring, has no analytics or telemetry, and keeps downloaded
-history on the phone. Explain the unofficial connection and watch-dependent
-metrics before the sign-in button. Keep the same information and expandable
-privacy details available offline in Settings. Notification permission remains
+history on the phone. Exports leave the phone only when the user shares them.
+Explain the unofficial connection and watch-dependent metrics before the
+sign-in button. Keep the same information and expandable privacy details
+available offline in Settings. Notification permission remains
 optional after sign-in.
 
 ### Today

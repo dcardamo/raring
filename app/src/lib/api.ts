@@ -57,6 +57,7 @@ export const sync_now = ():Promise<void> => call('sync_now',undefined,undefined)
 export const open_garmin_connect = ():Promise<boolean> => call('open_garmin_connect',undefined,false);
 export const begin_sign_in = ():Promise<void> => call('begin_sign_in',undefined,undefined);
 export const sign_out = ():Promise<void> => call('sign_out',undefined,undefined);
+export const export_archive = ():Promise<string> => call('export_archive',undefined,'Preview: no file created');
 export const request_notification_permission = ():Promise<boolean> => call('request_notification_permission',undefined,true);
 export const get_settings = ():Promise<Settings> => call('get_settings',undefined,previewSettings);
 export const set_settings = (settings:Settings):Promise<void> => {if(!isTauri()){previewSettings=copy(settings);return Promise.resolve()}return invoke<void>('set_settings',{settings})};

@@ -15,6 +15,18 @@ try {
  browser=await chromium.launch({headless:true,executablePath:'/run/current-system/sw/bin/chromium',args:['--no-sandbox']});
  const page=await browser.newPage({viewport:{width:390,height:844},hasTouch:true,isMobile:true});
  const errors=[];
+ for(const width of [390,700,1100]){
+  const exportPage=await browser.newPage({viewport:{width,height:844}});
+  await exportPage.goto(`${url}/?fixture=export#settings`);
+  await exportPage.getByRole('button',{name:'Export your data'}).waitFor();
+  assert.match(await exportPage.getByText('Download a ZIP', {exact:false}).textContent(),/only when you share it/);
+  await exportPage.getByRole('button',{name:'Export your data'}).scrollIntoViewIfNeeded();
+  await exportPage.screenshot({path:resolve(output,`export-settings-${width}.png`),fullPage:true});
+  await exportPage.getByRole('button',{name:'Export your data'}).click();
+  await exportPage.getByText('Preview: no file created').waitFor();
+  await exportPage.close();
+ }
+ console.log('Export settings at 390/700/1100 and preview handoff: passed');
  page.on('pageerror',e=>errors.push(e.message));
  for(const width of [390,700,1100]){
   const watch=await browser.newPage({viewport:{width,height:844}});

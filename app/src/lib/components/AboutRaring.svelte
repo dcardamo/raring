@@ -10,7 +10,7 @@
   </div>
   <div>
    <dt>Your data stays with you</dt>
-   <dd>Raring’s copy stays on your phone. Nothing is sent to us. No analytics, telemetry, ads or separate Raring account.</dd>
+   <dd>Raring’s copy stays on your phone. Exports leave it only when you choose to share them. Nothing is sent to us. No analytics, telemetry, ads or separate Raring account.</dd>
   </div>
  </dl>
  <p class="connection-note">Raring is independent, not affiliated with Garmin. It uses an unofficial connection that Garmin can change or stop at any time. Available metrics depend on your watch.</p>
@@ -19,6 +19,7 @@
   <div class="privacy-details">
    <p>Raring connects directly to Garmin to sign in and download your health data and activities, including GPS routes when available. Garmin’s services and sign-in page are covered by Garmin’s privacy policy.</p>
    <p>Raring does not read or store your Garmin password. Sign-in tokens are encrypted using Android Keystore. Downloaded data is stored in the app’s private storage, protected by Android, not by a separate Raring database encryption layer. Android backup and device transfer are disabled for the app.</p>
+   <p>Settings → Export makes a ZIP of saved Garmin data and local settings, without sign-in tokens. It leaves your phone only when you choose a destination in the share sheet. The temporary ZIP is removed from the app’s cache afterwards.</p>
    <p>Sign out in Settings to remove your saved sign-in and local Garmin history from Raring, or clear the app’s storage in Android. This does not delete anything from your Garmin account.</p>
    <p>Notifications are generated on your phone, not by a server. They may show health information on your lock screen; you can turn them off in Settings or change their visibility in Android.</p>
    <p>Raring is a fitness aid, not medical advice.</p>

@@ -144,16 +144,20 @@ the persistent notification a weather app keeps up to date.
 - Rendered natively (Glance or RemoteViews) from a small snapshot the Rust
   core writes after each sync, so the widget never starts the web view.
 
-### 12. Export
+### Export follow-up: import local settings on a new phone
 
-- Settings → Export: a zip of JSON (raw Garmin responses) plus CSVs of the
-  daily tables, through the Android share sheet. Include the local settings
-  rows, notably the weekly plan's targets and paused weeks (settings key
-  `plan`, kept per week) and immutable prospective sleep-plan snapshots
-  (`sleep_plan:YYYY-MM-DD`, with night, dated bounds/source and capture times).
-  Offer importing them on a new phone.
-- Optional FIT originals for activities:
-  `/download-service/files/activity/{id}`.
+The ZIP includes every safe settings row, including the weekly plan's targets
+and paused weeks (`plan`) and prospective sleep-plan snapshots
+(`sleep_plan:YYYY-MM-DD`). Offer a validated import of these settings on a new
+phone; no import is provided yet.
+
+### Export follow-up: optional activity FIT originals
+
+`/download-service/files/activity/{id}` is an unverified candidate. Each
+activity would cost one request; first count the activities and show that
+request count as an explicit choice. Download within the existing request
+budget and 429 backoff, resume after interruption, then add the files to a
+separate export. The offline JSON/CSV export does not make network requests.
 
 ## Later: more Garmin data
 
@@ -260,6 +264,20 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **12. Export** (commit "Export Garmin history from local data"). Settings
+  builds a ZIP in shared Rust code containing all saved raw Garmin JSON,
+  per-day CSV tables, non-credential keys from the local settings table and
+  a dated, versioned manifest. Android shares a private-cache FileProvider
+  URI (a filename-scoped cleanup is registered before writing, 24 hours from
+  export creation, including crashed partials); desktop saves in Downloads. Welcome, Settings
+  and site privacy copy explain that exports leave the phone only when shared.
+  On a read-only copy of the backfill lane's full-history database: 3,836
+  raw responses and 2,571 daily rows exported offline in 12 seconds to a
+  9.1 MB ZIP, with 40,192 KiB peak RSS (`time -v`, separate process); no
+  Garmin requests or 429s. Desktop Downloads and sharing on a physical
+  phone remain unverified. FIT originals remain a separate, explicitly
+  budgeted follow-up above.
 
 - **11. Long-term trends and comparisons** (commit "Add long-term trends and
   comparisons"). Every trend chart gains 7D, 30D, 90D, 1Y and All, with

@@ -283,6 +283,9 @@ fn exchange_ticket_and_store(app: &tauri::AppHandle, ticket: String) {
 fn sign_out(app: tauri::AppHandle) -> Result<(), String> {
     clear_tokens(&app)?;
     core(&app)?.forget_account().map_err(|e| e.to_string())?;
+    if let Ok(cache) = app.path().app_cache_dir() {
+        let _ = std::fs::remove_dir_all(cache.join("exports"));
+    }
     if let Ok(mut error) = app.state::<SignInState>().0.lock() {
         *error = None;
     }
@@ -366,6 +369,121 @@ fn database_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
     let root = root.join("files");
     std::fs::create_dir_all(&root).map_err(|e| e.to_string())?;
     Ok(root.join("raring.db"))
+}
+
+// A hard link publishes a complete file atomically and fails if the name already exists.
+fn publish_archive_no_replace(
+    source: &std::path::Path,
+    destination: &std::path::Path,
+) -> Result<(), String> {
+    std::fs::hard_link(source, destination).map_err(|e| e.to_string())?;
+    if let Err(e) = std::fs::remove_file(source) {
+        log::warn!("could not remove export staging file: {e}");
+    }
+    Ok(())
+}
+
+#[cfg(not(target_os = "android"))]
+fn save_archive_to_downloads(
+    source: &std::path::Path,
+    downloads: &std::path::Path,
+    filename: &str,
+) -> Result<std::path::PathBuf, String> {
+    use std::io::Write;
+    let temporary = downloads.join(format!("{filename}.partial"));
+    let destination = downloads.join(filename);
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut output = options.open(&temporary).map_err(|e| e.to_string())?;
+    let result = (|| {
+        let mut input = std::fs::File::open(source).map_err(|e| e.to_string())?;
+        std::io::copy(&mut input, &mut output).map_err(|e| e.to_string())?;
+        output.flush().map_err(|e| e.to_string())?;
+        output.sync_all().map_err(|e| e.to_string())?;
+        publish_archive_no_replace(&temporary, &destination)?;
+        Ok(destination)
+    })();
+    if result.is_err() {
+        let _ = std::fs::remove_file(&temporary);
+    }
+    result
+}
+
+#[tauri::command]
+async fn export_archive(app: tauri::AppHandle) -> Result<String, String> {
+    let mut random = [0u8; 16];
+    getrandom::fill(&mut random).map_err(|e| e.to_string())?;
+    let suffix = random
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
+    let filename = format!(
+        "raring-{}-{suffix}.zip",
+        Local::now().format("%Y%m%d-%H%M%S-%3f")
+    );
+    let path = app
+        .path()
+        .app_cache_dir()
+        .map_err(|e| e.to_string())?
+        .join("exports");
+    std::fs::create_dir_all(&path).map_err(|e| e.to_string())?;
+    #[cfg(target_os = "android")]
+    vault(&app)
+        .0
+        .run_mobile_plugin::<serde_json::Value>(
+            "prepareExport",
+            serde_json::json!({"filename": filename}),
+        )
+        .map_err(|e| e.to_string())?;
+    let file = path.join(&filename);
+    let partial = path.join(format!("{filename}.partial"));
+    let app_for_export = app.clone();
+    let destination = file.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let result = (|| {
+            let version = app_for_export.package_info().version.to_string();
+            core(&app_for_export)?
+                .export(&partial, &version)
+                .map_err(|e| e.to_string())?;
+            publish_archive_no_replace(&partial, &destination)
+        })();
+        if result.is_err() {
+            let _ = std::fs::remove_file(partial);
+        }
+        result
+    })
+    .await
+    .map_err(|e| e.to_string())??;
+    #[cfg(target_os = "android")]
+    {
+        // An IPC error can arrive after the chooser started; its URI must remain readable.
+        vault(&app)
+            .0
+            .run_mobile_plugin::<serde_json::Value>(
+                "shareExport",
+                serde_json::json!({"filename": filename}),
+            )
+            .map_err(|e| e.to_string())?;
+        Ok("Choose where to share the export".into())
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let result = (|| {
+            let downloads = app.path().download_dir().map_err(|e| e.to_string())?;
+            let destination = save_archive_to_downloads(&file, &downloads, &filename)?;
+            let _ = std::fs::remove_file(&file);
+            Ok(format!("Saved to {}", destination.display()))
+        })();
+        if result.is_err() {
+            let _ = std::fs::remove_file(file);
+        }
+        result
+    }
 }
 
 #[tauri::command]
@@ -473,6 +591,7 @@ pub fn run() {
                     request_notification_permission,
                     get_settings,
                     set_settings,
+                    export_archive,
                     load_demo_data
                 ]
             }
@@ -496,7 +615,8 @@ pub fn run() {
                     open_garmin_connect,
                     request_notification_permission,
                     get_settings,
-                    set_settings
+                    set_settings,
+                    export_archive
                 ]
             }
         })
@@ -527,4 +647,38 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod export_tests {
+    use super::*;
+
+    #[test]
+    fn publishing_and_desktop_saving_never_replace_an_existing_export() {
+        let mut random = [0u8; 16];
+        getrandom::fill(&mut random).unwrap();
+        let directory =
+            std::env::temp_dir().join(format!("raring-publish-{:x}", u128::from_le_bytes(random)));
+        std::fs::create_dir(&directory).unwrap();
+        let source = directory.join("staged.partial");
+        let destination = directory.join("archive.zip");
+        std::fs::write(&source, b"new").unwrap();
+        std::fs::write(&destination, b"existing").unwrap();
+        assert!(publish_archive_no_replace(&source, &destination).is_err());
+        assert_eq!(std::fs::read(&destination).unwrap(), b"existing");
+        assert_eq!(std::fs::read(&source).unwrap(), b"new");
+        #[cfg(not(target_os = "android"))]
+        {
+            assert!(save_archive_to_downloads(&source, &directory, "archive.zip").is_err());
+            assert_eq!(std::fs::read(&destination).unwrap(), b"existing");
+            assert!(!directory.join("archive.zip.partial").exists());
+            let saved = save_archive_to_downloads(&source, &directory, "another.zip").unwrap();
+            assert_eq!(std::fs::read(saved).unwrap(), b"new");
+        }
+        std::fs::remove_file(&destination).unwrap();
+        publish_archive_no_replace(&source, &destination).unwrap();
+        assert!(!source.exists());
+        assert_eq!(std::fs::read(destination).unwrap(), b"new");
+        std::fs::remove_dir_all(directory).unwrap();
+    }
 }

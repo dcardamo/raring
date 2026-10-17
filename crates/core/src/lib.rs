@@ -1,5 +1,6 @@
 //! Shared, offline-first Garmin core. Callers own and persist credentials.
 pub mod demo;
+mod export;
 pub mod garmin;
 pub mod notifications;
 pub mod phase;
@@ -137,6 +138,10 @@ impl Raring {
             history_days: self.store.days(),
             last_error: self.store.cursor("last_error").filter(|s| !s.is_empty()),
         }
+    }
+    /// Build a complete, token-free archive at a caller-owned private path.
+    pub fn export(&self, path: &Path, app_version: &str) -> std::result::Result<(), export::ExportError> {
+        export::write(&self.store, path, app_version)
     }
     pub fn settings(&self) -> view::Settings {
         self.store.settings()
