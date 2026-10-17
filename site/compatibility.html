@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Which Garmin watches work with Raring's weekly plan and strength features: tested, expected to work, or unknown. Report your watch on GitHub.">
+  <meta name="theme-color" content="#0b0f1a">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'">
+  <link rel="canonical" href="https://raring.app/compatibility.html">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="compatibility.css">
+  <title>Compatibility — Raring</title>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header wrap"><a class="brand" href="./" aria-label="Raring home"><img src="assets/icon.svg" width="44" height="44" alt="">Raring</a><nav aria-label="Main"><a href="./#how-it-works">How it works</a><a href="privacy.html">Privacy</a><a href="https://github.com/dcardamo/raring">Source</a></nav></header>
+
+  <main id="main" class="wrap compat-page">
+    <p class="eyebrow">Compatibility</p>
+    <h1>Will it work with my watch?</h1>
+    <p class="lead">Raring reads your Garmin account, not your watch. The weekly plan works with most watches that sync to Garmin Connect. Strength features depend on what your watch records and downloads.</p>
+
+    <ul class="tiers" aria-label="What each label means">
+      <li><span class="tier tested">Tested</span><p>We’ve used it on this watch.</p></li>
+      <li><span class="tier expected">Expected to work</span><p>The watch has the Garmin features it needs. Nobody has confirmed it yet.</p></li>
+      <li><span class="tier unknown">Unknown</span><p>No reports yet. Yours would help.</p></li>
+    </ul>
+
+    <section class="section compat-section" aria-labelledby="features-title">
+      <h2 id="features-title">What each feature needs</h2>
+      <ul class="needs">
+        <li><h3 class="plan-label">Weekly plan</h3><p>Intensity minutes, heart-rate zones and sleep in Garmin Connect.</p></li>
+        <li><h3 class="strength-label">Set read-back</h3><p>A Strength activity that records sets, reps and weights.</p></li>
+        <li><h3 class="strength-label">Set correction</h3><p>Edits sets on the activity in your Garmin account. Works wherever read-back does.</p></li>
+        <li><h3 class="strength-label">Workout push</h3><p>Downloads workouts from Garmin’s calendar. Up to about 100 steps each, rests included.</p></li>
+      </ul>
+
+      <table class="compat">
+        <caption>Watch compatibility by feature</caption>
+        <thead><tr><th scope="col">Watch</th><th scope="col">Weekly plan</th><th scope="col">Set read-back</th><th scope="col">Set correction</th><th scope="col">Workout push</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Forerunner 970<small>Our test watch</small></th>
+            <td data-label="Weekly plan"><span class="tier tested">Tested</span></td><td data-label="Set read-back"><span class="tier tested">Tested</span></td><td data-label="Set correction"><span class="tier tested">Tested</span></td><td data-label="Workout push"><span class="tier tested">Tested</span></td></tr>
+          <tr><th scope="row">Watches with Strength workouts<small>Records sets and downloads workouts from the calendar</small></th>
+            <td data-label="Weekly plan"><span class="tier expected">Expected</span></td><td data-label="Set read-back"><span class="tier expected">Expected</span></td><td data-label="Set correction"><span class="tier expected">Expected</span></td><td data-label="Workout push"><span class="tier expected">Expected</span></td></tr>
+          <tr><th scope="row">Watches with a Strength activity only<small>Records sets, but no downloaded workouts</small></th>
+            <td data-label="Weekly plan"><span class="tier expected">Expected</span></td><td data-label="Set read-back"><span class="tier expected">Expected</span></td><td data-label="Set correction"><span class="tier expected">Expected</span></td><td data-label="Workout push"><span class="tier unknown">Unknown</span></td></tr>
+          <tr><th scope="row">Other Garmin watches and trackers<small>Syncs to Garmin Connect</small></th>
+            <td data-label="Weekly plan"><span class="tier expected">Expected</span></td><td data-label="Set read-back"><span class="tier unknown">Unknown</span></td><td data-label="Set correction"><span class="tier unknown">Unknown</span></td><td data-label="Workout push"><span class="tier unknown">Unknown</span></td></tr>
+        </tbody>
+      </table>
+      <p class="note compat-note">Garmin decides what each watch records, and it can change its service at any time. A watch that works today could stop.</p>
+    </section>
+
+    <section class="report" aria-labelledby="report-title">
+      <div><p class="eyebrow">Tried it on another watch?</p><h2 id="report-title">Tell us how it went.</h2>
+        <p>Open a report with your watch model, the feature you tried and what happened. Reports move a watch from Unknown to Expected, or to Tested.</p></div>
+      <div class="report-action"><a class="button" href="https://github.com/dcardamo/raring/issues/new?labels=compatibility&amp;title=Compatibility%3A%20">Report on GitHub <span aria-hidden="true">↗</span></a>
+        <p class="quiet">Issues are public. Leave out your name, Garmin details and screenshots with personal data.</p></div>
+    </section>
+
+    <a class="text-link" href="./">← Back to Raring</a>
+  </main>
+
+  <footer class="site-footer wrap"><span>Raring · Make today count.</span><nav aria-label="Footer"><a href="./#install">Get the app</a><a href="privacy.html">Privacy</a><a href="https://github.com/dcardamo/raring">Source code</a></nav></footer>
+</body>
+</html>

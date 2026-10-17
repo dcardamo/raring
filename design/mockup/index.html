@@ -11,7 +11,7 @@
 :root{
   --bg:#0B0F1A;--card:rgba(255,255,255,.045);--line:rgba(255,255,255,.07);
   --text:#EEF1F7;--text2:#A3ACBF;--text3:#69728A;
-  --mint:#3DDC97;--amber:#FFB547;--coral:#FF6B6B;--violet:#9B8CFF;--flame:#FF8A3D;--sky:#5CC8FF;
+  --mint:#3DDC97;--amber:#FFB547;--coral:#FF6B6B;--violet:#9B8CFF;--flame:#FF8A3D;--sky:#5CC8FF;--rose:#FF6FB5;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:#04060B}
@@ -224,11 +224,12 @@ h1{font:600 30px/1.1 Outfit,Inter;margin-top:4px}
   .tabs{padding-bottom:calc(env(safe-area-inset-bottom) + 12px);height:auto}
 }
 </style>
+<link rel="stylesheet" href="plan-strength.css">
 </head>
 <body>
 <main class="gallery" id="gallery"></main>
 <script>
-const C = {mint:"#3DDC97", amber:"#FFB547", coral:"#FF6B6B", violet:"#9B8CFF", flame:"#FF8A3D", sky:"#5CC8FF",
+const C = {mint:"#3DDC97", amber:"#FFB547", coral:"#FF6B6B", violet:"#9B8CFF", flame:"#FF8A3D", sky:"#5CC8FF", rose:"#FF6FB5", rose2:"#E0489A",
   deep:"#5B4BE0", rem:"#B79CFF", light:"#7C93FF", awake:"#FF9B8F", text3:"#69728A",
   z:["#7D879C", "#5CC8FF", "#3DDC97", "#FFB547", "#FF6B6B"]};
 
@@ -301,8 +302,10 @@ const statusBar = () => `<div class="sb"><span>7:42</span><span class="ic">
   <svg width="18" height="12" viewBox="0 0 18 12" fill="#EEF1F7"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
   <svg width="26" height="12" viewBox="0 0 26 12"><rect x=".5" y=".5" width="22" height="11" rx="3.5" fill="none" stroke="#EEF1F7" opacity=".5"/><rect x="2.5" y="2.5" width="15" height="7" rx="2" fill="#EEF1F7"/><rect x="24" y="4" width="1.5" height="4" rx=".7" fill="#EEF1F7" opacity=".5"/></svg></span></div>`;
 
-const tabs = on => `<nav class="tabs">${[["today", "Today", ico.gauge], ["sleep", "Sleep", ico.moon], ["training", "Training", ico.bolt], ["health", "Health", ico.heart]]
-  .map(([k, l, i]) => `<button class="tab${k === on ? " on" : ""}" data-go="${k}">${i}${l}</button>`).join("")}</nav>`;
+const NAV = [["today", "Today", ico.gauge], ["sleep", "Sleep", ico.moon], ["training", "Training", ico.bolt], ["health", "Health", ico.heart]];
+const navItems = on => NAV.map(([k, l, i]) => `<button class="tab${k === on ? " on" : ""}" data-go="${k}">${i}${l}</button>`).join("");
+// Phones and unfolded screens use bottom tabs; wide windows swap them for a side rail.
+const tabs = on => `<nav class="tabs">${navItems(on)}</nav><nav class="rail"><img src="../../site/assets/icon.svg" width="40" height="40" alt="">${navItems(on)}</nav>`;
 
 const zoneBar = (mins) => {
   const tot = mins.reduce((a, b) => a + b, 0);
@@ -328,6 +331,7 @@ function today() {
   <div class="card"><h3>Today's call</h3>
     <div class="seg"><span>Rest</span><span>Easy</span><span>Steady</span><span class="on">Push</span></div>
     <div class="sub">${ico.check}Morning run done · <b class="n" style="color:#EEF1F7">186</b> load</div></div>
+  ${planCard()}
   <div class="row">
     <div class="card"><h3>Body Battery</h3><div class="bb"><div class="batt"><i style="height:78%"></i></div><div><div class="big n">78</div><div class="small"><b>+62</b> overnight</div></div></div></div>
     <div class="card"><h3>HRV <span class="pill ok">Balanced</span></h3><div class="big n">58<span class="unit">ms</span></div><div style="margin-top:10px">${spark([51, 49, 53, 55, 52, 56, 58], {w: 138, h: 34, color: C.mint, band: [48, 62], min: 42, max: 64})}</div></div>
@@ -426,9 +430,10 @@ function training() {
     <div class="card"><h3>VO₂ max</h3><div class="big n">52</div><div class="small" style="margin:6px 0 8px"><b>▲ 1</b> in 30 days</div>${spark([49, 49, 50, 50, 50, 51, 51, 52], {w: 138, h: 30, color: C.mint})}</div>
     <div class="card"><h3>Race times</h3><div class="race"><div><span>5K</span><b>21:40</b></div><div><span>10K</span><b>45:10</b></div><div><span>Half</span><b>1:39:50</b></div><div><span>Full</span><b>3:31:05</b></div></div></div>
   </div>
+  ${strengthCard()}
   <div class="card list"><h3>Workouts</h3>
     <div class="item tap" data-go="workout"><div class="act-ico" style="background:rgba(255,138,61,.15);color:${C.flame}">${ico.run}</div><div class="act-main"><b>Morning Run</b><span>Thu · 10.2 km · 52:14</span>${zoneBar([3.2, 9.75, 18.3, 17.5, 3.5])}</div><div class="act-load"><b class="n" style="color:${C.flame}">186</b><span>Load</span></div></div>
-    <div class="item"><div class="act-ico" style="background:rgba(155,140,255,.15);color:${C.violet}">${ico.lift}</div><div class="act-main"><b>Strength</b><span>Wed · 48:02</span>${zoneBar([14, 22, 9, 3, 0.1])}</div><div class="act-load"><b class="n" style="color:${C.violet}">74</b><span>Load</span></div></div>
+    <div class="item tap" data-go="strength-workout"><div class="act-ico" style="background:rgba(255,111,181,.15);color:${C.rose}">${ico.lift}</div><div class="act-main"><b>Lower A</b><span>Wed · Strength · 48:02</span>${zoneBar([14, 22, 9, 3, 0.1])}</div><div class="act-load"><b class="n" style="color:${C.rose}">74</b><span>Load</span></div></div>
     <div class="item"><div class="act-ico" style="background:rgba(92,200,255,.15);color:${C.sky}">${ico.bike}</div><div class="act-main"><b>Evening Ride</b><span>Wed · 38.4 km · 1:24:10</span>${zoneBar([8, 30, 32, 12, 2])}</div><div class="act-load"><b class="n" style="color:${C.sky}">246</b><span>Load</span></div></div>
   </div>
   </div>${tabs("training")}`;
@@ -518,17 +523,43 @@ function health() {
   </div>${tabs("health")}`;
 }
 
-const SCREENS = [["today", "Today", today], ["sleep", "Sleep", sleep], ["training", "Training", training], ["workout", "Workout", workout], ["health", "Health", health]];
-const g = document.getElementById("gallery");
-g.innerHTML = SCREENS.map(([k, l, f]) => `<section class="frame${k === "today" ? " current" : ""}" data-screen="${k}"><h2>${l}</h2><div class="phone">${f()}</div></section>`).join("");
-const show = k => document.querySelectorAll(".frame").forEach(f => f.classList.toggle("current", f.dataset.screen === k));
-if (location.hash.length > 1) show(location.hash.slice(1));
-g.addEventListener("click", e => {
-  const t = e.target.closest("[data-go]");
-  if (!t || window.innerWidth > 600) return;
-  show(t.dataset.go);
-  const cur = document.querySelector(".frame.current .scroll"); if (cur) cur.scrollTop = 0;
-});
+// Frames are [key, label, render, kind, group]; kind is "phone", "fold" (unfolded) or "desk".
+// plan-strength.js adds the weekly plan and strength screens before the gallery renders.
+const SCREENS = [["today", "Today", today], ["sleep", "Sleep", sleep], ["training", "Training", training], ["workout", "Workout", workout], ["health", "Health", health]].map(s => [...s, "phone", "Core"]);
+
+function render() {
+  const g = document.getElementById("gallery"), q = new URLSearchParams(location.search);
+  // ?app#key draws one screen full-window, so resizing walks through phone, unfolded and desktop layouts.
+  if (q.has("app")) {
+    document.body.classList.add("app");
+    const draw = () => {
+      const s = SCREENS.find(x => x[0] === location.hash.slice(1) && x[3] === "phone") || SCREENS[0];
+      g.innerHTML = `<div class="phone"><div class="cq">${s[2]()}</div></div>`;
+    };
+    draw(); addEventListener("hashchange", draw);
+    g.addEventListener("click", e => { const t = e.target.closest("[data-go]"); if (t) location.hash = t.dataset.go; });
+    return;
+  }
+  const only = q.get("group");
+  let group = "";
+  g.innerHTML = SCREENS.filter(s => !only || s[4] === only).map(([k, l, f, kind, grp]) => {
+    const head = !only && grp !== group ? `<h2 class="group">${group = grp}</h2>` : "";
+    const body = kind === "desk" ? `<div class="desk"><div class="titlebar"><i></i><i></i><i></i><span>Raring</span></div><div class="win">${f()}</div></div>`
+      : `<div class="phone${kind === "fold" ? " fold" : ""}"><div class="cq">${f()}</div></div>`;
+    const tag = kind === "desk" ? " · Desktop" : kind === "fold" ? " · Unfolded" : "";
+    return `${head}<section class="frame frame-${kind}${k === "today" && kind === "phone" ? " current" : ""}" data-screen="${kind === "phone" ? k : k + "@" + kind}"><h2>${l}${tag}</h2>${body}</section>`;
+  }).join("");
+  const show = k => document.querySelectorAll(".frame").forEach(f => f.classList.toggle("current", f.dataset.screen === k));
+  if (location.hash.length > 1) show(location.hash.slice(1));
+  g.addEventListener("click", e => {
+    const t = e.target.closest("[data-go]");
+    if (!t || window.innerWidth > 600) return;
+    show(t.dataset.go);
+    const cur = document.querySelector(".frame.current .scroll"); if (cur) cur.scrollTop = 0;
+  });
+}
+document.addEventListener("DOMContentLoaded", render);
 </script>
+<script src="plan-strength.js"></script>
 </body>
 </html>
