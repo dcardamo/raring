@@ -7,14 +7,13 @@
 .tier{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;line-height:1.4;white-space:nowrap}
 .tier::before{content:'';flex:none;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;color:var(--bg)}
 .tier.tested{color:var(--mint)}.tier.tested::before{content:'✓';background:var(--mint)}
-.tier.expected{color:var(--sky)}.tier.expected::before{background:linear-gradient(90deg,var(--sky) 50%,transparent 50%);box-shadow:inset 0 0 0 2px var(--sky)}
+.tier.expected{color:var(--text)}.tier.expected::before{background:linear-gradient(90deg,var(--text) 50%,transparent 50%);box-shadow:inset 0 0 0 2px var(--text)}
 .tier.unknown{color:var(--quiet)}.tier.unknown::before{content:'?';color:var(--quiet);box-shadow:inset 0 0 0 2px var(--quiet)}
 .compat-section{padding-top:56px}
 .needs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;list-style:none;padding:0;margin:28px 0 0}
 .needs li{border-top:2px solid var(--line);padding-top:16px}
 .needs h3{font-size:20px}
 .needs p{font-size:14px;margin-top:8px}
-.plan-label{color:var(--mint)}.strength-label{color:#ff6fb5}
 .compat{width:100%;border-collapse:separate;border-spacing:0;margin-top:40px;background:var(--card);border:1px solid var(--line);border-radius:20px;overflow:hidden}
 .compat caption{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 .compat th,.compat td{padding:18px 20px;text-align:left;vertical-align:middle;border-top:1px solid var(--line)}

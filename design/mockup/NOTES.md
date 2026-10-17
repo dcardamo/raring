@@ -2,102 +2,102 @@
 
 Open `index.html` for the gallery, or `index.html?app#plan` for one screen
 full-window: resize it to walk through phone, unfolded (660 px and up) and
-desktop (1000 px and up, side rail instead of tabs). Screens:
-`plan`, `plan-setup`, `checkin`, `strength-workout`, `fix`,
-`strength-history`, `builder`, `catalog`, `widget`. The compatibility page is
-`site/compatibility.html`. Screenshots are in `shots/`; regenerate them and
-`screens.png` with `node design/mockup/shoot.mjs`. All data is synthetic.
+desktop (1000 px and up, side rail instead of tabs). Screens: `language`,
+`plan`, `plan-setup`, `checkin`, `intro-1` to `intro-4`, `strength-workout`,
+`fix`, `strength-history`, `builder`, `catalog`, `help`, `help-sheet`,
+`widget`. The compatibility page is `site/compatibility.html`. Screenshots
+are in `shots/`; regenerate them and `screens.png` with
+`node design/mockup/shoot.mjs`. All data is synthetic.
 
-## Choices made
+## Design language
 
-- **Strength is rose** (`#FF6FB5` to `#E0489A`). It's the one free hue between
-  sleep violet and warning coral, and it stays clear of training orange. The
-  old Training list drew the strength workout in sleep violet; it now uses rose.
-- **The plan has no color of its own.** Each target uses its area's color:
-  strength rose, intensity minutes orange, Zone 2 the zone-2 blue, asleep-by
-  violet. The glow follows the week's state (mint when on pace).
-- **Partial credit everywhere.** Each target is a ring reading "N of target",
-  and there's no combined plan score. History shows each week's targets as
-  partly filled rings, plus a count of targets met.
-- **Placement.** A compact plan card sits on Today under Today's call and
-  opens the full plan. Training gets a Strength card that opens Strength
-  history. In the Monday check-in, the plan is the card before "Win & focus",
-  with Keep and Adjust buttons.
-- **Strength workouts show sets as bars.** Bar height is reps, the weight is
-  underneath, last time's sets are a dashed outline and suspected miscounts
-  are amber. Watch-counted and edited sets are marked separately.
-- **Corrections put flagged sets first,** each with a one-tap fix, followed by
-  every set with large steppers. Nothing reaches Garmin until one explicit
-  Save, which sends the whole list (Garmin's `PUT` replaces the array).
-- **Records are measured only:** the heaviest weight at 1, 3, 5, 8 and 10
-  reps. There's no estimated one-rep max, volume or load score.
-- **Builder:** each exercise has Off (your own targets) or Auto, and Auto shows
-  the suggestion with a one-line reason. It also has a step meter, scheduling
-  to Garmin's calendar and the readiness brake. On desktop it uses three
-  columns: workouts and catalog, exercises, then schedule and settings.
-- **Widgets:** a medium widget with readiness, the headline and asleep-by; a
-  small one with readiness and asleep-by; an evening small widget that leads
-  with asleep-by; and a waiting state.
-- **Compatibility** groups watches by capability; only the Forerunner 970 is
-  named. The page has its own stylesheet and isn't linked from the home page.
+Color means something or it isn't there. Icons and titles say where you are;
+color says how it's going. The `language` screen shows it.
+
+- **Status:** green good, amber fair, red poor. Only for how something is
+  going: scores by level, ranges, flags, goals behind or done. Missing data is
+  a gap, never a zero.
+- **Effort:** heart-rate zones, cool to hot: gray, blue, yellow, orange, red.
+  Red means hard. Zone 3 moves from green to yellow so green only ever means
+  good.
+- **Amount:** one blue, faint to strong, for "how much" with no judgement:
+  the body map, sets per muscle and the weekly heatmap.
+- **Ink:** everything else. Charts without a verdict, numbers, selected
+  controls and primary buttons are white on the dark ink, not a hue.
+- **Glow** stays only behind Today, Sleep, Training and Health heroes,
+  faintly, in the status color.
+
+This replaces the spec's "one color per area" (violet sleep, orange training,
+rose strength). The core five screens are recolored to match. The spec's Look
+section needs rewriting if you accept it; I haven't touched the spec.
+
+## Changes from the first round
+
+- **Weekly plan** is one list: each target is a line with "N of target" and a
+  bar that's ink on track, amber when behind pace and green when done. The
+  rings, pace ticks and day strip are gone. History is one bar per week:
+  the average completion across targets, each capped at 100%, so partial
+  credit shows. Today shows the same four bars, compact.
+- **Plan targets** start from a preset (Strength, Endurance, Sleep, Custom)
+  and list all four targets in one card.
+- **Garmin wording:** "Writes to Garmin" and "Save to Garmin" are gone; the
+  fix screen says "5 changes" and "Save". Help explains once that edits update
+  the activity in Garmin.
+- **Help:** a Help screen (from the avatar on Today, and a ? on plan,
+  strength and builder screens) and a bottom sheet for in-context help.
+- **Strength intro:** four steps the first time someone opens Strength: lift
+  with your watch, fix it after, plan workouts, then setup (watch check, body
+  map, weight steps, suggested weights).
+- **Body map:** Raring's own front and back figures, female and male, shaded
+  by sets per muscle in the amount blue. On the workout detail (this
+  session), strength history (this week or four weeks), the Training card and
+  the intro's setup.
 
 ## Open questions
 
-Each has a recommendation. Items marked *Rules* need a line in the spec's
-Rules section, because they're Raring's own math.
+Each has a recommendation. *Rules* marks Raring's own math, which needs a
+line in the spec's Rules section.
 
-1. **Week start.** Recommend following Garmin's start-of-week setting, so
-   intensity minutes match Garmin's weekly total. The mockup uses Monday.
-2. **Pace tick** on each ring (where even progress would be today, with rest
-   days skipped). Recommend keeping it: it's the only "am I behind" cue.
-   *Rules.*
-3. **Asleep-by counting.** Recommend counting a night as on time within 15
-   minutes, and leaving nights without a plan out of the count. *Rules.*
-4. **Intensity target.** Recommend Garmin's intensity minutes and Garmin's
-   goal by default, with "Vigorous only" as an option. Use Garmin's weekly
-   total; don't recompute it.
-5. **Zone 2 source.** Recommend activity time in Garmin's zone 2 only. Check
-   whether all-day zone time is available before the spec says either way.
-6. **Rest days** only move the pace tick and label Today ("Planned rest");
-   they don't lower targets. "Pause this week" leaves the week out of
-   history. Recommend as mocked.
-7. **Sets per muscle.** Recommend counting a set once for each primary muscle
-   in Garmin's catalog and ignoring secondary muscles. If the catalog has no
-   muscle data, keep a small mapping table. *Rules.*
-8. **Miscount flags.** Recommend three to start: 0 reps; reps at least 1.8
-   times the median of the exercise's other sets ("doubled"); and an exercise
-   Garmin couldn't name. Flags never fix anything automatically. *Rules.*
-9. **Readiness brake timing.** Readiness only exists on the morning itself.
-   Recommend scheduling with progressed weights, then swapping in held
-   weights after the morning sync on a Rest or Easy day, with a
-   notification. This only works if the watch syncs before the session, which
-   hasn't been checked on the Forerunner 970. If the spike says no, show the
-   brake as advice on Today instead.
-10. **Progression defaults.** Recommend double progression with the smallest
-    equipment step; add reps first when the next step is over 10% heavier;
-    drop one step after two sessions below the range; wait for two sessions
-    on a new exercise. *Rules.*
-11. **Step cap.** The mockup counts each set and its rest, with warm-ups
-    included and the last rest dropped. Recommend warning at 90 steps and
-    offering "split workout" at 100. The spike needs to confirm how Garmin
-    counts repeats.
-12. **Weekly repeat** ("Every Sat"). Garmin schedules one date at a time, so
-    Raring would have to reschedule every week. Recommend shipping "Once"
-    first.
-13. **Exercise suggestions when fixing** an unnamed exercise. Recommend
-    taking them from the scheduled workout, then recent exercises.
-14. **Widget evening switch.** Recommend that the small widget leads with
-    asleep-by three hours before the asleep-by time, while the medium widget
-    always shows both. Widgets are native per platform, so iOS would reuse the
-    layout with WidgetKit.
-15. **Compatibility page.** Recommend publishing it only when the features
-    ship, and naming only models someone has tested. It links to
-    `issues/new?labels=compatibility`, so a `compatibility` label or issue
-    template needs to exist first.
-16. **Units.** Recommend following Garmin's unit setting (kg or lb) rather
-    than adding a Raring setting.
+1. **Accept the design language** and rewrite the spec's Look section.
+   Recommend yes.
+2. **Zone 3 yellow** instead of Garmin's green. Recommend yes, so green keeps
+   one meaning; it differs from Garmin's own app.
+3. **Plan history as average completion.** Recommend yes, over "targets met",
+   which reads as failure for nearly-made weeks. *Rules.*
+4. **Pace** decides whether a goal is amber: the share of the week's
+   training days (nights, for sleep) that have passed. Recommend yes. *Rules.*
+5. **Body map figure** comes from a setting chosen in the intro, defaulting
+   from the Garmin profile when it has one. Recommend yes. The figures are
+   hand-drawn placeholders and need an illustration pass before shipping.
+6. **Sets per muscle** count a set once for each primary muscle in Garmin's
+   catalog. If the catalog has no muscle data, Raring keeps a small mapping
+   table. *Rules.*
+7. **Help content** lives in the app, offline, as short pages, with a link to
+   GitHub for questions. Recommend shipping the strength pages with strength,
+   and the rest as each area ships.
+8. **Week start** follows Garmin's start-of-week setting so intensity minutes
+   match Garmin's total. Recommend yes; the mockup uses Monday.
+9. **Asleep on time** means within 15 minutes of the suggested time, and
+   nights without a plan are left out. *Rules.*
+10. **Miscount flags:** 0 reps; reps at least 1.8 times the median of the
+    exercise's other sets; an exercise Garmin couldn't name. Never fixed
+    automatically. *Rules.*
+11. **Readiness brake timing.** Readiness only exists on the morning. Recommend
+    scheduling progressed weights and swapping in held weights after the
+    morning sync on a Rest or Easy day. This depends on the watch syncing
+    before the session, which the Forerunner 970 spike has to confirm.
+12. **Progression defaults:** double progression with the smallest equipment
+    step; add reps first when the next step is over 10% heavier; drop one
+    step after two sessions below range; wait two sessions on a new exercise.
+    *Rules.*
+13. **Step cap:** warn at 90, offer "split workout" at 100. The spike needs to
+    confirm how Garmin counts repeats.
+14. **Weekly repeat** ("Every Sat") needs Raring to reschedule each week.
+    Recommend shipping "Once" first.
+15. **Compatibility page:** publish only when the features ship; name only
+    tested models; create a `compatibility` issue label first.
+16. **Units** follow Garmin's setting.
 
-Not mocked: empty states (no strength history yet), saving offline, and a
-failed save. For a failed save, recommend keeping the edits on the device,
-fetching the sets again before the `PUT` in case they were edited in
-Connect, and saying plainly what Garmin rejected.
+Not mocked: empty states, saving offline, a failed save. For a failed save,
+recommend keeping edits on the device, fetching the sets again before writing
+in case they changed in Connect, and saying plainly what was rejected.

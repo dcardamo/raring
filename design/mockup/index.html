@@ -11,7 +11,8 @@
 :root{
   --bg:#0B0F1A;--card:rgba(255,255,255,.045);--line:rgba(255,255,255,.07);
   --text:#EEF1F7;--text2:#A3ACBF;--text3:#69728A;
-  --mint:#3DDC97;--amber:#FFB547;--coral:#FF6B6B;--violet:#9B8CFF;--flame:#FF8A3D;--sky:#5CC8FF;--rose:#FF6FB5;
+  --mint:#3DDC97;--amber:#FFB547;--coral:#FF6B6B;--violet:#9B8CFF;--flame:#FF8A3D;--sky:#5CC8FF;
+  --good:#3DDC97;--fair:#FFB547;--poor:#FF6B6B;--amount:#5CA8FF;--ink:#E4E8F0;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:#04060B}
@@ -70,7 +71,7 @@ h1{font:600 30px/1.1 Outfit,Inter;margin-top:4px}
 /* effort */
 .seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .seg span{height:38px;border-radius:13px;display:grid;place-items:center;background:rgba(255,255,255,.05);color:var(--text3);font:600 13px Inter}
-.seg span.on{background:linear-gradient(135deg,#3DDC97,#2BB6D9);color:#04241A;box-shadow:0 8px 24px rgba(61,220,151,.28)}
+.seg span.on{background:var(--ink);color:#0B0F1A}
 .sub{display:flex;align-items:center;gap:6px;margin-top:12px;color:var(--text2);font-size:13px}
 .sub svg{width:15px;height:15px;color:var(--mint)}
 /* body battery + hrv */
@@ -79,7 +80,7 @@ h1{font:600 30px/1.1 Outfit,Inter;margin-top:4px}
 .bb{display:flex;align-items:center;gap:14px}
 .batt{width:30px;height:56px;border-radius:8px;border:2px solid rgba(255,255,255,.18);padding:3px;display:flex;align-items:flex-end;position:relative}
 .batt:before{content:"";position:absolute;top:-6px;left:50%;width:12px;height:4px;border-radius:2px 2px 0 0;background:rgba(255,255,255,.18);transform:translateX(-50%)}
-.batt i{display:block;width:100%;border-radius:4px;background:linear-gradient(to top,#2BB6D9,#3DDC97)}
+.batt i{display:block;width:100%;border-radius:4px;background:var(--good)}
 .small{font:500 12px Inter;color:var(--text2);margin-top:6px}
 .small b{color:var(--mint);font-weight:600}
 /* vitals strip */
@@ -90,7 +91,7 @@ h1{font:600 30px/1.1 Outfit,Inter;margin-top:4px}
 .v span{font:500 11px Inter;color:var(--text3)}
 /* activity */
 .act{display:flex;align-items:center;gap:12px}
-.act-ico{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;flex:none}
+.act-ico{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;flex:none;background:rgba(255,255,255,.06);color:var(--text)}
 .act-ico svg{width:24px;height:24px}
 .act-main{flex:1;min-width:0}
 .act-main b{display:block;font:600 16px Inter}
@@ -109,7 +110,7 @@ h1{font:600 30px/1.1 Outfit,Inter;margin-top:4px}
 .need{flex:1}
 .need .big{font-size:40px}
 .needbar{position:relative;height:12px;border-radius:6px;background:rgba(255,255,255,.07);margin:12px 0 8px}
-.needbar i{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:linear-gradient(90deg,#6E5BFF,#9B8CFF)}
+.needbar i{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:rgba(228,232,240,.8)}
 .needbar u{position:absolute;top:-5px;bottom:-5px;width:2px;background:#fff;border-radius:1px}
 .need-sub{font-size:13px;color:var(--text2)}
 .need-sub b{color:var(--text);font:600 14px Outfit}
@@ -124,11 +125,12 @@ h1{font:600 30px/1.1 Outfit,Inter;margin-top:4px}
 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .tile{background:rgba(255,255,255,.035);border-radius:16px;padding:12px}
 .tile span{font:500 12px Inter;color:var(--text3);display:flex;align-items:center;gap:6px}
+.chip>svg{color:var(--text3)}
 .tile span svg{width:14px;height:14px}
 .tile b{display:block;font:600 22px/1.2 Outfit;margin:4px 0 2px}
 .tile b small{font:500 12px Inter;color:var(--text3);margin-left:3px}
 .tonight{display:flex;align-items:center;gap:14px}
-.tonight .moon{width:46px;height:46px;border-radius:15px;display:grid;place-items:center;background:rgba(155,140,255,.15);color:#B9AEFF}
+.tonight .moon{width:46px;height:46px;border-radius:15px;display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--text2)}
 .tonight .moon svg{width:24px;height:24px}
 .tonight b{font:600 22px Outfit}
 .tonight span{display:block;font-size:13px;color:var(--text2)}
@@ -160,7 +162,7 @@ h1{font:600 30px/1.1 Outfit,Inter;margin-top:4px}
 .te{display:flex;gap:14px}
 .te .dial-c b{font-size:22px}
 .te .dial-c span{font-size:9px;margin-top:3px}
-.te-l{text-align:center;font:600 11px Inter;margin-top:-6px}
+.te-l{text-align:center;font:600 11px Inter;margin-top:-6px;color:var(--text2)}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px 8px}
 .grid3 b{display:block;font:600 21px Outfit}
 .grid3 span{font:500 12px Inter;color:var(--text3)}
@@ -204,7 +206,7 @@ h1{font:600 30px/1.1 Outfit,Inter;margin-top:4px}
 .vr-n b{font:600 16px Outfit}
 .vr-n b small{font:500 11px Inter;color:var(--text3);margin-left:2px}
 .rb{position:relative;height:8px;border-radius:4px;background:rgba(255,255,255,.06)}
-.rb u{position:absolute;top:0;bottom:0;border-radius:4px;background:rgba(61,220,151,.30)}
+.rb u{position:absolute;top:0;bottom:0;border-radius:4px;background:rgba(255,255,255,.13)}
 .rb i{position:absolute;top:50%;width:12px;height:12px;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 3px #10141F}
 /* tabs */
 .tabs{position:absolute;left:0;right:0;bottom:0;height:86px;padding:10px 14px 24px;display:flex;justify-content:space-around;
@@ -212,7 +214,7 @@ h1{font:600 30px/1.1 Outfit,Inter;margin-top:4px}
 .tab{display:flex;flex-direction:column;align-items:center;gap:4px;font:600 11px Inter;color:var(--text3);background:none;border:0;cursor:pointer;width:76px}
 .tab.on{color:var(--text)}
 .tab svg{width:24px;height:24px}
-.tab.on svg{color:var(--mint)}
+.tab.on svg{color:var(--text)}
 @media (max-width:600px){
   .gallery{display:block;padding:0}
   .frame{display:none}
@@ -229,9 +231,11 @@ h1{font:600 30px/1.1 Outfit,Inter;margin-top:4px}
 <body>
 <main class="gallery" id="gallery"></main>
 <script>
-const C = {mint:"#3DDC97", amber:"#FFB547", coral:"#FF6B6B", violet:"#9B8CFF", flame:"#FF8A3D", sky:"#5CC8FF", rose:"#FF6FB5", rose2:"#E0489A",
-  deep:"#5B4BE0", rem:"#B79CFF", light:"#7C93FF", awake:"#FF9B8F", text3:"#69728A",
-  z:["#7D879C", "#5CC8FF", "#3DDC97", "#FFB547", "#FF6B6B"]};
+// Color carries meaning or it isn't there. Status: good, fair, poor. Effort: heart-rate zones, cool to hot.
+// Amount: one blue, faint to strong. Everything without a judgement is ink.
+const C = {good:"#3DDC97", fair:"#FFB547", poor:"#FF6B6B", amount:"#5CA8FF", ink:"#E4E8F0", ink2:"#A3ACBF", text3:"#69728A",
+  stage:{deep:"#2F6FE0", light:"#5C9BFF", rem:"#A9C8FF", awake:"#E4E8F0"},
+  z:["#7D879C", "#5CA8FF", "#FFD666", "#FF9F43", "#FF6B6B"]};
 
 const svgI = (d, extra = "") => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ${extra}>${d}</svg>`;
 const ico = {
@@ -256,21 +260,21 @@ const ico = {
 };
 
 let gid = 0;
-function arc({size, value, max = 100, stroke = 10, color, color2, band, marker = false, sweep = 270}) {
-  const id = "g" + (++gid), r = (size - stroke) / 2 - 3, c = size / 2, Cc = 2 * Math.PI * r, L = Cc * sweep / 360;
+// Solid arcs: the color is the status. A band marks a target range in neutral ink.
+function arc({size, value, max = 100, stroke = 10, color, band, marker = false, sweep = 270}) {
+  const r = (size - stroke) / 2 - 3, c = size / 2, Cc = 2 * Math.PI * r, L = Cc * sweep / 360;
   const rot = 90 + (360 - sweep) / 2, f = Math.max(0, Math.min(1, value / max));
-  let s = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="overflow:visible">
-    <defs><linearGradient id="${id}" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="${color2 || color}"/><stop offset="1" stop-color="${color}"/></linearGradient></defs>
-    <g transform="rotate(${rot} ${c} ${c})">
+  let s = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="overflow:visible"><g transform="rotate(${rot} ${c} ${c})">
     <circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="${stroke}" stroke-linecap="round" stroke-dasharray="${L} ${Cc}"/>`;
   if (band) {
     const b0 = L * band[0] / max, b1 = L * band[1] / max;
-    s += `<circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${color}" stroke-opacity=".22" stroke-width="${stroke}" stroke-dasharray="0 ${b0} ${b1 - b0} ${Cc}"/>`;
+    s += `<circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="#fff" stroke-opacity=".14" stroke-width="${stroke}" stroke-dasharray="0 ${b0} ${b1 - b0} ${Cc}"/>`;
   }
-  s += `<circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${color}" stroke-opacity=".10" stroke-width="${stroke * 2}" stroke-linecap="round" stroke-dasharray="${L * f} ${Cc}"/><circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="url(#${id})" stroke-width="${stroke}" stroke-linecap="round" stroke-dasharray="${L * f} ${Cc}"/></g>`;
+  if (f > 0) s += `<circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}" stroke-linecap="round" stroke-dasharray="${L * f} ${Cc}"/>`;
+  s += `</g>`;
   if (marker) {
     const a = (rot + sweep * f) * Math.PI / 180;
-    s += `<circle cx="${c + r * Math.cos(a)}" cy="${c + r * Math.sin(a)}" r="${stroke * .62}" fill="#fff" stroke="${color}" stroke-width="3"/>`;
+    s += `<circle cx="${c + r * Math.cos(a)}" cy="${c + r * Math.sin(a)}" r="${stroke * .62}" fill="#fff" stroke="#0B0F1A" stroke-width="3"/>`;
   }
   return s + "</svg>";
 }
@@ -284,7 +288,7 @@ function smooth(p) {
   return d;
 }
 
-function spark(vals, {w = 120, h = 40, color = C.mint, band, fill = true, sw = 2.2, min, max} = {}) {
+function spark(vals, {w = 120, h = 40, color = C.ink, band, fill = true, sw = 2.2, min, max} = {}) {
   const id = "s" + (++gid), all = vals.concat(band || []);
   const lo = min ?? Math.min(...all), hi = max ?? Math.max(...all), pad = 4;
   const X = i => pad + i * (w - 2 * pad) / (vals.length - 1), Y = v => h - pad - (v - lo) / (hi - lo || 1) * (h - 2 * pad);
@@ -313,53 +317,55 @@ const zoneBar = (mins) => {
 };
 
 /* ---------- Today ---------- */
+// Status thresholds for the sample's factor bars: Garmin reports each factor as a percentage.
+const level = (v, good = 70, fair = 50) => v >= good ? C.good : v >= fair ? C.fair : C.poor;
 function today() {
-  const factors = [["Sleep", 86, C.mint], ["Recovery", 92, C.mint], ["HRV", 78, C.mint], ["Acute load", 58, C.amber], ["Sleep hist.", 81, C.mint], ["Stress hist.", 73, C.mint]];
+  const factors = [["Sleep", 86], ["Recovery", 92], ["HRV", 78], ["Acute load", 58], ["Sleep hist.", 81], ["Stress hist.", 73]];
   const vit = [["RHR", "46", ico.heart], ["HRV", "58", ico.hrv], ["Resp", "14.1", ico.lungs], ["SpO₂", "96", ico.drop], ["Skin", "+0.1°", ico.temp]];
-  return `<div class="glow" style="--glow:rgba(61,220,151,.24)"></div>${statusBar()}
+  return `<div class="glow" style="--glow:rgba(61,220,151,.13)"></div>${statusBar()}
   <div class="scroll">
-  <header class="top"><div><div class="eyebrow">Thu 16 Oct</div><h1>Today</h1></div><div class="avatar">D</div></header>
+  <header class="top"><div><div class="eyebrow">Thu 16 Oct</div><h1>Today</h1></div><div class="avatar tap" data-go="help">D</div></header>
   <section class="dials">
-    <div class="dial sm tap" data-go="sleep">${arc({size: 100, value: 84, color: C.violet, color2: "#6E5BFF", stroke: 9})}<div class="dial-c"><b class="n">84</b><span>Sleep</span></div></div>
-    <div class="dial lg">${arc({size: 156, value: 82, color: C.mint, color2: "#2BB6D9", stroke: 13})}<div class="dial-c"><b class="n">82</b><span>Readiness</span><em style="color:${C.mint}">High</em></div></div>
-    <div class="dial sm tap" data-go="training">${arc({size: 100, value: 612, max: 1000, color: C.flame, color2: "#FF5E3A", stroke: 9, band: [420, 760], marker: true})}<div class="dial-c"><b class="n">612</b><span>Load</span></div></div>
+    <div class="dial sm tap" data-go="sleep">${arc({size: 100, value: 84, color: C.good, stroke: 9})}<div class="dial-c"><b class="n">84</b><span>Sleep</span></div></div>
+    <div class="dial lg">${arc({size: 156, value: 82, color: C.good, stroke: 13})}<div class="dial-c"><b class="n">82</b><span>Readiness</span><em style="color:${C.good}">High</em></div></div>
+    <div class="dial sm tap" data-go="training">${arc({size: 100, value: 612, max: 1000, color: C.good, stroke: 9, band: [420, 760], marker: true})}<div class="dial-c"><b class="n">612</b><span>Load</span></div></div>
   </section>
   <div class="headline"><h2>Ready to push</h2>
-    <div class="chips"><span class="chip" style="color:${C.violet}">${ico.moon}<b class="n">7:48</b></span><span class="chip" style="color:${C.mint}">${ico.hrv}<b class="n">58</b><span style="color:#A3ACBF">ms</span></span><span class="chip" style="color:${C.flame}">${ico.flame}<span style="color:#A3ACBF">Room to build</span></span></div></div>
+    <div class="chips"><span class="chip">${ico.moon}<b class="n">7:48</b></span><span class="chip">${ico.hrv}<b class="n">58</b>ms</span><span class="chip">${ico.flame}Room to build</span></div></div>
   <div class="card"><h3>What's driving it <span class="pill ok">5 of 6 good</span></h3>
-    <div class="factors">${factors.map(([n, v, c]) => `<div class="f"><span>${n}<b>${v}</b></span><div class="bar"><i style="width:${v}%;background:${c}"></i></div></div>`).join("")}</div></div>
+    <div class="factors">${factors.map(([n, v]) => `<div class="f"><span>${n}<b>${v}</b></span><div class="bar"><i style="width:${v}%;background:${level(v)}"></i></div></div>`).join("")}</div></div>
   <div class="card"><h3>Today's call</h3>
     <div class="seg"><span>Rest</span><span>Easy</span><span>Steady</span><span class="on">Push</span></div>
     <div class="sub">${ico.check}Morning run done · <b class="n" style="color:#EEF1F7">186</b> load</div></div>
   ${planCard()}
   <div class="row">
     <div class="card"><h3>Body Battery</h3><div class="bb"><div class="batt"><i style="height:78%"></i></div><div><div class="big n">78</div><div class="small"><b>+62</b> overnight</div></div></div></div>
-    <div class="card"><h3>HRV <span class="pill ok">Balanced</span></h3><div class="big n">58<span class="unit">ms</span></div><div style="margin-top:10px">${spark([51, 49, 53, 55, 52, 56, 58], {w: 138, h: 34, color: C.mint, band: [48, 62], min: 42, max: 64})}</div></div>
+    <div class="card"><h3>HRV <span class="pill ok">Balanced</span></h3><div class="big n">58<span class="unit">ms</span></div><div style="margin-top:10px">${spark([51, 49, 53, 55, 52, 56, 58], {w: 138, h: 34, color: C.good, band: [48, 62], min: 42, max: 64})}</div></div>
   </div>
   <div class="card"><h3>Vitals <span class="pill ok">${ico.check}All normal</span></h3>
     <div class="vitals">${vit.map(([n, v, i]) => `<div class="v"><div class="ring">${i}</div><b>${v}</b><span>${n}</span></div>`).join("")}</div></div>
   <div class="card tap" data-go="workout"><h3>Activities</h3>
-    <div class="act"><div class="act-ico" style="background:rgba(255,138,61,.15);color:${C.flame}">${ico.run}</div>
+    <div class="act"><div class="act-ico">${ico.run}</div>
       <div class="act-main"><b>Morning Run</b><span>06:12 · <span class="n">10.2 km</span> · <span class="n">52:14</span></span></div>
-      <div class="act-load"><b class="n" style="color:${C.flame}">186</b><span>Load</span></div></div>
+      <div class="act-load"><b class="n">186</b><span>Load</span></div></div>
     ${zoneBar([3.2, 9.75, 18.3, 17.5, 3.5])}
-    <div class="tags"><span class="pill ok">Aerobic 3.8 · Improving</span><span class="pill flame">Tempo</span></div></div>
+    <div class="tags"><span class="pill">Aerobic 3.8 · Improving</span><span class="pill">Tempo</span></div></div>
   <div class="card tap" data-go="health"><h3>Fitness Age</h3>
-    <div class="fa"><div><div class="big n">39</div><span class="pill ok" style="margin-top:8px">7 yrs younger</span></div>${spark([42, 41.6, 41.4, 41, 40.6, 40.4, 40, 39.8, 39.5, 39.3, 39.1, 39], {w: 160, h: 64, color: C.mint})}</div></div>
+    <div class="fa"><div><div class="big n">39</div><span class="pill ok" style="margin-top:8px">7 yrs younger</span></div>${spark([42, 41.6, 41.4, 41, 40.6, 40.4, 40, 39.8, 39.5, 39.3, 39.1, 39], {w: 160, h: 64, color: C.good})}</div></div>
   </div>${tabs("today")}`;
 }
 
 /* ---------- Sleep ---------- */
 const STAGES = [["light", 12], ["deep", 38], ["light", 22], ["rem", 14], ["light", 30], ["deep", 32], ["light", 18], ["awake", 4], ["rem", 22], ["light", 34], ["deep", 18], ["light", 26], ["rem", 28], ["awake", 6], ["light", 40], ["deep", 8], ["light", 24], ["rem", 30], ["light", 28], ["awake", 5], ["rem", 26], ["light", 18], ["awake", 5]];
 function hypnogram() {
-  const lanes = {awake: 0, rem: 1, light: 2, deep: 3}, names = ["Awake", "REM", "Light", "Deep"], col = {awake: C.awake, rem: C.rem, light: C.light, deep: C.deep};
+  const lanes = {awake: 0, rem: 1, light: 2, deep: 3}, names = ["Awake", "REM", "Light", "Deep"], col = C.stage;
   const W = 326, x0 = 46, cw = W - x0, total = STAGES.reduce((a, s) => a + s[1], 0), LH = 30, start = 22 * 60 + 31;
-  let s = `<svg width="${W}" height="${4 * LH + 22}" viewBox="0 0 ${W} ${4 * LH + 22}" style="display:block">`;
+  let s = `<svg width="${W}" height="${4 * LH + 22}" viewBox="0 0 ${W} ${4 * LH + 22}" style="display:block;max-width:100%;height:auto">`;
   names.forEach((n, i) => s += `<text x="0" y="${i * LH + 19}" fill="#69728A" font-family="Inter" font-size="11" font-weight="600">${n}</text><line x1="${x0}" x2="${W}" y1="${i * LH + 15}" y2="${i * LH + 15}" stroke="rgba(255,255,255,.05)"/>`);
   let t = 0, prev = null;
   STAGES.forEach(([st, d]) => {
     const x = x0 + t / total * cw, w = d / total * cw, y = lanes[st] * LH + 4;
-    if (prev !== null) s += `<line x1="${x}" x2="${x}" y1="${prev * LH + 15}" y2="${lanes[st] * LH + 15}" stroke="rgba(255,255,255,.22)" stroke-width="1"/>`;
+    if (prev !== null) s += `<line x1="${x}" x2="${x}" y1="${prev * LH + 15}" y2="${lanes[st] * LH + 15}" stroke="rgba(255,255,255,.18)" stroke-width="1"/>`;
     s += `<rect x="${x}" y="${y}" width="${Math.max(w, 2)}" height="22" rx="5" fill="${col[st]}"/>`;
     t += d; prev = lanes[st];
   });
@@ -374,67 +380,67 @@ function consistency() {
   const nights = [[22.6, 6.5], [23.1, 6.7], [22.9, 6.6], [23.6, 7.0], [22.5, 6.4], [23.3, 6.9], [22.8, 6.6], [22.7, 6.5], [23.0, 6.7], [24.0, 7.1], [22.6, 6.5], [22.9, 6.8], [22.7, 6.6], [22.52, 6.65]];
   const W = 326, H = 128, top = 21.5, bot = 7.5 + 24, Y = h => { const v = h < 12 ? h + 24 : h; return 8 + (v - top) / (bot - top) * (H - 26); };
   const bw = 14, gap = (W - 40 - nights.length * bw) / (nights.length - 1);
-  let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block">`;
-  s += `<rect x="40" y="${Y(22.5)}" width="${W - 40}" height="${Y(23) - Y(22.5)}" fill="${C.violet}" opacity=".12" rx="3"/><rect x="40" y="${Y(6.5)}" width="${W - 40}" height="${Y(7) - Y(6.5)}" fill="${C.violet}" opacity=".12" rx="3"/>`;
+  let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;max-width:100%;height:auto">`;
+  s += `<rect x="40" y="${Y(22.5)}" width="${W - 40}" height="${Y(23) - Y(22.5)}" fill="#fff" opacity=".06" rx="3"/><rect x="40" y="${Y(6.5)}" width="${W - 40}" height="${Y(7) - Y(6.5)}" fill="#fff" opacity=".06" rx="3"/>`;
   [["22:00", 22], ["02:00", 2], ["06:00", 6]].forEach(([l, h]) => s += `<text x="0" y="${Y(h) + 4}" fill="#69728A" font-family="Inter" font-size="11">${l}</text><line x1="40" x2="${W}" y1="${Y(h)}" y2="${Y(h)}" stroke="rgba(255,255,255,.05)"/>`);
   nights.forEach(([b, w], i) => {
     const x = 40 + i * (bw + gap), last = i === nights.length - 1;
-    s += `<rect x="${x}" y="${Y(b)}" width="${bw}" height="${Y(w) - Y(b)}" rx="7" fill="${last ? C.violet : "rgba(155,140,255,.38)"}"/>`;
+    s += `<rect x="${x}" y="${Y(b)}" width="${bw}" height="${Y(w) - Y(b)}" rx="7" fill="${last ? C.ink : "rgba(228,232,240,.28)"}"/>`;
   });
   return s + `<text x="40" y="${H - 2}" fill="#69728A" font-family="Inter" font-size="11">2 weeks ago</text><text x="${W}" y="${H - 2}" fill="#69728A" font-family="Inter" font-size="11" text-anchor="end">Last night</text></svg>`;
 }
 function sleep() {
-  const st = [["Deep", 96, C.deep, "+12m", C.mint], ["Light", 252, C.light, "−4m", C.text3], ["REM", 120, C.rem, "+9m", C.mint], ["Awake", 20, C.awake, "−6m", C.mint]];
+  const st = [["Deep", 96, C.stage.deep, "+12m", C.good], ["Light", 252, C.stage.light, "−4m", C.text3], ["REM", 120, C.stage.rem, "+9m", C.good], ["Awake", 20, C.stage.awake, "−6m", C.good]];
   const tot = st.reduce((a, s) => a + s[1], 0), hm = m => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`;
   const hr = [52, 50, 48, 47, 46, 46, 47, 46, 48, 47, 49, 51];
-  return `<div class="glow" style="--glow:rgba(155,140,255,.24)"></div>${statusBar()}
+  return `<div class="glow" style="--glow:rgba(61,220,151,.10)"></div>${statusBar()}
   <div class="scroll">
   <header class="top"><div><div class="eyebrow">Wed → Thu · 22:31 – 06:39</div><h1>Sleep</h1></div><div class="avatar">D</div></header>
   <section class="sleep-hero">
-    <div class="dial">${arc({size: 150, value: 84, color: C.violet, color2: "#6E5BFF", stroke: 12})}<div class="dial-c"><b class="n" style="font-size:46px">84</b><span>Score</span><em style="color:#B9AEFF">Good</em></div></div>
+    <div class="dial">${arc({size: 150, value: 84, color: C.good, stroke: 12})}<div class="dial-c"><b class="n" style="font-size:46px">84</b><span>Score</span><em style="color:${C.good}">Good</em></div></div>
     <div class="need"><div class="eyebrow">Asleep</div><div class="big n" style="margin-top:4px">7:48</div>
       <div class="needbar"><i style="width:${7.8 / 9 * 100}%"></i><u style="left:${7.5 / 9 * 100}%"></u></div>
-      <div class="need-sub">Need <b>7:30</b> · <span style="color:${C.mint};font-weight:600">+18 min</span></div></div>
+      <div class="need-sub">Need <b>7:30</b> · <span style="color:${C.good};font-weight:600">+18 min</span></div></div>
   </section>
   <div class="card"><h3>Stages</h3>${hypnogram()}</div>
   <div class="card"><div class="stack">${st.map(([, m, c]) => `<i style="width:${m / tot * 100}%;background:${c}"></i>`).join("")}</div>
     <div class="legend">${st.map(([n, m, c, d, dc]) => `<div class="leg"><i style="background:${c}"></i><div><span>${n}</span><span><b>${hm(m)}</b><em style="color:${dc}">${d}</em></span></div></div>`).join("")}</div></div>
   <div class="card"><h3>Overnight</h3><div class="tiles">
-    <div class="tile"><span style="color:${C.mint}">${ico.hrv}<span style="color:#69728A">HRV</span></span><b>58<small>ms</small></b>${spark([49, 54, 57, 61, 60, 58, 56, 59], {w: 128, h: 30, color: C.mint, fill: false})}</div>
-    <div class="tile"><span style="color:${C.coral}">${ico.heart}<span style="color:#69728A">Heart rate</span></span><b>46<small>bpm</small></b>${spark(hr, {w: 128, h: 30, color: C.coral, fill: false})}</div>
-    <div class="tile"><span style="color:${C.sky}">${ico.lungs}<span style="color:#69728A">Respiration</span></span><b>14.1<small>brpm</small></b>${spark([14.4, 14.2, 14, 13.9, 14.1, 14, 14.2, 14.1], {w: 128, h: 30, color: C.sky, fill: false, min: 12, max: 16})}</div>
-    <div class="tile"><span style="color:${C.violet}">${ico.drop}<span style="color:#69728A">SpO₂</span></span><b>96<small>%</small></b>${spark([97, 96, 95, 96, 96, 95, 96, 96], {w: 128, h: 30, color: C.violet, fill: false, min: 90, max: 100})}</div>
+    <div class="tile"><span>${ico.hrv}HRV</span><b>58<small>ms</small></b>${spark([49, 54, 57, 61, 60, 58, 56, 59], {w: 128, h: 30, color: C.ink, fill: false})}</div>
+    <div class="tile"><span>${ico.heart}Heart rate</span><b>46<small>bpm</small></b>${spark(hr, {w: 128, h: 30, color: C.ink, fill: false})}</div>
+    <div class="tile"><span>${ico.lungs}Respiration</span><b>14.1<small>brpm</small></b>${spark([14.4, 14.2, 14, 13.9, 14.1, 14, 14.2, 14.1], {w: 128, h: 30, color: C.ink, fill: false, min: 12, max: 16})}</div>
+    <div class="tile"><span>${ico.drop}SpO₂</span><b>96<small>%</small></b>${spark([97, 96, 95, 96, 96, 95, 96, 96], {w: 128, h: 30, color: C.ink, fill: false, min: 90, max: 100})}</div>
   </div></div>
-  <div class="card"><h3>Consistency <span class="pill violet">±18 min</span></h3>${consistency()}</div>
-  <div class="card"><div class="tonight"><div class="moon">${ico.moon}</div><div><span>Tonight</span><b>Bed by 22:50</b></div><div style="margin-left:auto;text-align:right"><span>Need</span><b class="n">7:35</b></div></div></div>
+  <div class="card"><h3>Consistency <span class="pill">±18 min</span></h3>${consistency()}</div>
+  <div class="card"><div class="tonight"><div class="moon">${ico.moon}</div><div><span>Tonight</span><b>Asleep by 22:50</b></div><div style="margin-left:auto;text-align:right"><span>Need</span><b class="n">7:35</b></div></div></div>
   </div>${tabs("sleep")}`;
 }
 
 /* ---------- Training ---------- */
 function training() {
   const wk = [["F", 0], ["S", 142], ["S", 210], ["M", 0], ["T", 95], ["W", 320], ["T", 186]];
-  const lf = [["Low aerobic", 450, [300, 600], C.sky, ""], ["High aerobic", 610, [400, 800], C.flame, ""], ["Anaerobic", 60, [150, 350], C.violet, `<span class="pill warn">Shortage</span>`]];
-  return `<div class="glow" style="--glow:rgba(255,138,61,.20)"></div>${statusBar()}
+  const lf = [["Low aerobic", 450, [300, 600], ""], ["High aerobic", 610, [400, 800], ""], ["Anaerobic", 60, [150, 350], `<span class="pill warn">Shortage</span>`]];
+  return `<div class="glow" style="--glow:rgba(61,220,151,.09)"></div>${statusBar()}
   <div class="scroll">
   <header class="top"><div><div class="eyebrow">Last 7 days</div><h1>Training</h1></div><span class="pill ok" style="font-size:13px;padding:6px 12px">${ico.vo2}Productive</span></header>
   <section class="semi">
-    <div style="position:absolute;top:0">${arc({size: 300, value: 612, max: 1000, sweep: 180, color: C.flame, color2: "#FF5E3A", stroke: 16, band: [420, 760], marker: true})}</div>
-    <div class="dial-c"><b class="n">612</b><span>Acute load</span><em style="color:${C.flame}">Optimal</em></div>
+    <div style="position:absolute;top:0">${arc({size: 300, value: 612, max: 1000, sweep: 180, color: C.good, stroke: 16, band: [420, 760], marker: true})}</div>
+    <div class="dial-c"><b class="n">612</b><span>Acute load</span><em style="color:${C.good}">Optimal</em></div>
     <span class="semi-l" style="left:24px">Low</span><span class="semi-l" style="right:24px">High</span>
   </section>
   <div class="headline" style="margin-top:-6px"><h2>Room to build</h2>
-    <div class="chips"><span class="chip" style="color:${C.flame}">${ico.flame}<span style="color:#A3ACBF">Load ratio</span><b class="n">1.1</b></span><span class="chip" style="color:${C.sky}">${ico.clock}<span style="color:#A3ACBF">Recovery</span><b class="n">18h</b></span></div></div>
-  <div class="card"><h3>This week</h3><div class="wk">${wk.map(([d, v], i) => `<div>${v ? `<b>${v}</b>` : ""}<i style="height:${Math.max(v / 340 * 80, 4)}px;background:${v ? (i === 6 ? C.flame : "rgba(255,138,61,.45)") : "rgba(255,255,255,.08)"}"></i><span>${d}</span></div>`).join("")}</div></div>
-  <div class="card"><h3>Load focus · 4 weeks</h3>${lf.map(([n, v, [a, b], c, tag]) => `<div class="lf"><div class="lf-top"><span>${n} ${tag}</span><b>${v}</b></div><div class="lfbar"><u style="left:${a / 900 * 100}%;width:${(b - a) / 900 * 100}%"></u><i style="width:${v / 900 * 100}%;background:${c}"></i></div></div>`).join("")}</div>
+    <div class="chips"><span class="chip">${ico.flame}Load ratio<b class="n">1.1</b></span><span class="chip">${ico.clock}Recovery<b class="n">18h</b></span></div></div>
+  <div class="card"><h3>This week</h3><div class="wk">${wk.map(([d, v], i) => `<div>${v ? `<b>${v}</b>` : ""}<i style="height:${Math.max(v / 340 * 80, 4)}px;background:${v ? (i === 6 ? C.ink : "rgba(228,232,240,.30)") : "rgba(255,255,255,.08)"}"></i><span>${d}</span></div>`).join("")}</div></div>
+  <div class="card"><h3>Load focus · 4 weeks</h3>${lf.map(([n, v, [a, b], tag]) => `<div class="lf"><div class="lf-top"><span>${n} ${tag}</span><b>${v}</b></div><div class="lfbar"><u style="left:${a / 900 * 100}%;width:${(b - a) / 900 * 100}%"></u><i style="width:${v / 900 * 100}%;background:${v < a ? C.fair : "rgba(228,232,240,.75)"}"></i></div></div>`).join("")}</div>
   <div class="row">
-    <div class="card"><h3>VO₂ max</h3><div class="big n">52</div><div class="small" style="margin:6px 0 8px"><b>▲ 1</b> in 30 days</div>${spark([49, 49, 50, 50, 50, 51, 51, 52], {w: 138, h: 30, color: C.mint})}</div>
+    <div class="card"><h3>VO₂ max</h3><div class="big n">52</div><div class="small" style="margin:6px 0 8px"><b>▲ 1</b> in 30 days</div>${spark([49, 49, 50, 50, 50, 51, 51, 52], {w: 138, h: 30, color: C.good})}</div>
     <div class="card"><h3>Race times</h3><div class="race"><div><span>5K</span><b>21:40</b></div><div><span>10K</span><b>45:10</b></div><div><span>Half</span><b>1:39:50</b></div><div><span>Full</span><b>3:31:05</b></div></div></div>
   </div>
   ${strengthCard()}
   <div class="card list"><h3>Workouts</h3>
-    <div class="item tap" data-go="workout"><div class="act-ico" style="background:rgba(255,138,61,.15);color:${C.flame}">${ico.run}</div><div class="act-main"><b>Morning Run</b><span>Thu · 10.2 km · 52:14</span>${zoneBar([3.2, 9.75, 18.3, 17.5, 3.5])}</div><div class="act-load"><b class="n" style="color:${C.flame}">186</b><span>Load</span></div></div>
-    <div class="item tap" data-go="strength-workout"><div class="act-ico" style="background:rgba(255,111,181,.15);color:${C.rose}">${ico.lift}</div><div class="act-main"><b>Lower A</b><span>Wed · Strength · 48:02</span>${zoneBar([14, 22, 9, 3, 0.1])}</div><div class="act-load"><b class="n" style="color:${C.rose}">74</b><span>Load</span></div></div>
-    <div class="item"><div class="act-ico" style="background:rgba(92,200,255,.15);color:${C.sky}">${ico.bike}</div><div class="act-main"><b>Evening Ride</b><span>Wed · 38.4 km · 1:24:10</span>${zoneBar([8, 30, 32, 12, 2])}</div><div class="act-load"><b class="n" style="color:${C.sky}">246</b><span>Load</span></div></div>
+    <div class="item tap" data-go="workout"><div class="act-ico">${ico.run}</div><div class="act-main"><b>Morning Run</b><span>Thu · 10.2 km · 52:14</span>${zoneBar([3.2, 9.75, 18.3, 17.5, 3.5])}</div><div class="act-load"><b class="n">186</b><span>Load</span></div></div>
+    <div class="item tap" data-go="strength-workout"><div class="act-ico">${ico.lift}</div><div class="act-main"><b>Lower A</b><span>Wed · Strength · 48:02</span>${zoneBar([14, 22, 9, 3, 0.1])}</div><div class="act-load"><b class="n">74</b><span>Load</span></div></div>
+    <div class="item"><div class="act-ico">${ico.bike}</div><div class="act-main"><b>Evening Ride</b><span>Wed · 38.4 km · 1:24:10</span>${zoneBar([8, 30, 32, 12, 2])}</div><div class="act-load"><b class="n">246</b><span>Load</span></div></div>
   </div>
   </div>${tabs("training")}`;
 }
@@ -451,9 +457,9 @@ function hrChart() {
   }
   const lo = 100, hi = 180, X = i => i / 209 * W, Y = v => H - 16 - (v - lo) / (hi - lo) * (H - 22);
   const bounds = [120, 138, 154, 167];
-  let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block"><defs><linearGradient id="hrg" x1="0" y1="0" x2="0" y2="${H}" gradientUnits="userSpaceOnUse">
+  let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;max-width:100%;height:auto"><defs><linearGradient id="hrg" x1="0" y1="0" x2="0" y2="${H}" gradientUnits="userSpaceOnUse">
     <stop offset="${Y(167) / H}" stop-color="${C.z[4]}"/><stop offset="${Y(167) / H}" stop-color="${C.z[3]}"/><stop offset="${Y(154) / H}" stop-color="${C.z[3]}"/><stop offset="${Y(154) / H}" stop-color="${C.z[2]}"/><stop offset="${Y(138) / H}" stop-color="${C.z[2]}"/><stop offset="${Y(138) / H}" stop-color="${C.z[1]}"/><stop offset="${Y(120) / H}" stop-color="${C.z[1]}"/><stop offset="${Y(120) / H}" stop-color="${C.z[0]}"/></linearGradient>
-    <linearGradient id="hra" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFB547" stop-opacity=".28"/><stop offset="1" stop-color="#FFB547" stop-opacity="0"/></linearGradient></defs>`;
+    <linearGradient id="hra" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E4E8F0" stop-opacity=".10"/><stop offset="1" stop-color="#E4E8F0" stop-opacity="0"/></linearGradient></defs>`;
   bounds.forEach(b => s += `<line x1="0" x2="${W}" y1="${Y(b)}" y2="${Y(b)}" stroke="rgba(255,255,255,.06)" stroke-dasharray="3 4"/>`);
   const d = "M" + pts.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join("L");
   s += `<path d="${d}L${W},${H - 16}L0,${H - 16}Z" fill="url(#hra)"/><path d="${d}" fill="none" stroke="url(#hrg)" stroke-width="2.2" stroke-linejoin="round"/>`;
@@ -462,28 +468,27 @@ function hrChart() {
 }
 function route() {
   const W = 358, H = 176, r = rng(3);
-  let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;border-radius:16px;background:#0E1424">`;
+  let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;max-width:100%;height:auto;border-radius:16px;background:#0E1424">`;
   for (let i = 0; i < 9; i++) { const y = 10 + i * 20 + r() * 6; s += `<path d="M-10,${y} C ${W * .3},${y + (r() - .5) * 30} ${W * .6},${y + (r() - .5) * 30} ${W + 10},${y + (r() - .5) * 20}" stroke="rgba(255,255,255,.045)" stroke-width="${1 + r() * 3}" fill="none"/>`; }
   for (let i = 0; i < 8; i++) { const x = 10 + i * 44 + r() * 10; s += `<path d="M${x},-10 C ${x + (r() - .5) * 30},${H * .4} ${x + (r() - .5) * 30},${H * .7} ${x + (r() - .5) * 20},${H + 10}" stroke="rgba(255,255,255,.04)" stroke-width="${1 + r() * 2}" fill="none"/>`; }
-  s += `<g transform="translate(16,0)"><path d="M-40,128 C 60,110 110,150 170,132 S 270,90 380,104" stroke="rgba(92,200,255,.16)" stroke-width="16" fill="none" stroke-linecap="round"/>`;
+  s += `<g transform="translate(16,0)"><path d="M-40,128 C 60,110 110,150 170,132 S 270,90 380,104" stroke="rgba(92,168,255,.14)" stroke-width="16" fill="none" stroke-linecap="round"/>`;
   const p = [[62, 140], [58, 104], [84, 70], [126, 52], [172, 40], [222, 46], [262, 68], [276, 102], [252, 128], [206, 132], [160, 124], [118, 134], [80, 146], [62, 140]];
-  s += `<defs><linearGradient id="rt" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${C.amber}"/><stop offset=".5" stop-color="${C.flame}"/><stop offset="1" stop-color="${C.coral}"/></linearGradient></defs>`;
-  s += `<path d="${smooth(p)}" stroke="${C.flame}" stroke-opacity=".14" stroke-width="13" fill="none" stroke-linecap="round"/><path d="${smooth(p)}" stroke="url(#rt)" stroke-width="4.5" fill="none" stroke-linecap="round"/>`;
-  s += `<circle cx="62" cy="140" r="7" fill="${C.mint}" stroke="#0E1424" stroke-width="3"/></g>`;
+  s += `<path d="${smooth(p)}" stroke="#E4E8F0" stroke-opacity=".12" stroke-width="12" fill="none" stroke-linecap="round"/><path d="${smooth(p)}" stroke="#E4E8F0" stroke-width="4" fill="none" stroke-linecap="round"/>`;
+  s += `<circle cx="62" cy="140" r="7" fill="#E4E8F0" stroke="#0E1424" stroke-width="3"/></g>`;
   return s + "</svg>";
 }
 function workout() {
   const zones = [["Z5", 3.5, "3:29"], ["Z4", 17.5, "17:30"], ["Z3", 18.3, "18:20"], ["Z2", 9.75, "9:45"], ["Z1", 3.2, "3:10"]], tot = 52.25;
   const splits = [321, 308, 302, 298, 305, 295, 301, 297, 310, 318], fast = Math.min(...splits), pace = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-  return `<div class="glow" style="--glow:rgba(255,138,61,.22)"></div>${statusBar()}
+  return `${statusBar()}
   <div class="scroll">
   <button class="back" data-go="training">${svgI('<path d="M15 5l-7 7 7 7"/>', 'width="20" height="20"')}Training</button>
-  <header class="top" style="margin-top:2px"><div><div class="eyebrow">Thu · 06:12</div><h1>Morning Run</h1></div><div class="act-ico" style="background:rgba(255,138,61,.15);color:${C.flame}">${ico.run}</div></header>
+  <header class="top" style="margin-top:2px"><div><div class="eyebrow">Thu · 06:12</div><h1>Morning Run</h1></div><div class="act-ico">${ico.run}</div></header>
   <div class="card"><div class="wo-hero">
-    <div><div class="eyebrow">Training load</div><div class="n" style="font:600 56px/1 Outfit;color:${C.flame};margin-top:6px">186</div><div class="tags"><span class="pill flame">Tempo</span><span class="pill">${ico.clock}18h recovery</span></div></div>
+    <div><div class="eyebrow">Training load</div><div class="n" style="font:600 56px/1 Outfit;margin-top:6px">186</div><div class="tags"><span class="pill">Tempo</span><span class="pill">${ico.clock}18h recovery</span></div></div>
     <div class="te">
-      <div><div class="dial">${arc({size: 82, value: 3.8, max: 5, color: C.mint, color2: "#2BB6D9", stroke: 7})}<div class="dial-c"><b class="n">3.8</b><span>Aerobic</span></div></div><div class="te-l" style="color:${C.mint}">Improving</div></div>
-      <div><div class="dial">${arc({size: 82, value: 1.2, max: 5, color: C.violet, color2: "#6E5BFF", stroke: 7})}<div class="dial-c"><b class="n">1.2</b><span>Anaer.</span></div></div><div class="te-l" style="color:#B9AEFF">Minor</div></div>
+      <div><div class="dial">${arc({size: 82, value: 3.8, max: 5, color: C.ink, stroke: 7})}<div class="dial-c"><b class="n">3.8</b><span>Aerobic</span></div></div><div class="te-l">Improving</div></div>
+      <div><div class="dial">${arc({size: 82, value: 1.2, max: 5, color: C.ink, stroke: 7})}<div class="dial-c"><b class="n">1.2</b><span>Anaer.</span></div></div><div class="te-l">Minor</div></div>
     </div></div></div>
   <div class="card"><div class="grid3">
     <div><b>10.2<span class="unit">km</span></b><span>Distance</span></div><div><b>52:14</b><span>Time</span></div><div><b>5:07<span class="unit">/km</span></b><span>Pace</span></div>
@@ -491,7 +496,7 @@ function workout() {
   <div class="card" style="padding:0;overflow:hidden">${route()}</div>
   <div class="card"><h3>Heart rate</h3>${hrChart()}</div>
   <div class="card"><h3>Time in zones</h3>${zones.map(([z, m, t], i) => `<div class="zr"><b>${z}</b><div class="bar"><i style="width:${m / 18.3 * 100}%;background:${C.z[4 - i]}"></i></div><span class="zt">${t}</span><span class="zp">${Math.round(m / tot * 100)}%</span></div>`).join("")}</div>
-  <div class="card"><h3>Splits <span class="pill ok">Fastest km 6</span></h3>${splits.map((s, i) => `<div class="sp"><span>${i + 1}</span><div class="bar"><i style="width:${(340 - s) / (340 - fast) * 92}%;background:${s === fast ? C.mint : "rgba(255,138,61,.6)"}"></i></div><b>${pace(s)}</b></div>`).join("")}</div>
+  <div class="card"><h3>Splits <span class="pill ok">Fastest km 6</span></h3>${splits.map((s, i) => `<div class="sp"><span>${i + 1}</span><div class="bar"><i style="width:${(340 - s) / (340 - fast) * 92}%;background:${s === fast ? C.good : "rgba(228,232,240,.45)"}"></i></div><b>${pace(s)}</b></div>`).join("")}</div>
   </div>${tabs("training")}`;
 }
 
@@ -500,25 +505,25 @@ function health() {
   const vit = [["Resting HR", "46", "bpm", ico.heart, 46, [40, 54], [44, 49]], ["HRV", "58", "ms", ico.hrv, 58, [38, 72], [48, 62]], ["Respiration", "14.1", "brpm", ico.lungs, 14.1, [12, 16.5], [13.2, 15]], ["SpO₂", "96", "%", ico.drop, 96, [90, 100], [94, 98]], ["Skin temp", "+0.1", "°C", ico.temp, .1, [-1, 1], [-.4, .4]]];
   const P = (x, [a, b]) => (x - a) / (b - a) * 100;
   const tr = {"Resting HR": [47, 46, 47, 45, 46, 46, 47, 46], HRV: [52, 55, 54, 57, 56, 55, 57, 58], Respiration: [14.2, 14, 14.3, 14.1, 14, 14.2, 14.1, 14.1], "SpO₂": [96, 95, 96, 97, 96, 96, 95, 96], "Skin temp": [0, -.1, .1, .2, 0, -.1, 0, .1]};
-  return `<div class="glow" style="--glow:rgba(61,220,151,.20)"></div>${statusBar()}
+  return `<div class="glow" style="--glow:rgba(61,220,151,.10)"></div>${statusBar()}
   <div class="scroll">
   <header class="top"><div><div class="eyebrow">Updated 06:58</div><h1>Health</h1></div><div class="avatar">D</div></header>
   <div class="card" style="margin-top:8px"><h3>Fitness Age <span class="pill ok">▼ 1 this year</span></h3>
     <div style="display:flex;align-items:flex-end;justify-content:space-between">
-      <div><div class="n" style="font:600 72px/0.9 Outfit;color:${C.mint}">39</div><div style="font:500 14px Inter;color:#A3ACBF;margin-top:8px"><b style="color:#EEF1F7">7 years younger</b> than your age</div></div>
-      ${spark([42, 41.6, 41.4, 41, 40.6, 40.4, 40, 39.8, 39.5, 39.3, 39.1, 39], {w: 120, h: 70, color: C.mint})}</div>
+      <div><div class="n" style="font:600 72px/0.9 Outfit;color:${C.good}">39</div><div style="font:500 14px Inter;color:#A3ACBF;margin-top:8px"><b style="color:#EEF1F7">7 years younger</b> than your age</div></div>
+      ${spark([42, 41.6, 41.4, 41, 40.6, 40.4, 40, 39.8, 39.5, 39.3, 39.1, 39], {w: 120, h: 70, color: C.good})}</div>
     <div class="agebar"><div class="mk fit" style="left:${(39 - 20) / 50 * 100}%"><span>YOU 39</span></div><div class="mk real" style="left:${(46 - 20) / 50 * 100}%"><span>AGE 46</span></div></div></div>
   <div class="card"><h3>Biggest lever</h3><div class="lever">
-    <div class="dial">${arc({size: 76, value: 112, max: 150, color: C.amber, color2: C.flame, stroke: 8})}<div class="dial-c"><b class="n">75%</b></div></div>
-    <div><b class="t">Vigorous minutes</b><span><b class="n" style="color:#EEF1F7">112</b> / 150 a week</span><div style="margin-top:8px"><span class="pill ok">Hit 150 → age 38</span></div></div></div></div>
+    <div class="dial">${arc({size: 76, value: 112, max: 150, color: C.fair, stroke: 8})}<div class="dial-c"><b class="n">75%</b></div></div>
+    <div><b class="t">Vigorous minutes</b><span><b class="n" style="color:#EEF1F7">112</b> / 150 a week</span><div style="margin-top:8px"><span class="pill">Hit 150 → age 38</span></div></div></div></div>
   <div class="card"><h3>What sets it</h3><div class="drivers">
-    <div class="drv"><div class="drv-top"><span>VO₂ max</span><span style="color:${C.mint}">${ico.check}</span></div><b>52</b><div class="rb"><u style="left:55%;width:45%"></u><i style="left:62%;background:${C.mint}"></i></div></div>
-    <div class="drv"><div class="drv-top"><span>Resting HR</span><span style="color:${C.mint}">${ico.check}</span></div><b>46<small>bpm</small></b><div class="rb"><u style="left:0;width:40%"></u><i style="left:22%;background:${C.mint}"></i></div></div>
-    <div class="drv"><div class="drv-top"><span>BMI</span><span style="color:${C.mint}">${ico.check}</span></div><b>23.8</b><div class="rb"><u style="left:20%;width:40%"></u><i style="left:46%;background:${C.mint}"></i></div></div>
-    <div class="drv"><div class="drv-top"><span>Vigorous</span><span style="color:${C.amber}">${ico.vo2}</span></div><b>112<small>min/wk</small></b><div class="rb"><u style="left:75%;width:25%;background:rgba(255,181,71,.3)"></u><i style="left:56%;background:${C.amber}"></i></div></div>
+    <div class="drv"><div class="drv-top"><span>VO₂ max</span><span style="color:${C.good}">${ico.check}</span></div><b>52</b><div class="rb"><u style="left:55%;width:45%"></u><i style="left:62%;background:${C.good}"></i></div></div>
+    <div class="drv"><div class="drv-top"><span>Resting HR</span><span style="color:${C.good}">${ico.check}</span></div><b>46<small>bpm</small></b><div class="rb"><u style="left:0;width:40%"></u><i style="left:22%;background:${C.good}"></i></div></div>
+    <div class="drv"><div class="drv-top"><span>BMI</span><span style="color:${C.good}">${ico.check}</span></div><b>23.8</b><div class="rb"><u style="left:20%;width:40%"></u><i style="left:46%;background:${C.good}"></i></div></div>
+    <div class="drv"><div class="drv-top"><span>Vigorous</span><span style="color:${C.fair}">${ico.vo2}</span></div><b>112<small>min/wk</small></b><div class="rb"><u style="left:75%;width:25%"></u><i style="left:56%;background:${C.fair}"></i></div></div>
   </div></div>
   <div class="card"><h3>Vitals · last night <span class="pill ok">${ico.check}All normal</span></h3>
-    ${vit.map(([n, v, u, i, x, sc, band]) => `<div class="vr"><div class="vi">${i}</div><div><div class="vr-n"><span>${n}</span><b>${v}<small>${u}</small></b></div><div class="rb"><u style="left:${P(band[0], sc)}%;width:${P(band[1], sc) - P(band[0], sc)}%"></u><i style="left:${P(x, sc)}%;background:${C.mint}"></i></div></div>${spark(tr[n], {w: 70, h: 28, color: C.mint, fill: false, sw: 1.8, band, min: sc[0], max: sc[1]})}</div>`).join("")}
+    ${vit.map(([n, v, u, i, x, sc, band]) => `<div class="vr"><div class="vi">${i}</div><div><div class="vr-n"><span>${n}</span><b>${v}<small>${u}</small></b></div><div class="rb"><u style="left:${P(band[0], sc)}%;width:${P(band[1], sc) - P(band[0], sc)}%"></u><i style="left:${P(x, sc)}%;background:${C.good}"></i></div></div>${spark(tr[n], {w: 70, h: 28, color: C.ink, fill: false, sw: 1.8, band, min: sc[0], max: sc[1]})}</div>`).join("")}
   </div>
   </div>${tabs("health")}`;
 }

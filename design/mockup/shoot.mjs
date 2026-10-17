@@ -12,11 +12,15 @@ const {chromium} = createRequire(resolve(modules, 'noop.js'))('playwright');
 const url = pathToFileURL(resolve(here, 'index.html')).href, out = resolve(here, 'shots');
 const sizes = {phone: [390, 844, 2], fold: [720, 900, 1], desktop: [1280, 820, 1]};
 const screens = {
-  today: ['phone'], training: ['phone'],
-  plan: ['phone', 'fold', 'desktop'], 'plan-setup': ['phone', 'fold', 'desktop'], checkin: ['phone', 'desktop'],
+  language: ['phone', 'desktop'],
+  today: ['phone'], sleep: ['phone'], training: ['phone'], workout: ['phone'], health: ['phone'],
+  plan: ['phone', 'fold', 'desktop'], 'plan-setup': ['phone', 'fold', 'desktop'], checkin: ['phone'],
+  'intro-1': ['phone'], 'intro-2': ['phone'], 'intro-3': ['phone'], 'intro-4': ['phone'],
   'strength-workout': ['phone', 'fold', 'desktop'], fix: ['phone', 'fold', 'desktop'], 'strength-history': ['phone', 'fold', 'desktop'],
-  builder: ['phone', 'fold', 'desktop'], catalog: ['phone', 'desktop'], widget: ['phone'],
+  builder: ['phone', 'fold', 'desktop'], catalog: ['phone'], help: ['phone', 'desktop'], 'help-sheet': ['phone'], widget: ['phone'],
 };
+// Overlays are shot at the window's size, as they'd appear.
+const fixedHeight = new Set(['help-sheet', 'widget']);
 
 await mkdir(out, {recursive: true});
 const browser = await chromium.launch({executablePath: process.env.CHROMIUM ?? '/run/current-system/sw/bin/chromium', args: ['--no-sandbox']});
@@ -32,7 +36,7 @@ try {
       await page.evaluate(() => document.fonts.ready);
       // Grow the window to the content so each shot shows the whole screen, not just the first view.
       const full = await page.evaluate(() => document.querySelector('.scroll')?.scrollHeight ?? 0);
-      if (full > h) await page.setViewportSize({width: w, height: full});
+      if (full > h && !fixedHeight.has(key)) await page.setViewportSize({width: w, height: full});
       const overflow = await page.evaluate(() => document.querySelector('.scroll') ? document.querySelector('.scroll').scrollWidth - document.querySelector('.scroll').clientWidth : 0);
       if (overflow > 1) errors.push(`${kind}/${key}: ${overflow}px horizontal overflow`);
       await page.screenshot({path: resolve(out, `${kind}-${key}.png`)});
