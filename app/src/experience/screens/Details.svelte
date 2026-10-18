@@ -151,7 +151,7 @@
  {@render header('Trends', 'From the history on this phone')}
  <section class="card">{#each Object.entries(METRICS) as [id, m]}<button class="rowlink" onclick={() => go(`metric/${id}`)}><span class="tr-i"><Icon name={id === 'weight' ? 'scale' : 'trend-up'} size={22}/></span><span><b>{m.name}</b><small>{m.area} · {m.source}</small></span><Icon name="chevron" size={16}/></button>{/each}</section>
 
-{:else if key === 'intention' || key === 'scheduled' || route === 'plan/commitments' || route === 'plan/garmin' || key === 'review' || key === 'reviews'}
+{:else if key === 'intention' || key === 'scheduled' || route === 'plan/commitments' || route === 'plan/garmin' || route.startsWith('plan/race/') || key === 'review' || key === 'reviews'}
  <PlanDetail {route}/>
 {:else if key === 'adapt'}
  <Adapt {route}/>

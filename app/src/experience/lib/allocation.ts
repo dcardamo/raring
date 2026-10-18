@@ -2,14 +2,14 @@
 import {between, addDays, dayLabel} from './dates';
 import {versionFor, type Ctx, type GoalTargets, type Intention, type Allocation} from './rules';
 import type {Activity} from './world';
-export type GoalKey = 'strength' | 'zone2' | 'im' | 'sleep';
-export const GOAL_INFO = {strength:{name:'Strength',unit:'sessions',color:'#FF7DB8'},zone2:{name:'Zone 2',unit:'min',color:'#5CA8FF'},im:{name:'Intensity',unit:'min',color:'#36C9C6'},sleep:{name:'Sleep timing',unit:'nights',color:'#A9C8FF'}} as const;
-export const emptyGoals = (): GoalTargets => ({strength:0,zone2:0,im:0,sleep:0,sleepTime:'22:15',sleepKind:'winddown'});
+export type GoalKey = 'strength' | 'zone2' | 'hi' | 'im' | 'sleep';
+export const GOAL_INFO = {strength:{name:'Strength',unit:'sessions',color:'#FF7DB8'},zone2:{name:'Zone 2',unit:'min',color:'#5CA8FF'},hi:{name:'Zone 4–5',unit:'min',color:'#FF8A5C'},im:{name:'Intensity',unit:'min',color:'#36C9C6'},sleep:{name:'Sleep timing',unit:'nights',color:'#A9C8FF'}} as const;
+export const emptyGoals = (): GoalTargets => ({strength:0,zone2:0,hi:0,im:0,sleep:0,sleepTime:'22:15',sleepKind:'winddown',sleepScore:0});
 export function goalsFor(ctx: Ctx, date = ctx.calendarDate): GoalTargets {
  const accepted=versionFor({state:ctx.state,calendarDate:date});
  const base=accepted.revisions.at(-1) ?? accepted.base;
  const local=(ctx.state.goalVersions??[]).filter(v=>v.from<=date).at(-1);
- return local ? local.targets : {...emptyGoals(),strength:base?.strength??0,im:base?.im??0};
+ return local ? {...emptyGoals(),...local.targets} : {...emptyGoals(),strength:base?.strength??0,im:base?.im??0};
 }
 export const isOpen = (i:Intention) => !i.status || i.status==='open';
 export const allocationFor = (i:Intention):Allocation => i.allocation ?? (i.sport==='strength' && i.kind!=='sleep' ? {strength:1} : {});
@@ -35,6 +35,7 @@ export function recordedFor(activities:Activity[],key:GoalKey):number {
  const unique=[...new Map(activities.map(a=>[a.id,a])).values()];
  if(key==='strength')return unique.filter(a=>a.sport==='strength').length;
  if(key==='zone2')return Math.floor(unique.reduce((n,a)=>n+(a.zones[1]??0),0)/60);
+ if(key==='hi')return Math.floor(unique.reduce((n,a)=>n+(a.zones[3]??0)+(a.zones[4]??0),0)/60);
  if(key==='im')return unique.reduce((n,a)=>n+a.im,0);
  return 0;
 }

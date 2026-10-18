@@ -3,7 +3,7 @@
  import SportIcon from './SportIcon.svelte';
  import {stressColors, stressLevel} from '../../lib/charts';
  import {store} from '../lib/store.svelte';
- import {stressCard, bodyBatteryDay} from '../lib/views';
+ import {stressCard, bodyBatteryDay, heartRateDay, napCharge} from '../lib/views';
  import {stagesFor} from '../lib/world';
  import {SPORTS} from '../lib/sports';
  import {dur, dayLabel, hm, toMin} from '../lib/dates';
@@ -28,6 +28,15 @@
  let bbPath = $derived(bb ? bb.points.filter(([m]) => m >= 0 && m <= uploadMin).map(([m, v], i) => `${i ? 'L' : 'M'}${(m / 1440 * 1000).toFixed(1)},${(48 - v / 100 * 44).toFixed(1)}`).join('') : '');
  let bbNow = $derived(bb ? bb.points.filter(([m]) => m <= uploadMin).at(-1)?.[1] ?? null : null);
  let stress = $derived(stressCard(ctx, day));
+ // Garmin's all-day heart rate (2-minute samples); missing samples break the line.
+ let hr = $derived(waiting ? null : heartRateDay(ctx, day));
+ let hrPath = $derived.by(() => {
+  if (!hr) return '';
+  let d = '', pen = false;
+  hr.timeline.forEach((v, i) => { if (v == null || i * 2 > uploadMin) { pen = false; return; } d += `${pen ? 'L' : 'M'}${i * 2},${(50 - (Math.min(180, Math.max(40, v)) - 40) / 140 * 48).toFixed(1)}`; pen = true; });
+  return d;
+ });
+ let naps = $derived(waiting ? [] : ctx.napList.filter(n => n.start[0] === day).map(n => ({m: toMin(n.start[1]), len: n.min, delta: napCharge(ctx, n)})));
  // Fifteen-minute averages of Garmin's three-minute readings; missing slots stay empty.
  let bars = $derived.by(() => {
   const out: {m: number, v: number}[] = [];
@@ -39,7 +48,7 @@
  });
  let events = $derived([
   ...ctx.world.activities.filter(a => a.date === day).map(a => ({m: toMin(a.start), len: a.min, color: SPORTS[a.sport].color, sport: a.sport, label: `${a.name} ${a.start}, ${a.min} min`, go: `workout/${a.id}`, nap: false})),
-  ...ctx.napList.filter(n => n.start[0] === day).map(n => ({m: toMin(n.start[1]), len: n.min, color: '#A9C8FF', sport: 'other' as const, label: `Nap ${n.start[1]}, ${n.min} min`, go: 'sleep/naps', nap: true})),
+  ...ctx.napList.filter(n => n.start[0] === day).map(n => { const dl = napCharge(ctx, n); return {m: toMin(n.start[1]), len: n.min, color: '#A9C8FF', sport: 'other' as const, label: `Nap ${n.start[1]}, ${n.min} min${dl != null ? `, Body Battery ${dl >= 0 ? '+' : ''}${dl}` : ''}`, go: 'sleep/naps', nap: true}; }),
  ].sort((a, b) => a.m - b.m));
  const go = (r: string) => store.navigate(r);
 </script>
@@ -54,7 +63,7 @@
 
  <button class="row" onclick={() => go('metric/bodyBattery')} aria-label={`Body Battery ${bbNow ?? 'unavailable'} at ${ctx.upload.at}`}>
   <span class="lab"><Icon name="bolt" size={15}/><b>Body Battery</b></span>
-  <span class="track chart">{#if bbPath}<svg viewBox="0 0 1000 50" preserveAspectRatio="none" aria-hidden="true"><path d={`${bbPath}L${(uploadMin / 1440 * 1000).toFixed(1)},50L0,50Z`} fill="rgba(61,220,151,.16)"/><path d={bbPath} fill="none" stroke="#3DDC97" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>{:else}<em class="none">Awaiting upload</em>{/if}{#if now != null}<u style:left={pct(now) + '%'}></u>{/if}</span>
+  <span class="track chart">{#if bbPath}<svg viewBox="0 0 1000 50" preserveAspectRatio="none" aria-hidden="true"><path d={`${bbPath}L${(uploadMin / 1440 * 1000).toFixed(1)},50L0,50Z`} fill="rgba(61,220,151,.16)"/><path d={bbPath} fill="none" stroke="#3DDC97" stroke-width="2" vector-effect="non-scaling-stroke"/>{#each naps as n}<rect x={n.m / 1440 * 1000} y="0" width={n.len / 1440 * 1000} height="50" fill="rgba(169,200,255,.22)"/>{/each}</svg>{#each naps.filter(n => n.delta != null) as n}<span class="nap-d" style:left={pct(n.m + n.len / 2) + '%'}>{n.delta! >= 0 ? '+' : ''}{n.delta} nap</span>{/each}{:else}<em class="none">Awaiting upload</em>{/if}{#if now != null}<u style:left={pct(now) + '%'}></u>{/if}</span>
   <span class="val n">{bbNow ?? '—'}</span>
  </button>
 
@@ -62,6 +71,12 @@
   <span class="lab"><Icon name="pulse" size={15}/><b>Stress</b></span>
   <span class="track chart">{#if bars.length}<svg viewBox="0 0 1440 50" preserveAspectRatio="none" aria-hidden="true">{#each bars as b}<rect x={b.m + 1} y={50 - Math.max(2, b.v / 100 * 48)} width="13" height={Math.max(2, b.v / 100 * 48)} fill={stressColors[stressLevel(b.v)]}/>{/each}</svg>{:else}<em class="none">Awaiting upload</em>{/if}{#if now != null}<u style:left={pct(now) + '%'}></u>{/if}</span>
   <span class="val n">{stress.average ?? '—'}<small>avg</small></span>
+ </button>
+
+ <button class="row" onclick={() => go('metric/heartRate')} aria-label={hr?.minimum != null ? `Heart rate ${hr.minimum} to ${hr.maximum} bpm, resting ${hr.resting}` : 'Heart rate unavailable'}>
+  <span class="lab"><Icon name="heart" size={15}/><b>Heart rate</b></span>
+  <span class="track chart">{#if hrPath}<svg viewBox="0 0 1440 50" preserveAspectRatio="none" aria-hidden="true"><path d={hrPath} fill="none" stroke="#FF6B8A" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg><span class="yl">180<br>40</span>{:else}<em class="none">Awaiting upload</em>{/if}{#if now != null}<u style:left={pct(now) + '%'}></u>{/if}</span>
+  <span class="val n">{hr?.resting ?? '—'}<small>rest bpm</small></span>
  </button>
 
  <div class="row ev" role="group" aria-label="Recorded activities and naps">
@@ -87,6 +102,8 @@
  .none{position:absolute;inset:0;display:grid;place-items:center;font:500 10.5px Inter;color:var(--text3);font-style:normal}
  .val{text-align:right;font-size:17px;font-weight:600}.val small{display:block;font:500 9.5px Inter;color:var(--text3)}
  .axis{padding:0;min-height:22px}.ticks{height:20px;background:none}.ticks i{position:absolute;top:2px;transform:translateX(-50%);font:500 10px Inter;color:var(--text3);font-style:normal}.ticks i:first-child{transform:none}.ticks i:nth-child(5){transform:translateX(-100%)}.ticks b{position:absolute;top:-2px;transform:translateX(-50%);font:600 10px Inter;color:var(--text);background:#141a27;padding:1px 4px;border-radius:4px;white-space:nowrap}
+ .nap-d{position:absolute;top:-2px;transform:translateX(-50%);font:600 9.5px Inter;color:#A9C8FF;background:#141a27;padding:0 3px;border-radius:4px;white-space:nowrap}
+ .yl{position:absolute;right:2px;top:1px;font:500 8px/1.25 Inter;color:var(--text3);text-align:right;pointer-events:none}
  .key{display:flex;flex-wrap:wrap;gap:4px 12px;margin:6px 0 0;font-size:10.5px;color:var(--text3)}.key span{display:inline-flex;gap:5px;align-items:center}.key i{width:8px;height:8px;border-radius:2px}
  @container(max-width:300px){.row{grid-template-columns:72px 1fr 40px}.lab b{font-size:11px}}
 </style>

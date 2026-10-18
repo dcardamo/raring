@@ -17,6 +17,7 @@
  <p class="small">Reminders follow the same rest, pause and limit rules as Today. Lock screens never show restriction notes, routine names, journal or weight. Widgets need no permission.</p>
 </Card>
 <Card title="Today">
+ <label class="toggle"><span>Weekly planning reminder<small>A Plan your week prompt at the start of each week. Never during wind-down.</small></span><input type="checkbox" checked={s.planReminder !== false} onchange={e => store.set({planReminder: e.currentTarget.checked})}/></label>
  <label class="toggle"><span>Follow my day<small>Lead with this morning, the day or tonight. Turn off for shift work.</small></span><input type="checkbox" checked={s.follow} onchange={e => store.set({follow: e.currentTarget.checked})}/></label>
  <label class="toggle"><span>Quiet celebrations<small>Same information, no animation.</small></span><input type="checkbox" checked={s.quiet} onchange={e => store.set({quiet: e.currentTarget.checked})}/></label>
 </Card>

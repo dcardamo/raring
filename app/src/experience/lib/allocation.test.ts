@@ -3,7 +3,7 @@ import {derive, type Intention, type State} from './rules';
 import {allocations, dayEvidence, intentionState, movedIntention, recordedFor} from './allocation';
 // Browser state defaults without importing the Svelte runtime singleton.
 const base = (): State => ({profile:'mixed',day:'2026-11-18',clock:'day',offline:false,follow:true,irregular:false,rest:null,pause:null,pauses:[],limits:{exclude:[],note:'',routines:{}},rehab:{items:[],done:{}},intentions:[],dismissed:{},journal:{consent:false,open:false,downloaded:false},winddown:{},revisions:[],ownCommitments:null,ambitionsAdded:[],celebrated:{},seen:{},quiet:false,vitalsException:false,extraStrength:false,napCase:'same',calendar:'complete',notifyBedtime:false,permission:'not-asked',channels:{morning:true,weekly:true,metrics:true,vitals:true,training:false,status:false},signedOut:false,dst:false,returning:false,noRunning:false,savedSleepTarget:false,winddownIntention:false,navVariant:'tabs',reviewDraft:null});
-const goals = (t: Partial<{strength: number, zone2: number, im: number, sleep: number}>) => [{from: '2026-11-16', targets: {strength: 0, zone2: 0, im: 0, sleep: 0, sleepTime: '22:15', sleepKind: 'winddown' as const, ...t}}];
+const goals = (t: Partial<{strength: number, zone2: number, hi: number, im: number, sleep: number, sleepScore: number}>) => [{from: '2026-11-16', targets: {strength: 0, zone2: 0, hi: 0, im: 0, sleep: 0, sleepScore: 0, sleepTime: '22:15', sleepKind: 'winddown' as const, ...t}}];
 const plan = (o: Partial<Intention>): Intention => ({id: 'x', sport: 'cycling', date: '2026-11-19', time: null, link: null, history: [], ...o});
 const row = (s: State, key: string) => allocations(derive(s)).find(r => r.key === key)!;
 describe('weekly goal counting', () => {

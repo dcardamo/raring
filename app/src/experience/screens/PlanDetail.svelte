@@ -14,10 +14,24 @@
  import {PLAN_WEEKS, SCHEDULE, COACH, activityById} from '../lib/world';
  import {allocationFor, intentionState, isOpen} from '../lib/allocation';
  import {commitmentWeeks, totals} from '../lib/progress';
+ import {weekOutcome, weekRings, activeKeys} from '../lib/week';
+ import {trainingView} from '../lib/views';
+ import {goalsFor, GOAL_INFO} from '../lib/allocation';
+ import {daysBetween} from '../lib/dates';
+ import {rand} from '../lib/world';
  let {route}: {route: string} = $props();
  let ctx = $derived(store.ctx);
  const go = (r: string) => store.navigate(r);
  let [key, sub] = $derived(route.split('/'));
+ // race / event goal
+ let race = $derived(key === 'plan' && sub === 'race' ? [...ctx.world.ambitions, ...store.state.ambitionsAdded].find(a => a.id === route.split('/')[2]) : undefined);
+ let raceLabel = $derived(race ? (/half/i.test(race.name) ? 'Half' : /marathon/i.test(race.name) ? 'Full' : /5k/i.test(race.name) ? '5K' : '10K') : '10K');
+ let prediction = $derived(race ? trainingView(ctx).races.find(r => r.label === raceLabel) ?? null : null);
+ // Prediction history is not stored today (see provenance); a synthetic weekly series stands in.
+ let predSeries = $derived(prediction ? Array.from({length: 10}, (_, i) => ({from: addDays(ctx.weekFrom, -7 * (9 - i)), s: Math.round(prediction!.seconds + (9 - i) * 9 + (rand(raceLabel + i) - .5) * 30)})) : []);
+ let raceWeeks = $derived(race ? [...Array.from({length: 4}, (_, i) => weekOutcome(ctx, addDays(ctx.weekFrom, -7 * (4 - i)))), null] : []);
+ let g = $derived(goalsFor(ctx)), keys = $derived(activeKeys(g).filter(k => k !== 'sleep'));
+ const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
  let planProfile = $derived(['mixed', 'sparse'].includes(store.state.profile));
  // intention
  let i = $derived(key === 'intention' ? store.state.intentions.find(x => x.id === sub) : undefined);
@@ -51,6 +65,7 @@
   {#if store.state.limits.exclude.includes(i.sport)}<div class="notice-strip"><Icon name="alert" size={16}/><p>You excluded {SPORTS[i.sport].name.toLowerCase()} in your limits</p></div>{/if}
   {#if store.state.limits.note}<div class="notice-strip"><Icon name="alert" size={16}/><p>Review needed · your movement note applies (“{store.state.limits.note}”)</p></div>{/if}
   <div class="btns"><button class="secondary" onclick={() => store.openSheet('add', i!.id)}>Edit</button><button class="secondary" onclick={() => A.removeIntention(i!.id)}>Remove</button></div>
+  {#if !i.garminId}<button class="send" disabled aria-describedby="send-n"><span aria-hidden="true">◇</span>Send to Garmin</button><p class="small" id="send-n">Not available yet: Raring can’t write to your Garmin calendar or watch.</p>{/if}
   <div class="sec-h"><h2>Recorded that day</h2></div>
   {#if linked}
    <ActivityTile a={linked} {ctx} navigate={go}/>
@@ -93,6 +108,26 @@
    {#if counted}<button class="link" onclick={() => go(`intention/${counted.id}`)}>Counts toward your goals</button>{:else}<button class="link" onclick={() => store.openSheet('allocate', 'garmin:' + g.id)}>Count toward my goals</button>{/if}
   </section>
  {/each}
+
+{:else if race}
+ {@render header(race.name, `${race.date ? dayLabel(race.date) : 'No date'} · ${race.source}`)}
+ <section class="card race-hero">{#if race.date}<div class="cdown"><b class="n">{daysBetween(ctx.calendarDate, race.date)}</b><small>days to go · {Math.ceil(daysBetween(ctx.calendarDate, race.date) / 7)} weeks</small></div>{/if}
+  {#if prediction}<div class="pred"><small>Garmin’s {raceLabel} prediction</small><b class="n">{mmss(prediction.seconds)}</b></div>{/if}</section>
+ {#if prediction}
+  {@const lo = Math.min(...predSeries.map(p => p.s)) - 20}{@const hi = Math.max(...predSeries.map(p => p.s)) + 20}
+  <section class="card"><h3>{raceLabel} prediction, last 10 weeks</h3>
+   <svg class="pchart" viewBox="0 0 320 130" role="img" aria-label={`${raceLabel} prediction from ${mmss(predSeries[0].s)} to ${mmss(predSeries.at(-1)!.s)}`}>
+    {#each [lo, (lo + hi) / 2, hi] as v}<line x1="44" x2="316" y1={10 + (v - lo) / (hi - lo) * 96} y2={10 + (v - lo) / (hi - lo) * 96} stroke="rgba(255,255,255,.08)"/><text x="40" y={14 + (v - lo) / (hi - lo) * 96} text-anchor="end">{mmss(v)}</text>{/each}
+    {#each predSeries as p, i}<circle cx={52 + i * 29} cy={10 + (p.s - lo) / (hi - lo) * 96} r="3.5" fill="#FFB547"/>{/each}
+    <text x="52" y="126">{dayLabel(predSeries[0].from).slice(4)}</text><text x="313" y="126" text-anchor="end">{dayLabel(predSeries.at(-1)!.from).slice(4)}</text>
+   </svg><p class="small">Lower is faster. Weekly Garmin estimates; nothing drawn between them.</p></section>
+ {/if}
+ <section class="card"><h3>Your weeks toward it</h3>
+  {#if keys.length}<table class="rweeks"><thead><tr><th>Week</th>{#each keys as k}<th style:color={GOAL_INFO[k].color}>{GOAL_INFO[k].name}</th>{/each}</tr></thead><tbody>
+   {#each raceWeeks as w}{@const cur = w ? null : weekRings(ctx)}<tr><th>{w ? weekRange(w.from).replace(/ \w+$/, '') : 'This week'}</th>{#each keys as k}{@const o = w ? w.goals.find(x => x.key === k) : cur!.rings.find(x => x.key === k)}<td>{#if w && !w.counted}<span class="nc">{w.reasons[0] ?? '—'}</span>{:else if o}<b class="n">{o.recorded}</b>/{w ? (o as {target: number}).target : g[k]}{:else}—{/if}</td>{/each}</tr>{/each}
+  </tbody></table>{:else}<p class="small">Choose weekly goals in Plan to see how each week feeds this race.</p>{/if}
+ </section>
+ {#if ctx.world.schedule.length}<section class="card"><h3>Garmin Coach · {COACH.name}</h3>{#each ctx.world.schedule.filter(s => s.date >= ctx.weekFrom && s.date <= ctx.weekTo) as s}<button class="rowlink" onclick={() => go(`scheduled/${s.id}`)}><Glyph sport={s.sport} mark="garmin" size={26}/><span><b>{s.name}</b><small>{dayLabel(s.date)} · completion unknown</small></span><Icon name="chevron" size={16}/></button>{/each}</section>{/if}
 
 {:else if route === 'plan/commitments'}
  {@render header('Commitments', `Week of ${dayLabel(ctx.weekFrom)}`)}
@@ -154,6 +189,10 @@
  .ihero b{display:block;font:600 19px Outfit}.ihero small{display:block;color:var(--text2);font-size:12px;margin-top:2px}
  .status{display:inline-block;margin-top:8px;padding:3px 9px;border-radius:999px;font:600 11px Inter;background:rgba(255,255,255,.07);color:var(--text2)}.s-recorded{color:#3DDC97}.s-review{color:#FFB547}.s-not-recorded,.s-awaiting{border:1px dashed rgba(228,232,240,.3);background:none}.alloc{margin:8px 4px;font-size:13px;color:var(--text2)}.ihero.garmin{border-color:rgba(164,139,255,.3)}
  .coach-d{font-size:44px;color:#BDAAFF;line-height:1}.gsess{padding:10px 14px}.gsess .link{margin-left:42px;font-size:12px}
+ .race-hero{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;background:linear-gradient(120deg,rgba(255,181,71,.12),var(--card))}.cdown b{display:block;font-size:48px;font-weight:600;line-height:1;color:#FFB547}.cdown small,.pred small{font-size:12px;color:var(--text2)}.pred{text-align:right}.pred b{display:block;font-size:28px;font-weight:600}
+ .pchart{width:100%;height:auto}.pchart text{font:500 10px Inter;fill:var(--text3)}
+ .rweeks{width:100%;border-collapse:collapse;font-size:12.5px}.rweeks th,.rweeks td{padding:7px 4px;border-bottom:1px solid var(--line);text-align:right}.rweeks thead th{font:600 10.5px Inter}.rweeks tbody th{text-align:left;font-weight:500;color:var(--text2)}.rweeks .nc{font-size:10.5px;color:var(--text3)}
+ .send{display:flex;gap:8px;align-items:center;justify-content:center;width:100%;margin-top:10px;min-height:42px;border-radius:13px;border:1px dashed rgba(164,139,255,.4);background:none;color:var(--text3);font:600 13px Inter}.send:disabled{cursor:not-allowed}
  .cand{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
  .cand .secondary{width:auto;margin:0;padding:10px 14px}
  .hist{list-style:none;padding:0;margin:0;display:grid;gap:8px}

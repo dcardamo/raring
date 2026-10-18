@@ -2,9 +2,12 @@
  import {tick} from 'svelte';
  import Icon from '../../lib/components/Icon.svelte';
  import GoalEditor from './GoalEditor.svelte';
+ import PlanWeek from './PlanWeek.svelte';
  import AllocationEditor from './AllocationEditor.svelte';
  import SessionChoices from './SessionChoices.svelte';
  import {dayEvidence} from '../lib/allocation';
+ import {dayRings} from '../lib/week';
+ import NestedRings from './NestedRings.svelte';
  import {search} from '../lib/searchIndex';
  import Glyph, {MARK_NAMES, type Mark} from './Glyph.svelte';
  import XIcon from './XIcon.svelte';
@@ -38,7 +41,7 @@
   }
  }
  const days = $derived(Array.from({length: 8}, (_, i) => addDays(ctx.calendarDate, i)));
- const TITLES: Record<string, string> = {adapt: 'Adapt today', add: 'Add to my plan', why: 'Why this?', notices: 'Notices', permission: 'Allow notifications?', winddown: 'A wind-down intention', consent: 'Allow Garmin journal reads?', resume: 'Resume training', ambition: 'Add an ambition', signout: 'Sign out and erase?', legend: 'Key', versions: 'Commitment targets', search: 'Search', goals:'Your weekly goals', allocate:'Place in your week', choose:'Choose another', reschedule:'Reschedule locally', day:'Your day'};
+ const TITLES: Record<string, string> = {adapt: 'Adapt today', add: 'Add to my plan', why: 'Why this?', notices: 'Notices', permission: 'Allow notifications?', winddown: 'A wind-down intention', consent: 'Allow Garmin journal reads?', resume: 'Resume training', ambition: 'Add an ambition', signout: 'Sign out and erase?', legend: 'Key', versions: 'Commitment targets', search: 'Search', planweek: 'Plan your week', move: 'Move to another day', goals:'Your weekly goals', allocate:'Place in your week', choose:'Choose another', reschedule:'Reschedule locally', day:'Your day'};
  const LEGEND: [Mark, Sport, string][] = [['recorded', 'running', 'Recorded by your watch'], ['plan', 'running', 'Your plan, on this phone'], ['garmin', 'running', 'Garmin schedule, read-only'], ['self', 'yoga', 'Self-reported'], ['rest', 'other', 'Rest day'], ['paused', 'other', 'Paused'], ['unknown', 'other', 'Awaiting evidence']];
 </script>
 <svelte:window onkeydown={keys}/>
@@ -50,6 +53,11 @@
   {#if sheet.name === 'search'}
    <label class="field col"><span class="sr">Search metrics and details</span><input type="search" data-autofocus placeholder="Search metrics, sleep, exercises…" bind:value={query} autocomplete="off"/></label>
    {#each search(query) as e}<button class="rowlink" onclick={() => { const r = e.route; query = ''; store.navigate(r); }}><Icon name="chevron" size={14}/><span><b>{e.name}</b><small>{e.area}</small></span><Icon name="arrow-right" size={14}/></button>{:else}{#if query.trim()}<p class="small">Nothing by that name. Training and Health hold every metric.</p>{/if}{/each}
+  {:else if sheet.name === 'planweek'}<PlanWeek/>
+  {:else if sheet.name === 'move'}
+   {@const mi=store.state.intentions.find(x=>x.id===sheet!.arg)}
+   {#if mi}<p class="small">{mi.name??SPORTS[mi.sport].name} · now {dayLabel(mi.date)}. Only your plan moves.</p>
+    <div class="chiprow">{#each days.filter(d=>d!==mi.date) as d}<button class="chipb" onclick={()=>A.reschedule(mi.id,d)}>{d===ctx.calendarDate?'Today':dayLabel(d).replace(/ \w+$/,'')}</button>{/each}</div>{/if}
   {:else if sheet.name === 'goals'}<GoalEditor/>
   {:else if sheet.name === 'allocate'}<AllocationEditor arg={sheet.arg}/>
   {:else if sheet.name === 'choose'}<SessionChoices/>
@@ -57,15 +65,18 @@
    <label class="field"><span>New date</span><input aria-label="New date" type="date" min={ctx.calendarDate} bind:value={rescheduleDate}/></label>
    <button class="primary" disabled={!rescheduleDate || rescheduleDate<ctx.calendarDate} onclick={()=>A.reschedule(sheet!.arg!,rescheduleDate)}>Move my session</button>
   {:else if sheet.name === 'day'}
-   {@const d=dayEvidence(ctx,sheet.arg??ctx.calendarDate)}
-   <p class="small">{dayLabel(d.date)}{d.rest?' · Rest day':''}{d.paused?' · Paused':''}{d.unknown?' · Awaiting data':''}</p>
-   <dl class="day-facts"><dt>Sleep Score · Garmin reading</dt><dd>{d.night?.score??'Unavailable'}</dd><dt>{d.cardioLabel}</dt><dd>{d.future?'Future':d.unknown?'Awaiting data':d.cardio}{d.cardioTarget?` / ${d.cardioTarget} planned`:''}</dd><dt>Strength sessions</dt><dd>{d.future?'Future':d.unknown?'Awaiting data':d.strength}{d.strengthTarget?` / ${d.strengthTarget} planned`:''}</dd><dt>Overnight vitals</dt><dd>{d.vitals==='usual'?'Usual range':d.vitals==='unusual'?'Unusual readings':'Unavailable'}</dd></dl>
-   <p class="small">Sleep is a score, not completion. Cardio and strength rings compare recorded quantities with your day’s allocations. Vitals are a status, not a health score.</p>
-   {#each d.acts as a}<button class="rowlink" onclick={()=>store.navigate(`workout/${a.id}`)}><Glyph sport={a.sport} size={26}/><span><b>{a.name}</b><small>{a.start} · {a.min} min recorded</small></span><Icon name="chevron" size={16}/></button>{/each}
-   {#each d.plans as i}<button class="rowlink" onclick={()=>store.navigate(`intention/${i.id}`)}><Glyph sport={i.sport} mark="plan" size={26}/><span><b>{i.name??SPORTS[i.sport].name}</b><small>Your plan{ i.time?' · '+i.time:''}</small></span><Icon name="chevron" size={16}/></button>{/each}
+   {@const day=sheet.arg??ctx.calendarDate}{@const d=dayRings(ctx,day)}{@const ev=dayEvidence(ctx,day)}
+   <div class="day-head"><NestedRings rings={d.rings} size={64} stroke={5} gap={2} mark={d.mark} future={d.future}/><div><b>{dayLabel(day)}</b><small>{d.mark==='rest'?'Rest day':d.mark==='ill'?'Ill · goals paused':d.mark==='paused'?'Paused':d.mark==='unknown'?'Awaiting Garmin data':d.future?'Ahead':day===ctx.calendarDate?'Today':''}{ev.night?` · Sleep Score ${ev.night.score} (Garmin)`:''}</small></div></div>
+   {#if d.rings.some(r=>r.outline)}<table class="dgoals"><thead><tr><th></th><th>Planned</th><th>Recorded</th><th>Left</th></tr></thead><tbody>
+    {#each d.rings.filter(r=>r.outline) as r}<tr style:--c={r.color}><th><i></i>{r.name}</th><td>{r.planned||'—'}</td><td>{d.future?'—':d.mark==='unknown'?'?':r.recorded}</td><td>{d.future||d.mark==='unknown'?'—':Math.max(0,r.planned-r.recorded)||'—'}</td></tr>{/each}
+   </tbody></table>{:else}<p class="small">Nothing planned{d.future?'':' or recorded toward your goals'}.</p>{/if}
+   {#each ev.plans as i}<button class="rowlink" onclick={()=>store.navigate(`intention/${i.id}`)}><Glyph sport={i.kind==='sleep'?'other':i.sport} mark="plan" size={26}/><span><b>{i.name??SPORTS[i.sport].name}</b><small>Your plan{i.time?' · '+i.time:''}</small></span><Icon name="chevron" size={16}/></button>{/each}
+   {#each ctx.world.schedule.filter(g=>g.date===day) as g}<button class="rowlink" onclick={()=>store.navigate(`scheduled/${g.id}`)}><Glyph sport={g.sport} mark="garmin" size={26}/><span><b>{g.name}</b><small>Garmin schedule · {g.min} min</small></span><Icon name="chevron" size={16}/></button>{/each}
+   {#each ev.acts as a}<button class="rowlink" onclick={()=>store.navigate(`workout/${a.id}`)}><Glyph sport={a.sport} size={26}/><span><b>{a.name}</b><small>Recorded · {a.start} · {a.min} min</small></span><Icon name="chevron" size={16}/></button>{/each}
   {:else if sheet.name === 'adapt'}
    {#if ctx.restActive}<div class="state-row"><Glyph mark="rest" size={34}/><span><b>Rest day is on</b><small>Through tonight</small></span></div><button class="secondary" onclick={A.unrest}>Undo rest</button>
    {:else}<button class="primary big" data-autofocus onclick={A.rest}><Icon name="moon" size={18}/>Rest today</button><p class="small">No exercise prompts today or tonight.</p>{/if}
+   {#if !ctx.paused}<button class="secondary" onclick={A.ill}><Icon name="pause" size={16}/>I’m ill</button><p class="small">Pauses goals and the backlog until you resume. No catch-up.</p>{/if}
    <div class="list">
     <button class="rowlink" onclick={() => store.navigate('adapt/pause')}><Icon name="pause" size={20}/><span><b>Pause training</b><small>Until you resume</small></span>{#if ctx.paused}<span class="val">On</span>{:else}<Icon name="chevron" size={16}/>{/if}</button>
     <button class="rowlink" onclick={() => store.navigate('adapt/limits')}><XIcon name="adapt" size={20}/><span><b>Avoid activities or movements</b><small>Exclusions and your own note</small></span>{#if ctx.hasLimits}<span class="val">On</span>{:else}<Icon name="chevron" size={16}/>{/if}</button>
@@ -124,6 +135,18 @@
     {#each vs.revisions as r}<li><span class="when">From {dayLabel(r.from)}</span><span class="dots" aria-hidden="true">{#each Array(r.strength) as _}<i></i>{/each}</span><span class="what">{r.strength} strength · {r.im} min<small>Changed this week</small></span></li>{/each}
    </ol>
   {:else if sheet.name === 'legend'}
+   {@const R=(f:number,o:number,k:'strength'|'zone2'='strength')=>[{key:k,name:'',unit:'',color:k==='strength'?'#FF7DB8':'#5CA8FF',recorded:0,planned:0,filled:f,outline:o}]}
+   <h3 class="lg-h">Day rings · one per goal, same order everywhere</h3>
+   <ul class="legend">
+    <li><NestedRings rings={R(1,1)} size={30}/><span><b>Filled</b><small>Recorded toward that day’s planned share</small></span></li>
+    <li><NestedRings rings={R(.4,1)} size={30}/><span><b>Thin line</b><small>Planned, not recorded (yet)</small></span></li>
+    <li><NestedRings rings={[]} size={30}/><span><b>No ring</b><small>Nothing planned or recorded for that goal</small></span></li>
+    <li><NestedRings rings={[]} size={30} mark="rest"/><span><b>Moon</b><small>Rest day you chose</small></span></li>
+    <li><NestedRings rings={[]} size={30} mark="ill"/><span><b>Hatched</b><small>Ill or paused · no catch-up</small></span></li>
+    <li><NestedRings rings={[]} size={30} mark="unknown"/><span><b>Dotted</b><small>Awaiting Garmin data · not zero</small></span></li>
+    <li><span class="lg-g">◇</span><span><b>Diamond by the date</b><small>A Garmin schedule session that day</small></span></li>
+   </ul>
+   <h3 class="lg-h">Sessions</h3>
    <ul class="legend">{#each LEGEND as [m, s, t]}<li><Glyph sport={s} mark={m} size={30} label={MARK_NAMES[m]}/><span><b>{MARK_NAMES[m]}</b><small>{t}</small></span></li>{/each}</ul>
    <p class="small">Activity colours: {#each ['running', 'cycling', 'strength', 'walking', 'hiit', 'swimming', 'yoga'] as s}<span class="sw" style:background={SPORTS[s as Sport].color}></span>{SPORTS[s as Sport].name} {/each}</p>
   {/if}
@@ -131,7 +154,9 @@
 {/if}
 <style>
  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
- .day-facts{display:grid;grid-template-columns:1fr auto;gap:12px 8px;font-size:14px;margin:16px 0}.day-facts dt{color:var(--text2)}.day-facts dd{margin:0;font-family:Outfit;font-weight:600;text-align:right}
+ .lg-h{font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin:10px 0 4px}.lg-g{width:30px;text-align:center;color:#BDAAFF;font-size:18px}
+ .day-head{display:flex;gap:14px;align-items:center;margin:4px 0 12px}.day-head b{display:block;font:600 18px Outfit}.day-head small{font-size:12px;color:var(--text2)}
+ .dgoals{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px}.dgoals th,.dgoals td{padding:7px 4px;border-bottom:1px solid var(--line);text-align:right}.dgoals thead th{font:600 10.5px Inter;color:var(--text3)}.dgoals tbody th{text-align:left;font-weight:600}.dgoals i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--c);margin-right:7px}.dgoals td{font-family:Outfit}
  .big{font-size:16px}
  .list{margin-top:10px}
  .state-row{display:flex;align-items:center;gap:12px;margin:10px 0;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.05)}

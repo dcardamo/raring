@@ -63,7 +63,15 @@ Zone 2 is only recorded zone time or intended minutes the person enters; unknown
 coverage shows "awaiting data"; Not recorded is never Missed unless the person
 marks it. Pinned Opus 5.5 continued P2 from a mixed-model P1. Not recorded
 without a recording offers Reschedule and Let it go only; a self-reported
-"done without the watch" is not built. This does not authorise stage 2 or a release.
+"done without the watch" is not built. P3 (Dan's P2 review, `.data/lanes/experience-p3-feedback.md`): a
+widget-justification table, ring and next-week-goal rules are in the design.
+**P3a** adds the weekly loop (Plan your week prompt on every tab with review →
+proposed goals needing acceptance → place → done; Today's backlog with Do it
+today; one-tap Ill), nested goal rings on every date cell and a week ring,
+compact Plan with steppers, Move, inline Garmin items, Zone 4–5 and Sleep
+Score goals, a race page and a disabled Send to Garmin; Today's effort
+chevrons, HR row and nap Body Battery. P3b (Training, Health, Sleep tabs,
+Progress, help sheets, Profile) follows. This does not authorise stage 2 or a release.
 
 **Usability gate remains pending; no stage 2 authorised.** No unfamiliar people have evaluated
 first meaning, discovery, comprehension or pressure. Three participants (including

@@ -1324,6 +1324,11 @@ or unverified endpoint or history. Prefer the first two.
 | Strength best-set charts, muscle map, sets per week | `StrengthView` (12 weeks); longer periods need older stored sets, coverage unverified | view (12 weeks); longer: new |
 | Endurance and hill score history (Explore sparklines) | Only the latest value is exposed; history storage unverified | new |
 | Ambition countdowns | Garmin race (`UpcomingRace`) or local event | view + new local state |
+| Your day heart-rate row | `HeartRateDay.timeline` (2-minute samples; gaps stay gaps) | view |
+| Nap Body Battery change (nap row, Body Battery row) | Difference across the nap in `dailyStress.bodyBatteryValuesArray` | stored: view change, no new request |
+| Day and week rings, backlog, week review | Stored activities (`zone_seconds` for Zone 2 and Zone 4–5), local goals and intentions, pauses, coverage | stored + new local state |
+| Suggested bedtime in goals | `SleepPlan.need_min` and usual wake; no sleep-debt feed | view |
+| Race prediction history on the race page | Only the latest `TrainingView.races` is exposed; a stored series is unverified | new (synthetic in the prototype) |
 
 #### Proposed rules for Progress
 

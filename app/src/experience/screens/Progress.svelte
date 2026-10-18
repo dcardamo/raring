@@ -4,7 +4,7 @@
  import ConsistencyChart from '../../lib/components/ConsistencyChart.svelte';
  import RootHeader from '../components/RootHeader.svelte';
  import PeriodBars from '../components/PeriodBars.svelte';
- import ActivityCalendar from '../components/ActivityCalendar.svelte';
+ import DayCells from '../components/DayCells.svelte';
  import CommitmentBars from '../components/CommitmentBars.svelte';
  import TrendTile from '../components/TrendTile.svelte';
  import LiftChart from '../components/LiftChart.svelte';
@@ -99,8 +99,8 @@
 
 <div class="sec-h"><h2>{monthYear(cal.from)}</h2><span class="small">Active on {calActive} of {calKnown} covered days</span></div>
 <section class="card">
- <ActivityCalendar month={cal} onDay={d => { go('activities'); setTimeout(() => store.setUi({date: d}), 50); }}/>
- <p class="cal-key" aria-hidden="true"><span><i class="k a"></i>Recorded</span><span><i class="k r"></i>Rest</span><span><i class="k p"></i>Paused</span><span><i class="k u"></i>Awaiting evidence</span></p>
+ <DayCells from={cal.from} count={cal.days.length} lead={(new Date(cal.from + 'T00:00:00Z').getUTCDay() + 6) % 7} size={30}/>
+ <p class="cal-key"><button class="link" onclick={() => store.openSheet('legend')}>Key</button> · rings show each goal per day; tap a day for details</p>
 </section>
 
 

@@ -23,11 +23,11 @@ export const PROFILES = {
 } as const;
 export type Profile = keyof typeof PROFILES;
 
-export type Allocation = {strength?: number, zone2?: number, im?: number, sleep?: number};
-export type GoalTargets = {strength: number, zone2: number, im: number, sleep: number, sleepTime: string, sleepKind: 'winddown' | 'bedtime'};
+export type Allocation = {strength?: number, zone2?: number, hi?: number, im?: number, sleep?: number};
+export type GoalTargets = {strength: number, zone2: number, hi: number, im: number, sleep: number, sleepTime: string, sleepKind: 'winddown' | 'bedtime', sleepScore: number};
 export type GoalVersion = {from: string, targets: GoalTargets};
 export type Intention = {id: string, sport: Sport, date: string, time: string | null, link: string | null, history: [string, string][], name?: string, durationMin?: number, allocation?: Allocation, kind?: 'workout' | 'sleep', garminId?: string, status?: 'open' | 'released' | 'missed'};
-export type Pause = {since: string, review: string | null, until?: string};
+export type Pause = {since: string, review: string | null, until?: string, reason?: 'ill'};
 export type Revision = {week: string, from: string, strength: number, im: number};
 export type Commitments = {from: string, strength: number, im: number, note: string};
 export type State = {
@@ -42,6 +42,7 @@ export type State = {
   signedOut: boolean, dst: boolean, returning: boolean, noRunning: boolean, savedSleepTarget: boolean, winddownIntention: boolean,
   navVariant: 'tabs' | 'header', reviewDraft: string | null,
   goalVersions?: GoalVersion[], todayChoice?: {day: string, id: string}, keptGarmin?: Record<string, boolean>,
+  planWeeks?: Record<string, 'done' | 'dismissed'>, planReminder?: boolean,
 };
 
 export function profileWorld(state: State) {
@@ -138,7 +139,7 @@ export function derive(state: State): Ctx {
   ctx.tonight = tonight(ctx);
   ctx.notices = notices(ctx);
   ctx.lead = lead(ctx);
-  ctx.adaptLabel = paused ? 'Paused' : ctx.restActive ? 'Rest day' : hasLimits ? 'Limits on' : 'Adapt today';
+  ctx.adaptLabel = paused ? (paused.reason === 'ill' ? 'Ill' : 'Paused') : ctx.restActive ? 'Rest day' : hasLimits ? 'Limits on' : 'Adapt today';
   return ctx;
 }
 export type Ctx = {

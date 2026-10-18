@@ -134,6 +134,7 @@ export function timelines(ctx: Ctx, date = ctx.calendarDate) {
  * Today's curve ends at the value of the last upload. Minutes run from 22:00
  * the evening before (−120) to the given end.
  */
+const NAP_CHARGE = .55;
 export function bodyBatteryDay(ctx: Ctx, date = ctx.calendarDate, end?: number) {
   const night = ctx.nightOf(date);
   const until = Math.min(end ?? 1440, untilFor(ctx, date));
@@ -147,25 +148,37 @@ export function bodyBatteryDay(ctx: Ctx, date = ctx.calendarDate, end?: number) 
   const high = Math.min(100, low + charge);
   // Unscaled drain per 3-minute step after waking; scaled so today ends at the upload value.
   const steps: number[] = [];
+  // Naps recharge Body Battery, as in Garmin's intraday curve.
+  const naps = ctx.napList.filter(n => n.start[0] === date).map(n => [toMin(n.start[1]), toMin(n.start[1]) + n.min] as [number, number]);
   for (let m = wake ?? 0; m < Math.min(until, 1440); m += 3) {
     const s = t.stress[Math.floor(m / 3)];
     const act = ctx.world.activities.find(a => a.date === date && m >= toMin(a.start) && m < toMin(a.start) + a.min);
-    steps.push(act ? act.load / act.min * .55 : s == null ? .08 : .04 + s / 900);
+    const nap = naps.some(([a, b]) => m >= a && m < b);
+    steps.push(nap ? Number.NaN : act ? act.load / act.min * .55 : s == null ? .08 : .04 + s / 900);
   }
-  const raw = steps.reduce((a, b) => a + b, 0);
-  const scale = target != null && raw > 0 ? Math.max(0, high - target) / raw : 1;
+  const raw = steps.filter(x => !Number.isNaN(x)).reduce((a, b) => a + b, 0);
+  const napGain = steps.filter(x => Number.isNaN(x)).length * NAP_CHARGE;
+  const scale = target != null && raw > 0 ? Math.max(0, high + napGain - target) / raw : 1;
   const points: [number, number][] = [];
   let v = low + 4, k = 0;
   for (let m = -120; m <= Math.min(until, 1500); m += 3) {
     if (bed != null && wake != null && m >= bed && m < wake) v = low + charge * Math.sqrt((m - bed) / (wake - bed));
     else if (bed != null && m < bed) v = low + 4 * (bed - m) / Math.max(1, bed + 120);
-    else if (wake != null && m >= wake && m < 1440) v = Math.max(5, v - (steps[k++] ?? 0) * scale);
+    else if (wake != null && m >= wake && m < 1440) { const x = steps[k++] ?? 0; v = Number.isNaN(x) ? Math.min(100, v + NAP_CHARGE) : Math.max(5, v - x * scale); }
     else if (m >= 1440) v = Math.max(5, v - .03);
     points.push([m, Math.round(v)]);
   }
   return {points, charged: high - low, high, low, now: points.at(-1)?.[1] ?? null, until};
 }
 
+/** Body Battery change across a nap, from the same intraday curve; null when it isn't covered. */
+export function napCharge(ctx: Ctx, nap: {start: [string, string], min: number}): number | null {
+  const bb = bodyBatteryDay(ctx, nap.start[0]), a = toMin(nap.start[1]), b = a + nap.min;
+  if (b > bb.until) return null;
+  const at = (m: number) => bb.points.find(([x]) => x >= m)?.[1] ?? null;
+  const x = at(a), y = at(b);
+  return x == null || y == null ? null : y - x;
+}
 export function stressCard(ctx: Ctx, date = ctx.calendarDate): StressCard {
   const t = timelines(ctx, date);
   const vals = t.stress.filter((v): v is number => v != null);

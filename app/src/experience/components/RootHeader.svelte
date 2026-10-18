@@ -1,11 +1,12 @@
 <script lang="ts">
  import Icon from '../../lib/components/Icon.svelte';
  import XIcon from './XIcon.svelte';
+ import PlanPrompt from './PlanPrompt.svelte';
  import {store} from '../lib/store.svelte';
  import {dayLabel, monthYear} from '../lib/dates';
  // Compact root header: date and upload freshness, the title with a stable,
  // labelled Adapt control, and quiet one-line status notes.
- let {title, adapt = false}: {title: string, adapt?: boolean} = $props();
+ let {title, adapt = true}: {title: string, adapt?: boolean} = $props();
  let ctx = $derived(store.ctx);
  let history = $derived(!ctx.world.historyComplete && title === 'Today' ? `History since ${monthYear(ctx.world.historyStart).replace(/^(\w{3})\w*/, '$1')} · older history downloading` : null);
 </script>
@@ -24,6 +25,7 @@
   <p class="hnote">{#if ctx.offline}<span><XIcon name="offline" size={13}/>Offline · saved data</span>{/if}{#if history}<span>{history}</span>{/if}</p>
  {/if}
 </header>
+<PlanPrompt/>
 <style>
  .hctl{flex-wrap:wrap;justify-content:flex-end}
  .hnote{display:flex;flex-wrap:wrap;gap:4px 12px;margin:4px 2px 0;font-size:12px;color:var(--text3)}

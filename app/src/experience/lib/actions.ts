@@ -33,6 +33,7 @@ export const A = {
  dismiss(id: string) { store.set(s => ({dismissed: {...s.dismissed, [id]: true}}), 'Hidden for today'); store.closeSheet(); },
  rest() { store.set({rest: {day: ctx().calendarDate}}, 'Rest day, through tonight'); store.closeSheet(); },
  unrest() { store.set({rest: null}, 'Rest removed'); store.closeSheet(); },
+ ill() { const c = ctx(); store.set({pause: {since: c.calendarDate, review: null, reason: 'ill'}, rest: null}, 'Ill: goals paused, nothing to catch up'); store.closeSheet(); },
  pause(review: string | null = null) { store.set({pause: {since: ctx().calendarDate, review}}, 'Training paused until you resume'); },
  resume() { store.set(endPause, 'Training resumed · commitments as they were'); store.closeSheet(); },
  resumeChange() { store.set(endPause, 'Training resumed'); store.sheetThen(() => store.navigate('plan/commitments')); },

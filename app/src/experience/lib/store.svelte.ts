@@ -97,6 +97,7 @@ class Store {
     if (/^metric\/\w+$/.test(route)) return route.slice(7) in METRICS;
     if (/^strength\/[\w-]+$/.test(route)) return EXERCISES.some(e => `strength/${e.id}` === route);
     if (/^intention\/\w+$/.test(route)) return true;
+    if (/^plan\/race\/[\w-]+$/.test(route)) return true;
     if (/^scheduled\/[\w-]+$/.test(route)) return SCHEDULE.some(s => `scheduled/${s.id}` === route);
     if (/^review\/\d{4}-W\d{2}$/.test(route)) return true;
     if (/^help\/[\w-]+$/.test(route)) return HELP_PAGES.includes(route.slice(5));
@@ -132,7 +133,7 @@ class Store {
     if (route.startsWith('workout/')) return 'activities';
     if (route.startsWith('metric/')) return METRICS[route.slice(7)].parent;
     if (route.startsWith('strength/')) return 'strength';
-    if (route.startsWith('intention/') || route.startsWith('scheduled/') || route === 'plan/commitments' || route === 'plan/garmin') return 'plan';
+    if (route.startsWith('intention/') || route.startsWith('scheduled/') || route === 'plan/commitments' || route === 'plan/garmin' || route.startsWith('plan/race/')) return 'plan';
     return 'today';
   }
   rootTrail(r: string) { return r === 'today' ? ['today'] : ['today', r]; }
@@ -336,6 +337,7 @@ export function titleOf(route: string): string {
   if (a === 'scheduled') return SCHEDULE.find(s => s.id === b)?.name ?? 'Garmin schedule';
   if (a === 'review') return `Week ${b.slice(6)}`;
   if (a === 'help') return 'Help';
+  if (a === 'plan' && b === 'race') return 'Race';
   if (TITLES[a]) return TITLES[a];
   return route;
 }

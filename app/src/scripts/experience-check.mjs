@@ -247,7 +247,7 @@ await journey('Possible match needs review, then counts once', 'U41', async (pag
  const amounts = () => page.locator('.goal').first().locator('.amounts b').allInnerTexts();
  const before = await amounts();
  await expectText(page, 'Needs review', 'review flagged');
- await page.locator('.unfinished.review').getByRole('button', {name: 'This was my session'}).click(); j.path.push('This was my session'); await settle(page);
+ await page.locator('.unfinished.uf-review').getByRole('button', {name: 'This was my session'}).click(); j.path.push('This was my session'); await settle(page);
  const after = await amounts();
  if (before[0] !== after[0] || before[1] !== after[1]) throw new Error(`linking changed recorded/planned: ${before} → ${after}`);
  await expectNoText(page, 'Needs review', 'review resolved');
@@ -263,6 +263,85 @@ await journey('Garmin Coach is read-only and can count toward a local goal', 'U4
  if (st.length !== before + 1 || !st.at(-1).garminId) throw new Error('Garmin session not counted as a local allocation');
  await expectText(page, 'Counts toward your goals', 'local overlay shown');
  j.done('plan/garmin', 3);
+});
+// ---------- P3a: the weekly loop, rings and Today ----------
+await journey('Plan your week: review last week, choose goals, place, done', 'U15', async (page, j) => {
+ await set(page, {day: '2026-11-16', clock: 'day', intentions: []}); await ext(page, 'training');
+ if (!await page.locator('.pp').count()) throw new Error('prompt missing on Training at the start of the week');
+ await j.tap('Start');
+ if (!(await page.locator('.sheet').textContent()).includes('9–15 Nov')) throw new Error('review does not show last week');
+ const sheet = await page.locator('.sheet').innerText();
+ if (!/Met|Partly met|Not recorded/.test(sheet)) throw new Error('review lacks outcomes');
+ if (!(await page.locator('.sheet').textContent()).includes('Suggested for this week')) throw new Error('no proposals');
+ if (await page.locator('.sheet .prop input:checked').count()) throw new Error('a proposal was pre-accepted');
+ await j.tap('Next: goals'); await page.getByRole('button', {name: 'More Zone 2'}).click(); await page.getByRole('button', {name: 'More Zone 2'}).click(); j.path.push('+ Zone 2 ×2');
+ await j.tap('Next: place them');
+ await page.locator('.sheet .bl').first().getByRole('button', {name: 'Wed'}).click(); j.path.push('Wed'); await page.waitForTimeout(150);
+ await j.tap('Next'); await j.tap('Done');
+ const st = await page.evaluate(() => window.RaringApp.state);
+ if (st.planWeeks?.['2026-W47'] !== 'done') throw new Error('week not marked planned');
+ if (!st.intentions.some(i => i.date === '2026-11-18')) throw new Error('nothing placed on Wednesday');
+ if (st.goalVersions?.at(-1)?.targets.zone2 !== 20) throw new Error(`zone2 goal ${st.goalVersions?.at(-1)?.targets.zone2}`);
+ if (await page.locator('.pp').count()) throw new Error('prompt still shown after planning');
+ j.done('training', 9, 'review, goals by steppers, one placement');
+});
+await journey('Plan prompt: not now, stop reminders, never at wind-down', 'U15', async (page) => {
+ await set(page, {day: '2026-11-16', clock: 'winddown'}); await ext(page, 'today');
+ if (await page.locator('.pp').count()) throw new Error('prompt during wind-down');
+ await set(page, {clock: 'day'}); await ext(page, 'today');
+ await page.locator('.pp').getByRole('button', {name: 'Not now'}).click(); await settle(page);
+ if (await page.locator('.pp').count()) throw new Error('Not now did not hide it');
+ await set(page, {day: '2026-11-23', planWeeks: {}}); await ext(page, 'progress');
+ await page.locator('.pp').getByRole('button', {name: 'Stop weekly reminders'}).click(); await settle(page);
+ if (await page.evaluate(() => window.RaringApp.state.planReminder) !== false) throw new Error('reminder not turned off');
+ await ext(page, 'settings'); await expectText(page, 'Weekly planning reminder', 'setting in Settings');
+});
+await journey('Backlog: do it today from Today', 'U13', async (page, j) => {
+ await j.tap('Do it today');
+ const st = await page.evaluate(() => window.RaringApp.state.intentions.filter(i => i.date === '2026-11-18' && i.allocation?.im));
+ if (st.length !== 1 || st[0].allocation.im > 30) throw new Error(`backlog item not taken for today: ${JSON.stringify(st)}`);
+ j.done('today', 1);
+});
+await journey('Move a planned session to a future day', 'U13', async (page, j) => {
+ await ext(page, 'plan'); await j.tap(/^Move Strength/); await j.tap('Fri 20', '.sheet');
+ const i = await page.evaluate(() => window.RaringApp.state.intentions.find(x => x.id === 'i1'));
+ if (i.date !== '2026-11-20' || !i.history.at(-1)[1].includes('Wed 18 Nov')) throw new Error(`move failed ${JSON.stringify(i)}`);
+ j.done('plan', 2);
+});
+await journey('Ill: one tap pauses rings and backlog, no catch-up', 'U13', async (page, j) => {
+ await ext(page, 'progress'); await j.tap(/^Adapt today/); await j.tap('I’m ill');
+ if ((await page.locator('.adapt').innerText()).trim() !== 'Ill') throw new Error('header does not show Ill');
+ await ext(page, 'plan'); await expectText(page, 'Backlog paused', 'backlog paused'); await expectText(page, 'no catch-up', 'no catch-up');
+ const wed = await page.locator('.day-cells .dc').nth(2).getAttribute('aria-label');
+ if (!wed.includes('ill')) throw new Error(`day cell not marked ill: ${wed}`);
+ j.done('plan', 2, 'from any screen');
+});
+await journey('Rings describe planned and recorded per day', 'U13', async (page) => {
+ await ext(page, 'plan');
+ const labels = await page.locator('.day-cells .dc').evaluateAll(els => els.map(e => e.getAttribute('aria-label')));
+ if (!labels[0].includes('Strength 1 of 1 planned')) throw new Error(`Mon: ${labels[0]}`);
+ if (!labels[2].includes('Strength 0 of 1 planned')) throw new Error(`Wed: ${labels[2]}`);
+ if (labels[4].includes('Strength')) throw new Error(`Fri draws a ring with nothing planned: ${labels[4]}`);
+ if (!labels[3].includes('Garmin session')) throw new Error(`Thu Garmin item missing: ${labels[3]}`);
+ if (await page.locator('.ws .nr').count() !== 1) throw new Error('no week ring');
+});
+await journey('Today: effort is not a control; HR row; nap Body Battery', 'U13', async (page) => {
+ if (await page.locator('.effort button').count()) throw new Error('effort scale has buttons');
+ if (!(await page.locator('.effort').getAttribute('aria-label')).startsWith('Raring effort: easy')) throw new Error('effort label');
+ if (!await page.locator('.day-rows').getByRole('button', {name: /^Heart rate/}).count()) throw new Error('HR row missing');
+ await expectText(page, 'Body Battery +', 'nap Body Battery change');
+ if (await page.locator('.day-rows').count() !== 1) throw new Error('Your day duplicated');
+});
+await journey('Send to Garmin is visible but not available', 'U13', async (page) => {
+ await ext(page, 'intention/i1');
+ if (!await page.getByRole('button', {name: /Send to Garmin/}).isDisabled()) throw new Error('Send to Garmin is enabled');
+ await expectText(page, 'Not available yet', 'labelled');
+});
+await journey('Race goal: countdown, prediction and weeks', 'U13', async (page, j) => {
+ await ext(page, 'plan'); await j.tap(/^Winter 10K, 24 days/);
+ await expectRoute(page, 'plan/race/event', 'race detail');
+ await expectText(page, 'prediction', 'Garmin prediction'); await expectText(page, 'Your weeks toward it', 'weeks');
+ j.done('plan/race/event', 1);
 });
 await journey('U53 Journal consent, open, leave, background, opt out', 'U52', async (page, j) => {
  await j.tap('Allow local journal reads'); await j.tap('Allow journal reads'); await j.tap('Open journal');
@@ -367,7 +446,7 @@ await journey('Movement review suppresses every training prompt', 'U31', async (
 });
 await journey('Historical revisions do not time travel', 'U26', async (page) => {
  await set(page, {day: '2026-11-16'}); await ext(page, 'plan');
- await expectNoText(page, 'Target 1 since Thu', 'Monday before revision');
+ await expectNoText(page, 'Targets changed Thu', 'Monday before revision');
  await ext(page, 'workout/a-1107'); await expectText(page, 'Strength session · no sets', 'old timer evidence');
  await ext(page, 'workout/a-1102'); await expectText(page, '1 of 3', 'older workout uses week 46 targets');
 });
@@ -380,10 +459,10 @@ await journey('Intention edit, timing migration and routine self-report', 'U22',
  await j.tap('Edit'); await j.tap('Tue 17'); await j.tap('Save changes');
  await expectText(page, 'Changed to Strength', 'edit history');
  await ext(page, 'plan');
- await j.tap('Goals'); await page.getByLabel('Sleep timing weekly target').fill('3'); await j.tap('Save weekly goals');
+ await j.tap('Goals'); for (let i = 0; i < 3; i++) await page.getByRole('button', {name: 'More Sleep timing'}).click(); await j.tap('Save weekly goals');
  const st = await page.evaluate(() => window.RaringApp.state);
  if (st.goalVersions?.at(-1)?.targets.sleep !== 3 || Object.values(st.winddown).some(Boolean)) throw new Error('sleep timing goal inferred completion');
- await expectText(page, 'not yet placed', 'sleep timing nights start unplaced');
+ await expectText(page, '3 sleep-timing nights', 'sleep timing nights start in the backlog');
  await ext(page, 'adapt/routines');
  await page.getByLabel('Exercise name').fill('Wall sit 3 × 30 s'); await j.tap('Add to checklist'); await j.tap('Mark done today');
  await expectText(page, 'Done today · Self-reported', 'routine separate from Garmin');
