@@ -15,6 +15,65 @@ availability on every account or watch.
 
 ## Now
 
+### 26. A focused, adaptive Raring experience — exclusive
+
+**Design:** [A focused, adaptive Raring experience](docs/experience-design.md).
+Design documented; implementation has not started. **Start after the already
+in-flight “Raring 9+10: Status notification and widgets” workspace is complete,
+integrated and checked.** Then item 26 is the sole implementation priority; do
+not start another backlog item between them. An idle agent alone does not establish
+that the workspace is finished. The redesign and progressive usability/discoverability
+work are **one item**, not a feature project followed by a UX cleanup.
+
+**Start gate confirmed:** items 9+10 are integrated in `2580ffb`; repository,
+Android unit/instrumentation and release checks passed. Their workspace and
+the old merge queue are archived; no other Raring implementation lane is
+active. This initiative uses the single `feat/experience-redesign` branch.
+Stage 1 begins with linked prototypes, not product-shell changes. Unfamiliar-user
+usability remains unverified and must reach its explicit decision gate.
+
+**Exclusive workstream:** once implementation starts, suspend other feature work
+and parallel implementation lanes, including unrelated items below. Work through
+this initiative's stages sequentially on one integration branch; do not release
+an unfinished shell through `main`'s automatic release workflow. Read-only reviews
+and checks may support it, including time-sensitive daylight-saving/device checks.
+An urgent unrelated fix needs an explicit decision to pause this work. If a
+usability gate is blocked, ask whether to proceed with explicitly limited evidence
+or pause and lift the exclusivity hold; do not silently waive it or freeze work
+indefinitely.
+
+- Deliver immediate value without choosing a goal, configuring a dashboard or
+  completing a tour. Several ambitions can coexist with always-relevant sleep,
+  recovery and longer-term health; only the leading message is focused.
+- Prove the navigation and progressive disclosure through whole user journeys
+  before restructuring the app. The current four tabs are not a constraint.
+  The working design is Today, Plan and Progress with stable labelled Explore
+  access; discovery tests decide whether Explore needs primary navigation.
+- Replace the stats-led Today with timely context, one useful next decision and
+  recorded accomplishments. Show direct contributions separately from Garmin's
+  estimates and longer-term outcomes; no invented strain or wellbeing score.
+- Make explicit rest, illness pauses, activity/movement restrictions, local
+  intentions and user-supplied rehabilitation routines first-class. They must
+  constrain all advice/reminders, not be overridden by readiness or a weekly gap.
+- Connect plans and progress with honest target versions, evidence coverage and
+  private milestones. No engagement/wear streaks, catch-up pressure or rewards
+  for higher physiological scores. Sleep preparation is not a performance contest.
+- Preserve every shipped capability and its data/privacy rules, including the
+  **already-landed naps and consented journal**. Numeric sleep debt, populated
+  Coach/schedule semantics and Garmin writes are not assumed available.
+- Run the design's **U01–U64 journey catalogue** across simple/no-plan users,
+  curious users, mixed sports, events, interrupted plans, sparse data and
+  accessibility. Include unfamiliar-user discovery, private real-data review and
+  Android checks; screenshots and passing unit tests alone do not validate UX.
+
+Sequence: linked prototype and journey gate → shell/shared context → Today and
+adaptations → Plan/Progress → complete usability, migration and regression checks.
+Update `docs/spec.md` as behaviour ships. Complete the definition of done in the
+design before resuming unrelated features; record shipping commits here and move
+this item to Done then. Existing follow-ups below remain tracked: incorporate
+relevant UX checks into this work, but do not claim deferred endpoint or device
+verification is solved by changing the presentation.
+
 ### Time-of-day follow-ups
 
 From item 4, in priority order.
@@ -33,6 +92,9 @@ From item 4, in priority order.
 - On desktop widths the masonry columns can place the leading card beside a
   notice rather than first in reading order; check it once desktop ships.
 - "Timing history" opens Sleep at its top; scroll it to Consistency.
+- After item 26, item 9's notification must use its shared eligible context
+  and adaptation rules rather than a separate phase rule or frozen `TodayFocus`
+  shape.
 
 ### Sleep rhythm follow-ups
 
@@ -102,9 +164,11 @@ From item 11, in priority order.
   a lap press after each set and weights entered, compare Raring's workout
   screen with Connect, then decide whether the compatibility page can move
   from partial to Tested.
-- **Strength intro and figure choice** (`intro-1` to `intro-4` in
-  `design/mockup/`): the four first-run steps and the female/male figure
-  override. The figure follows the Garmin profile until then.
+- **Strength introduction and figure choice**: depends on item 26's
+  progressive-disclosure design. Replace the mandatory-seeming four-step
+  `intro-1` to `intro-4` concept in `design/mockup/` with help at the point of
+  use; keep the optional female/male figure override discoverable in Strength.
+  The figure follows the Garmin profile until then.
 - **Exercise display names**: Raring title-cases Garmin's keys
   ("One Arm Dumbbell Row"). Look for Garmin's own localized names before
   adding a table.
@@ -134,6 +198,11 @@ From item 11, in priority order.
   physical watch's source-zone behavior is still unverified.
 
 ### 9–10a. Status surface follow-ups
+
+Items 9 and 10 are now shipped. Item 26 must preserve both surfaces and
+adapt their shared eligibility, rest/restriction, privacy and freshness rules;
+the current notification layout and widget gauge hierarchy are not constraints
+on the redesign.
 
 - On a real phone, add both widgets, enable the silent notification and
   compare readings/upload time after a Connect sync. Check metric taps,
@@ -267,7 +336,9 @@ faces, screens, sensors and audio prompts stay in Connect.
 
 - AI-written insights: they often restate the numbers and would need a
   service that sees the data.
-- Social feeds, badges and challenges.
+- Social feeds, competitive leaderboards/challenges, engagement rewards and
+  app-open or wearable-use streaks. Private, evidence-backed milestones and
+  optional quiet celebrations are in scope for item 26; no new wellbeing score.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
