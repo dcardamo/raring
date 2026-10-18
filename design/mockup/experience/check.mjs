@@ -345,6 +345,61 @@ await journey('Intention edit, timing migration and routine self-report', 'U22',
   await expectText(page, 'Done today (self-reported)', 'routine separate from Garmin');
 });
 
+await journey('Unknown timing never reuses old-night training advice', 'U38', async (page) => {
+  await page.evaluate(() => window.RaringApp.set({clock:'late'})); await settle(page);
+  await expectText(page, 'Your recorded context', 'neutral fixed presentation after midnight');
+  await expectNoText(page, 'Training is an option', 'no old-night training advice');
+  await page.evaluate(() => window.RaringApp.external('surfaces')); await settle(page);
+  await expectText(page, 'Recorded context only', 'same fixed presentation on surfaces');
+});
+await journey('First commitment does not adopt old targets', 'U01', async (page) => {
+  await page.evaluate(() => window.RaringApp.external('plan/commitments')); await settle(page);
+  await page.getByRole('button',{name:'2',exact:true}).click(); await settle(page);
+  const st = await page.evaluate(() => window.RaringApp.state.ownCommitments);
+  if (st.im !== 0) throw new Error('intensity commitment silently adopted');
+  await page.evaluate(() => window.RaringApp.external('progress')); await settle(page);
+  await expectNoText(page, 'targets then: 3 strength', 'no pre-setup achievements');
+});
+await journey('Sleep above need has honest sign', 'U03', async (page) => {
+  await page.evaluate(() => window.RaringApp.set({day:'2026-11-20'})); await settle(page);
+  await expectText(page, '0h 03 above', 'per-night difference');
+  await expectNoText(page, '-1h', 'no negative duration formatter');
+});
+
+await journey('Movement review covers a local Run intention', 'U01', async (page, j) => {
+  await page.evaluate(() => window.RaringApp.set({limits:{exclude:[],note:'No deep knee bends',routines:{}}}));
+  await page.getByRole('button',{name:'Plan',exact:true}).click(); await settle(page);
+  await j.tap('Add to my plan'); await j.tap('Run');
+  if (!(await page.locator('.sheet').textContent()).includes('Review needed')) throw new Error('movement note missing in non-strength planning');
+  await j.tap('Add to plan');
+  await page.getByRole('button',{name:'Today',exact:true}).click(); await settle(page);
+  await expectText(page, 'Review your planned session', 'movement review before readiness');
+  await j.tap('Review session'); await expectText(page, 'No deep knee bends', 'note visible on the local intention');
+});
+await journey('Fixed layout preserves tonight and self-report identity', 'U37', async (page) => {
+  const before = await page.evaluate(() => window.RaringRules.derive(window.RaringApp.state).tonight.nightOf);
+  await page.evaluate(() => window.RaringApp.set({follow:false}));
+  await page.evaluate(() => window.RaringApp.external('sleep/tonight')); await settle(page);
+  await expectText(page, 'Wed night → Thu morning', 'presentation independent night');
+  await page.getByRole('button',{name:'I wound down (optional)',exact:true}).click(); await settle(page);
+  const marks = await page.evaluate(() => window.RaringApp.state.winddown);
+  if (!marks[before] || marks['2026-11-19']) throw new Error('preparation assigned to a different night');
+});
+await journey('Time-only edit retains activity and original day', 'U19', async (page, j) => {
+  await page.evaluate(() => window.RaringApp.external('intention/i0')); await settle(page);
+  await j.tap('Edit'); await page.locator('.sheet input[type=time]').fill('08:30'); await page.locator('.sheet input[type=time]').blur(); await settle(page);
+  await j.tap('Save changes');
+  const i = await page.evaluate(() => window.RaringApp.state.intentions.find(x=>x.id==='i0'));
+  if (i.sport !== 'strength' || i.date !== '2026-11-16' || i.time !== '08:30') throw new Error(`time edit corrupted draft: ${JSON.stringify(i)}`);
+});
+await journey('Changing date/type clears a confirmed link', 'U22', async (page, j) => {
+  await j.tap('This was my session'); await j.tap('Edit'); await j.tap('Run'); await j.tap('Tue 17 Nov'); await j.tap('Save changes');
+  const i = await page.evaluate(() => window.RaringApp.state.intentions.find(x=>x.id==='i0'));
+  if (i.link) throw new Error('incompatible activity link survived');
+  await expectText(page, 'old activity link cleared', 'association history retained');
+  await expectNoText(page, 'Linked by you:', 'no wrong-day completion display');
+});
+
 // ---------- 3. Layout budgets ----------
 const VIEWS = [
   ['phone-390', {width: 390, height: 844}, 1], ['phone-360', {width: 360, height: 780}, 1],

@@ -19,7 +19,7 @@ availability on every account or watch.
 
 **Design:** [A focused, adaptive Raring experience](docs/experience-design.md).
 **Stage 1 implemented as an isolated linked prototype**, not production shell
-changes: `design/mockup/experience/`. See the design's stage-1 checkpoint for
+changes: `design/mockup/experience/`, checkpoint `302a69e`. See the design's stage-1 checkpoint for
 working routes, preservation/legacy mappings, measured scripted paths, screenshots
 and U01–U64 evidence limits. The redesign and usability/discoverability work remain
 **one item**, not a feature project followed by a UX cleanup.

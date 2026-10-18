@@ -289,7 +289,7 @@ ${card('This week', `${tracksHtml(ctx)}
 <p class="small">Changes apply from today (${dayLabel(ctx.calendarDate)}). Earlier days and weeks keep the targets they had. Lowering a target already met shows “Reached · adjusted”, without a celebration.</p>
 <button class="secondary" data-go="adapt/lighter">Busy or travelling?</button>`)}
 ${card('Zone 2 and timing evidence', '<p>Zone 2 minutes use recorded heart-rate zones, not Garmin’s moderate + twice-vigorous intensity weighting. Missing zones mean unknown, not zero.</p><p class="small">A saved Zone 2 commitment remains its own track at cutover. This stage exercises strength/intensity target edits; full Zone 2 edit and migration arithmetic require the implemented Plan projection, not this synthetic model.</p><button class="secondary" data-go="sleep/timing">Sleep timing observation</button>')}
-${card('Versions', `<ol class="versions">${D.commitmentVersions.filter(v => v.from <= p.wk).map(v => `<li><b>${v.from.replace('2026-W', 'Week ')}</b> ${v.strength} strength · ${v.im} min <small>${h(v.note)}</small></li>`).join('')}${revs.map(r => `<li><b>${dayLabel(r.from)}</b> ${r.strength} strength · ${r.im} min <small>Current-week revision; the original ${p.base.strength} · ${p.base.im} stays on record</small></li>`).join('')}${p.pause ? `<li><b>${dayLabel(p.pause.since)}${p.pause.until ? `–${dayLabel(p.pause.until)}` : ''}</b> Paused <small>No proration, no completion for pausing</small></li>` : ''}</ol>`)}
+${card('Versions', `<ol class="versions">${(['mixed', 'sparse'].includes(state.profile) ? D.commitmentVersions : state.ownCommitments ? [state.ownCommitments] : []).filter(v => v.from <= p.wk).map(v => `<li><b>${v.from.replace('2026-W', 'Week ')}</b> ${v.strength} strength · ${v.im} min <small>${h(v.note)}</small></li>`).join('')}${revs.map(r => `<li><b>${dayLabel(r.from)}</b> ${r.strength} strength · ${r.im} min <small>Current-week revision; the original ${p.base.strength} · ${p.base.im} stays on record</small></li>`).join('')}${p.pause ? `<li><b>${dayLabel(p.pause.since)}${p.pause.until ? `–${dayLabel(p.pause.until)}` : ''}</b> Paused <small>No proration, no completion for pausing</small></li>` : ''}</ol>`)}
 ${card('Last week on these targets', `<p class="small">A retrospective comparison only: week 46 had 2 strength sessions and 178 min. This is not an achievement for a week before these targets existed.</p>`)}`;
   }
 
@@ -304,7 +304,7 @@ ${card('Last week on these targets', `<p class="small">A retrospective compariso
       : ['A new best this week', 'Dumbbell bench press 22 kg × 8, best in your available history (since Sep 2025).', 'workout/a-1201', 'Open workout'];
     return `${rootHeader(env, 'progress')}
 <section class="lead k-done" aria-labelledby="plead-h"><p class="kicker">${icon('check')}<span>This week</span></p><h2 id="plead-h">${leadText[0]}</h2><p class="lead-line">${leadText[1]}</p><div class="lead-actions"><button class="primary" data-go="${leadText[2]}">${leadText[3]}</button></div></section>
-${p ? card('Follow-through', `${tracksHtml(ctx)}<h3 class="sub">Last 8 plan weeks</h3><ol class="weeks">${D.weeks.map(w => `<li class="w-${w.state}"><button data-go="review/${w.id}"><span class="wk">${w.range}</span>${tag(w.label, w.state)}<small>${h(w.detail)}${w.version ? ` · targets then: ${w.version}` : ''}</small></button></li>`).join('')}<li class="w-current"><button data-go="plan"><span class="wk">This week</span>${tag(p.midPause ? 'Adjusted · paused' : 'In progress', p.midPause ? 'adjusted-paused' : 'open')}<small>Targets: ${p.target.strength} strength · ${p.target.im} min</small></button></li></ol><p class="small">Weeks before your first plan have no verdict. Paused and unknown weeks stay visible; no streak.</p>`, '', 'sec-follow')
+${p ? card('Follow-through', `${tracksHtml(ctx)}<h3 class="sub">Last 8 plan weeks</h3><ol class="weeks">${(['mixed', 'sparse'].includes(profile) ? D.weeks : []).map(w => `<li class="w-${w.state}"><button data-go="review/${w.id}"><span class="wk">${w.range}</span>${tag(w.label, w.state)}<small>${h(w.detail)}${w.version ? ` · targets then: ${w.version}` : ''}</small></button></li>`).join('')}<li class="w-current"><button data-go="plan"><span class="wk">This week</span>${tag(p.midPause ? 'Adjusted · paused' : 'In progress', p.midPause ? 'adjusted-paused' : 'open')}<small>Targets: ${p.target.strength} strength · ${p.target.im} min</small></button></li></ol><p class="small">Weeks before your first plan have no verdict. Paused and unknown weeks stay visible; no streak.</p>`, '', 'sec-follow')
       : card('Recorded activity', `<p>${profile === 'sleep' ? 'No recorded workouts. That isn’t a problem; sleep and health are here too.' : `${ctx.world.activities.length} activities recorded in this fixture.`}</p><button class="link" data-go="activities">All activities</button>`)}
 ${card('Measured change', `${row('Fitness Age', '<span class="n">41</span>', 'metric/fitnessAge', 'Garmin estimate · 3 Nov · unchanged over 8 weeks, separate from your routine')}${profile !== 'sleep' ? row('VO₂ max', '<span class="n">47</span>', 'metric/vo2max', 'Garmin estimate · 3 Nov · sparse history') : ''}${profile === 'mixed' ? row('Strength bests', '2 this month', 'strength', 'Best in available history') : ''}${row('Sleep', 'Patterns', 'sleep/patterns', 'Recorded duration against recorded need')}<p class="small">Participation and measured change are kept apart; a flat estimate doesn’t mean effort was wasted.</p>`)}
 ${profile === 'mixed' ? card('Milestones', `<ol class="miles">${D.milestones.map(m => `<li><button data-go="${m.route}"><span class="wk">${dayLabel(m.date)}</span><b>${h(m.text)}</b><small>${h(m.kind)}</small></button></li>`).join('')}</ol>`) : ''}
@@ -316,11 +316,12 @@ ${card('Weekly review', `${row(`Week of ${A().latestReviewWeek() === '2026-W47' 
   }
   function review(env, id) {
     const {ctx, state} = env;
-    const w = weekInfo(id);
+    const stored = weekInfo(id);
+    const w = stored && (['mixed', 'sparse'].includes(state.profile) ? stored : {...stored, state: 'none', label: 'No accepted commitments', version: null, detail: 'No targets were saved for this week.'});
     if (!w) return `${detailHeader(env, 'Week review')}${card('', '<p>No review exists for that week.</p>')}`;
     const p = ctx.plan;
     const current = id === '2026-W47';
-    const win = current ? (ctx.world.activities.some(a => a.id === 'a-1201') ? 'Monday’s strength session, including a new bench press best.' : 'Your recorded data stays available, with or without targets.') : w.state === 'reached' ? 'Every accepted commitment met against that week’s targets.' : w.state === 'none' ? '3 activities recorded before you had a plan.' : w.state === 'paused' ? '2 activities recorded during a paused week, with no completion award.' : w.state === 'unknown' ? '2 known workouts; the remaining evidence is unavailable.' : w.detail;
+    const win = current ? (ctx.world.activities.some(a => a.id === 'a-1201') ? 'Monday’s strength session, including a new bench press best.' : 'Your recorded data stays available, with or without targets.') : w.state === 'reached' ? 'Every accepted commitment met against that week’s targets.' : w.state === 'none' ? w.detail : w.state === 'paused' ? '2 activities recorded during a paused week, with no completion award.' : w.state === 'unknown' ? '2 known workouts; the remaining evidence is unavailable.' : w.detail;
     const obs = current ? 'One short night (5h 10) on Tuesday; Garmin rated Wednesday’s readiness Low.' : w.state === 'unknown' ? 'Garmin’s activity list was incomplete, so this week stays “awaiting evidence”.' : 'Bed times varied by 40 min; Garmin rated 5 of 7 nights aligned.';
     return `${detailHeader(env, `Week ${id.slice(6)} review`, w.range)}
 ${card('The win', `<p>${h(win)}</p>`)}
@@ -330,7 +331,7 @@ ${card('A choice for next week', `<div class="btns"><button class="secondary" da
   }
   function reviews(env) {
     return `${detailHeader(env, 'Weekly reviews', 'Dated, kept on this phone')}
-${card('', `${['2026-W47', ...D.weeks.map(w => w.id).reverse()].filter(id => id !== '2026-W47' || A().latestReviewWeek() === '2026-W47').map(id => { const w = weekInfo(id); return row(`Week ${id.slice(6)} · ${w.range}`, tag(w.label || 'In progress', w.state), `review/${id}`); }).join('')}`)}`;
+${card('', `${['2026-W47', ...D.weeks.map(w => w.id).reverse()].filter(id => id !== '2026-W47' || A().latestReviewWeek() === '2026-W47').map(id => { const w = weekInfo(id); return row(`Week ${id.slice(6)} · ${w.range}`, tag(['mixed', 'sparse'].includes(env.state.profile) ? w.label || 'In progress' : 'No accepted commitments', w.state), `review/${id}`); }).join('')}`)}`;
   }
 
   // ---------- Explore ----------
@@ -450,7 +451,7 @@ ${card('', D.gear.map(g => `<div class="factor"><span>${g.name}<small>${g.used}$
     const acts = ctx.world.activities.filter(a => a.sport === 'strength');
     if (!acts.length) return `${detailHeader(env, 'Strength')}${card('', `<p>No strength sessions recorded in the last 12 weeks.</p><p class="small">When you record one with lap presses between sets, Garmin’s sets appear here. <button class="link inline" data-go="help/strength-start">How to record sets</button></p>`)}`;
     return `${detailHeader(env, 'Strength', 'Last 12 weeks')}
-${card('This week', `<div class="big"><b class="n">${acts.filter(a => a.date >= ctx.weekFrom && a.date <= ctx.calendarDate).length}</b><span>sessions · 11 sets recorded</span></div><div class="focus"><span>Chest</span><span class="amount"><i style="width:70%"></i></span><span>Back</span><span class="amount"><i style="width:60%"></i></span><span>Arms</span><span class="amount"><i style="width:80%"></i></span><span>Core</span><span class="amount"><i style="width:20%"></i></span><span>Legs</span><span class="amount"><i style="width:0%"></i></span></div><p class="small">Recorded sets per muscle. Not muscle freshness, injury status or safety. <button class="link inline" data-go="help/strength-muscles">About the map</button></p>`)}
+${card('This week', `<div class="big"><b class="n">${acts.filter(a => a.date >= ctx.weekFrom && a.date <= ctx.calendarDate).length}</b><span>sessions · ${acts.filter(a => a.date >= ctx.weekFrom && a.date <= ctx.calendarDate).reduce((n, a) => n + (D.sets[a.id] || []).reduce((t, x) => t + x.sets.length, 0), 0)} sets recorded</span></div><div class="focus"><span>Chest</span><span class="amount"><i style="width:70%"></i></span><span>Back</span><span class="amount"><i style="width:60%"></i></span><span>Arms</span><span class="amount"><i style="width:80%"></i></span><span>Core</span><span class="amount"><i style="width:20%"></i></span><span>Legs</span><span class="amount"><i style="width:0%"></i></span></div><p class="small">Recorded sets per muscle. Not muscle freshness, injury status or safety. <button class="link inline" data-go="help/strength-muscles">About the map</button></p>`)}
 ${card('Muscles', row('Recorded coverage and previous weeks', '', 'strength/muscles'))}
 ${card('Exercises', D.exercises.map(e => row(e.name, e.best[8] || e.best[10] || '—', `strength/${e.id}`, 'Heaviest set history and bests')).join(''))}
 ${card('Sessions', acts.slice().reverse().map(a => row(`${dayLabel(a.date)} · ${a.start}`, a.timerOnly ? 'Timer only' : 'Sets', `workout/${a.id}`)).join(''))}
@@ -503,7 +504,7 @@ ${a.sport === 'strength' ? (sets ? card('Sets', sets.map(x => `<div class="exerc
     return `${detailHeader(env, 'Health', `${dayLabel(env.ctx.displayedDay)} · Garmin`)}
 ${state.vitalsException ? `<section class="notice">${icon('info')}<p>Two overnight readings are outside your usual ranges. This isn’t a diagnosis; consider taking it easy and checking how you feel.</p></section>` : ''}
 ${card('Vitals', `<div class="vitals">${D.vitals.map(v => { const off = state.vitalsException && (v.id === 'hrv' || v.id === 'sleepHr'); return `<button class="vital" data-go="metric/${v.id}"><small>${v.label}</small><b class="n">${off ? (v.id === 'hrv' ? '31' : '61') : v.value}<span>${v.unit}</span></b>${tag(off ? (v.id === 'hrv' ? 'Below range' : 'Above range') : v.state, off ? 'fair' : v.state === 'Within range' ? 'good' : 'gap')}</button>`; }).join('')}</div><p class="small">Ranges are personal Garmin baselines, not medical targets. Missing or baseline-building is neutral, not an all-clear.</p>`)}
-${card('Heart rate, stress and energy', `${row('All-day heart rate', 'Resting 54 bpm', 'metric/heartRate', 'Daily resting value; Sleep HR is the overnight average')}${row('Stress', 'Avg 27 · Low', 'metric/stress', 'Garmin, so far today')}${row('Body Battery', '64', 'metric/bodyBattery', 'At last upload, not live')}`)}
+${card('Heart rate, stress and energy', `${row('All-day heart rate', 'Resting 54 bpm', 'metric/heartRate', 'Daily resting value; Sleep HR is the overnight average')}${row('Stress', 'Avg 27 · Low', 'metric/stress', 'Garmin, so far today')}${row('Body Battery', env.ctx.stale || env.ctx.phase === 'waiting' ? 'Unavailable' : String(D.bodyBattery[env.ctx.calendarDate] ?? '—'), 'metric/bodyBattery', `At last upload (${env.ctx.upload.detail}), not live`)}`)}
 ${card('Fitness Age', `${row('Fitness Age', '<span class="n">41</span>', 'metric/fitnessAge', 'Garmin estimate · 3 Nov · real age 44')}<p class="small">Garmin’s drivers: VO₂ max, resting HR, body fat, vigorous minutes (its own 4-week window). An estimate, not a grade.</p>`)}
 ${card('Weight & body composition', `<p class="small">Private to Health. No targets or notifications.</p><button class="secondary" data-go="health/weight">Open weight</button>`)}
 ${journalCard(env)}`;
@@ -566,7 +567,7 @@ ${card('', Object.entries(D.metrics).map(([id, m]) => row(m.name, '', `metric/${
     const linked = i.link && activity(i.link);
     const excluded = state.limits.exclude.includes(i.sport);
     return `${detailHeader(env, `${SPORTS[i.sport]} · ${dayLabel(i.date)}`, `Your plan${i.time ? ` · ${i.time}` : ' · any time'}`)}
-${card('', `<p>${tag('Your plan', 'intent')} On this phone. Not sent to Garmin, and not proof of completion.</p>${excluded ? `<p class="notice small">${icon('info')} You excluded ${SPORTS[i.sport].toLowerCase()} in your limits. This stays in your plan until you change it.</p>` : ''}${i.sport === 'strength' && state.limits.note ? `<p class="small">Your movement note applies (“${h(state.limits.note)}”). Raring can’t check what this session contains.</p>` : ''}
+${card('', `<p>${tag('Your plan', 'intent')} On this phone. Not sent to Garmin, and not proof of completion.</p>${excluded ? `<p class="notice small">${icon('info')} You excluded ${SPORTS[i.sport].toLowerCase()} in your limits. This stays in your plan until you change it.</p>` : ''}${state.limits.note ? `<p class="small">Review needed: your movement note applies (“${h(state.limits.note)}”). Raring can’t check what this session contains.</p>` : ''}
 <div class="btns"><button class="secondary" data-sheet="add" data-arg="${i.id}">Edit</button><button class="secondary" data-act="removeIntention" data-arg="${i.id}">Remove</button></div>`)}
 ${card('Recorded that day', linked ? `<p class="selfrep">${icon('check')} Linked by you: ${SPORTS[linked.sport]} at ${linked.start}.</p><p class="small">A link you confirmed, not Garmin schedule completion. The workout counts either way.</p><button class="link" data-act="unlink" data-arg="${i.id}">Unlink</button>`
       : candidates.length ? (i.date < ctx.calendarDate ? '<p class="small">Not linked. That’s not a missed workout; recorded work counts either way.</p>' : '') + candidates.map(a => `<div class="cand">${row(`${SPORTS[a.sport]} · ${a.start}`, `${a.min} min`, `workout/${a.id}`, 'Recorded · already counts')}<button class="secondary" data-act="link" data-arg="${i.id}:${a.id}">This was my session</button></div>`).join('') + '<p class="small">Optional. Recorded work counts without a link.</p>'
@@ -670,7 +671,7 @@ ${card('', rows.map(([from, to]) => { const c = A().canonical(from); const t = A
         const d = env.ui.add || {sport: editing?.sport || null, date: editing?.date || ctx.calendarDate, time: editing?.time || ''};
         const days = [...Array(8)].map((_, i) => addDays(ctx.calendarDate, i));
         return wrap(editing ? 'Edit your plan' : 'Add to my plan', `<p class="small">Saved on this phone. Not sent to Garmin.</p>
-<fieldset><legend>Activity</legend><div class="chips">${['strength', 'running', 'cycling', 'walking', 'swimming', 'yoga', 'other'].map(s => { const ex = state.limits.exclude.includes(s); return `<button class="chip" aria-pressed="${d.sport === s}" data-act="addField" data-arg="sport:${s}" ${ex ? 'disabled aria-describedby="ex-note"' : ''}>${SPORTS[s]}${ex ? ' · excluded' : ''}</button>`; }).join('')}</div>${state.limits.exclude.length ? '<p class="small" id="ex-note">Excluded by your limits.</p>' : ''}${d.sport === 'strength' && state.limits.note ? `<p class="small">Your movement note applies; Raring can’t check routine contents.</p>` : ''}</fieldset>
+<fieldset><legend>Activity</legend><div class="chips">${['strength', 'running', 'cycling', 'walking', 'swimming', 'yoga', 'other'].map(s => { const ex = state.limits.exclude.includes(s); return `<button class="chip" aria-pressed="${d.sport === s}" data-act="addField" data-arg="sport:${s}" ${ex ? 'disabled aria-describedby="ex-note"' : ''}>${SPORTS[s]}${ex ? ' · excluded' : ''}</button>`; }).join('')}</div>${state.limits.exclude.length ? '<p class="small" id="ex-note">Excluded by your limits.</p>' : ''}${d.sport && state.limits.note ? `<p class="small">Review needed: your movement note applies; Raring can’t check session contents.</p>` : ''}</fieldset>
 <fieldset><legend>Day</legend><div class="chips">${days.map(x => `<button class="chip" aria-pressed="${d.date === x}" data-act="addField" data-arg="date:${x}">${x === ctx.calendarDate ? 'Today' : dayLabel(x)}</button>`).join('')}</div></fieldset>
 <label class="field"><span>Time (optional)</span><input type="time" value="${h(d.time)}" data-change="addTime"></label>
 ${ctx.world.ambitions.length ? `<p class="small">Linking it to an ambition is optional.</p>` : ''}
@@ -715,6 +716,10 @@ ${ctx.world.ambitions.length ? `<p class="small">Linking it to an ambition is op
     history.replaceState({__raringExperience: {...s, ui: next}}, '', location.hash);
     window.RaringApp._ui(next);
   }
+  function addDraft() {
+    const editing = S().intentions.find(i => i.id === history.state.__raringExperience.sheet?.arg);
+    return ui().add || {sport: editing?.sport || null, date: editing?.date || R.derive(S()).calendarDate, time: editing?.time || ''};
+  }
   const endPause = () => st => ({pause: null, pauses: [...(st.pauses || []), {...st.pause, until: R.derive(st).calendarDate}]});
   window.RaringActions = {
     back: () => A().back(),
@@ -740,8 +745,8 @@ ${ctx.world.ambitions.length ? `<p class="small">Linking it to an ambition is op
       A().set(st => ({revisions: [...st.revisions, next]}), 'Changed from today; earlier days keep their targets');
     },
     ownCommit: n => { const ctx = R.derive(S()); A().set({ownCommitments: {from: R.weekId(ctx.calendarDate), strength: Number(n), im: 0, note: 'Your first commitment; Garmin intensity goal stays separate'}}, 'Commitment added'); },
-    addField: arg => { const [k, v] = arg.split(/:(.*)/); const cur = ui().add || {sport: null, date: R.derive(S()).calendarDate, time: ''}; const sheet = history.state.__raringExperience.sheet; if (sheet?.arg && !ui().add) { const i = S().intentions.find(x => x.id === sheet.arg); Object.assign(cur, {sport: i.sport, date: i.date, time: i.time || ''}); } setUi({add: {...cur, [k]: v}}); },
-    addTime: v => { const cur = ui().add || {sport: null, date: R.derive(S()).calendarDate, time: ''}; setUi({add: {...cur, time: v}}); },
+    addField: arg => { const [k, v] = arg.split(/:(.*)/); setUi({add: {...addDraft(), [k]: v}}); },
+    addTime: v => setUi({add: {...addDraft(), time: v}}),
     saveIntention: id => {
       const d = ui().add; const st = S();
       const editing = id && st.intentions.find(i => i.id === id);
@@ -749,7 +754,7 @@ ${ctx.world.ambitions.length ? `<p class="small">Linking it to an ambition is op
       const date = d?.date || editing?.date, time = d ? d.time || null : editing?.time || null;
       const when = `${dayLabel(date)}${time ? `, ${time}` : ', any time'}`;
       const now = dayLabel(R.derive(st).calendarDate);
-      const list = editing ? st.intentions.map(i => i.id === id ? {...i, sport, date, time, history: [...i.history, [now, `Changed to ${SPORTS[sport]}, ${when}`]]} : i)
+      const list = editing ? st.intentions.map(i => i.id === id ? {...i, sport, date, time, link: i.sport === sport && i.date === date ? i.link : null, history: [...i.history, [now, `Changed to ${SPORTS[sport]}, ${when}${i.link && (i.sport !== sport || i.date !== date) ? '; old activity link cleared' : ''}`]]} : i)
         : [...st.intentions, {id: 'n' + Date.now().toString(36), sport, date, time, link: null, history: [[now, `Added for ${when}`]]}];
       A().set({intentions: list}, editing ? 'Plan updated · not sent to Garmin' : 'Added to your plan · on this phone, not Garmin');
       A().closeSheet();

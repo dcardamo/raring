@@ -1035,7 +1035,7 @@ exception does not turn unverified usability into a passed result.
 ### Stage-1 prototype checkpoint (unshipped)
 
 The 9+10 prerequisite is confirmed at `2580ffb`; the design handoff is `8d593fd`.
-Stage 1 now has a linked, independently synthetic prototype in
+Stage 1 checkpoint `302a69e` provides a linked, independently synthetic prototype in
 [`design/mockup/experience/`](../design/mockup/experience/README.md). No production
 shell, Rust rules/storage, native code or generated types were changed. The old
 visual reference and released app remain intact. `spec.md` still describes the
@@ -1198,6 +1198,15 @@ comparison crash; rest saved against the wrong retained sleep day; journal rows
 surviving background/Back; restrictions not gating illustrative surfaces; and
 revisions leaking into earlier dates. Regression checks now exercise those
 transitions, including a retained partial-pause interval after resume.
+A subsequent read-only whole-stage review reproduced four additional transitions:
+movement notes missing from non-strength local intentions, fixed presentation
+changing the night across midnight, time-only edits losing the intention draft,
+and links surviving a date/type edit. These were corrected and added as browser
+regressions. Changing presentation now leaves tonight/self-report identity alone;
+all intention types retain review-needed context; edits preserve the draft and
+clear incompatible confirmed links with an explicit history entry. No remaining
+journal-privacy blocker was reproduced by that review; this is still not native
+or unfamiliar-user evidence.
 
 Remaining design risks for participant testing: Plan's first-visit migration
 explanation is wordy; Progress's eight-week history may obscure outcomes; Explore
@@ -1209,8 +1218,9 @@ named/weighted set read-back, phone battery or real-user evidence was added.
 
 Repository regression checks run alongside the isolated prototype: workspace
 Rust tests and Clippy (`-D warnings`), Svelte/TypeScript checks, 57 UI unit tests,
-existing browser regressions and production build all pass. Generated types are
-unchanged. No new APK, physical device or native instrumentation run is claimed.
+existing browser regressions, production build and whole-history secret scan all
+pass. The isolated browser suite also passes over the reachable HTTP preview;
+`.git/config` and `.data/` requests there return 404. Generated types are unchanged. No new APK, physical device or native instrumentation run is claimed.
 The coordinator must now obtain the named unfamiliar-user / limited-evidence
 proceed-versus-pause decision; the lane must not advance silently.
 

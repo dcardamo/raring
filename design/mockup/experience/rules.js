@@ -127,7 +127,7 @@
 
   function tonight(ctx) {
     const sleepOnly = ctx.state.profile === 'sleep';
-    const nightOf = ctx.phase === 'late' ? ctx.day : ctx.calendarDate;
+    const nightOf = ctx.clock.phase === 'late' ? ctx.day : ctx.calendarDate;
     const need = sleepOnly ? 505 : 490;
     return {
       nightOf, nightLabel: `${shortDay(nightOf)} night → ${shortDay(addDays(nightOf, 1))} morning`,
@@ -228,6 +228,8 @@
     evidence.push(n ? `Last night ${dur(n.asleep)} of ${dur(n.need)} need` : 'No recorded night');
     evidence.push(r ? `Readiness ${r.value} ${r.level}` : ctx.world.readinessSupported ? 'Readiness missing' : 'Readiness not recorded by this watch');
     trace.push({gate: 'Evidence', result: `${evidence.join(' · ')} · watch upload ${ctx.upload.label}.`});
+    if (ctx.fixedReason) return done({id: `fixed:${ctx.calendarDate}`, kind: 'quiet', headline: 'Your recorded context',
+      lines: ['Fixed presentation: no assumed sleep schedule or training window.'], action: {label: 'View sleep', go: 'sleep'}});
     const blocked = trainBlocked(ctx);
     trace.push({gate: 'Circumstances', result: blocked === 'paused' ? `Training paused since ${dayLabel(ctx.paused.since)}: no exercise prompts.`
       : blocked === 'rest' ? 'Rest today: no exercise prompts today or tonight.'
@@ -287,6 +289,9 @@
     }
     const intent = ctx.intentionsToday.find(i => !i.link);
     if (intent) {
+      if (ctx.limits.note) return done({id: `review-intent:${intent.id}`, kind: 'intention', headline: 'Review your planned session',
+        lines: [`${SPORTS[intent.sport]} is your intention; its movements are unknown to Raring. Your movement note still applies.`],
+        action: {label: 'Review session', go: `intention/${intent.id}`}});
       trace.push({gate: 'Decisions', result: 'Your own intention for today leads; current evidence qualifies it.'});
       return done({id: `intent:${intent.id}`, kind: 'intention', headline: `${SPORTS[intent.sport]} ${intent.time ? `at ${intent.time}` : 'today'}`,
         lines: [`In your plan${ctx.limits.exclude.includes(intent.sport) ? ', but you excluded this activity' : ''}. ${r ? `Readiness ${r.level} (${r.value}).` : ''}`],
@@ -296,7 +301,7 @@
     if (!r) {
       trace.push({gate: 'Garmin guidance', result: 'No readiness, so no effort suggestion; sleep leads.'});
       return done({id: `sleep:${ctx.displayedDay}`, kind: 'sleep', headline: n ? `You slept ${dur(n.asleep)}` : 'No sleep recorded last night',
-        lines: n ? [`${dur(n.need - n.asleep)} below last night’s need of ${dur(n.need)}.`, `Sleep score ${n.score} (Garmin).${ctx.world.readinessSupported ? '' : ' This watch doesn’t record readiness.'}`] : ['Your watch may not have been worn.'],
+        lines: n ? [`${n.asleep < n.need ? dur(n.need - n.asleep) + ' below' : n.asleep === n.need ? 'Matched' : dur(n.asleep - n.need) + ' above'} last night’s need of ${dur(n.need)}.`, `Sleep score ${n.score} (Garmin).${ctx.world.readinessSupported ? '' : ' This watch doesn’t record readiness.'}`] : ['Your watch may not have been worn.'],
         action: {label: 'Last night’s sleep', go: 'sleep'}});
     }
     const id = `suggest:${ctx.calendarDate}`;
@@ -323,6 +328,7 @@
   function surfaces(ctx) {
     const r = ctx.readiness, s = ctx.state;
     const focus = ctx.phase === 'waiting' || ctx.stale ? 'Waiting for last night'
+      : ctx.fixedReason ? 'Recorded context only'
       : ['evening', 'winddown', 'late'].includes(ctx.phase) ? `Wind down from ${ctx.tonight.windDown}`
       : ctx.paused ? 'Training paused' : ctx.restActive ? 'Rest day'
       : ctx.hasLimits ? 'Training suggestions limited' : s.dismissed[`suggest:${ctx.calendarDate}`] ? 'No training suggestion today'
