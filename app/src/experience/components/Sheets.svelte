@@ -1,0 +1,122 @@
+<script lang="ts">
+ import {tick} from 'svelte';
+ import Icon from '../../lib/components/Icon.svelte';
+ import Glyph, {MARK_NAMES, type Mark} from './Glyph.svelte';
+ import XIcon from './XIcon.svelte';
+ import {store} from '../lib/store.svelte';
+ import {A} from '../lib/actions';
+ import {addDays, dayLabel} from '../lib/dates';
+ import {PLAN_SPORTS, SPORTS, type Sport} from '../lib/sports';
+ let sheet = $derived(store.sheet);
+ let ctx = $derived(store.ctx);
+ let box = $state<HTMLElement>();
+ // Add-to-plan draft: activity and day are enough; time is optional.
+ let draft = $state<{sport: Sport | null, date: string, time: string}>({sport: null, date: '', time: ''});
+ let ambName = $state(''), ambDate = $state('');
+ $effect(() => {
+  if (sheet?.name === 'add') {
+   const editing = sheet.arg ? store.state.intentions.find(i => i.id === sheet.arg) : null;
+   draft = {sport: editing?.sport ?? null, date: editing?.date ?? store.ctx.calendarDate, time: editing?.time ?? ''};
+  }
+  if (sheet) void tick().then(() => (box?.querySelector('[data-autofocus]') as HTMLElement ?? box?.querySelector('h2'))?.focus());
+ });
+ function keys(e: KeyboardEvent) {
+  if (!sheet) return;
+  if (e.key === 'Escape') store.closeSheet();
+  if (e.key === 'Tab' && box) {
+   const nodes = [...box.querySelectorAll<HTMLElement>('button:not(:disabled), input, select, textarea')];
+   const first = nodes[0], last = nodes.at(-1);
+   if (e.shiftKey && (document.activeElement === first || document.activeElement?.tagName === 'H2')) { e.preventDefault(); last?.focus(); }
+   else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+  }
+ }
+ const days = $derived(Array.from({length: 8}, (_, i) => addDays(ctx.calendarDate, i)));
+ const TITLES: Record<string, string> = {adapt: 'Adapt today', add: 'Add to my plan', why: 'Why this?', notices: 'Notices', permission: 'Allow notifications?', winddown: 'A wind-down intention', consent: 'Allow Garmin journal reads?', resume: 'Resume training', ambition: 'Add an ambition', signout: 'Sign out and erase?', legend: 'Key'};
+ const LEGEND: [Mark, Sport, string][] = [['recorded', 'running', 'Recorded by your watch'], ['plan', 'running', 'Your plan, on this phone'], ['garmin', 'running', 'Garmin schedule, read-only'], ['self', 'yoga', 'Self-reported'], ['rest', 'other', 'Rest day'], ['paused', 'other', 'Paused'], ['unknown', 'other', 'Awaiting evidence']];
+</script>
+<svelte:window onkeydown={keys}/>
+{#if sheet}
+ <div class="scrim" role="presentation" onclick={() => store.closeSheet()}></div>
+ <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-t" bind:this={box}>
+  <div class="sheet-h"><h2 id="sheet-t" tabindex="-1">{sheet.name === 'add' && sheet.arg ? 'Edit your plan' : TITLES[sheet.name] ?? ''}</h2><button class="iconbtn" aria-label="Close" onclick={() => store.closeSheet()}><Icon name="close" size={18}/></button></div>
+
+  {#if sheet.name === 'adapt'}
+   {#if ctx.restActive}<div class="state-row"><Glyph mark="rest" size={34}/><span><b>Rest day is on</b><small>Through tonight</small></span></div><button class="secondary" onclick={A.unrest}>Undo rest</button>
+   {:else}<button class="primary big" data-autofocus onclick={A.rest}><Icon name="moon" size={18}/>Rest today</button><p class="small">No exercise prompts today or tonight.</p>{/if}
+   <div class="list">
+    <button class="rowlink" onclick={() => store.navigate('adapt/pause')}><Icon name="pause" size={20}/><span><b>Pause training</b><small>Until you resume</small></span>{#if ctx.paused}<span class="val">On</span>{:else}<Icon name="chevron" size={16}/>{/if}</button>
+    <button class="rowlink" onclick={() => store.navigate('adapt/limits')}><XIcon name="adapt" size={20}/><span><b>Avoid activities or movements</b><small>Exclusions and your own note</small></span>{#if ctx.hasLimits}<span class="val">On</span>{:else}<Icon name="chevron" size={16}/>{/if}</button>
+    <button class="rowlink" onclick={() => store.navigate('adapt/routines')}><Icon name="check" size={20}/><span><b>My routines</b><small>A checklist you supply</small></span><Icon name="chevron" size={16}/></button>
+    <button class="rowlink" onclick={() => store.navigate('adapt/lighter')}><Icon name="clock" size={20}/><span><b>Busy or travelling</b><small>A lighter week</small></span><Icon name="chevron" size={16}/></button>
+   </div>
+
+  {:else if sheet.name === 'add'}
+   <fieldset><legend>Activity</legend><div class="sport-grid">
+    {#each PLAN_SPORTS as s}{@const ex = store.state.limits.exclude.includes(s)}<button class="sport" aria-pressed={draft.sport === s} disabled={ex} onclick={() => draft.sport = s}><Glyph sport={s} mark={draft.sport === s ? 'recorded' : 'plan'} size={34} label={SPORTS[s].name}/><span>{SPORTS[s].name}{ex ? ' · excluded' : ''}</span></button>{/each}
+   </div>{#if draft.sport && store.state.limits.note}<p class="small">Review needed: your movement note applies.</p>{/if}</fieldset>
+   <fieldset><legend>Day</legend><div class="chiprow">{#each days as d}<button class="chipb" aria-pressed={draft.date === d} onclick={() => draft.date = d}>{d === ctx.calendarDate ? 'Today' : dayLabel(d).replace(/ \w+$/, '')}</button>{/each}</div></fieldset>
+   <label class="field"><span>Time (optional)</span><input type="time" bind:value={draft.time}/></label>
+   <button class="primary" disabled={!draft.sport} onclick={() => draft.sport && A.saveIntention({sport: draft.sport, date: draft.date, time: draft.time || null}, sheet?.arg)}>{sheet.arg ? 'Save changes' : 'Add to plan'}</button>
+   <p class="small center">On this phone · not sent to Garmin</p>
+
+  {:else if sheet.name === 'why'}
+   <ol class="trace">{#each ctx.lead.trace as t, i}<li><span class="step n">{i + 1}</span><span><b>{t.gate}</b><small>{t.result}</small></span></li>{/each}</ol>
+
+  {:else if sheet.name === 'notices'}
+   {#each ctx.notices as n}<div class="notice-strip"><Icon name="alert" size={18}/><p>{n.text}</p><button class="link inline" onclick={() => store.navigate(n.action.go)}>{n.action.label}</button></div>{/each}
+
+  {:else if sheet.name === 'permission'}
+   <p>The app stays fully useful if you decline.</p>
+   <button class="primary" onclick={() => A.permit('granted', sheet!.arg ?? '')}>Allow</button><button class="secondary" onclick={() => A.permit('declined', sheet!.arg ?? '')}>Decline</button>
+
+  {:else if sheet.name === 'winddown'}
+   <p>Make room to wind down this evening. Marking it done is optional and kept apart from recorded sleep.</p>
+   <button class="primary" onclick={A.winddownIntention}>Add wind-down intention</button>
+
+  {:else if sheet.name === 'consent'}
+   <ul class="plain"><li>Last 7 days of Garmin lifestyle logs, read-only.</li><li>Entries stay closed until you open them, and hide when you leave or switch apps.</li><li>Never in Today, Progress, search or notifications.</li><li>Turning this off stops new reads. Downloaded logs stay on this phone and in exports until you erase local data.</li></ul>
+   <button class="primary" data-autofocus onclick={A.journalAllow}>Allow journal reads</button><button class="secondary" onclick={() => store.closeSheet()}>Not now</button>
+
+  {:else if sheet.name === 'resume'}
+   <p>Your commitments as they were:</p>
+   {#if ctx.plan}<div class="state-row"><Glyph sport="strength" mark="plan" size={30}/><span><b>{ctx.plan.target.strength} strength · {ctx.plan.target.im} min</b><small>A week</small></span></div>{:else}<p class="small">No commitments.</p>{/if}
+   <button class="primary" onclick={A.resume}>Resume as they are</button><button class="secondary" onclick={A.resumeChange}>Resume and change commitments</button>
+
+  {:else if sheet.name === 'ambition'}
+   <label class="field col"><span>Name</span><input bind:value={ambName} placeholder="For example: Hike in May" data-autofocus/></label>
+   <label class="field col"><span>Date (optional)</span><input type="date" bind:value={ambDate}/></label>
+   <button class="primary" disabled={!ambName.trim()} onclick={() => { A.saveAmbition(ambName, ambDate); ambName = ''; ambDate = ''; }}>Add</button>
+   <p class="small center">A local entry · not a Garmin race</p>
+
+  {:else if sheet.name === 'signout'}
+   <p>This erases from this phone:</p>
+   <ul class="plain"><li>Downloaded Garmin history, including any journal logs</li><li>Your plans, intentions, commitments and ambitions</li><li>Rest, pauses, limits and notes, routine checklists and self-reports</li><li>Dismissals and settings</li></ul>
+   <p class="small">Sign-in tokens are removed. Nothing in Garmin changes.</p>
+   <button class="secondary" onclick={() => store.navigate('settings/export')}>Export first</button><button class="danger" onclick={A.signout}>Sign out and erase</button>
+
+  {:else if sheet.name === 'legend'}
+   <ul class="legend">{#each LEGEND as [m, s, t]}<li><Glyph sport={s} mark={m} size={30} label={MARK_NAMES[m]}/><span><b>{MARK_NAMES[m]}</b><small>{t}</small></span></li>{/each}</ul>
+   <p class="small">Activity colours: {#each ['running', 'cycling', 'strength', 'walking', 'hiit', 'swimming', 'yoga'] as s}<span class="sw" style:background={SPORTS[s as Sport].color}></span>{SPORTS[s as Sport].name} {/each}</p>
+  {/if}
+ </div>
+{/if}
+<style>
+ .big{font-size:16px}
+ .list{margin-top:10px}
+ .state-row{display:flex;align-items:center;gap:12px;margin:10px 0;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.05)}
+ .state-row b{display:block}.state-row small{color:var(--text2);font-size:12px}
+ .sport-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+ .sport{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--text2);font:600 12px Inter}
+ .sport[aria-pressed="true"]{border-color:var(--ink);color:var(--text);background:rgba(255,255,255,.08)}
+ .sport:disabled{opacity:.4}
+ .center{text-align:center}
+ .trace{list-style:none;padding:0;margin:0;display:grid;gap:12px}
+ .trace li{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start}
+ .trace .step{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.08);font-size:13px}
+ .trace b{display:block}.trace small{display:block;color:var(--text2);font-size:13px;margin-top:2px}
+ .plain{padding-left:18px;color:var(--text2);line-height:1.5;font-size:14px}
+ .legend{list-style:none;padding:0;margin:0;display:grid;gap:10px}
+ .legend li{display:flex;gap:12px;align-items:center}
+ .legend b{display:block}.legend small{color:var(--text2);font-size:12px}
+ .sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin:0 4px 0 8px}
+</style>
