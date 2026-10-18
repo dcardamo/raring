@@ -24,6 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.withLock
 
 // WorkManager increments the count on RUNNING; only ENQUEUED again means a retry.
@@ -39,22 +40,55 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
     }
     override fun onNewIntent(intent: Intent) { openTarget(intent) }
     private fun openTarget(intent: Intent?) {
-        val target = intent?.getStringExtra("target")?.takeIf { it in setOf("today", "checkin", "sleep", "training", "health") } ?: return
+        val target = intent?.getStringExtra("target")?.takeIf { it in setOf("today", "checkin", "sleep", "training", "health", "readiness", "metric/bodyBattery", "metric/stress") } ?: return
         webview?.post { webview?.loadUrl("http://tauri.localhost/#$target") }
         intent.removeExtra("target")
     }
     @Command fun loadTokens(invoke: Invoke) {
         CoroutineScope(Dispatchers.IO).launch {
-            invoke.resolve(JSObject().apply { put("value", TokenVault.loadOrClear(activity)) })
+            try {
+                SyncGate.mutex.withLock {
+                    invoke.resolve(JSObject().apply { put("value", if (AccountSession.active(activity)) AccountSession.loadLocked(activity) else null) })
+                }
+            } catch (e: Exception) { invoke.reject("Local session is suspended", e) }
         }
     }
-    @Command fun saveTokens(invoke: Invoke) {
+    @Command fun exchangeTicket(invoke: Invoke) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                SyncGate.mutex.withLock { TokenVault.save(activity, invoke.getArgs().getString("value")) }
-                SyncScheduler.start(activity)
+                val args = invoke.getArgs()
+                val saved = AccountSession.exchangeSignIn(activity, args.getString("ticket"), args.getLong("generation"))
+                if (saved) SyncScheduler.start(activity)
+                invoke.resolve(JSObject().apply { put("saved", saved) })
+            } catch (e: Exception) { invoke.reject("Sign-in could not be completed. No unverified account data is shown.", e) }
+        }
+    }
+    @Command fun suspendSession(invoke: Invoke) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                SyncScheduler.cancel(activity)
+                val generation = AccountSession.beginSignIn(activity)
+                invoke.resolve(JSObject().apply { put("generation", generation) })
+            } catch (e: Exception) { invoke.reject("Could not suspend the previous session", e) }
+        }
+    }
+    @Command fun sessionState(invoke: Invoke) {
+        CoroutineScope(Dispatchers.IO).launch {
+            invoke.resolve(JSObject().apply { put("active", AccountSession.active(activity)) })
+        }
+    }
+    @Command fun demoSession(invoke: Invoke) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                SyncGate.mutex.withLock { AccountSession.useDemoLocked(activity) }
                 invoke.resolve(JSObject())
-            } catch (e: Exception) { invoke.reject("token vault unavailable", e) }
+            } catch (e: Exception) { invoke.reject("Demo requires a credential-free debug emulator", e) }
+        }
+    }
+    @Command fun applyStatusSettings(invoke: Invoke) {
+        CoroutineScope(Dispatchers.IO).launch {
+            StatusSurfaces.applySettings(activity)
+            invoke.resolve(JSObject())
         }
     }
     @Command fun clearTokens(invoke: Invoke) {
@@ -62,7 +96,7 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
             try {
                 SyncScheduler.cancel(activity)
                 BedtimeScheduler.cancel(activity)
-                SyncGate.mutex.withLock { TokenVault.clear(activity) }
+                AccountSession.signOut(activity)
                 CookieManager.getInstance().removeAllCookies(null)
                 WebStorage.getInstance().deleteAllData()
                 invoke.resolve(JSObject())
@@ -71,9 +105,30 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
     }
     @Command fun schedule(invoke: Invoke) {
         CoroutineScope(Dispatchers.IO).launch {
-            if (TokenVault.loadOrClear(activity) != null) SyncScheduler.start(activity)
-            BedtimeScheduler.run(activity)
-            invoke.resolve(JSObject())
+            try {
+                StatusSurfaces.applySettings(activity)
+                if (AccountSession.isDemo(activity)) {
+                    StatusSurfaces.refresh(activity)
+                    invoke.resolve(JSObject())
+                    return@launch
+                }
+                SyncGate.mutex.withLock {
+                    if (AccountSession.loadLocked(activity) != null && (AccountSession.active(activity) || AccountSession.migrationAllowed(activity))) {
+                        SyncScheduler.start(activity)
+                        if (!AccountSession.active(activity)) SyncScheduler.immediate(activity)
+                    } else {
+                        SyncScheduler.cancel(activity)
+                        AccountSession.suspendLocked(activity)
+                    }
+                }
+                BedtimeScheduler.run(activity)
+                StatusSurfaces.refresh(activity)
+                invoke.resolve(JSObject())
+            } catch (e: Exception) {
+                // Suspension remains authoritative even when storage cannot be repaired.
+                StatusSurfaces.clear(activity)
+                invoke.reject("Local session is suspended", e)
+            }
         }
     }
     @Command fun syncNow(invoke: Invoke) {
@@ -94,16 +149,22 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
             try {
                 val date = invoke.getArgs().getString("date")
                 val result = SyncGate.mutex.withLock {
-                    val tokens = TokenVault.loadOrClear(activity) ?: ""
+                    check(AccountSession.active(activity)) { "sign in again" }
+                    val tokens = AccountSession.loadLocked(activity) ?: ""
                     val db = java.io.File(activity.filesDir, "raring.db").absolutePath
                     val response = JSONObject(NativeBridge.heartRateDay(db, tokens, date))
-                    if (response.optBoolean("authFailed")) throw IllegalStateException("sign in again")
+                    if (response.optBoolean("authFailed")) {
+                        AccountSession.suspendLocked(activity)
+                        SyncScheduler.cancel(activity)
+                        throw IllegalStateException("sign in again")
+                    }
                     response.optString("tokensJson").takeIf { it.isNotEmpty() }?.let { TokenVault.save(activity, it) }
                     if (!response.isNull("error")) throw IllegalStateException(response.getString("error"))
                     response.getJSONObject("day")
                 }
                 invoke.resolve(JSObject().apply { put("day", result) })
             } catch (e: Exception) { invoke.reject("Heart rate unavailable — try again later", e) }
+            finally { StatusSurfaces.refresh(activity) }
         }
     }
     @Command fun prepareExport(invoke: Invoke) {
@@ -117,11 +178,22 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
         }
     }
     @Command fun shareExport(invoke: Invoke) {
-        try {
-            ExportShare.share(activity, invoke.getArgs().getString("filename"))
-            invoke.resolve(JSObject())
-        } catch (e: Exception) {
-            invoke.reject("could not share export", e)
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val name = invoke.getArgs().getString("filename")
+                val expected = invoke.getArgs().getString("accountId")
+                SyncGate.mutex.withLock {
+                    val identity = org.json.JSONObject(NativeBridge.accountSession(AccountSession.db(activity), "state", "", "")).optString("identity")
+                    if (!AccountSession.active(activity) || identity != expected) {
+                        ExportShare.cleanPrepared(activity.cacheDir, name)
+                        error("Account changed during export")
+                    }
+                    withContext(Dispatchers.Main) { ExportShare.share(activity, name) }
+                }
+                invoke.resolve(JSObject())
+            } catch (e: Exception) {
+                invoke.reject("could not share export", e)
+            }
         }
     }
     @Command fun openGarminConnect(invoke: Invoke) {
@@ -140,6 +212,7 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
         } else requestPermissionForAlias("notifications", invoke, "permissionResult")
     }
     @PermissionCallback fun permissionResult(invoke: Invoke) {
+        CoroutineScope(Dispatchers.IO).launch { StatusSurfaces.refresh(activity) }
         invoke.resolve(JSObject().apply {
             put("granted", Build.VERSION.SDK_INT < 33 || getPermissionState("notifications") == PermissionState.GRANTED)
         })

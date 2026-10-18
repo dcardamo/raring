@@ -29,7 +29,9 @@ import type { PlanView } from './generated/PlanView';
 import type { PlanUpdate } from './generated/PlanUpdate';
 
 export type { Settings } from './generated/Settings';
-export const defaultSettings = {notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,bedtimeLeadMin:30,adaptiveToday:true,journalEnabled:false} satisfies Settings;
+export type SettingsPatch = Partial<Settings>;
+export const supportsStatusSurfaces = (isTauri() && /Android/.test(navigator.userAgent)) || new URLSearchParams(location.search).get('fixture')==='status-offer';
+export const defaultSettings = {notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,notifyStatus:false,statusOfferSeen:false,bedtimeLeadMin:30,adaptiveToday:true,journalEnabled:false} satisfies Settings;
 let previewSettings:Settings = {...defaultSettings};
 const copy = <T>(value:T):T => structuredClone(value);
 const call = <T>(name:string,args:Record<string,unknown>|undefined,fallback:T):Promise<T> => isTauri()?invoke<T>(name,args):Promise.resolve(copy(fallback));
@@ -62,5 +64,5 @@ export const sign_out = ():Promise<void> => call('sign_out',undefined,undefined)
 export const export_archive = ():Promise<string> => call('export_archive',undefined,'Preview: no file created');
 export const request_notification_permission = ():Promise<boolean> => call('request_notification_permission',undefined,true);
 export const get_settings = ():Promise<Settings> => call('get_settings',undefined,previewSettings);
-export const set_settings = (settings:Settings):Promise<void> => {if(!isTauri()){previewSettings=copy(settings);return Promise.resolve()}return invoke<void>('set_settings',{settings})};
+export const patch_settings = (patch:SettingsPatch):Promise<void> => {if(!isTauri()){previewSettings={...previewSettings,...copy(patch)};return Promise.resolve()}return invoke<void>('patch_settings',{patch})};
 export const onStatusChanged = (callback:()=>void):Promise<()=>void> => isTauri()?listen('status-changed',callback):Promise.resolve(()=>{});

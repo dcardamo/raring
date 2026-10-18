@@ -28,6 +28,15 @@ object BedtimeScheduler {
     // Posts a reminder that is due now and schedules the next one, or cancels it.
     // Synchronized so the alarm, sync and clock paths check, post and record in turn.
     @Synchronized fun run(context: Context) {
+        // Account changes and alarm delivery must not cross. An active sync's
+        // finally block checks the reminder again, so receivers need not wait.
+        if (!SyncGate.mutex.tryLock()) return
+        try {
+            if (!AccountSession.active(context)) { cancel(context); return }
+            runLocked(context)
+        } finally { SyncGate.mutex.unlock() }
+    }
+    private fun runLocked(context: Context) {
         try {
             val db = File(context.filesDir, "raring.db").absolutePath
             val now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)

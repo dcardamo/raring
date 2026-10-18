@@ -173,6 +173,26 @@ pub fn timing_focus(
         format!("Wake times held steady. Keep them{near}.")
     })
 }
+/// The worst Garmin-rated factor, with its percentage breaking ties.
+pub fn limiting_factor(factors: &[crate::view::Factor]) -> Option<&crate::view::Factor> {
+    use crate::view::Tone;
+    let rank = |tone| match tone {
+        Tone::Poor => 0,
+        Tone::Fair => 1,
+        Tone::Good => 2,
+        Tone::Neutral => 3,
+    };
+    factors
+        .iter()
+        .filter(|f| f.tone != Tone::Neutral)
+        .min_by(|a, b| {
+            rank(a.tone).cmp(&rank(b.tone)).then_with(|| {
+                a.percent
+                    .unwrap_or(f64::MAX)
+                    .total_cmp(&b.percent.unwrap_or(f64::MAX))
+            })
+        })
+}
 pub fn biggest_drag<'a>(factors: &'a [(&'a str, f64)]) -> Option<&'a str> {
     factors
         .iter()

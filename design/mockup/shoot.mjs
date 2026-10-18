@@ -17,7 +17,7 @@ const screens = {
   plan: ['phone', 'fold', 'desktop'], 'plan-setup': ['phone', 'fold', 'desktop'], checkin: ['phone'],
   'intro-1': ['phone'], 'intro-2': ['phone'], 'intro-3': ['phone'], 'intro-4': ['phone'],
   'strength-workout': ['phone', 'fold', 'desktop'], fix: ['phone', 'fold', 'desktop'], 'strength-history': ['phone', 'fold', 'desktop'],
-  builder: ['phone', 'fold', 'desktop'], catalog: ['phone'], help: ['phone', 'desktop'], 'help-sheet': ['phone'], widget: ['phone'],
+  builder: ['phone', 'fold', 'desktop'], catalog: ['phone'], help: ['phone', 'desktop'], 'help-sheet': ['phone'], widget: ['phone'], 'status-surfaces': ['phone'],
   'tod-rules': ['phone'], 'tod-wake': ['phone'], 'tod-day': ['phone', 'desktop'], 'tod-evening': ['phone', 'fold'], 'tod-winddown': ['phone'],
   'tod-late': ['phone'], 'tod-missing': ['phone'], 'tod-overview': ['phone'],
   reconcile: ['phone'], 'reconcile-closed': ['phone'], 'why-readiness': ['phone', 'desktop'], 'why-battery': ['phone'], 'why-training': ['phone'],

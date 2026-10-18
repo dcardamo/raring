@@ -15,6 +15,7 @@ object TokenVault {
     private const val ALIAS = "app.raring.tokens.v1"
     private val aad = ALIAS.toByteArray(Charsets.UTF_8)
     private fun file(context: Context) = File(context.noBackupFilesDir, "tokens.enc")
+    fun exists(context: Context): Boolean = file(context).isFile
     private fun key(): SecretKey {
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         (store.getKey(ALIAS, null) as? SecretKey)?.let { return it }
@@ -44,7 +45,13 @@ object TokenVault {
         cipher.updateAAD(aad)
         return String(cipher.doFinal(bytes.copyOfRange(13, bytes.size)), Charsets.UTF_8)
     }
-    @Synchronized fun loadOrClear(context: Context): String? = try { load(context) }
-    catch (_: Exception) { clear(context); null }
-    @Synchronized fun clear(context: Context) { file(context).delete() }
+    @Synchronized fun clear(context: Context) {
+        val stored = file(context)
+        if (stored.exists() && !stored.delete()) {
+            // A retained ciphertext must not become a usable session on a later
+            // migration. The platform session tombstone also blocks promotion.
+            KeyStore.getInstance("AndroidKeyStore").apply { load(null); deleteEntry(ALIAS) }
+            error("Could not remove stored credentials")
+        }
+    }
 }

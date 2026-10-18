@@ -42,7 +42,50 @@
  import {colors,toneColor,batteryColor,stressColors,stressNames} from './lib/charts';import {duration,elapsed,pace,clock,dateLabel,monthLabel,signed,num} from './lib/format';
  type StrengthPage={strengthPage:StrengthView|null};
  type PageData=TodayView|SleepView|TrainingView|WorkoutView|HealthView|CheckinView|PlanView|StrengthPage;
- let sheet=$state(false),journalOpen=$state(false),journalDayOpen=$state<string|null>(null);
+ let sheet=$state(false),statusOffer=$state(false),savingStatus=$state(false);
+ let checkingStatusOffer=false,settingsRevision=0;
+ let settingsBusy=$state<Partial<Record<keyof api.Settings,boolean>>>({});
+ function canApplySettingsRead(revision:number){return revision===settingsRevision && !Object.values(settingsBusy).some(Boolean) && !savingStatus}
+ async function patchSettings(patch:api.SettingsPatch):Promise<boolean>{
+  const keys=Object.keys(patch) as (keyof api.Settings)[];
+  if(keys.some(key=>settingsBusy[key]))return false;
+  const previous=Object.fromEntries(keys.map(key=>[key,settings[key]])) as api.SettingsPatch;
+  settingsBusy={...settingsBusy,...Object.fromEntries(keys.map(key=>[key,true]))};
+  settingsRevision++;
+  settings={...settings,...patch};
+  try{await api.patch_settings(patch);return true}
+  catch(e){settings={...settings,...previous};error=String(e);return false}
+  finally{settingsBusy={...settingsBusy,...Object.fromEntries(keys.map(key=>[key,false]))};settingsRevision++}
+ }
+ async function offerStatus(){
+  if(!api.supportsStatusSurfaces || route!=='today' || !status?.lastSync || checkingStatusOffer)return;
+  checkingStatusOffer=true;
+  const revision=settingsRevision;
+  try{
+   const saved=await api.get_settings();
+   if(!canApplySettingsRead(revision) || saved.statusOfferSeen || saved.notifyStatus || route!=='today')return;
+   if(await patchSettings({statusOfferSeen:true}))statusOffer=true;
+  }catch(e){error=String(e)}finally{checkingStatusOffer=false}
+ }
+ async function toggleStatus(enabled:boolean){
+  if(savingStatus || settingsBusy.notifyStatus || settingsBusy.statusOfferSeen)return;
+  savingStatus=true;
+  settingsRevision++;
+  try{
+   if(enabled && !await api.request_notification_permission()){
+    error='Notifications are blocked. Allow notifications for Raring in Android Settings, then try again.';
+    return;
+   }
+   if(await patchSettings({notifyStatus:enabled,statusOfferSeen:true})){statusOffer=false;error=''}
+  }catch(e){error=String(e)}finally{savingStatus=false;settingsRevision++}
+ }
+ let journalOpen=$state(false),journalDayOpen=$state<string|null>(null);
+ async function toggleJournal(enabled:boolean){
+  if(settingsBusy.journalEnabled)return;
+  if(await patchSettings({journalEnabled:enabled})){
+   journalOpen=false;journalDayOpen=null;clearViews();await refresh(true);
+  }
+ }
  function napWhen(local:string|null,label:string){
   if(!local || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(local) || clock(local)==='—')return `${label} date/time unavailable`;
   const day=dateLabel(local.slice(0,10));
@@ -144,8 +187,9 @@
     if(request!==requestId)return;
    }
    if(current==='settings'){
+    const revision=settingsRevision;
     const nextSettings=await api.get_settings();
-    if(request===requestId)settings=nextSettings;
+    if(request===requestId && canApplySettingsRead(revision))settings=nextSettings;
    }else if(current!=='onboarding' && current!=='help' && !current.startsWith('help/')){
     let next=await readView(current);
     if(request!==requestId)return;
@@ -172,6 +216,7 @@
     if(data){hasRendered=true;prefetchTabs()}
    }
    if(hasRendered && !prefetched && current!=='onboarding')prefetchTabs();
+   if(current==='today')void offerStatus();
    if(request===requestId)error='';
   }catch(e){
    if(request===requestId){error=String(e)}
@@ -235,17 +280,14 @@
  // Saves run in order; each reloads every cached view, since Today shows the plan too.
  let planSaves=Promise.resolve();
  function savePlan(update:PlanUpdate){planSaves=planSaves.then(async()=>{try{await api.set_plan(update);clearViews();await refresh(true)}catch(e){error=String(e)}})}
- async function saveSettings():Promise<boolean>{try{await api.set_settings($state.snapshot(settings));return true}catch(e){error=String(e);return false}}
  // Today's layout depends on this switch: once it is stored, drop every view read before it and read
  // the visible Today again, wherever the user has gone meanwhile. A failed save puts the switch back.
  let savingTodayLayout=$state(false);
  async function saveTodayLayout(on:boolean){
   if(savingTodayLayout)return;
   savingTodayLayout=true;
-  const previous=settings.adaptiveToday;
-  settings={...settings,adaptiveToday:on};
   try{
-   if(!await saveSettings()){settings={...settings,adaptiveToday:previous};return}
+   if(!await patchSettings({adaptiveToday:on}))return;
    clearViews();
    if(route==='today')void refresh(true);
   }finally{savingTodayLayout=false}
@@ -285,7 +327,7 @@
   {#if error || status?.lastError}<p class="small" role="alert">{error || status?.lastError}</p>{/if}
  </section>
 {:else if route==='settings'}
- <Header title="Settings" eyebrow="RARING" back={back} backLabel={parentLabel}/><div class="dashboard" {@attach masonry}><Card title="Notifications">{#each (Object.keys(settings) as (keyof api.Settings)[]).filter(key=>typeof settings[key]==='boolean' && key!=='adaptiveToday' && key!=='journalEnabled') as key}<label class="setting"><span>{({notifyMorningReadiness:'Morning readiness',notifyWeeklyCheckin:'Weekly check-in',notifyMetricChanges:'VO₂ max or Fitness Age changed',notifyVitals:'Vitals off',notifyTrainingStatus:'Training status changed',notifyBedtime:'Bedtime'} as Record<string,string>)[key]}</span><input type="checkbox" checked={settings[key]===true} onchange={(e)=>{settings={...settings,[key]:e.currentTarget.checked};void saveSettings()}}/></label>{#if key==='notifyBedtime' && settings.notifyBedtime}<label class="setting lead"><span>Wind-down reminder</span><select value={settings.bedtimeLeadMin} onchange={(e)=>{settings={...settings,bedtimeLeadMin:Number(e.currentTarget.value)};void saveSettings()}}>{#each [15,30,45,60,90] as lead}<option value={lead}>{lead} min before</option>{/each}</select></label>{/if}{/each}</Card><Card title="Today"><label class="setting"><span>Follow my day<small class="setting-note">Lead with this morning, the day so far or tonight's sleep. Turn off for shift work or an irregular schedule.</small></span><input type="checkbox" checked={settings.adaptiveToday} disabled={savingTodayLayout} onchange={(e)=>void saveTodayLayout(e.currentTarget.checked)}/></label></Card><Card title="Journal privacy"><label class="setting"><span>Allow Garmin journal reads<small class="setting-note">Off by default. Last seven days only; never in notifications. Turning this off stops new reads. Already downloaded logs remain on this device and in future exports until you erase local data.</small></span><input type="checkbox" checked={settings.journalEnabled} onchange={async e=>{const previous=settings;settings={...settings,journalEnabled:e.currentTarget.checked};if(!await saveSettings())settings=previous;else {journalOpen=false;clearViews();void refresh(true)}}}/></label></Card><Card title="Permission"><button class="secondary" onclick={async()=>{try{await api.request_notification_permission()}catch(e){error=String(e)}}}>Enable notifications</button></Card><Card title="Garmin history"><div class="big n">{status?.historyFrom?`Since ${monthLabel(status.historyFrom)}`:'—'}</div><p class="small">{status?.historyComplete?'All of your Garmin history is on this phone.':'Downloading older history in the background.'}</p></Card><Card title="Export"><p class="small">Download a ZIP of your saved Garmin responses, daily CSVs and Raring settings. Sign-in tokens are never included. Previously downloaded journal logs are included even if journal reads are now off; erase local data to remove them. The file leaves your phone only when you share it.</p><button class="secondary" disabled={exporting} onclick={exportData}>{exporting?'Preparing your export…':'Export your data'}</button>{#if exportMessage}<p class="small" role="status">{exportMessage}</p>{/if}</Card><Card title="Account"><button class="signout" onclick={async()=>{if(confirm('Sign out and erase all local Garmin history?')){try{await api.sign_out();clearViews();data=null;localStorage.removeItem('notifications-step-done');onboardStep=0;navigate('onboarding')}catch(e){error=String(e)}}}}>Sign out</button></Card><Card title="Help" onclick={()=>navigate('help')}><p class="small">How Raring reads strength sets, the body map and which watches work.</p></Card><Card title="How Raring works"><AboutRaring/></Card></div>
+ <Header title="Settings" eyebrow="RARING" back={back} backLabel={parentLabel}/><div class="dashboard" {@attach masonry}><Card title="Notifications">{#each (['notifyMorningReadiness','notifyWeeklyCheckin','notifyMetricChanges','notifyVitals','notifyTrainingStatus','notifyBedtime'] as const) as key}<label class="setting"><span>{({notifyMorningReadiness:'Morning readiness',notifyWeeklyCheckin:'Weekly check-in',notifyMetricChanges:'VO₂ max or Fitness Age changed',notifyVitals:'Vitals off',notifyTrainingStatus:'Training status changed',notifyBedtime:'Bedtime'} as Record<string,string>)[key]}</span><input type="checkbox" checked={settings[key]} disabled={settingsBusy[key]} onchange={(e)=>void patchSettings({[key]:e.currentTarget.checked})}/></label>{#if key==='notifyBedtime' && settings.notifyBedtime}<label class="setting lead"><span>Wind-down reminder</span><select value={settings.bedtimeLeadMin} disabled={settingsBusy.bedtimeLeadMin} onchange={(e)=>void patchSettings({bedtimeLeadMin:Number(e.currentTarget.value)})}>{#each [15,30,45,60,90] as lead}<option value={lead}>{lead} min before</option>{/each}</select></label>{/if}{/each}{#if api.supportsStatusSurfaces}<label class="setting"><span>Persistent status<small class="setting-note">Silent readings and today's focus, with the watch's upload time. Uses the existing sync; no extra Garmin requests.</small></span><input type="checkbox" checked={settings.notifyStatus} disabled={savingStatus || settingsBusy.notifyStatus || settingsBusy.statusOfferSeen} onchange={(e)=>{const input=e.currentTarget,on=input.checked;input.checked=settings.notifyStatus;void toggleStatus(on)}}/></label><p class="small">Add Raring widgets from your home screen's widget picker. Updates follow sync; Android may delay them.</p>{/if}</Card><Card title="Today"><label class="setting"><span>Follow my day<small class="setting-note">Lead with this morning, the day so far or tonight's sleep. Turn off for shift work or an irregular schedule.</small></span><input type="checkbox" checked={settings.adaptiveToday} disabled={savingTodayLayout} onchange={(e)=>void saveTodayLayout(e.currentTarget.checked)}/></label></Card><Card title="Journal privacy"><label class="setting"><span>Allow Garmin journal reads<small class="setting-note">Off by default. Last seven days only; never in notifications. Turning this off stops new reads. Already downloaded logs remain on this device and in future exports until you erase local data.</small></span><input type="checkbox" checked={settings.journalEnabled} disabled={settingsBusy.journalEnabled} onchange={e=>void toggleJournal(e.currentTarget.checked)}/></label></Card><Card title="Permission"><button class="secondary" onclick={async()=>{try{await api.request_notification_permission()}catch(e){error=String(e)}}}>Enable notifications</button></Card><Card title="Garmin history"><div class="big n">{status?.historyFrom?`Since ${monthLabel(status.historyFrom)}`:'—'}</div><p class="small">{status?.historyComplete?'All of your Garmin history is on this phone.':'Downloading older history in the background.'}</p></Card><Card title="Export"><p class="small">Download a ZIP of your saved Garmin responses, daily CSVs and Raring settings. Sign-in tokens are never included. Previously downloaded journal logs are included even if journal reads are now off; erase local data to remove them. The file leaves your phone only when you share it.</p><button class="secondary" disabled={exporting} onclick={exportData}>{exporting?'Preparing your export…':'Export your data'}</button>{#if exportMessage}<p class="small" role="status">{exportMessage}</p>{/if}</Card><Card title="Account"><button class="signout" onclick={async()=>{if(confirm('Sign out and erase all local Garmin history?')){try{await api.sign_out();clearViews();data=null;localStorage.removeItem('notifications-step-done');onboardStep=0;navigate('onboarding')}catch(e){error=String(e)}}}}>Sign out</button></Card><Card title="Help" onclick={()=>navigate('help')}><p class="small">How Raring reads strength sets, the body map and which watches work.</p></Card><Card title="How Raring works"><AboutRaring/></Card></div>
 {:else if route==='help'}
  <Header title="Help" eyebrow="RARING" back={back} backLabel={parentLabel}/><div class="help-list">{#each helpSections as section}<Card title={section.title}>{#each section.pages as page}<button class="help-row" onclick={()=>navigate('help/'+page)}><span class="help-icon"><Icon name={helpContent[page].icon} size={18}/></span><b>{helpContent[page].title}</b><Icon name="chevron" size={16}/></button>{/each}</Card>{/each}<p class="small help-foot">Still stuck? Ask at {GITHUB_QUESTIONS}</p></div>
 {:else if route.startsWith('help/') && route.slice(5) in helpContent}
@@ -298,6 +340,7 @@
  <div class="sync-indicator"><span class="small" aria-live="polite">{#if todayData.watchLastUpload}{watchLabel(todayData.watchLastUpload,now)}{:else}Watch upload time unavailable{/if}{#if syncBusy} · Refreshing…{:else if syncError || status?.lastError} · Raring sync delayed · {syncError || status?.lastError}{/if}</span><button class="sync-button" disabled={syncBusy} onclick={syncNow}>Refresh</button></div>
  <section class="dials"><button class="dial-button" onclick={()=>navigate('sleep')}>{#if todayData.sleep}<Gauge size={100} value={todayData.sleep.value} max={todayData.sleep.max} color={toneColor(todayData.sleep.tone)} caption="Sleep"/>{:else}<Gauge size={100} value={null} caption="Sleep"/>{/if}</button><button class="dial-button large" onclick={()=>navigate('readiness')}>{#if todayData.readiness}<Gauge size={156} stroke={13} value={todayData.readiness.value} max={todayData.readiness.max} color={toneColor(todayData.readiness.tone)} caption="Readiness" label={todayData.readiness.label}/>{:else}<Gauge size={156} stroke={13} value={null} caption="Readiness"/>{/if}</button><button class="dial-button" onclick={()=>navigate('training')}>{#if todayData.load}<Gauge size={100} value={todayData.load.value} max={todayData.load.max} color={toneColor(todayData.load.tone)} caption="Load" band={todayData.load.band} marker/>{:else}<Gauge size={100} value={null} caption="Load"/>{/if}</button></section>
  <div class="headline"><h2>{todayData.headline||'Your day is taking shape'}</h2><div class="chips">{#each todayData.chips as chip}<Chip {chip} label={chip.icon==='moon'?'View sleep':chip.icon==='hrv'?'View HRV':'View training'} onclick={()=>navigate(chip.icon==='moon'?'sleep':chip.icon==='hrv'?'metric/hrv':'training')}/>{/each}</div>{#if todayData.reconcile}<Reconcile reconcile={todayData.reconcile}/>{/if}{#if todayData.focus.note}<p class="phase-note"><Icon name="clock" size={14}/>{todayData.focus.note}</p>{/if}</div></div><div class="dashboard" {@attach masonry}>
+ {#if statusOffer}<Card title="Your day, at a glance"><p>Keep Body Battery, stress and today's focus in a silent notification. Always labeled with the watch's upload time.</p><p class="small">Off unless you choose it. No extra Garmin requests. You can change this in Settings.</p><button class="primary" disabled={savingStatus} onclick={()=>void toggleStatus(true)}>Enable persistent status</button><button class="secondary" disabled={savingStatus} onclick={()=>statusOffer=false}>Not now</button></Card>{/if}
  {#if watchNeedsSync(todayData,now)}<Card title="Watch upload" extra="watch-notice"><p>Open Garmin Connect to sync your watch</p>{#if todayData.watchSleepUploadStale}<p class="small">Last night's sleep hasn't uploaded yet.</p>{/if}{#if connectUnavailable}<p class="small" role="status">Open Garmin Connect on your phone, then sync your watch there.</p>{:else}<button class="watch-open" onclick={openConnect}>Open Garmin Connect <Icon name="arrow-right" size={16}/></button>{/if}</Card>{/if}
  {#if Object.keys(todayData.missingMetricReasons).length}<Card title="About missing readings" extra="watch-notice"><div class="missing-reasons">{#each Object.values(todayData.missingMetricReasons) as reason}<p>{reason}</p>{/each}</div></Card>{/if}
  {#each todayData.focus.cards as card,i (card)}
@@ -363,7 +406,7 @@
  <Card title="Heart rate · all day" onclick={()=>navigate('metric/heartRate')}><div class="big n">{num(healthData.heartRateDay.resting)}<small> bpm</small></div><div class="small">Garmin resting HR</div>{#if healthData.heartRateDay.timeline.length}<StressTimeline heartRate={healthData.heartRateDay} compact/>{/if}<p class="small">Sleep HR in overnight vitals is a separate value.</p></Card>
  {#if healthData.stress.average!=null || healthData.stress.trend.some(v=>v!=null)}{@const stress=healthData.stress}<Card title="Stress" onclick={()=>navigate('metric/stress')}>{#snippet aside()}{#if stress.qualifier}<span class="pill" style:color={toneColor(stress.tone)}>{stress.qualifier}</span>{/if}{/snippet}<div class="age-small"><div><div class="big n" style:color={stress.level?stressColors[stress.level]:undefined}>{num(stress.average)}</div><div class="small">Today's average</div></div><Sparkline values={stress.trend} w={160} h={64} color={colors.ink} fill={false}/></div><p class="small">Daily average · last 30 days</p></Card>{/if}
  {#if healthData.bodyWeight}{@const weight=healthData.bodyWeight}<Card title="Weight"><div class="age-small"><div><div class="big n">{num(weight.value,1)}<small>&nbsp;{weight.unit}</small></div><div class="small">Last measured {dateLabel(weight.measuredOn)}</div></div><Sparkline values={weight.trend} w={160} h={64} color={colors.ink} fill={false} points/></div><p class="small">{#if weight.bodyFat!=null}Body fat {num(weight.bodyFat,1)}% ·&nbsp;{/if}{#if weight.bmi!=null}BMI {num(weight.bmi,1)} ·&nbsp;{/if}Last 12 weeks · recorded weigh-ins only</p></Card>{/if}
- <Card title="Garmin journal" extra="journal"><p class="small">Private lifestyle logs · last 7 days · read-only. Never in notifications.</p>{#if !healthData.journalEnabled}<button class="secondary" onclick={async()=>{try{const saved=await api.get_settings();await api.set_settings({...saved,journalEnabled:true});clearViews();await refresh(true)}catch(e){error=String(e)}}}>Allow local journal reads</button><p class="small">Off by default. Garmin logs are fetched only after you allow them; turn off in Settings.</p>{:else if !journalOpen}<button class="secondary" onclick={()=>journalOpen=true}>Open journal</button>{:else}<button class="secondary" onclick={()=>journalOpen=false}>Close journal</button>{#each healthData.journal as day}<div class="journal-day"><b>{dateLabel(day.date)}</b><small>Garmin · {day.state==='empty'?'No entries recorded':day.state==='available'?'Recorded':day.state==='stale'?'May be out of date':day.state==='unavailable'?'Not available':'Not checked'}</small>{#each day.entries.slice(0,journalDayOpen===day.date?undefined:3) as entry}<div class="journal-entry"><span>{entry.name}</span><span>{entry.value??'Value unknown'}</span></div>{/each}{#if day.entries.length>3}<button class="journal-more" onclick={()=>journalDayOpen=journalDayOpen===day.date?null:day.date}>{journalDayOpen===day.date?'Show less':`Show ${day.entries.length-3} more`}</button>{/if}</div>{/each}{/if}</Card>
+ <Card title="Garmin journal" extra="journal"><p class="small">Private lifestyle logs · last 7 days · read-only. Never in notifications.</p>{#if !healthData.journalEnabled}<button class="secondary" disabled={settingsBusy.journalEnabled} onclick={()=>void toggleJournal(true)}>Allow local journal reads</button><p class="small">Off by default. Garmin logs are fetched only after you allow them; turn off in Settings.</p>{:else if !journalOpen}<button class="secondary" onclick={()=>journalOpen=true}>Open journal</button>{:else}<button class="secondary" onclick={()=>journalOpen=false}>Close journal</button>{#each healthData.journal as day}<div class="journal-day"><b>{dateLabel(day.date)}</b><small>Garmin · {day.state==='empty'?'No entries recorded':day.state==='available'?'Recorded':day.state==='stale'?'May be out of date':day.state==='unavailable'?'Not available':'Not checked'}</small>{#each day.entries.slice(0,journalDayOpen===day.date?undefined:3) as entry}<div class="journal-entry"><span>{entry.name}</span><span>{entry.value??'Value unknown'}</span></div>{/each}{#if day.entries.length>3}<button class="journal-more" onclick={()=>journalDayOpen=journalDayOpen===day.date?null:day.date}>{journalDayOpen===day.date?'Show less':`Show ${day.entries.length-3} more`}</button>{/if}</div>{/each}{/if}</Card>
  <Card title="Fitness Age">{#snippet aside()}{#if healthData.fitnessAge.change12m!=null && Math.abs(healthData.fitnessAge.change12m)>=1}<span class="pill" style:color={healthData.fitnessAge.change12m<0?colors.good:colors.poor}><Icon name={healthData.fitnessAge.change12m<0?'trend-down':'trend-up'} size={13}/>{Math.round(Math.abs(healthData.fitnessAge.change12m))} this year</span>{/if}{/snippet}<div class="age-hero"><div><div class="age-number n" style:color={healthData.fitnessAge.fitnessAge!=null?fitnessAgeColor(healthData.fitnessAge.fitnessAge,healthData.fitnessAge.chronologicalAge):undefined}>{num(healthData.fitnessAge.fitnessAge)}</div>{#if healthData.fitnessAge.fitnessAge!=null && healthData.fitnessAge.chronologicalAge!=null}<div class="age-caption"><b>{num(healthData.fitnessAge.chronologicalAge-healthData.fitnessAge.fitnessAge)} years younger</b> than your age</div>{/if}</div><Sparkline values={healthData.fitnessAge.trend} w={120} h={70} color={colors.ink}/></div>{#if healthData.fitnessAge.fitnessAge!=null && healthData.fitnessAge.chronologicalAge!=null}<div class="agebar" style:--age-status={fitnessAgeColor(healthData.fitnessAge.fitnessAge,healthData.fitnessAge.chronologicalAge)}><div class="age-mark fit" style:left={Math.max(0,Math.min(100,(healthData.fitnessAge.fitnessAge-20)/50*100))+'%'}><span>YOU {num(healthData.fitnessAge.fitnessAge)}</span></div><div class="age-mark real" style:left={Math.max(0,Math.min(100,(healthData.fitnessAge.chronologicalAge-20)/50*100))+'%'}><span>AGE {num(healthData.fitnessAge.chronologicalAge)}</span></div></div>{/if}</Card>
  <Card title="Fitness Age history"><HistoryChart values={[]} endDate={healthData.date} label="Fitness Age" unit="years" metric="fitnessAge" initialRange="year"/></Card>
  {#if healthData.intensity}<IntensityCard intensity={healthData.intensity} open={()=>navigate('plan')}/>{/if}

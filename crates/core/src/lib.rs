@@ -1,4 +1,5 @@
 //! Shared, offline-first Garmin core. Callers own and persist credentials.
+pub mod account;
 pub mod demo;
 mod export;
 pub mod garmin;
@@ -10,6 +11,8 @@ pub mod plan;
 pub mod planned;
 pub mod rules;
 pub mod screens;
+pub mod settings;
+pub mod status;
 pub mod store;
 pub mod strength;
 pub mod sync;
@@ -19,7 +22,10 @@ pub mod view;
 use chrono::{DateTime, Local, NaiveDateTime, Utc};
 pub use garmin::Tokens;
 pub use notifications::Notification;
-use std::{path::Path, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    sync::{Arc, Mutex},
+};
 pub use sync::SyncReport;
 
 #[derive(Debug, thiserror::Error)]
@@ -28,22 +34,32 @@ pub enum Error {
     Store(#[from] rusqlite::Error),
     #[error(transparent)]
     Garmin(#[from] garmin::Error),
-    #[error("unknown notification setting")]
+    #[error("invalid setting name or value")]
     InvalidSetting,
+    #[error("status snapshot: {0}")]
+    Snapshot(#[from] std::io::Error),
 }
 pub type Result<T> = std::result::Result<T, Error>;
 pub struct Raring {
     store: Arc<store::Store>,
+    snapshot_path: Option<PathBuf>,
+    snapshot_state: Mutex<bool>, // true after sign-out; serializes snapshot writes with erasure
 }
 pub struct SyncOutcome {
     pub tokens: Tokens,
     pub report: SyncReport,
     pub notifications: Vec<Notification>,
+    /// Local publication failed; retry it offline, never repeat Garmin requests for it.
+    pub snapshot_error: Option<String>,
 }
 impl Raring {
     pub fn open(db_path: impl AsRef<Path>) -> Result<Self> {
+        let path = db_path.as_ref();
         Ok(Self {
-            store: Arc::new(store::Store::open(db_path)?),
+            store: Arc::new(store::Store::open(path)?),
+            snapshot_path: (path != Path::new(":memory:"))
+                .then(|| path.with_extension("status.json")),
+            snapshot_state: Mutex::new(false),
         })
     }
     pub async fn refresh_tokens(tokens: &Tokens) -> Result<Tokens> {
@@ -60,6 +76,14 @@ impl Raring {
             .map_err(|_| garmin::Error::Network)?;
         Ok(garmin::exchange_ticket(&http, ticket, garmin::sso::PORTAL_SERVICE_URL).await?)
     }
+    /// Synthetic ticket-exchange endpoint for debug integration tests only.
+    #[cfg(debug_assertions)]
+    pub async fn sign_in_with_ticket_at(ticket: &str, token_url: &str) -> Result<Tokens> {
+        let http = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(30))
+            .build().map_err(|_| garmin::Error::Network)?;
+        Ok(garmin::exchange_ticket_at(&http, token_url, ticket, garmin::sso::PORTAL_SERVICE_URL).await?)
+    }
     pub async fn sync(
         &self,
         tokens: Tokens,
@@ -71,15 +95,23 @@ impl Raring {
         // SQLite calls are short and individually mutex-protected. Network awaits never hold the DB lock.
         let mut report = sync::sync(&store, &client, now, budget).await;
         // A sync may take minutes; evidence was available only after it ended.
-        if plan::capture_sleep_plan(&store, Local::now()).is_err() {
-            report.error = Some("Could not save tonight's plan".into());
+        {
+            let _boundary = status::WRITE_LOCK.lock().unwrap();
+            if plan::capture_sleep_plan(&store, Local::now()).is_err() {
+                report.error = Some("Could not save tonight's plan".into());
+            }
         }
         let tokens = client.tokens().await;
-        let notifications = notifications::notifications(&store, now);
+        let snapshot_error = self.refresh_status_snapshot(Local::now()).err().map(|e| e.to_string());
+        let notifications = {
+            let _boundary = status::WRITE_LOCK.lock().unwrap();
+            notifications::notifications(&store, now)
+        };
         Ok(SyncOutcome {
             tokens,
             report,
             notifications,
+            snapshot_error,
         })
     }
     /// Capture only a live prospective plan; historical view reads stay pure.
@@ -175,11 +207,115 @@ impl Raring {
     pub fn export(&self, path: &Path, app_version: &str) -> std::result::Result<(), export::ExportError> {
         export::write(&self.store, path, app_version)
     }
+    /// Export only if the active account and cached profile belong to `expected`
+    /// in the same SQLite snapshot used for all archive contents.
+    pub fn export_for_account(&self, path: &Path, app_version: &str, expected: &str) -> std::result::Result<(), export::ExportError> {
+        export::write_for_account(&self.store, path, app_version, expected)
+    }
     pub fn settings(&self) -> view::Settings {
         self.store.settings()
     }
+    pub fn bound_account_identity(&self) -> Option<String> { account::identity(&self.store) }
+    /// Local view construction may capture a prospective plan. Keep it in one account.
+    pub fn with_verified_session<T>(&self, expected: &str, read: impl FnOnce() -> T) -> Option<T> {
+        let _boundary = status::WRITE_LOCK.lock().unwrap();
+        if self.session_identity().as_deref() != Some(expected) { return None; }
+        Some(read())
+    }
+    /// Full replacement for explicit fixtures/CLI callers, never UI transport.
     pub fn set_settings(&self, settings: view::Settings) -> Result<()> {
+        self.save_settings(None, |_| Ok(settings))
+    }
+    pub fn set_settings_for_account(&self, settings: view::Settings, expected: Option<String>) -> Result<()> {
+        self.save_settings(Some(expected), |_| Ok(settings))
+    }
+    /// Merge only the requested fields after taking the account/write barrier.
+    pub fn patch_settings_for_account(&self, patch: settings::SettingsPatch, expected: Option<String>) -> Result<()> {
+        self.save_settings(Some(expected), |current| patch.apply(current))
+    }
+    fn save_settings(&self, expected: Option<Option<String>>, update: impl FnOnce(&view::Settings) -> Result<view::Settings>) -> Result<()> {
+        let signed_out = self.snapshot_state.lock().unwrap();
+        let _write = status::WRITE_LOCK.lock().unwrap();
+        if expected.is_some_and(|id| id != self.bound_account_identity()) {
+            return Err(Error::InvalidSetting);
+        }
+        let previous = self.store.settings();
+        let mut settings = update(&previous)?;
         self.store.set_settings(&settings)?;
+        if let Err(error) = self.write_status_snapshot(Local::now(), *signed_out) {
+            // Only a new status opt-in depends on publishing its cache. Never
+            // restore an older settings object: all other edits, particularly
+            // revocations (including journalEnabled=false), stay
+            // authoritative even if the native presentation cache cannot update.
+            if settings.notify_status && !previous.notify_status {
+                settings.notify_status = false;
+                self.store.set_settings(&settings)?;
+                return Err(error);
+            }
+        }
+        Ok(())
+    }
+    /// Suspend presentation without discarding the account's history or local plans.
+    pub fn suspend_session(&self) -> Result<()> {
+        let _write = status::WRITE_LOCK.lock().unwrap();
+        self.store.suspend_account()?;
+        if let Some(path) = &self.snapshot_path { let _ = status::erase(path); }
+        Ok(())
+    }
+    #[cfg(debug_assertions)]
+    pub fn is_demo_session(&self) -> bool {
+        let profile = self.store.get("profile", "me");
+        self.session_identity().as_deref() == Some("900000000001")
+            && profile.is_some_and(|p| p["displayName"] == "sample-demo")
+    }
+    pub fn legacy_session_needs_verification(&self) -> bool {
+        self.store.setting("account_session").is_none() && self.store.get("profile", "me").is_some()
+    }
+    pub fn session_identity(&self) -> Option<String> {
+        account::active(&self.store).then(|| account::identity(&self.store)).flatten()
+    }
+    /// Caller holds its credential gate across verification, vault save and activation.
+    pub async fn verify_account(&self, client: &garmin::Client, now: chrono::DateTime<chrono::Utc>) -> Result<()> {
+        account::verify(&self.store, client, now).await
+    }
+    pub fn activate_session(&self) -> Result<()> {
+        let _write = status::WRITE_LOCK.lock().unwrap();
+        if !self.store.activate_account()? { return Err(garmin::Error::Decode.into()); }
+        // Cache failure must not undo verified identity; the reader rejects old-account files.
+        if let Some(path) = &self.snapshot_path {
+            let _ = status::write(path, &status::snapshot(&self.store, Local::now()));
+        }
+        Ok(())
+    }
+    /// Read the cache with authoritative privacy/opt-out policy. Never trust file enablement.
+    pub fn surface_snapshot(&self) -> Result<Option<serde_json::Value>> {
+        let _write = status::WRITE_LOCK.lock().unwrap();
+        let Some(identity) = self.session_identity() else { return Ok(None) };
+        let Some(path) = &self.snapshot_path else { return Ok(None) };
+        let bytes = match std::fs::read(path) {
+            Ok(bytes) => bytes,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(e) => return Err(e.into()),
+        };
+        let Ok(mut snapshot) = serde_json::from_slice::<serde_json::Value>(&bytes) else { return Ok(None) };
+        if snapshot["version"] != 1 || snapshot["accountId"].as_str() != Some(&identity) {
+            return Ok(None);
+        }
+        snapshot["enabled"] = self.settings().notify_status.into();
+        Ok(Some(snapshot))
+    }
+    /// Recompute the native snapshot from local data without network access.
+    pub fn refresh_status_snapshot(&self, now: DateTime<Local>) -> Result<()> {
+        let signed_out = self.snapshot_state.lock().unwrap();
+        let _write = status::WRITE_LOCK.lock().unwrap();
+        self.write_status_snapshot(now, *signed_out)
+    }
+    fn write_status_snapshot(&self, now: DateTime<Local>, signed_out: bool) -> Result<()> {
+        if !signed_out {
+            if let Some(path) = &self.snapshot_path {
+                status::write(path, &status::snapshot(&self.store, now))?;
+            }
+        }
         Ok(())
     }
     pub fn setting(&self, key: &str) -> bool {
@@ -191,6 +327,7 @@ impl Raring {
             "vitals" => s.notify_vitals,
             "training-status" => s.notify_training_status,
             "bedtime" => s.notify_bedtime,
+            "status" => s.notify_status,
             _ => false,
         }
     }
@@ -203,6 +340,7 @@ impl Raring {
             "vitals" => s.notify_vitals = value,
             "training-status" => s.notify_training_status = value,
             "bedtime" => s.notify_bedtime = value,
+            "status" => s.notify_status = value,
             _ => return Err(Error::InvalidSetting),
         }
         self.set_settings(s)
@@ -223,6 +361,12 @@ impl Raring {
         Ok(())
     }
     pub fn forget_account(&self) -> Result<()> {
+        let mut signed_out = self.snapshot_state.lock().unwrap();
+        *signed_out = true;
+        let _write = status::WRITE_LOCK.lock().unwrap();
+        if let Some(path) = &self.snapshot_path {
+            status::erase(path)?;
+        }
         self.store.forget_account()?;
         Ok(())
     }

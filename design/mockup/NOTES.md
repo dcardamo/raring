@@ -5,10 +5,59 @@ full-window: resize it to walk through phone, unfolded (660 px and up) and
 desktop (1000 px and up, side rail instead of tabs). Screens: `language`,
 `plan`, `plan-setup`, `checkin`, `intro-1` to `intro-4`, `strength-workout`,
 `fix`, `strength-history`, `builder`, `catalog`, `help`, `help-sheet`,
-`widget`, `reconcile`, `reconcile-closed`, `why-readiness`, `why-battery`,
+`widget`, `status-surfaces`, `reconcile`, `reconcile-closed`, `why-readiness`, `why-battery`,
 `why-training`. The compatibility page is `site/compatibility.html`. Screenshots
 are in `shots/`; regenerate them and `screens.png` with
 `node design/mockup/shoot.mjs`. All data is synthetic.
+
+## Status surfaces (items 9 and 10)
+
+`status-surfaces` shows the same synthetic snapshot across a silent, ongoing
+notification and small/medium home-screen widgets. The notification's collapsed
+row keeps Body Battery (BB), stress and **latest** heart rate together, followed
+by **As of**; expanded adds small neutral-ink bars and the phase focus with its
+reason. This is a quiet status readout, not a real-time monitor: the time is the
+watch upload, not the time the notification was drawn. No sound or foreground
+service is implied by this design. The separate `widget` screen puts the new
+small and medium widgets on a home screen for scale.
+
+The small widget gives readiness the only status-colored gauge and makes the
+focus the next line; the medium widget holds readiness, sleep, Body Battery and
+stress in four equal tiles. All widgets show **As of**, even when some values
+are unavailable. A blank gauge/number/bar means missing, never zero; the
+missing example names the wait without inventing a readiness verdict. Daytime
+focus can update after an activity sync. In the evening it becomes wind-down
+and Garmin's window rather than an effort instruction; the readiness number
+still belongs to today's snapshot. The notification and small widget open
+Today, Sleep opens Sleep, and the other medium tiles open Today in the mock.
+The native implementation opens each matching detail; the focus opens
+Readiness or Sleep, and neutral waiting opens Today. Latest HR now uses item
+14's shared all-day timeline after integration; without measured samples it is
+blank, never resting-HR substitution.
+
+Implementation screenshots (synthetic data) are
+`shots/android-notification-{collapsed,expanded}.png`, `shots/android-widget-small.png`,
+`android-widget-medium.png` and `android-widget-missing.png`. Settings and the
+once-only offer are `shots/status-settings-{390,700,1100}.png` and
+`status-offer-{390,700,1100}.png`; `npm run test:ui` writes fresh copies to
+`.data/screens/`. Native screenshots are from emulator-5584. The review's minimum-size renders
+are `shots/widget-min-{small,medium}-{1.0,1.3,1.5}.png`: actual RemoteViews
+inflated at the declared 140×300 dp / 300×180 dp bounds, with text-size assertions
+confirming each font scale. Focus and upload time wrap rather than disappear;
+tests check every nonempty line, child bounds and metric tap regions, plus
+missing-data cases. `shots/review-*-font150.png` also shows the launcher and
+notification shade on emulator-5584 with the system font scale set to 1.5,
+including the integrated latest-HR reading. These do not claim coverage of
+other launchers or physical phones. Android controls
+the notification shell; the inner readout keeps the mock's ink, quiet bars and
+blank missing values.
+
+The existing hourly network schedule stays unchanged. `scripts/measure-status.mjs`
+measures accelerated offline refreshes only (seed a synthetic demo, enable
+status, select an isolated emulator): one cold refresh took 401 ms; warm
+refreshes 62–174 ms including adb/file checks, with no WebView. The emulator
+reported 0 mAh for batches of one, four and twenty: not a meaningful estimate
+of physical phone battery or radio cost, and no justification for more polling.
 
 ## Design language
 

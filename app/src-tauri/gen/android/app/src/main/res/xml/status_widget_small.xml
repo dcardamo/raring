@@ -1,0 +1,3 @@
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android" android:minWidth="140dp" android:minHeight="300dp" android:minResizeWidth="140dp" android:minResizeHeight="300dp"
+ android:initialLayout="@layout/status_widget_small" android:previewLayout="@layout/status_widget_small"
+ android:updatePeriodMillis="1800000" android:resizeMode="horizontal|vertical" android:widgetCategory="home_screen"/>

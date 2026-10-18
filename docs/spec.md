@@ -411,6 +411,32 @@ the change against the week before, and next week's targets and rest days
 with Keep and Change. It ends with one win and one focus for the
 coming week, a line each. Past check-ins stay in a list.
 
+## Android status surfaces
+
+A small home-screen widget shows readiness and Today's focus; a medium one
+shows readiness, sleep score, Body Battery and the latest measured stress.
+Tapping a reading opens its detail; the small widget's focus opens readiness,
+sleep or Today as appropriate. Missing readings are blank, never zero.
+Both widgets and the optional ongoing notification always show "As of" with
+the selected watch's upload date and time, or "As of unavailable".
+
+The notification has a separate low-importance, silent channel, no sound or
+vibration, and private lock-screen content. Collapsed: battery, stress and
+heart-rate icons and values. Expanded: battery/stress bars, phase-aware focus
+and its reason. Latest heart rate uses the current calendar day's last measured
+sample from the shared all-day HR parser. It remains blank without samples;
+resting/overnight heart rate is not a substitute.
+It starts off, is offered once on Today after the first successful sync, and
+can be changed in Settings. Permission denial leaves it off. Explicit opt-out
+persists even if snapshot publication fails; native rendering reads authoritative
+SQLite enablement, never the old file's enabled bit. Cancellation does not wait
+for a network sync. Failed opt-in publication still rolls the opt-in back. Android may let
+the user dismiss an ongoing notification; the next update restores it.
+Widgets do not require enabling the notification. Their declared minimum and
+minimum resize sizes are 140×300 dp (small) and 300×180 dp (medium); focus and
+upload time can wrap. Android RemoteViews are tested at those actual bounds
+with 1.0, 1.3 and 1.5 font scales, including missing readings.
+
 ## Planned training (read-only)
 
 The core fetches active Garmin Coach plans, a dated 14-day-ahead workout
@@ -450,6 +476,7 @@ Sent by the phone itself.
 | Vitals off                    | Two or more vitals outside normal range      | On      |
 | Training status changed       | On sync                                      | Off     |
 | Bedtime                       | Wind-down time of tonight's plan (lead 30 min, configurable) | Off     |
+| Persistent status (Android)   | Existing sync; silent, no extra Garmin requests | Off     |
 
 ## Rules
 
@@ -543,6 +570,23 @@ Sent by the phone itself.
   schedule), no plan, or a plan that doesn't fit the wake time. The phase
   is re-evaluated from local data on open, resume, every view refresh, sync
   and at each phase boundary, offline included.
+- **Status snapshot**: readiness and sleep follow Today's displayed day;
+  Body Battery and the latest measurable stress sample come from the current
+  calendar day, never yesterday during the night handover. The daily stress
+  average is not a latest sample. An absent value remains null, including
+  latest heart rate when the shared all-day HR timeline has no measured sample. "As of" is only the selected
+  watch's upload time, never the snapshot write or API fetch time; include its
+  date so an old reading cannot look like today's. No separate stale-score
+  verdict or expiry threshold is added.
+- **Compact focus**: reuse `TodayFocus` and its phase rules. Wake, daytime
+  and fixed layout show the suggested Rest/Easy/Steady/Push effort and the
+  same lowest Garmin-rated factor as Today. Without readiness, wait
+  neutrally; the shared unsynced-night wait has no effort or reason.
+  Evening, wind-down and late night use Today's headline and the shared
+  sleep plan's reason, with no effort after wind-down. Native surfaces
+  describe the last snapshot, not a live watch reading. Offline widget
+  updates, clock changes and sync re-evaluate the phase; Android may defer
+  delivery, so transitions are not exact alarms.
 - **Timing review**: the week's earliest and latest bed and wake times, the
   wake-time spread (latest minus earliest) against the week before, and
   counts of Garmin's alignment ratings. The focus follows the majority rating
@@ -794,6 +838,77 @@ Sent by the phone itself.
   hourly, and every 15 minutes in the morning until readiness arrives. A job
   calls the Rust core directly over JNI, without starting the UI, then posts
   any notifications.
+- **Android account boundary**: the existing `SyncGate` owns credential
+  suspension, verification, vault save and activation. Like the desktop credential
+  gate, it numbers sign-in attempts and invalidates them on begin/sign-out.
+  The WebView callback carries the attempt captured at begin through ticket
+  exchange. Ticket HTTP runs outside `SyncGate`; a stale completion (including
+  an error) is discarded under the gate before touching the active session.
+  Android generation changes and profile verification/promotion hold that same
+  gate, so the generation cannot change during the profile request. Auth failure and a new
+  sign-in suspend presentation immediately, clear notifications/widgets and
+  stop reminders without erasing history. Before saving candidate credentials,
+  Rust reads `/userprofile-service/socialProfile` fresh with that candidate and
+  binds its numeric `profileId` (the user-profile identifier, not the separate
+  social `id`, display name or full name). This field's meaning is supported by
+  public client source, not a real-account switching experiment. The first
+  migrated session is also verified once; ordinary sync and surface refresh
+  do not add identity requests. Same-account reauthentication preserves history,
+  targets and plan snapshots. A verified different account switches profile and
+  clears account-bound rows, settings, cursors and notification history in one
+  SQLite transaction, before activation—even if its first data sync fails.
+  Failed/ambiguous verification keeps the old history suspended and candidate
+  credentials unsaved. Unidentifiable legacy history requires explicit sign-out,
+  never an inferred identity from a name. The native snapshot includes its account
+  binding; Rust rejects a stale file for another or unverified account. Android
+  status/view commands also require a verified active session. One short Rust
+  barrier covers local view/plan/settings mutations, snapshot construction and
+  account transitions; profile HTTP waits never hold it. Queued settings saves
+  reject a changed account. A credential-free native suspension tombstone is
+  checked by every Android consumer, including views and bedtime, even if SQLite
+  suspension fails. Vault deletion failure is reported, invalidates the retained
+  ciphertext's keystore key and cannot trigger automatic reauthentication.
+  Explicit fresh verification is required to resume. Desktop retains the shared
+  `DesktopCredentials` boundary from `c1e3c9f` for sync, on-demand reads and
+  account changes; no second desktop credential gate is added. Account activation/pending markers are excluded from
+  exports. Android passes the expected account into archive construction: the
+  first read inside the same SQLite transaction checks active identity, then
+  verifies the cached profile before any ZIP bytes are created. Every archive
+  read uses that pinned transaction, preventing A→B→A account switching from
+  exporting B's rows for an A request. Final identity validation and the atomic
+  no-replace rename hold the existing short local session barrier together;
+  ZIP construction and profile HTTP never hold it. The native share path also
+  checks the verified account under `SyncGate`. Historical/CLI exports remain
+  an explicit separate, unbound operation.
+- **Preference updates**: production UI controls send only changed fields via
+  `patch_settings`, not a cached full settings object. Rust validates names and
+  types against `Settings`, then merges with current stored values inside the
+  existing account/write barrier. Writes to the same control are disabled while
+  pending; unrelated controls remain usable. Settings reads are revision-guarded
+  and the one-time status offer writes only its marker. A snapshot publication
+  failure rolls back only a new persistent-status opt-in, never other changes
+  or revocations. Both Health's journal allow button and Settings' opt-out send
+  only `journalEnabled`; false stays authoritative even when status snapshot
+  publication fails and unrelated older patches complete later. Journal content
+  and consent are excluded from the native snapshot and notification/widget
+  allowlists. Full-settings replacement is reserved for
+  explicit fixtures/CLI, not the UI transport.
+- **Native status snapshot**: after every foreground/background sync attempt
+  that reaches the core, Rust atomically replaces a private, versioned JSON
+  snapshot beside SQLite. It includes nullable readings, tones, `TodayFocus`
+  phase and compact focus, the displayed date, write time and watch upload
+  time. No endpoint or request is added; a snapshot write failure is reported
+  separately and retried offline, never by repeating a Garmin sync. Kotlin reads and draws it using
+  RemoteViews; neither rendering path starts the WebView. Settings and
+  native lifecycle events can ask Rust to refresh it offline. Sign-out erases
+  it and clears the surfaces; unsupported/corrupt versions render blank.
+  Keep the existing hourly WorkManager sync and its existing 15-minute
+  missing-readiness morning follow-ups, not a new notification poll or
+  foreground service. Widget host updates request an offline refresh every
+  30 minutes; reboot, timezone and clock changes also refresh locally.
+  Emulator accelerated refresh measurements showed no usable battery-drain
+  signal, so there is no evidence for increasing Garmin polling. Actual
+  battery/radio cost and Doze delivery remain phone checks.
 - **View cache**: after the first view renders, the four tabs are
   prefetched and cached by route for the current day. A completed sync, a
   changed sync timestamp or a local day rollover invalidates in-flight reads
@@ -814,7 +929,9 @@ Sent by the phone itself.
   core. Background scheduling is inherently native (WorkManager on Android,
   background refresh on iOS, syncing while the app runs on desktop); secure
   token storage and other logic belong in Rust where a cross-platform crate
-  exists.
+  exists. Status notifications and widgets ship on Android only; their
+  versioned snapshot is platform-neutral JSON produced entirely in Rust,
+  so later iOS widgets can consume the same contract with a native renderer.
 - **Public website**: `site/` is a static introduction, installation guide and
   privacy page, hosted at raring.app with GitHub Pages. It has no tracking,
   sign-in or access to Garmin data; it is not the future web version of the app.
@@ -833,8 +950,8 @@ Sent by the phone itself.
 4. Health, notifications and the weekly check-in, then a screenshot review.
 5. Polish, first APK release, and the repo goes public after a final review.
 
-After v1: iOS, desktop apps, web app and a home-screen widget. Garmin
-lifestyle logs are available read-only in Health with explicit local consent.
+After v1: iOS, desktop apps and web app. Garmin lifestyle logs are available
+read-only in Health with explicit local consent.
 
 ## Testing
 

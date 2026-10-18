@@ -1,0 +1,17 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+ android:id="@+id/status_widget_root" android:orientation="vertical" android:gravity="center_horizontal"
+ android:background="@drawable/status_card" android:padding="9dp" android:layout_width="match_parent" android:layout_height="match_parent">
+ <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Raring"
+ android:textColor="#EAF0F5" android:textSize="12sp" android:textStyle="bold"/>
+ <FrameLayout android:layout_width="112dp" android:layout_height="92dp">
+  <ImageView android:id="@+id/status_gauge" android:layout_width="112dp" android:layout_height="92dp" android:scaleType="fitCenter"/>
+  <TextView android:id="@+id/status_readiness" android:layout_width="match_parent" android:layout_height="match_parent"
+   android:gravity="center" android:textColor="#FFFFFF" android:textSize="24sp" android:textStyle="bold"/>
+ </FrameLayout>
+ <TextView android:id="@+id/status_focus" android:layout_width="match_parent" android:layout_height="wrap_content"
+  android:gravity="center" android:textColor="#EAF0F5" android:textSize="12sp"/>
+ <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Readiness"
+  android:textColor="#B2C2D3" android:textSize="10sp"/>
+ <TextView android:id="@+id/status_asof" android:layout_width="match_parent" android:layout_height="wrap_content"
+  android:gravity="center" android:textColor="#B2C2D3" android:textSize="10sp"/>
+</LinearLayout>

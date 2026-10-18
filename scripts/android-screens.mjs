@@ -35,9 +35,10 @@ while(Date.now()<readyBy){
 if(!ready)throw Error('Tauri IPC bridge did not become ready');
 const status=await evaluate("window.__TAURI_INTERNALS__.invoke('app_status')");
 if(status.signedIn)throw Error('Refusing to seed demo data in a signed-in app');
-const demo=await evaluate("window.__TAURI_INTERNALS__.invoke('load_demo_data')");console.log('DEMO',demo);
 console.log('STATUS',status);
 const syncStatus=await evaluate("window.__TAURI_INTERNALS__.invoke('sync_now').then(x=>x, e=>({error:String(e)}))");console.log('FOREGROUND_SYNC_NO_TOKENS',syncStatus);
+// An unauthenticated sync correctly suspends data presentation; seed only after that probe.
+const demo=await evaluate("window.__TAURI_INTERNALS__.invoke('load_demo_data')");console.log('DEMO',demo);
 const [date,workout]=demo.split(':');
 await evaluate("location.href='http://tauri.localhost/?fixture=demo#today'");
 await new Promise(ok=>setTimeout(ok,1400));

@@ -1,7 +1,7 @@
 //! Offline archive creation. The caller decides how to hand the completed file to the user.
 use crate::store::Store;
 use chrono::Utc;
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension};
 use serde_json::{json, Map, Value};
 use std::{
     collections::BTreeSet,
@@ -23,6 +23,8 @@ pub enum ExportError {
     Json(#[from] serde_json::Error),
     #[error(transparent)]
     Csv(#[from] csv::Error),
+    #[error("export account binding does not match the active cached profile")]
+    AccountMismatch,
 }
 
 // Never copy credentials from a future Garmin response or a new settings key.
@@ -48,6 +50,8 @@ fn credential_key(key: &str) -> bool {
         "cookie",
         "sessionkey",
         "sessionid",
+        "accountsession",
+        "accountpending",
         "clientsecret",
         "privatekey",
         "ticket",
@@ -102,6 +106,54 @@ pub(crate) fn write(store: &Store, path: &Path, version: &str) -> Result<(), Exp
     store.with_export_db(|db| {
         db.execute_batch("BEGIN DEFERRED")?;
         let result = write_snapshot(db, path, version);
+        db.execute_batch("ROLLBACK")?;
+        result
+    })?
+}
+
+/// Bind the snapshot to the expected account before any archive bytes are created.
+/// Both queries and the subsequent export use this same SQLite read transaction.
+pub(crate) fn write_for_account(
+    store: &Store,
+    path: &Path,
+    version: &str,
+    expected: &str,
+) -> Result<(), ExportError> {
+    write_bound_snapshot(store, path, version, expected, || {}, || {})
+}
+
+fn write_bound_snapshot(
+    store: &Store,
+    path: &Path,
+    version: &str,
+    expected: &str,
+    before_first_read: impl FnOnce(),
+    after_identity_read: impl FnOnce(),
+) -> Result<(), ExportError> {
+    store.with_export_db(|db| {
+        db.execute_batch("BEGIN DEFERRED")?;
+        let result = (|| {
+            before_first_read();
+            let session: Option<String> = db.query_row(
+                "SELECT value FROM settings WHERE key='account_session'", [], |row| row.get(0),
+            ).optional()?;
+            // This first SELECT pins the WAL snapshot, including profile and export data.
+            after_identity_read();
+            let active = session.as_deref()
+                .and_then(|s| serde_json::from_str::<Value>(s).ok())
+                .is_some_and(|s| s["active"] == true && s["identity"].as_str() == Some(expected));
+            let profile: Option<String> = db.query_row(
+                "SELECT json FROM raw WHERE endpoint='profile' AND key='me'", [], |row| row.get(0),
+            ).optional()?;
+            let profile_matches = profile.as_deref()
+                .and_then(|s| serde_json::from_str::<Value>(s).ok())
+                .and_then(|p| crate::account::profile_identity(&p))
+                .as_deref() == Some(expected);
+            if !crate::account::valid_identity(expected) || !active || !profile_matches {
+                return Err(ExportError::AccountMismatch);
+            }
+            write_snapshot(db, path, version)
+        })();
         db.execute_batch("ROLLBACK")?;
         result
     })?
@@ -261,7 +313,119 @@ fn write_snapshot(db: &Connection, path: &Path, version: &str) -> Result<(), Exp
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Read;
+    use std::{io::Read, sync::{mpsc, Arc}, thread};
+
+    fn bound_fixture() -> (Arc<Store>, std::path::PathBuf, std::path::PathBuf) {
+        let directory = std::env::temp_dir().join(format!(
+            "raring-bound-export-{}-{}", std::process::id(), Utc::now().timestamp_nanos_opt().unwrap()
+        ));
+        std::fs::create_dir(&directory).unwrap();
+        let store = Arc::new(Store::open(directory.join("data.db")).unwrap());
+        switch(&store, 11, "A");
+        (store, directory.join("archive.zip"), directory)
+    }
+
+    fn switch(store: &Store, id: u64, marker: &str) {
+        let _boundary = crate::status::WRITE_LOCK.lock().unwrap();
+        let profile = json!({"profileId":id,"displayName":marker});
+        assert!(store.bind_account(&id.to_string(), &profile, "now").unwrap());
+        assert!(store.activate_account().unwrap());
+        store.put("summary", "2026-01-02", "now", &json!({"marker":marker,"accessToken":"secret"})).unwrap();
+        store.set_setting("plan", &format!("\"{marker}\"")).unwrap();
+    }
+
+    fn boundary_available() {
+        // Other tests may briefly own the process-wide barrier. Wait for an
+        // actual acquisition rather than race them with try_lock(). The export
+        // is paused on a channel throughout this assertion.
+        let (acquired, ready) = mpsc::channel();
+        let probe = thread::spawn(move || {
+            let _boundary = crate::status::WRITE_LOCK.lock().unwrap();
+            let _ = acquired.send(());
+        });
+        assert!(ready.recv_timeout(std::time::Duration::from_secs(5)).is_ok(), "ZIP construction must not hold the local session barrier");
+        probe.join().unwrap();
+    }
+
+    fn assert_archive_marker(path: &Path, marker: &str) {
+        let mut archive = zip::ZipArchive::new(File::open(path).unwrap()).unwrap();
+        let mut settings = String::new();
+        archive.by_name("settings.json").unwrap().read_to_string(&mut settings).unwrap();
+        assert_eq!(serde_json::from_str::<Value>(&settings).unwrap()["plan"], marker);
+        let mut raw = String::new();
+        archive.by_name("raw/00000001.json").unwrap().read_to_string(&mut raw).unwrap();
+        assert_eq!(serde_json::from_str::<Value>(&raw).unwrap(), json!({"marker":marker}));
+        assert!(!settings.contains("account_session"));
+        assert!(!settings.contains("account_pending"));
+    }
+
+    #[test]
+    fn bound_export_rejects_aba_before_first_snapshot_read_without_creating_bytes() {
+        let (store, path, directory) = bound_fixture();
+        let (entered_tx, paused) = mpsc::channel();
+        let (resume, proceed) = mpsc::channel();
+        let (identity_read, read_paused) = mpsc::channel();
+        let (finish, finish_rx) = mpsc::channel();
+        let worker = {
+            let store = Arc::clone(&store);
+            let path = path.clone();
+            thread::spawn(move || write_bound_snapshot(&store, &path, "test", "11", || {
+                entered_tx.send(()).unwrap();
+                proceed.recv().unwrap();
+            }, || {
+                identity_read.send(()).unwrap();
+                finish_rx.recv().unwrap();
+            }))
+        };
+        paused.recv().unwrap();
+        boundary_available();
+        switch(&store, 22, "B");
+        resume.send(()).unwrap();
+        read_paused.recv().unwrap();
+        switch(&store, 11, "A-again");
+        finish.send(()).unwrap();
+        assert!(matches!(worker.join().unwrap(), Err(ExportError::AccountMismatch)));
+        assert!(!path.exists()); // Neither publication nor the native share path can be reached.
+        write_for_account(&store, &path, "test", "11").unwrap();
+        assert_archive_marker(&path, "A-again");
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn bound_export_rejects_inactive_or_mismatched_cached_profile() {
+        let (store, path, directory) = bound_fixture();
+        store.put("profile", "me", "now", &json!({"profileId":22,"displayName":"B"})).unwrap();
+        assert!(matches!(write_for_account(&store, &path, "test", "11"), Err(ExportError::AccountMismatch)));
+        assert!(!path.exists());
+        switch(&store, 11, "A-restored");
+        store.suspend_account().unwrap();
+        assert!(matches!(write_for_account(&store, &path, "test", "11"), Err(ExportError::AccountMismatch)));
+        assert!(!path.exists());
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn bound_export_after_first_identity_read_keeps_a_only_across_aba() {
+        let (store, path, directory) = bound_fixture();
+        let (entered, paused) = mpsc::channel();
+        let (resume, proceed) = mpsc::channel();
+        let worker = {
+            let store = Arc::clone(&store);
+            let path = path.clone();
+            thread::spawn(move || write_bound_snapshot(&store, &path, "test", "11", || {}, || {
+                entered.send(()).unwrap();
+                proceed.recv().unwrap();
+            }))
+        };
+        paused.recv().unwrap();
+        boundary_available();
+        switch(&store, 22, "B");
+        switch(&store, 11, "A-again");
+        resume.send(()).unwrap();
+        worker.join().unwrap().unwrap();
+        assert_archive_marker(&path, "A");
+        std::fs::remove_dir_all(directory).unwrap();
+    }
 
     fn check_keys(value: &Value) {
         match value {
@@ -389,6 +553,8 @@ mod tests {
         store.set_setting("plan", r#"{"weeks":{"2025-01-06":{"targets":{"strengthSessions":3},"paused":true}},"refreshToken":"do-not-export"}"#).unwrap();
         store.set_setting("sleep_plan:2025-01-03", r#"{"plan":{"night":"2025-01-03","bedtimeAt":"2025-01-02T22:30:00","accessToken":"do-not-export"},"capturedAt":"2025-01-02T18:00:00"}"#).unwrap();
         store.set_setting("access_token", "do-not-export").unwrap();
+        store.set_setting("account_session", r#"{"identity":"101","active":true}"#).unwrap();
+        store.set_setting("account_pending", "101").unwrap();
         store.put("summary", "2025-01-02", "now", &json!({"value":1,"oauthToken":"do-not-export","deep":[{"client_secret":"do-not-export","ok":2}]})).unwrap();
         let path = std::env::temp_dir().join(format!(
             "raring-export-test-{}-{}.zip",
@@ -443,6 +609,8 @@ mod tests {
         std::fs::remove_file(path).unwrap();
         assert!(!contents.contains("do-not-export"));
         assert!(!contents.contains("access_token"));
+        assert!(!contents.contains("account_session"));
+        assert!(!contents.contains("account_pending"));
         assert!(!contents.contains("oauthToken"));
         assert!(!contents.contains("client_secret"));
         assert!(contents.contains("future-plan"));

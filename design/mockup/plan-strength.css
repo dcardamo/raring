@@ -322,28 +322,6 @@ body.app .scroll{padding-top:16px}
 .hclock{margin:4px 6px 18px}
 .hclock b{display:block;font:300 56px/1 Outfit;letter-spacing:-.02em}
 .hclock span{font:500 15px Inter;color:var(--text2)}
-.wg{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.wd{border-radius:28px;background:rgba(11,15,26,.82);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(12px);padding:14px;position:relative;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,.3)}
-.wd.med{grid-column:span 2;display:flex;align-items:center;gap:14px;height:154px}
-.wd .dial-c em{font:700 10px Inter;letter-spacing:.12em;text-transform:uppercase;font-style:normal;margin-top:3px}
-.wd-r{flex:1;min-width:0}
-.wd-r>b{display:block;font:600 21px/1.15 Outfit;margin-bottom:12px}
-.wd-sl{display:flex;align-items:center;gap:10px;padding:10px;border-radius:16px;background:rgba(255,255,255,.05)}
-.wd-sl .moon{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:rgba(255,255,255,.07);color:var(--text2)}
-.wd-sl .moon svg{width:18px;height:18px}
-.wd-sl span{display:block;font-size:11px;color:var(--text2)}.wd-sl b{font:600 20px/1.1 Outfit}
-.wd-r small{display:block;font-size:11px;color:var(--text3);margin-top:8px}
-.wd.sm{height:154px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
-.wd-b{display:flex;align-items:center;gap:6px;margin-top:-6px;color:var(--text2)}
-.wd-b svg{width:15px;height:15px}.wd-b b{font:600 18px Outfit;color:var(--text)}.wd-b small{font-size:11px;color:var(--text3)}
-.wd-b i{width:9px;height:9px;border-radius:50%}
-.wd.eve .wd-moon{flex:none;width:38px;height:38px;border-radius:13px;display:grid;place-items:center;background:rgba(255,255,255,.07);color:var(--text2)}
-.wd.eve .wd-moon svg{width:20px;height:20px}
-.wd.eve>b{font:600 40px/1.05 Outfit;margin-top:6px}
-.wd.eve>span{font:600 11px Inter;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:12px}
-.wd.eve .wd-b{margin:0}
-.wd.wait .wd-b{margin-top:-2px}
-.apps4{display:grid;grid-template-columns:1fr 1fr;gap:6px;align-content:center;justify-items:center}
 .happ{display:flex;flex-direction:column;align-items:center;gap:6px}
 .happ i{width:54px;height:54px;border-radius:50%}
 .happ img{width:54px;height:54px;border-radius:50%}

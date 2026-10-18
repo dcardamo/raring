@@ -33,8 +33,6 @@ From item 4, in priority order.
 - On desktop widths the masonry columns can place the leading card beside a
   notice rather than first in reading order; check it once desktop ships.
 - "Timing history" opens Sleep at its top; scroll it to Consistency.
-- Item 9's notification focus can reuse `TodayFocus` rather than another
-  phase rule.
 
 ### Sleep rhythm follow-ups
 
@@ -135,32 +133,23 @@ From item 11, in priority order.
   23-/25-hour transitions retain their readings and GMT-based overlays, but a
   physical watch's source-zone behavior is still unverified.
 
-### 9. Persistent status notification (opt-in)
+### 9–10a. Status surface follow-ups
 
-A silent, ongoing notification that always shows the latest values, like
-the persistent notification a weather app keeps up to date.
-
-- Content: Body Battery, stress, latest heart rate, and the day-aware focus
-  from item 4 (effort during the day, bedtime timing near sleep). Collapsed:
-  one line of icons and numbers. Expanded: small bars, the focus with its
-  reason, and "as of" time.
-- The focus can change through the day: Garmin recalculates readiness after
-  an activity syncs, so a post-workout sync updates it.
-- Updated by the existing WorkManager job; no foreground service. Freshness
-  is bounded by the watch's upload frequency and WorkManager's 15-minute
-  minimum, so always show "as of". Measure battery and request cost before
-  defaulting to 15 minutes; consider faster polling only while the screen is
-  on.
-- Low-importance channel, no sound, off by default, toggled in Settings and
-  offered once after the first sync.
-
-### 10. Home-screen widgets
-
-- Small: readiness gauge and focus. Medium: readiness, sleep, Body Battery,
-  stress. Same data and refresh as item 9; tapping opens the matching
-  screen.
-- Rendered natively (Glance or RemoteViews) from a small snapshot the Rust
-  core writes after each sync, so the widget never starts the web view.
+- On a real phone, add both widgets, enable the silent notification and
+  compare readings/upload time after a Connect sync. Check metric taps,
+  permission denial, Settings off/on, reboot and overnight Doze.
+- Check upgrading an existing installation and reconnecting the same Garmin
+  account: cached history and local targets should survive identity
+  verification. Different-account isolation has been tested with synthetic
+  accounts, not by switching real accounts.
+- Measure phone battery/radio cost before considering faster polling. Keep
+  the existing hourly/morning sync; emulator rendering measurements and
+  reported 0 mAh do not establish phone battery cost.
+- Compare the notification's latest HR sample with Today's available data;
+  absent readings stay blank. Rendering itself makes no Garmin requests.
+- Check other launchers and lock-screen privacy choices. Android can defer
+  updates and allows users to dismiss ongoing notifications. Minimum-size
+  RemoteViews passed emulator tests at font scales 1.0, 1.3 and 1.5.
 
 ### Export follow-up: import local settings on a new phone
 
@@ -487,6 +476,48 @@ faces, screens, sensors and audio prompts stay in Connect.
   - Acute load history comes from readiness history's `acuteLoad`; the
     corresponding Training Status field is `dailyTrainingLoadAcute`.
     Detailed account comparisons remain in the private research notes.
+
+- **9–10. Persistent status and home-screen widgets** (commit "Finish shared
+  status notification and widgets"). Visual-first mockups in `design/mockup/`
+  (`status-surfaces`, `widget`). One private version-1 Rust JSON snapshot
+  feeds the silent, off-by-default notification and small/medium RemoteViews
+  widgets. Shared `TodayFocus`, lowest-factor rule and watch upload time;
+  latest stress is a sample, not the daily average; unknown values stay blank.
+  Settings offers the notification once after first sync and handles permission
+  denial. Foreground and background sync share the writer; widget/lifecycle
+  refreshes are offline, and no rendering path starts the WebView.
+  Existing hourly/morning sync remains unchanged. No new Garmin endpoints;
+  real read-only validation matched snapshot readiness, sleep, phase and
+  selected-watch upload to Today without rate-limit/auth failures. HR uses the
+  shared calendar-day timeline's last measured sample, without notification-only
+  requests. Device/cadence limitations are under 9–10a above. Account-bound
+  snapshots require fresh identity verification before vault promotion; same-account
+  reauthentication preserves local targets, failed verification suspends rather
+  than destroys history, and a verified switch erases account-bound data before
+  exposing the new session. Explicit opt-out survives cache publication failure
+  and cancels independently of an in-flight sync. Widget minima and large-font
+  tests cover real RemoteViews bounds rather than showcase screenshot sizes.
+  A short Rust barrier prevents view/plan/settings writes and snapshots from
+  crossing an account transition; no network wait holds it. Native tests inject
+  SQLite suspension and vault deletion failures, verify fail-closed status,
+  bedtime and app authorization, and preserve targets for later same-account
+  reauthentication. A platform suspension tombstone prevents retained credentials
+  from being automatically promoted after a failed clear. Queued mutations
+  validate their expected identity inside the barrier before writing; inactive
+  or changed sessions receive no account history metadata from app status.
+  An actual emulator IPC fault probe confirmed hidden status and denied views
+  after failed SQLite suspension and after restarting with that fault still
+  present; lifecycle scheduling reports the failure rather than crashing.
+  Exports omit activation/pending markers, bind their SQLite snapshot to the
+  expected account and check identity plus publication under one barrier.
+  Older ticket exchanges cannot replace a newer sign-in. UI settings are
+  validated field patches: unrelated delayed saves cannot reinstate status or
+  journal consent, and journal opt-out survives a failed native snapshot write.
+  Journal values are excluded from all status-surface allowlists. Final checks:
+  352 Rust tests, 57 UI unit tests, browser regression/build, Clippy, secret scan,
+  Android APK, 14 native unit tests and 14 emulator instrumentation tests passed.
+  Physical-phone, launcher and Doze checks remain open above.
+
 - **8. Read-only strength view** (commit "Show strength sets, history and the
   body map"). Strength activities show Garmin's sets per exercise with
   last time, records and miscount flags; Training has a this-week card;

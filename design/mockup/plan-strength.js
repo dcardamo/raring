@@ -455,21 +455,7 @@ function helpSheet() {
 }
 
 /* ---------- Home-screen widget ---------- */
-function widget() {
-  const icon = c => `<div class="happ"><i style="background:${c}"></i><span></span></div>`;
-  return `${statusBar()}<div class="home">
-    <div class="hclock"><b class="n">7:42</b><span>Thursday 16 October</span></div>
-    <div class="wg">
-      <div class="wd med"><div class="dial">${arc({size: 118, value: 82, color: C.good, stroke: 11})}<div class="dial-c"><b class="n" style="font-size:38px">82</b><em style="color:${C.good}">High</em></div></div>
-        <div class="wd-r"><b>Ready to push</b><div class="wd-sl"><span class="moon">${ico.moon}</span><div><span>Asleep by</span><b class="n">22:50</b></div></div><small>Updated 06:58</small></div></div>
-      <div class="wd sm"><div class="dial">${arc({size: 96, value: 82, color: C.good, stroke: 9})}<div class="dial-c"><b class="n" style="font-size:30px">82</b><em style="color:${C.good}">High</em></div></div><div class="wd-b">${ico.moon}<b class="n">22:50</b></div></div>
-      <div class="wd sm eve"><div class="wd-moon">${ico.moon}</div><b class="n">22:50</b><span>Asleep by</span><div class="wd-b"><i style="background:${C.good}"></i><b class="n">82</b><small>today</small></div></div>
-      <div class="wd sm wait"><div class="dial">${arc({size: 96, value: 0, color: C.ink, stroke: 9})}<div class="dial-c"><b class="n" style="font-size:26px;color:#8E98AC">—</b></div></div><div class="wd-b">${ico.sync}<small>Waiting for Garmin</small></div></div>
-      <div class="apps4">${icon("#2A3350")}${icon("#33304A")}<div class="happ"><img src="../../site/assets/icon.svg" width="54" height="54" alt=""><span>Raring</span></div>${icon("#283A44")}</div>
-    </div>
-    <div class="dock"><div class="dk">${["#2B3350", "#33304A", "#283A44", "#3A2F3A"].map(c => `<i style="background:${c}"></i>`).join("")}</div><div class="hsearch">${ico.search}</div></div>
-  </div>`;
-}
+function widget() { return statusWidgetHome(); }
 
 /* ---------- Design language ---------- */
 function language() {

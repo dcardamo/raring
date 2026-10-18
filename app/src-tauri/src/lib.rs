@@ -14,7 +14,7 @@ use tauri::{Emitter, Manager};
 #[derive(Default)]
 struct SignInState(Mutex<Option<String>>);
 #[derive(Default)]
-struct SignInPending(Mutex<bool>);
+struct SignInPending(Mutex<Option<u64>>);
 
 fn core(app: &tauri::AppHandle) -> Result<Raring, String> {
     Raring::open(database_path(app)?).map_err(|e| e.to_string())
@@ -48,6 +48,7 @@ fn vault(app: &tauri::AppHandle) -> tauri::State<'_, AndroidVault> {
     app.state::<AndroidVault>()
 }
 
+#[cfg(not(target_os = "android"))]
 fn load_tokens(app: &tauri::AppHandle) -> Result<Option<String>, String> {
     #[cfg(target_os = "android")]
     {
@@ -76,18 +77,8 @@ fn load_tokens(app: &tauri::AppHandle) -> Result<Option<String>, String> {
     }
 }
 
-#[allow(dead_code)]
+#[cfg(not(target_os = "android"))]
 fn save_tokens(app: &tauri::AppHandle, value: &str) -> Result<(), String> {
-    #[cfg(target_os = "android")]
-    {
-        vault(app)
-            .0
-            .run_mobile_plugin::<serde_json::Value>(
-                "saveTokens",
-                serde_json::json!({ "value": value }),
-            )
-            .map_err(|e| e.to_string())?;
-    }
     #[cfg(not(target_os = "android"))]
     {
         use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
@@ -134,6 +125,14 @@ fn clear_tokens(app: &tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(target_os = "android")]
+fn session_ready(app: &tauri::AppHandle) -> Result<bool, String> {
+    #[derive(Deserialize)]
+    struct State { active: bool }
+    vault(app).0.run_mobile_plugin::<State>("sessionState", serde_json::json!({}))
+        .map(|s| s.active).map_err(|e| e.to_string())
+}
+
 #[cfg(not(target_os = "android"))]
 async fn with_desktop_tokens<T, F, Fut>(
     app: &tauri::AppHandle,
@@ -162,8 +161,21 @@ where
 }
 
 fn status_read(app: tauri::AppHandle) -> Result<AppStatus, String> {
-    let mut status = core(&app)?.status();
-    status.signed_in = load_tokens(&app)?.is_some();
+    #[cfg(target_os = "android")]
+    let mut status = {
+        let hidden = || AppStatus { signed_in:false, syncing:false, last_sync:None,
+            history_days:0, last_error:None, history_from:None, history_complete:false };
+        let verified = || -> Option<AppStatus> {
+            if !session_ready(&app).unwrap_or(false) { return None; }
+            let core = core(&app).ok()?;
+            let identity = core.session_identity()?;
+            let snapshot = core.with_verified_session(&identity, || core.status())?;
+            (session_ready(&app).unwrap_or(false) && core.session_identity().as_ref() == Some(&identity)).then_some(snapshot)
+        };
+        verified().unwrap_or_else(hidden)
+    };
+    #[cfg(not(target_os = "android"))]
+    let mut status = { let mut s = core(&app)?.status(); s.signed_in = load_tokens(&app)?.is_some(); s };
     if let Ok(error) = app.state::<SignInState>().0.lock() {
         if error.is_some() {
             status.last_error = error.clone();
@@ -182,9 +194,24 @@ async fn app_status(app: tauri::AppHandle) -> Result<AppStatus, String> {
 // View construction reads many SQLite rows; synchronous commands block Android's WebView.
 async fn read_view<T: Send + 'static>(
     app: tauri::AppHandle,
-    read: impl FnOnce(Raring) -> Result<T, String> + Send + 'static,
+    read: impl FnOnce(&Raring) -> Result<T, String> + Send + 'static,
 ) -> Result<T, String> {
-    tauri::async_runtime::spawn_blocking(move || read(core(&app)?))
+    #[cfg(target_os = "android")]
+    let identity = core(&app)?.session_identity().ok_or("Account verification required")?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let core = core(&app)?;
+        #[cfg(target_os = "android")]
+        if !session_ready(&app)? { return Err("Account verification required".into()); }
+        #[cfg(target_os = "android")]
+        let result = core.with_verified_session(&identity, || read(&core)).ok_or("Account verification required")??;
+        #[cfg(not(target_os = "android"))]
+        let result = read(&core)?;
+        #[cfg(target_os = "android")]
+        if !session_ready(&app)? || core.session_identity().as_ref() != Some(&identity) {
+            return Err("Account changed while reading data".into());
+        }
+        Ok(result)
+    })
         .await
         .map_err(|e| e.to_string())?
 }
@@ -261,12 +288,17 @@ async fn heart_rate_day(app: tauri::AppHandle, date: String) -> Result<HeartRate
         struct Response {
             day: HeartRateDay,
         }
-        return vault(&app)
+        if !session_ready(&app)? { return Err("Account verification required".into()); }
+        let expected = core(&app)?.session_identity().ok_or("Account verification required")?;
+        let response = vault(&app)
             .0
             .run_mobile_plugin_async::<Response>("heartRateDay", serde_json::json!({"date":date}))
             .await
-            .map(|r| r.day)
-            .map_err(|e| e.to_string());
+            .map_err(|e| e.to_string())?;
+        if !session_ready(&app)? || core(&app)?.session_identity().as_ref() != Some(&expected) {
+            return Err("Account changed while reading heart rate".into());
+        }
+        return Ok(response.day);
     }
     #[cfg(not(target_os = "android"))]
     {
@@ -326,37 +358,49 @@ async fn set_plan(app: tauri::AppHandle, update: PlanUpdate) -> Result<(), Strin
 }
 
 #[tauri::command]
-fn begin_sign_in(app: tauri::AppHandle) -> Result<(), String> {
+async fn begin_sign_in(app: tauri::AppHandle) -> Result<(), String> {
+    *app.state::<SignInPending>().0.lock().map_err(|e| e.to_string())? = None;
+    #[cfg(target_os = "android")]
+    let generation = {
+        #[derive(Deserialize)]
+        struct Attempt { generation: u64 }
+        let result = vault(&app).0.run_mobile_plugin_async::<Attempt>(
+            "suspendSession", serde_json::json!({})
+        ).await.map_err(|e| e.to_string());
+        let _ = app.emit("status-changed", ());
+        result?.generation
+    };
     #[cfg(not(target_os = "android"))]
-    app.state::<DesktopCredentials>().invalidate_sign_in();
+    let generation = app.state::<DesktopCredentials>().invalidate_sign_in();
     *app.state::<SignInPending>()
         .0
         .lock()
-        .map_err(|e| e.to_string())? = true;
+        .map_err(|e| e.to_string())? = Some(generation);
     app.get_webview_window("main")
         .ok_or("main window missing")?
         .navigate(tauri::Url::parse(&sso::sign_in_url()).map_err(|e| e.to_string())?)
         .map_err(|e| e.to_string())
 }
 
-fn exchange_ticket_and_store(app: &tauri::AppHandle, ticket: String, generation: Option<u64>) {
+fn exchange_ticket_and_store(app: &tauri::AppHandle, ticket: String, generation: u64) {
+    #[cfg(target_os = "android")]
+    let outcome = {
+        #[derive(Deserialize)]
+        struct Promotion { saved: bool }
+        vault(app).0.run_mobile_plugin::<Promotion>("exchangeTicket",
+            serde_json::json!({"ticket":ticket,"generation":generation}))
+            .map(|r| r.saved).map_err(|e| e.to_string())
+    };
+    #[cfg(not(target_os = "android"))]
     let outcome = runtime().and_then(|rt| {
         let tokens = rt
             .block_on(Raring::sign_in_with_ticket(&ticket))
             .map_err(|_| "Garmin sign-in failed — try again".to_owned())?;
         let json = serde_json::to_string(&tokens).map_err(|e| e.to_string())?;
-        #[cfg(not(target_os = "android"))]
-        return rt.block_on(
+        rt.block_on(
             app.state::<DesktopCredentials>()
-                .save_sign_in(generation.ok_or("missing sign-in generation")?, || {
-                    save_tokens(app, &json)
-                }),
-        );
-        #[cfg(target_os = "android")]
-        {
-            let _ = generation;
-            save_tokens(app, &json).map(|_| true)
-        }
+                .save_sign_in(generation, || save_tokens(app, &json)),
+        )
     });
     if outcome.as_ref().is_ok_and(|saved| !saved) {
         return;
@@ -380,6 +424,7 @@ fn exchange_ticket_and_store(app: &tauri::AppHandle, ticket: String, generation:
 
 #[tauri::command]
 async fn sign_out(app: tauri::AppHandle) -> Result<(), String> {
+    *app.state::<SignInPending>().0.lock().map_err(|e| e.to_string())? = None;
     #[cfg(not(target_os = "android"))]
     app.state::<DesktopCredentials>()
         .sign_out(|| {
@@ -389,8 +434,9 @@ async fn sign_out(app: tauri::AppHandle) -> Result<(), String> {
         .await?;
     #[cfg(target_os = "android")]
     {
-        clear_tokens(&app)?;
-        core(&app)?.forget_account().map_err(|e| e.to_string())?;
+        let result = clear_tokens(&app);
+        let _ = app.emit("status-changed", ());
+        result?;
     }
     if let Ok(cache) = app.path().app_cache_dir() {
         let _ = std::fs::remove_dir_all(cache.join("exports"));
@@ -418,6 +464,7 @@ async fn sync_now(app: tauri::AppHandle) -> Result<AppStatus, String> {
                 .sync(tokens, Local::now(), 60)
                 .await
                 .map_err(|e| e.to_string())?;
+            if let Some(error) = &outcome.snapshot_error { log::warn!("status snapshot publication failed: {error}"); }
             Ok((outcome.notifications, outcome.tokens))
         })
         .await?
@@ -554,8 +601,25 @@ fn save_archive_to_downloads(
     result
 }
 
+// Hold the local account transition barrier only across the final check and rename.
+// The ZIP construction and native IPC deliberately run outside this barrier.
+#[cfg(any(target_os = "android", test))]
+fn publish_bound_archive(
+    core: &Raring,
+    expected: &str,
+    publish: impl FnOnce() -> Result<(), String>,
+) -> Result<(), String> {
+    core.with_verified_session(expected, publish)
+        .ok_or_else(|| "Account changed during export".to_owned())?
+}
+
 #[tauri::command]
 async fn export_archive(app: tauri::AppHandle) -> Result<String, String> {
+    #[cfg(target_os = "android")]
+    let expected = {
+        if !session_ready(&app)? { return Err("Account verification required".into()); }
+        core(&app)?.session_identity().ok_or("Account verification required")?
+    };
     let mut random = [0u8; 16];
     getrandom::fill(&mut random).map_err(|e| e.to_string())?;
     let suffix = random
@@ -584,13 +648,28 @@ async fn export_archive(app: tauri::AppHandle) -> Result<String, String> {
     let partial = path.join(format!("{filename}.partial"));
     let app_for_export = app.clone();
     let destination = file.clone();
+    #[cfg(target_os = "android")]
+    let exporting_account = expected.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let result = (|| {
             let version = app_for_export.package_info().version.to_string();
-            core(&app_for_export)?
-                .export(&partial, &version)
-                .map_err(|e| e.to_string())?;
-            publish_archive_no_replace(&partial, &destination)
+            #[cfg(target_os = "android")]
+            {
+                let core = core(&app_for_export)?;
+                core.export_for_account(&partial, &version, &exporting_account)
+                    .map_err(|e| e.to_string())?;
+                if !session_ready(&app_for_export)? {
+                    return Err("Account changed during export".into());
+                }
+                publish_bound_archive(&core, &exporting_account, || {
+                    publish_archive_no_replace(&partial, &destination)
+                })
+            }
+            #[cfg(not(target_os = "android"))]
+            {
+                core(&app_for_export)?.export(&partial, &version).map_err(|e| e.to_string())?;
+                publish_archive_no_replace(&partial, &destination)
+            }
         })();
         if result.is_err() {
             let _ = std::fs::remove_file(partial);
@@ -606,7 +685,7 @@ async fn export_archive(app: tauri::AppHandle) -> Result<String, String> {
             .0
             .run_mobile_plugin::<serde_json::Value>(
                 "shareExport",
-                serde_json::json!({"filename": filename}),
+                serde_json::json!({"filename": filename, "accountId": expected}),
             )
             .map_err(|e| e.to_string())?;
         Ok("Choose where to share the export".into())
@@ -627,15 +706,23 @@ async fn export_archive(app: tauri::AppHandle) -> Result<String, String> {
 }
 
 #[tauri::command]
-fn get_settings(app: tauri::AppHandle) -> Result<Settings, String> {
-    Ok(core(&app)?.settings())
+async fn get_settings(app: tauri::AppHandle) -> Result<Settings, String> {
+    read_view(app, |core| Ok(core.settings())).await
 }
 
 #[tauri::command]
-fn set_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String> {
-    core(&app)?
-        .set_settings(settings)
-        .map_err(|e| e.to_string())?;
+async fn patch_settings(app: tauri::AppHandle, patch: raring_core::settings::SettingsPatch) -> Result<(), String> {
+    // Merge the patch only inside the existing write barrier, never before queueing.
+    let expected = core(&app)?.bound_account_identity();
+    let handle = app.clone();
+    tauri::async_runtime::spawn_blocking(move || core(&handle)?.patch_settings_for_account(patch, expected).map_err(|e| e.to_string()))
+        .await.map_err(|e| e.to_string())??;
+    // Complete opt-out cancellation before acknowledging the save. This command
+    // reads authoritative local policy and never waits for the network SyncGate.
+    #[cfg(target_os = "android")]
+    vault(&app).0.run_mobile_plugin_async::<serde_json::Value>(
+        "applyStatusSettings", serde_json::json!({})
+    ).await.map_err(|e| e.to_string())?;
     // The bedtime switch and wind-down lead move tonight's reminder.
     #[cfg(target_os = "android")]
     std::thread::spawn(move || {
@@ -652,6 +739,14 @@ fn load_demo_data(app: tauri::AppHandle) -> Result<String, String> {
     let date = Local::now().date_naive().to_string();
     let store = raring_core::store::Store::open(database_path(&app)?).map_err(|e| e.to_string())?;
     raring_core::demo::seed(&store, Local::now().date_naive()).map_err(|e| e.to_string())?;
+    // Explicit debug-only synthetic binding; never used by sign-in or production sync.
+    let profile = serde_json::json!({"profileId":900000000001_u64,"displayName":"sample-demo"});
+    store.put("profile", "me", &Local::now().to_rfc3339(), &profile).map_err(|e| e.to_string())?;
+    store.set_setting("account_session", &serde_json::json!({
+        "identity":raring_core::account::profile_identity(&profile),"active":true
+    }).to_string()).map_err(|e| e.to_string())?;
+    #[cfg(target_os = "android")]
+    vault(&app).0.run_mobile_plugin::<serde_json::Value>("demoSession", serde_json::json!({})).map_err(|e| e.to_string())?;
     let _ = app.emit("status-changed", status_read(app.clone())?);
     Ok(format!("{}:{}", date, raring_core::demo::WORKOUT_ID))
 }
@@ -689,23 +784,13 @@ pub fn run() {
                         return true;
                     }
                     let app = webview.app_handle().clone();
-                    let pending = app.state::<SignInPending>().0.lock().is_ok_and(|s| *s);
-                    if let Some(ticket) = sso::extract_ticket(url.as_str()).filter(|_| pending) {
-                        if let Ok(mut state) = app.state::<SignInPending>().0.lock() {
-                            *state = false;
-                        }
+                    let candidate = sso::extract_ticket(url.as_str()).and_then(|ticket| {
+                        app.state::<SignInPending>().0.lock().ok()?.take()
+                            .map(|generation| (ticket, generation))
+                    });
+                    if let Some((ticket, generation)) = candidate {
                         let window = webview.clone();
                         let app = webview.app_handle().clone();
-                        let generation = {
-                            #[cfg(not(target_os = "android"))]
-                            {
-                                Some(app.state::<DesktopCredentials>().generation())
-                            }
-                            #[cfg(target_os = "android")]
-                            {
-                                None
-                            }
-                        };
                         std::thread::spawn(move || {
                             let _ = window.navigate(home_url());
                             exchange_ticket_and_store(&app, ticket, generation);
@@ -714,7 +799,7 @@ pub fn run() {
                     }
                     if url.as_str().starts_with(home_url().as_str()) {
                         if let Ok(mut state) = app.state::<SignInPending>().0.lock() {
-                            *state = false;
+                            *state = None;
                         }
                     }
                     true
@@ -742,7 +827,7 @@ pub fn run() {
                     open_garmin_connect,
                     request_notification_permission,
                     get_settings,
-                    set_settings,
+                    patch_settings,
                     heart_rate_day,
                     export_archive,
                     load_demo_data
@@ -768,7 +853,7 @@ pub fn run() {
                     open_garmin_connect,
                     request_notification_permission,
                     get_settings,
-                    set_settings,
+                    patch_settings,
                     heart_rate_day,
                     export_archive
                 ]
@@ -806,6 +891,77 @@ pub fn run() {
 #[cfg(test)]
 mod export_tests {
     use super::*;
+    use std::{sync::{mpsc, Arc}, thread};
+
+    fn bound_fixture() -> (Arc<Raring>, std::path::PathBuf, std::path::PathBuf, std::path::PathBuf) {
+        let mut random = [0u8; 16];
+        getrandom::fill(&mut random).unwrap();
+        let directory = std::env::temp_dir().join(format!("raring-bound-publish-{:x}", u128::from_le_bytes(random)));
+        std::fs::create_dir(&directory).unwrap();
+        let database = directory.join("data.db");
+        let store = raring_core::store::Store::open(&database).unwrap();
+        assert!(store.bind_account("11", &serde_json::json!({"profileId":11,"displayName":"A"}), "now").unwrap());
+        assert!(store.activate_account().unwrap());
+        store.put("summary", "2026-01-02", "now", &serde_json::json!({"marker":"A"})).unwrap();
+        let core = Arc::new(Raring::open(&database).unwrap());
+        let partial = directory.join("staged.partial");
+        core.export_for_account(&partial, "test", "11").unwrap();
+        (core, partial, directory.join("archive.zip"), directory)
+    }
+
+    #[test]
+    fn bound_publication_serializes_final_check_and_rename_with_transition() {
+        let (core, partial, destination, directory) = bound_fixture();
+        let expected_bytes = std::fs::read(&partial).unwrap();
+        let (at_guard, guarded) = mpsc::channel();
+        let (release, released) = mpsc::channel();
+        let (transition_start, starting) = mpsc::channel();
+        let (transition_done, finished) = mpsc::channel();
+        let publisher = {
+            let core = Arc::clone(&core);
+            let partial = partial.clone();
+            let destination = destination.clone();
+            thread::spawn(move || publish_bound_archive(&core, "11", || {
+                at_guard.send(()).unwrap();
+                released.recv().unwrap();
+                publish_archive_no_replace(&partial, &destination)
+            }))
+        };
+        guarded.recv().unwrap();
+        let transition = {
+            let core = Arc::clone(&core);
+            let destination = destination.clone();
+            thread::spawn(move || {
+                transition_start.send(()).unwrap();
+                core.suspend_session().unwrap();
+                assert!(destination.exists(), "transition crossed the check/rename gap");
+                transition_done.send(()).unwrap();
+            })
+        };
+        starting.recv().unwrap();
+        // The publisher is paused inside the critical section. A transition
+        // must remain blocked until we explicitly release the rename.
+        let blocked = matches!(finished.recv_timeout(std::time::Duration::from_millis(250)), Err(mpsc::RecvTimeoutError::Timeout));
+        release.send(()).unwrap();
+        assert!(blocked);
+        publisher.join().unwrap().unwrap();
+        transition.join().unwrap();
+        finished.recv().unwrap();
+        assert!(!partial.exists());
+        assert_eq!(std::fs::read(&destination).unwrap(), expected_bytes);
+        assert!(core.session_identity().is_none());
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn transition_before_publication_guard_rejects_without_destination() {
+        let (core, partial, destination, directory) = bound_fixture();
+        core.suspend_session().unwrap();
+        assert!(publish_bound_archive(&core, "11", || publish_archive_no_replace(&partial, &destination)).is_err());
+        assert!(partial.exists());
+        assert!(!destination.exists());
+        std::fs::remove_dir_all(directory).unwrap();
+    }
 
     #[test]
     fn publishing_and_desktop_saving_never_replace_an_existing_export() {

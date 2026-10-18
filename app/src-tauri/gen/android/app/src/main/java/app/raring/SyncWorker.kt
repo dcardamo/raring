@@ -35,14 +35,28 @@ import java.util.concurrent.TimeUnit
 object NativeBridge {
     init { System.loadLibrary("raring_app_lib") }
     @JvmStatic external fun prepareTokens(tokensJson: String): String
+    @JvmStatic external fun exchangeTicket(ticket: String, testApi: String): String
     @JvmStatic external fun sync(dbPath: String, tokensJson: String, nowIso: String): String
     @JvmStatic external fun heartRateDay(dbPath: String, tokensJson: String, date: String): String
     @JvmStatic external fun markSent(dbPath: String, tagsJson: String, nowIso: String): String
     @JvmStatic external fun bedtime(dbPath: String, nowLocal: String): String
+    @JvmStatic external fun refreshStatus(dbPath: String, nowIso: String): String
+    @JvmStatic external fun accountSession(dbPath: String, action: String, tokensJson: String, testApi: String): String
 }
 
 // The vault read, JNI refresh and vault write must share one lock across every work request.
-object SyncGate { val mutex = Mutex() }
+object SyncGate {
+    val mutex = Mutex()
+    // Same attempt-generation semantics as DesktopCredentials. All Android
+    // invalidation/check/promotion runs under this existing gate, so a profile
+    // request cannot be crossed by another invalidation.
+    private var signInGeneration = 0L
+    internal fun invalidateSignInLocked(): Long { check(mutex.isLocked); return ++signInGeneration }
+    internal fun isCurrentSignInLocked(generation: Long): Boolean {
+        check(mutex.isLocked)
+        return generation == signInGeneration
+    }
+}
 
 object SyncScheduler {
     private val network = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
@@ -106,20 +120,37 @@ class SyncWorker(context: Context, params: WorkerParameters): CoroutineWorker(co
         } finally {
             // Each sync can move tonight's plan; the reminder follows it.
             BedtimeScheduler.run(applicationContext)
+            StatusSurfaces.refresh(applicationContext)
         }
     }
     private suspend fun syncLocked(): Result {
         return try {
             SyncGate.mutex.withLock {
-                val tokens = TokenVault.loadOrClear(applicationContext)
+                var tokens = AccountSession.loadLocked(applicationContext)
                 if (tokens == null) {
+                    AccountSession.suspendLocked(applicationContext)
                     SyncScheduler.cancel(applicationContext)
                     notify(applicationContext, "auth-required", "Sign in to Garmin again", "Open Raring to reconnect", "today")
                     return@withLock Result.success()
                 }
+                if (!AccountSession.active(applicationContext)) {
+                    if (!AccountSession.migrationAllowed(applicationContext)) {
+                        AccountSession.suspendLocked(applicationContext)
+                        SyncScheduler.cancel(applicationContext)
+                        return@withLock Result.success()
+                    }
+                    try {
+                        AccountSession.verifyAndSaveLocked(applicationContext, tokens)
+                        tokens = TokenVault.load(applicationContext) ?: return@withLock Result.failure()
+                    } catch (_: Exception) {
+                        SyncScheduler.cancel(applicationContext)
+                        notify(applicationContext, "auth-required", "Sign in to Garmin again", "Account identity could not be verified", "today")
+                        return@withLock Result.success()
+                    }
+                }
                 val prepared = JSONObject(NativeBridge.prepareTokens(tokens))
                 if (prepared.optBoolean("authFailed")) {
-                    TokenVault.clear(applicationContext)
+                    AccountSession.suspendLocked(applicationContext)
                     SyncScheduler.cancel(applicationContext)
                     notify(applicationContext, "auth-required", "Sign in to Garmin again", "Open Raring to reconnect", "today")
                     return@withLock Result.success()
@@ -130,8 +161,14 @@ class SyncWorker(context: Context, params: WorkerParameters): CoroutineWorker(co
                 val now = OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
                 val db = File(applicationContext.filesDir, "raring.db").absolutePath
                 val response = JSONObject(NativeBridge.sync(db, readyTokens, now))
+                if (response.optBoolean("authFailed")) {
+                    AccountSession.suspendLocked(applicationContext)
+                    SyncScheduler.cancel(applicationContext)
+                    notify(applicationContext, "auth-required", "Sign in to Garmin again", "Open Raring to reconnect", "today")
+                    return@withLock Result.success()
+                }
                 // Persist a rotated token before handling partial endpoint failures.
-                if (!response.optBoolean("authFailed")) TokenVault.save(applicationContext, response.getString("tokensJson"))
+                TokenVault.save(applicationContext, response.getString("tokensJson"))
                 Log.i(TAG, "background JNI sync completed")
                 val alerts = response.optJSONArray("notifications") ?: org.json.JSONArray()
                 for (i in 0 until alerts.length()) {
@@ -142,12 +179,6 @@ class SyncWorker(context: Context, params: WorkerParameters): CoroutineWorker(co
                         val marked = JSONObject(NativeBridge.markSent(db, tags.toString(), now))
                         if (marked.has("error")) Log.w(TAG, "could not record notification delivery")
                     }
-                }
-                if (response.optBoolean("authFailed")) {
-                    TokenVault.clear(applicationContext)
-                    SyncScheduler.cancel(applicationContext)
-                    notify(applicationContext, "auth-required", "Sign in to Garmin again", "Open Raring to reconnect", "today")
-                    return@withLock Result.success()
                 }
                 if (!response.isNull("error")) {
                     Log.w(TAG, "background sync incomplete: ${response.getString("error")}")

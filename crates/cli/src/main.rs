@@ -203,7 +203,7 @@ async fn main() -> Result<()> {
             save_tokens(&tokens)?;println!("Tokens saved with owner-only permissions.");
         },
         Some("sync")=>{let tokens=read_tokens()?;let budget=args.windows(2).find(|v|v[0]=="--budget").map(|v|v[1].parse::<usize>()).transpose()?.unwrap_or(60);
-            let result=core.sync(tokens,now,budget).await?;save_tokens(&result.tokens)?;show(&result.report)?;},
+            let result=core.sync(tokens,now,budget).await?;save_tokens(&result.tokens)?;if let Some(error)=&result.snapshot_error{eprintln!("{error}");}show(&result.report)?;},
         Some("status")=>show(&core.status())?,
         Some("heart-rate-day")=>{
             let date=args.get(1).context("heart-rate-day YYYY-MM-DD")?;

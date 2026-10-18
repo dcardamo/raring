@@ -72,6 +72,10 @@ fn run_background_sync(db_path: &str, tokens_json: &str, now_iso: &str) -> SyncR
             return result;
         }
     };
+    if core.session_identity().is_none() {
+        result.auth_failed = true;
+        return result;
+    }
     let runtime = match tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -89,6 +93,9 @@ fn run_background_sync(db_path: &str, tokens_json: &str, now_iso: &str) -> SyncR
     };
     match runtime.block_on(core.sync(tokens, now, budget)) {
         Ok(outcome) => {
+            if let Some(error) = &outcome.snapshot_error {
+                log::warn!("status snapshot publication failed (offline retry): {error}");
+            }
             result.tokens_json = serde_json::to_string(&outcome.tokens).unwrap_or_default();
             result.readiness_missing = !outcome.report.readiness_present;
             result.auth_failed = outcome.report.auth_failed;
@@ -123,6 +130,39 @@ fn run_background_sync(db_path: &str, tokens_json: &str, now_iso: &str) -> SyncR
         Err(e) => result.error = Some(e.to_string()),
     }
     result
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_app_raring_NativeBridge_exchangeTicket(
+    mut env: JNIEnv<'_>, _class: JClass<'_>, ticket: JString<'_>, test_api: JString<'_>,
+) -> jni::sys::jstring {
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| -> Result<String, String> {
+        let ticket = env.get_string(&ticket).map_err(|e| e.to_string())?.to_string_lossy().into_owned();
+        let test_api = env.get_string(&test_api).map_err(|e| e.to_string())?.to_string_lossy().into_owned();
+        let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().map_err(|e| e.to_string())?;
+        let tokens = if test_api.is_empty() {
+            rt.block_on(Raring::sign_in_with_ticket(&ticket)).map_err(|e| e.to_string())?
+        } else {
+            #[cfg(not(debug_assertions))]
+            return Err("Test origins are disabled".into());
+            #[cfg(debug_assertions)]
+            {
+                let url = tauri::Url::parse(&test_api).map_err(|_| "Invalid test origin")?;
+                if url.scheme() != "http" || url.host_str() != Some("127.0.0.1") || !url.username().is_empty() || url.password().is_some() {
+                    return Err("Test origin must be loopback".into());
+                }
+                rt.block_on(Raring::sign_in_with_ticket_at(&ticket, &test_api)).map_err(|e| e.to_string())?
+            }
+        };
+        serde_json::to_string(&tokens).map_err(|e| e.to_string())
+    }));
+    let value = match result {
+        Ok(Ok(tokens)) => serde_json::json!({"tokensJson":tokens}),
+        Ok(Err(error)) => serde_json::json!({"error":error}),
+        Err(_) => serde_json::json!({"error":"Ticket exchange failed"}),
+    };
+    env.new_string(value.to_string()).map(|s| s.into_raw()).unwrap_or(std::ptr::null_mut())
 }
 
 #[no_mangle]
@@ -200,6 +240,46 @@ pub extern "system" fn Java_app_raring_NativeBridge_sync(
     }
 }
 
+// Re-evaluate the committed, private snapshot without starting the UI or a network client.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_app_raring_NativeBridge_refreshStatus(
+    mut env: JNIEnv<'_>,
+    _class: JClass<'_>,
+    db_path: JString<'_>,
+    now_iso: JString<'_>,
+) -> jni::sys::jstring {
+    let result =
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| -> Result<(), String> {
+            let db = env
+                .get_string(&db_path)
+                .map_err(|e| e.to_string())?
+                .to_string_lossy()
+                .into_owned();
+            let now = env
+                .get_string(&now_iso)
+                .map_err(|e| e.to_string())?
+                .to_string_lossy()
+                .into_owned();
+            let now = DateTime::parse_from_rfc3339(&now)
+                .map_err(|e| e.to_string())?
+                .with_timezone(&Local);
+            Raring::open(db)
+                .map_err(|e| e.to_string())?
+                .refresh_status_snapshot(now)
+                .map_err(|e| e.to_string())
+        }));
+    let json = match result {
+        Ok(Ok(())) => "{}".into(),
+        Ok(Err(e)) => serde_json::json!({"error": e}).to_string(),
+        Err(_) => "{\"error\":\"native status refresh failed\"}".into(),
+    };
+    match env.new_string(json) {
+        Ok(v) => v.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "system" fn Java_app_raring_NativeBridge_heartRateDay(
@@ -227,7 +307,10 @@ pub extern "system" fn Java_app_raring_NativeBridge_heartRateDay(
                 .to_string_lossy()
                 .into_owned();
             let core = Raring::open(db).map_err(|e| e.to_string())?;
-            if let Some(day) = core.cached_heart_rate_day(&date) {
+            let identity = core.session_identity().ok_or("Account verification required")?;
+            let cached = core.with_verified_session(&identity, || core.cached_heart_rate_day(&date))
+                .ok_or("Account verification required")?;
+            if let Some(day) = cached {
                 return Ok(serde_json::json!({"day":day}).to_string());
             }
             let tokens: Tokens = serde_json::from_str(&tokens).map_err(|e| e.to_string())?;
@@ -274,7 +357,8 @@ fn bedtime(db_path: &str, now_local: &str) -> BedtimeResult {
         }
     };
     let reminder = match Raring::open(db_path) {
-        Ok(core) => core.bedtime_reminder(now),
+        Ok(core) if core.session_identity().is_some() => core.bedtime_reminder(now),
+        Ok(_) => None,
         Err(e) => {
             result.error = Some(e.to_string());
             return result;
@@ -367,6 +451,81 @@ pub extern "system" fn Java_app_raring_NativeBridge_markSent(
         Ok(v) => v.into_raw(),
         Err(_) => std::ptr::null_mut(),
     }
+}
+
+// All mutating operations are invoked under Android's existing SyncGate.
+fn account_session(db: &str, action: &str, tokens: &str, test_api: &str) -> Result<serde_json::Value, String> {
+    let core = Raring::open(db).map_err(|e| e.to_string())?;
+    let error = |e: raring_core::Error| e.to_string();
+    match action {
+        "suspend" => { core.suspend_session().map_err(error)?; Ok(serde_json::json!({"active":false})) }
+        "state" => {
+            #[cfg(debug_assertions)]
+            let demo = core.is_demo_session();
+            #[cfg(not(debug_assertions))]
+            let demo = false;
+            Ok(serde_json::json!({"active":core.session_identity().is_some(),"migrationAllowed":core.legacy_session_needs_verification(),"identity":core.session_identity(),"demo":demo}))
+        }
+        "snapshot" => Ok(serde_json::json!({"snapshot":core.surface_snapshot().map_err(error)?})),
+        "activate" => { core.activate_session().map_err(error)?; Ok(serde_json::json!({"active":true})) }
+        "forget" => { core.forget_account().map_err(error)?; Ok(serde_json::json!({})) }
+        #[cfg(debug_assertions)]
+        "testSettings" => {
+            let settings = serde_json::from_str(tokens).map_err(|_| "Invalid settings")?;
+            core.set_settings(settings).map_err(error)?;
+            Ok(serde_json::json!({}))
+        }
+        #[cfg(debug_assertions)]
+        "testSettingsPatch" => {
+            let patch = serde_json::from_str(tokens).map_err(|_| "Invalid settings patch")?;
+            core.patch_settings_for_account(patch, core.bound_account_identity()).map_err(error)?;
+            Ok(serde_json::json!({}))
+        }
+        "verify" => {
+            let tokens: Tokens = serde_json::from_str(tokens).map_err(|_| "Invalid credentials")?;
+            let client = if test_api.is_empty() {
+                raring_core::garmin::Client::new(tokens).map_err(|e| e.to_string())?
+            } else {
+                // Only debug builds permit an emulator-local synthetic profile server.
+                #[cfg(not(debug_assertions))]
+                return Err("Test origins are disabled".into());
+                #[cfg(debug_assertions)]
+                {
+                    let url = tauri::Url::parse(test_api).map_err(|_| "Invalid test origin")?;
+                    if url.scheme() != "http" || url.host_str() != Some("127.0.0.1") || !url.username().is_empty() || url.password().is_some() {
+                        return Err("Test origin must be loopback".into());
+                    }
+                    raring_core::garmin::Client::with_urls(tokens, test_api, test_api, std::time::Duration::ZERO).map_err(|e| e.to_string())?
+                }
+            };
+            let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().map_err(|e| e.to_string())?;
+            rt.block_on(core.verify_account(&client, Utc::now())).map_err(error)?;
+            let tokens = rt.block_on(client.tokens());
+            Ok(serde_json::json!({"tokensJson":serde_json::to_string(&tokens).map_err(|e| e.to_string())?}))
+        }
+        _ => Err("Unknown account operation".into()),
+    }
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_app_raring_NativeBridge_accountSession(
+    mut env: JNIEnv<'_>, _class: JClass<'_>, db: JString<'_>, action: JString<'_>,
+    tokens: JString<'_>, test_api: JString<'_>,
+) -> jni::sys::jstring {
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| -> Result<serde_json::Value, String> {
+        let db = env.get_string(&db).map_err(|e| e.to_string())?.to_string_lossy().into_owned();
+        let action = env.get_string(&action).map_err(|e| e.to_string())?.to_string_lossy().into_owned();
+        let tokens = env.get_string(&tokens).map_err(|e| e.to_string())?.to_string_lossy().into_owned();
+        let test_api = env.get_string(&test_api).map_err(|e| e.to_string())?.to_string_lossy().into_owned();
+        account_session(&db, &action, &tokens, &test_api)
+    }));
+    let value = match result {
+        Ok(Ok(value)) => value,
+        Ok(Err(error)) => serde_json::json!({"error":error}),
+        Err(_) => serde_json::json!({"error":"Account operation failed"}),
+    };
+    env.new_string(value.to_string()).map(|s| s.into_raw()).unwrap_or(std::ptr::null_mut())
 }
 
 #[cfg(test)]

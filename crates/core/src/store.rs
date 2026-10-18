@@ -1,6 +1,7 @@
 //! SQLite raw response cache. Nothing parsed is discarded: changing parsers never needs a refetch.
 use crate::view::Settings;
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{params, Connection, OptionalExtension, TransactionBehavior};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{
     path::{Path, PathBuf},
@@ -11,6 +12,15 @@ pub struct Store {
     db: Mutex<Connection>,
     path: PathBuf,
 }
+
+#[derive(Serialize, Deserialize)]
+struct AccountSession {
+    identity: Option<String>,
+    active: bool,
+}
+
+const SESSION_KEY: &str = "account_session";
+const PENDING_KEY: &str = "account_pending";
 impl Store {
     pub fn open(path: impl AsRef<Path>) -> rusqlite::Result<Self> {
         let path = path.as_ref().to_path_buf();
@@ -254,7 +264,11 @@ impl Store {
             return vec![];
         };
         stmt.query_map([], |r| {
-            Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?))
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?,
+            ))
         })
         .map(|rows| {
             rows.flatten()
@@ -409,6 +423,192 @@ impl Store {
                 |r| r.get(0),
             )
             .unwrap_or(0)
+    }
+    /// Invalid session metadata never grants access or authorizes a data switch.
+    pub fn account_identity(&self) -> Option<String> {
+        self.setting(SESSION_KEY)
+            .and_then(|s| serde_json::from_str::<AccountSession>(&s).ok())
+            .and_then(|s| s.identity)
+            .filter(|id| crate::account::valid_identity(id))
+    }
+    pub fn account_active(&self) -> bool {
+        let db = self.db.lock().unwrap();
+        let session: Option<String> = db
+            .query_row(
+                "SELECT value FROM settings WHERE key=?1",
+                [SESSION_KEY],
+                |r| r.get(0),
+            )
+            .optional()
+            .ok()
+            .flatten();
+        let session = session.and_then(|s| serde_json::from_str::<AccountSession>(&s).ok());
+        if !session.as_ref().is_some_and(|s| {
+            s.active
+                && s.identity
+                    .as_deref()
+                    .is_some_and(crate::account::valid_identity)
+        }) {
+            return false;
+        }
+        let profile: Option<String> = db
+            .query_row(
+                "SELECT json FROM raw WHERE endpoint='profile' AND key='me'",
+                [],
+                |r| r.get(0),
+            )
+            .optional()
+            .ok()
+            .flatten();
+        profile
+            .and_then(|s| serde_json::from_str::<Value>(&s).ok())
+            .and_then(|v| crate::account::profile_identity(&v))
+            == session.and_then(|s| s.identity)
+    }
+    pub fn suspend_account(&self) -> rusqlite::Result<()> {
+        let mut db = self.db.lock().unwrap();
+        let tx = db.transaction()?;
+        let current: Option<String> = tx
+            .query_row(
+                "SELECT value FROM settings WHERE key=?1",
+                [SESSION_KEY],
+                |r| r.get(0),
+            )
+            .optional()?;
+        // Preserve malformed metadata: its unknown identity must not be silently
+        // replaced with a migration fallback on the next binding attempt.
+        if current.as_deref().is_some_and(|s| {
+            serde_json::from_str::<AccountSession>(s).map_or(true, |session| {
+                session
+                    .identity
+                    .as_deref()
+                    .is_some_and(|id| !crate::account::valid_identity(id))
+            })
+        }) {
+            tx.execute("DELETE FROM settings WHERE key=?1", [PENDING_KEY])?;
+            tx.commit()?;
+            return Ok(());
+        }
+        let identity = current
+            .and_then(|s| serde_json::from_str::<AccountSession>(&s).ok())
+            .and_then(|s| s.identity);
+        let session = serde_json::json!({"identity": identity, "active": false});
+        tx.execute("INSERT INTO settings (key,value) VALUES (?1,?2) ON CONFLICT(key) DO UPDATE SET value=excluded.value", params![SESSION_KEY, session.to_string()])?;
+        tx.execute("DELETE FROM settings WHERE key=?1", [PENDING_KEY])?;
+        tx.commit()?;
+        Ok(())
+    }
+    /// Returns false when unbound history cannot safely be assigned to a different account.
+    /// Profile and session transition together, with a complete erase only for a known switch.
+    pub fn bind_account(
+        &self,
+        identity: &str,
+        profile: &Value,
+        at: &str,
+    ) -> rusqlite::Result<bool> {
+        let mut db = self.db.lock().unwrap();
+        let tx = db.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let session: Option<String> = tx
+            .query_row(
+                "SELECT value FROM settings WHERE key=?1",
+                [SESSION_KEY],
+                |r| r.get(0),
+            )
+            .optional()?;
+        let session = session
+            .as_deref()
+            .map(serde_json::from_str::<AccountSession>);
+        if session.as_ref().is_some_and(|s| {
+            s.as_ref().map_or(true, |session| {
+                session
+                    .identity
+                    .as_deref()
+                    .is_some_and(|id| !crate::account::valid_identity(id))
+            })
+        }) || !crate::account::valid_identity(identity)
+            || crate::account::profile_identity(profile).as_deref() != Some(identity)
+        {
+            return Ok(false);
+        }
+        let bound = session.and_then(Result::ok).and_then(|s| s.identity);
+        let cached: Option<String> = tx
+            .query_row(
+                "SELECT json FROM raw WHERE endpoint='profile' AND key='me'",
+                [],
+                |r| r.get(0),
+            )
+            .optional()?;
+        let cached_identity = cached
+            .as_deref()
+            .and_then(|s| serde_json::from_str::<Value>(s).ok())
+            .and_then(|v| crate::account::profile_identity(&v));
+        // Existing metadata is authoritative; an old cached profile is only a migration fallback.
+        let old = bound.or(cached_identity);
+        let has_history: bool = tx.query_row(
+            "SELECT EXISTS(SELECT 1 FROM raw UNION ALL SELECT 1 FROM activities UNION ALL SELECT 1 FROM cursors UNION ALL SELECT 1 FROM notifications UNION ALL SELECT 1 FROM settings WHERE key NOT IN (?1,?2))",
+            params![SESSION_KEY, PENDING_KEY], |r| r.get(0),
+        )?;
+        if old.is_none() && has_history {
+            return Ok(false);
+        }
+        if old.as_deref().is_some_and(|old| old != identity) {
+            tx.execute_batch("DELETE FROM raw; DELETE FROM activities; DELETE FROM notifications; DELETE FROM cursors; DELETE FROM settings;")?;
+        }
+        tx.execute("INSERT INTO raw (endpoint,key,fetched_at,json) VALUES ('profile','me',?1,?2) ON CONFLICT(endpoint,key) DO UPDATE SET fetched_at=excluded.fetched_at,json=excluded.json", params![at, profile.to_string()])?;
+        let session = serde_json::json!({"identity": identity, "active": false});
+        tx.execute("INSERT INTO settings (key,value) VALUES (?1,?2) ON CONFLICT(key) DO UPDATE SET value=excluded.value", params![SESSION_KEY, session.to_string()])?;
+        tx.execute("INSERT INTO settings (key,value) VALUES (?1,?2) ON CONFLICT(key) DO UPDATE SET value=excluded.value", params![PENDING_KEY, identity])?;
+        tx.commit()?;
+        Ok(true)
+    }
+    /// Only the pending verified profile may be activated.
+    pub fn activate_account(&self) -> rusqlite::Result<bool> {
+        let mut db = self.db.lock().unwrap();
+        let tx = db.transaction()?;
+        let session: Option<String> = tx
+            .query_row(
+                "SELECT value FROM settings WHERE key=?1",
+                [SESSION_KEY],
+                |r| r.get(0),
+            )
+            .optional()?;
+        let identity = session
+            .and_then(|s| serde_json::from_str::<AccountSession>(&s).ok())
+            .filter(|s| {
+                !s.active
+                    && s.identity
+                        .as_deref()
+                        .is_some_and(crate::account::valid_identity)
+            })
+            .and_then(|s| s.identity);
+        let pending: Option<String> = tx
+            .query_row(
+                "SELECT value FROM settings WHERE key=?1",
+                [PENDING_KEY],
+                |r| r.get(0),
+            )
+            .optional()?;
+        let profile: Option<String> = tx
+            .query_row(
+                "SELECT json FROM raw WHERE endpoint='profile' AND key='me'",
+                [],
+                |r| r.get(0),
+            )
+            .optional()?;
+        let profile_id = profile
+            .and_then(|s| serde_json::from_str::<Value>(&s).ok())
+            .and_then(|v| crate::account::profile_identity(&v));
+        if identity.is_none() || identity != profile_id || identity != pending {
+            return Ok(false);
+        }
+        let session = serde_json::json!({"identity": identity, "active": true});
+        tx.execute(
+            "UPDATE settings SET value=?1 WHERE key=?2",
+            params![session.to_string(), SESSION_KEY],
+        )?;
+        tx.execute("DELETE FROM settings WHERE key=?1", [PENDING_KEY])?;
+        tx.commit()?;
+        Ok(true)
     }
     pub fn forget_account(&self) -> rusqlite::Result<()> {
         self.db.lock().unwrap().execute_batch("DELETE FROM raw; DELETE FROM activities; DELETE FROM notifications; DELETE FROM cursors; DELETE FROM settings;")

@@ -1657,23 +1657,7 @@ pub fn today_at_calendar(store: &Store, date: &str, now: DateTime<FixedOffset>, 
     });
     // The factor Garmin rates worst, its percentage breaking ties; unrated
     // factors never count.
-    let rank = |tone: Tone| match tone {
-        Tone::Poor => 0,
-        Tone::Fair => 1,
-        Tone::Good => 2,
-        Tone::Neutral => 3,
-    };
-    let worst = factors
-        .iter()
-        .map(|f| rank(f.tone))
-        .filter(|r| *r < 3)
-        .min();
-    let drag = factors
-        .iter()
-        .filter(|f| Some(rank(f.tone)) == worst)
-        .map(|f| (f.name.as_str(), f.percent.unwrap_or(f64::MAX)))
-        .collect::<Vec<_>>();
-    let biggest_drag = rules::biggest_drag(&drag).map(str::to_owned);
+    let biggest_drag = rules::limiting_factor(&factors).map(|f| f.name.clone());
     let mut chips = vec![];
     if let Some(v) = num(sleep(&s), &[&["sleepTimeSeconds"]]) {
         chips.push(Chip {

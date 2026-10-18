@@ -62,6 +62,8 @@ try {
  page.on('pageerror',e=>errors.push(e.message));
  for(const width of [390,700,1100]){
   const watch=await browser.newPage({viewport:{width,height:844}});
+  // Stale-upload prompts are intentionally suppressed at night.
+  await watch.clock.setFixedTime(new Date('2025-10-16T14:00:00'));
   await watch.goto(`${url}/?fixture=stale#today`);
   await watch.getByText('Open Garmin Connect to sync your watch',{exact:true}).waitFor();
   await watch.getByText("Your watch doesn't record skin temperature",{exact:true}).waitFor();
@@ -70,13 +72,48 @@ try {
   await watch.getByText('Open Garmin Connect on your phone, then sync your watch there.',{exact:true}).waitFor();
   await watch.close();
  }
+ for(const width of [390,700,1100]){
+  const surface=await browser.newPage({viewport:{width,height:1000}});
+  await surface.goto(`${url}/?fixture=status-offer#today`);
+  const enable=surface.getByRole('button',{name:'Enable persistent status',exact:true});
+  await enable.waitFor();
+  await enable.scrollIntoViewIfNeeded();
+  await surface.screenshot({path:resolve(output,`status-offer-${width}.png`)});
+  await surface.getByRole('button',{name:'Not now',exact:true}).click();
+  await surface.getByRole('button',{name:'Settings',exact:true}).click();
+  const toggle=surface.getByRole('checkbox',{name:/Persistent status/});
+  await toggle.waitFor();
+  assert.equal(await toggle.isChecked(),false,'status is opt-in');
+  assert.equal(await surface.getByRole('checkbox').count(),9,'internal offer flag is not a toggle');
+  await toggle.check();
+  await surface.screenshot({path:resolve(output,`status-settings-${width}.png`)});
+  await toggle.uncheck();
+  await surface.getByRole('button',{name:'Today',exact:true}).first().click();
+  await surface.locator('h1').waitFor();
+  assert.equal(await enable.count(),0,'offer is not repeated after declining');
+  await surface.close();
+ }
+ const desktopSettings=await browser.newPage();
+ await desktopSettings.goto(`${url}/#settings`);
+ await desktopSettings.getByRole('heading',{name:'Settings',exact:true}).waitFor();
+ assert.equal(await desktopSettings.getByRole('checkbox',{name:/Persistent status/}).count(),0,'native status is Android-only');
+ await desktopSettings.close();
+ console.log('Android status offer once, opt-in settings and fixture screenshots at 390/700/1100: passed');
+ const quietWatch=await browser.newPage({viewport:{width:390,height:844}});
+ await quietWatch.clock.setFixedTime(new Date('2025-10-16T23:30:00'));
+ await quietWatch.goto(`${url}/?fixture=stale#today`);
+ await quietWatch.getByText('Watch synced 7 h ago',{exact:true}).waitFor();
+ assert.equal(await quietWatch.getByText('Open Garmin Connect to sync your watch',{exact:true}).count(),0,'stale-upload prompts remain quiet at night');
+ await quietWatch.close();
  const fresh=await browser.newPage({viewport:{width:390,height:844}});
+ await fresh.clock.setFixedTime(new Date('2025-10-16T14:00:00'));
  await fresh.goto(`${url}/?fixture=fresh#today`);
  await fresh.getByText('Watch synced 2 h ago',{exact:true}).waitFor();
  assert.equal(await fresh.getByText('Open Garmin Connect to sync your watch',{exact:true}).count(),0);
  await fresh.screenshot({path:resolve(output,'watch-fresh-390.png')});
  await fresh.close();
  const sleepUpload=await browser.newPage({viewport:{width:390,height:844}});
+ await sleepUpload.clock.setFixedTime(new Date('2025-10-16T14:00:00'));
  await sleepUpload.goto(`${url}/?fixture=stale-sleep#today`);
  await sleepUpload.getByText("Last night's sleep hasn't uploaded yet.",{exact:true}).waitFor();
  assert.equal(await sleepUpload.getByText('Open Garmin Connect to sync your watch',{exact:true}).count(),1,'missing sleep gives one sync prompt in the upload card');
@@ -548,6 +585,170 @@ try {
  for(const name of ['today','sleep','training','health','status','workout'])samples[name]=JSON.parse(await readFile(resolve(`src/lib/sample/${name}.json`),'utf8'));
  // The sample's phase ended long ago; phase expiry has its own check below.
  samples.today.focus.until=null;
+ const statusDenied=await browser.newPage({viewport:{width:390,height:844}});
+ await statusDenied.addInitScript(samples=>{
+  const state=window.testStatus={permission:'denied',failSave:false,saves:0,settings:{notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,notifyStatus:false,statusOfferSeen:false,adaptiveToday:true,bedtimeLeadMin:30}};
+  window.isTauri=true;
+  window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
+   if(command==='app_status')return samples.status;
+   if(command==='get_settings')return structuredClone(state.settings);
+   if(command==='patch_settings'){state.saves++;if(state.failSave)throw Error('Synthetic snapshot write failure');Object.assign(state.settings,args.patch);return}
+   if(command==='request_notification_permission'){
+    await new Promise(r=>setTimeout(r,100));
+    if(state.permission==='error')throw Error('Synthetic permission failure');
+    return state.permission==='granted';
+   }
+   if(command.startsWith('plugin:event|'))return 1;
+   if(command in samples)return structuredClone(samples[command]);
+   throw Error('Unexpected status command '+command);
+  }};
+ },samples);
+ await statusDenied.goto(`${url}/?fixture=status-offer#settings`);
+ const deniedToggle=statusDenied.getByRole('checkbox',{name:/Persistent status/});
+ await deniedToggle.waitFor();
+ for(const permission of ['denied','error']){
+  await statusDenied.evaluate(p=>window.testStatus.permission=p,permission);
+  await deniedToggle.click();
+  await statusDenied.getByRole('status').filter({hasText:permission==='denied'?'Notifications are blocked':'Synthetic permission failure'}).waitFor();
+  assert.equal(await deniedToggle.isChecked(),false,'denial/exception cannot leave the switch visually on');
+  assert.equal(await statusDenied.evaluate(()=>window.testStatus.saves),0,'permission denial never enables persistent status');
+ }
+ await statusDenied.evaluate(()=>{window.testStatus.permission='granted';window.testStatus.failSave=true});
+ await deniedToggle.click();
+ await statusDenied.getByRole('status').filter({hasText:'Synthetic snapshot write failure'}).waitFor();
+ assert.equal(await deniedToggle.isChecked(),false,'failed publication rolls the switch back');
+ assert.equal(await statusDenied.evaluate(()=>window.testStatus.settings.notifyStatus),false);
+ await statusDenied.evaluate(()=>window.testStatus.failSave=false);
+ await deniedToggle.click();
+ await statusDenied.waitForFunction(()=>window.testStatus.settings.notifyStatus);
+ assert.equal(await deniedToggle.isChecked(),true);
+ await statusDenied.close();
+ console.log('Persistent status permission denial/exception leaves the checkbox and setting off: passed');
+ // Deferred native calls expose the stale-snapshot race without relying on network timing.
+ const patches=await browser.newPage({viewport:{width:390,height:844}});
+ patches.on('pageerror',e=>errors.push(e.message));
+ await patches.addInitScript(samples=>{
+  const stored={notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,notifyStatus:true,statusOfferSeen:true,adaptiveToday:true,bedtimeLeadMin:30,journalEnabled:true};
+  const state=window.testPatch={stored,patches:[],pending:[],holdKeys:[],holdReads:false,reads:[],readsCompleted:0,settingsReads:0,failOptIn:false};
+  window.isTauri=true;
+  window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
+   if(command.startsWith('plugin:event|'))return 1;
+   if(command==='app_status')return structuredClone(samples.status);
+   if(command==='get_settings'){
+    state.settingsReads++;
+    const snapshot=structuredClone(stored);
+    if(state.holdReads){await new Promise(resolve=>state.reads.push(resolve));state.readsCompleted++}
+    return snapshot;
+   }
+   if(command==='patch_settings'){
+    state.patches.push(structuredClone(args.patch));
+    if(Object.keys(args.patch).some(key=>state.holdKeys.includes(key)))await new Promise(resolve=>state.pending.push(resolve));
+    if(state.failOptIn && args.patch.notifyStatus===true){state.failOptIn=false;throw Error('Synthetic opt-in failure')}
+    Object.assign(stored,args.patch);return;
+   }
+   if(command==='request_notification_permission')return true;
+   if(command==='health')return {...structuredClone(samples.health),journalEnabled:stored.journalEnabled};
+   if(command in samples)return structuredClone(samples[command]);
+   throw Error('Unexpected settings command '+command);
+  }};
+ },samples);
+ await patches.goto(`${url}/?fixture=status-offer#settings`);
+ const morning=patches.getByRole('checkbox',{name:'Morning readiness'});
+ const weekly=patches.getByRole('checkbox',{name:'Weekly check-in'});
+ const privacy=patches.getByRole('checkbox',{name:/Persistent status/});
+ await morning.waitFor();
+ assert.equal(await patches.getByRole('checkbox').count(),9,'journal has its own consent control');
+ assert.equal(await patches.locator('.card').filter({has:patches.getByRole('heading',{name:'Notifications',exact:true})}).getByRole('checkbox').count(),7,'journal consent is not a notification switch');
+ await patches.evaluate(()=>window.testPatch.holdKeys=['notifyMorningReadiness','notifyStatus']);
+ await morning.uncheck();
+ await patches.waitForFunction(()=>window.testPatch.pending.length===1);
+ assert.equal(await morning.isDisabled(),true,'the same notification switch is locked during its write');
+ assert.equal(await privacy.isEnabled(),true,'unrelated privacy switch remains usable');
+ await morning.evaluate(el=>el.click());
+ assert.equal(await patches.evaluate(()=>window.testPatch.patches.length),1,'rapid same-key click is ignored');
+ await privacy.click();
+ await patches.waitForFunction(()=>window.testPatch.pending.length===2);
+ assert.equal(await privacy.isDisabled(),true,'rapid privacy toggle is locked during its write');
+ await privacy.evaluate(el=>el.click());
+ assert.equal(await patches.evaluate(()=>window.testPatch.patches.length),2);
+ await patches.evaluate(()=>window.testPatch.pending.pop()());
+ await patches.waitForFunction(()=>window.testPatch.stored.notifyStatus===false);
+ await patches.evaluate(()=>window.testPatch.pending.shift()());
+ await patches.waitForFunction(()=>window.testPatch.stored.notifyMorningReadiness===false);
+ assert.equal(await privacy.isChecked(),false,'late unrelated write cannot turn status back on');
+ assert.deepEqual(await patches.evaluate(()=>window.testPatch.patches.slice(0,2)),[{notifyMorningReadiness:false},{notifyStatus:false,statusOfferSeen:true}]);
+ await patches.evaluate(()=>{window.testPatch.holdKeys=[];window.testPatch.failOptIn=true});
+ await privacy.click();
+ await patches.getByRole('status').filter({hasText:'Synthetic opt-in failure'}).waitFor();
+ assert.equal(await privacy.isChecked(),false,'failed opt-in rolls back only its own keys');
+ await weekly.uncheck();
+ await patches.waitForFunction(()=>window.testPatch.stored.notifyWeeklyCheckin===false);
+ assert.equal(await privacy.isChecked(),false,'unrelated patch after failed opt-in cannot revive consent');
+ assert.equal(await patches.evaluate(()=>window.testPatch.stored.notifyStatus),false);
+ await patches.getByRole('checkbox',{name:'Bedtime'}).check();
+ await patches.waitForFunction(()=>window.testPatch.stored.notifyBedtime===true);
+ await patches.getByLabel('Wind-down reminder').selectOption('45');
+ await patches.waitForFunction(()=>window.testPatch.stored.bedtimeLeadMin===45);
+ assert.deepEqual(await patches.evaluate(()=>window.testPatch.patches.slice(-2)),[{notifyBedtime:true},{bedtimeLeadMin:45}]);
+ await privacy.click();
+ await patches.waitForFunction(()=>window.testPatch.stored.notifyStatus===true);
+ await patches.evaluate(()=>{window.testPatch.holdReads=true;window.dispatchEvent(new Event('raring:resume'))});
+ await patches.waitForFunction(()=>window.testPatch.reads.length===1);
+ await privacy.click();
+ await patches.waitForFunction(()=>window.testPatch.stored.notifyStatus===false);
+ await patches.evaluate(()=>window.testPatch.reads.shift()());
+ await patches.waitForFunction(()=>window.testPatch.readsCompleted===1);
+ assert.equal(await privacy.isChecked(),false,'stale full read cannot visually re-enable status');
+ assert.equal(await patches.evaluate(()=>window.testPatch.stored.notifyStatus),false);
+ assert.ok((await patches.evaluate(()=>window.testPatch.patches)).every(p=>Object.keys(p).length<=2),'no settings snapshot is ever submitted');
+ const journalToggle=patches.getByRole('checkbox',{name:/Allow Garmin journal reads/});
+ await patches.evaluate(()=>{window.testPatch.holdReads=false;window.testPatch.holdKeys=['notifyMorningReadiness','journalEnabled']});
+ await morning.check();
+ await patches.waitForFunction(()=>window.testPatch.pending.length===1);
+ await journalToggle.uncheck();
+ await patches.waitForFunction(()=>window.testPatch.pending.length===2);
+ assert.equal(await journalToggle.isDisabled(),true);
+ await journalToggle.evaluate(el=>el.click());
+ await patches.evaluate(()=>window.testPatch.pending.pop()());
+ await patches.waitForFunction(()=>window.testPatch.stored.journalEnabled===false);
+ await patches.evaluate(()=>window.testPatch.pending.shift()());
+ await patches.waitForFunction(()=>window.testPatch.stored.notifyMorningReadiness===true);
+ assert.equal(await journalToggle.isChecked(),false,'late unrelated save cannot restore journal consent');
+ assert.equal(await patches.evaluate(()=>window.testPatch.stored.journalEnabled),false);
+ assert.deepEqual(await patches.evaluate(()=>window.testPatch.patches.slice(-2)),[{notifyMorningReadiness:true},{journalEnabled:false}]);
+ await patches.getByRole('navigation').getByRole('button',{name:'Health',exact:true}).click();
+ const allowJournal=patches.getByRole('button',{name:'Allow local journal reads',exact:true});
+ await allowJournal.waitFor();
+ const settingsReads=await patches.evaluate(()=>window.testPatch.settingsReads);
+ await allowJournal.click();
+ await patches.waitForFunction(()=>window.testPatch.pending.length===1);
+ assert.equal(await allowJournal.isDisabled(),true,'Health allow uses the same per-field write guard');
+ await patches.evaluate(()=>window.testPatch.pending.shift()());
+ await patches.getByRole('button',{name:'Open journal',exact:true}).waitFor();
+ assert.deepEqual(await patches.evaluate(()=>window.testPatch.patches.at(-1)),{journalEnabled:true},'Health allow sends only consent');
+ assert.equal(await patches.evaluate(()=>window.testPatch.settingsReads),settingsReads,'Health allow never reads/resubmits whole Settings');
+ await patches.close();
+ const marker=await browser.newPage({viewport:{width:390,height:844}});
+ marker.on('pageerror',e=>errors.push(e.message));
+ await marker.addInitScript(samples=>{
+  const stored={notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,notifyStatus:false,statusOfferSeen:false,adaptiveToday:true,bedtimeLeadMin:30};
+  const state=window.testMarker={stored,patches:[]};
+  window.isTauri=true;
+  window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
+   if(command.startsWith('plugin:event|'))return 1;
+   if(command==='app_status')return structuredClone(samples.status);
+   if(command==='get_settings')return structuredClone(stored);
+   if(command==='patch_settings'){state.patches.push(structuredClone(args.patch));Object.assign(stored,args.patch);return}
+   if(command in samples)return structuredClone(samples[command]);
+   throw Error('Unexpected offer command '+command);
+  }};
+ },samples);
+ await marker.goto(`${url}/?fixture=status-offer#today`);
+ await marker.getByRole('button',{name:'Enable persistent status'}).waitFor();
+ assert.deepEqual(await marker.evaluate(()=>window.testMarker.patches),[{statusOfferSeen:true}],'offer writes only its marker');
+ assert.equal(await marker.evaluate(()=>window.testMarker.stored.notifyStatus),false);
+ await marker.close();
+ console.log('Settings patches: deferred writes, failed opt-in, stale reads and offer marker: passed');
  const onboarding=await browser.newPage({viewport:{width:390,height:844}});
  onboarding.on('pageerror',e=>errors.push(e.message));
  await onboarding.addInitScript(samples=>{
@@ -580,11 +781,11 @@ try {
  await onboarding.getByText('Keep Garmin Connect syncing',{exact:true}).waitFor();
  assert.ok((await onboarding.locator('.about-raring').textContent()).includes('No analytics, telemetry, ads'));
  assert.equal(await onboarding.getByRole('navigation').count(),0,'welcome does not expose signed-in navigation');
- const privacy=onboarding.locator('summary');
- await privacy.focus();await privacy.press('Enter');
+ const privacySummary=onboarding.locator('summary');
+ await privacySummary.focus();await privacySummary.press('Enter');
  assert.ok(await onboarding.locator('details').getAttribute('open')!==null,'privacy is keyboard accessible');
  await onboarding.getByText(/Sign-in tokens are encrypted/).waitFor();
- await privacy.press('Enter');
+ await privacySummary.press('Enter');
  await onboarding.getByRole('button',{name:'Sign in with Garmin'}).click();
  await onboarding.getByRole('alert').getByText('Error: Synthetic sign-in failure',{exact:true}).waitFor();
  await onboarding.evaluate(()=>{window.testOnboarding.failSignIn=false});
@@ -1093,7 +1294,7 @@ function trendFixture(q){
   localStorage.setItem('notifications-step-done','1');
   samples.status.lastSync=new Date().toISOString();
   const stored={notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,bedtimeLeadMin:30,adaptiveToday:true};
-  const state=window.testLayout={stored,saves:[],failNext:false};
+  const state=window.testLayout={stored,saves:[],patches:[],failNext:false};
   const focus=()=>stored.adaptiveToday
    ?{...samples.today.focus,phase:'day',cards:['now','focus','sleepPlan'],planOpen:false}
    :{...samples.today.focus,phase:'overview',cards:['focus','sleepPlan'],planOpen:true};
@@ -1103,10 +1304,11 @@ function trendFixture(q){
    if(command==='sync_now')return;
    if(command==='app_status')return structuredClone(samples.status);
    if(command==='get_settings')return structuredClone(stored);
-   if(command==='set_settings'){
+   if(command==='patch_settings'){
+    state.patches.push(structuredClone(args.patch));
     await new Promise(resolve=>state.saves.push(resolve));
     if(state.failNext){state.failNext=false;throw Error('Synthetic save failure')}
-    Object.assign(stored,args.settings);return;
+    Object.assign(stored,args.patch);return;
    }
    if(command==='today')return {...structuredClone(samples.today),focus:focus()};
    if(command in samples)return structuredClone(samples[command]);
@@ -1157,6 +1359,7 @@ function trendFixture(q){
  await saved();
  await layout.waitForFunction(()=>window.testLayout.stored.adaptiveToday && ![...document.querySelectorAll('label.setting')].find(l=>l.textContent.includes('Follow my day')).querySelector('input').disabled);
  assert.equal(await followSwitch().isChecked(),true,'the switch and store agree on the last accepted change');
+ assert.deepEqual(await layout.evaluate(()=>window.testLayout.patches),[{adaptiveToday:false},{adaptiveToday:true},{adaptiveToday:true}],'layout sends only its changed field');
  await layout.close();
  console.log('Follow my day: slow save, rapid clicks, navigation, failure and retry: passed');
  for(const width of [390,700,1100]){
