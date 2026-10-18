@@ -24,7 +24,7 @@ try{
   await page.screenshot({path:resolve(output,`${name}.png`)});
   console.log(`${name}: ${resolve(output,`${name}.png`)}`);
   if(name==='workout' && !(await page.locator('.map > path').first().getAttribute('d')).includes('C'))throw new Error('Sparse route was not smoothed');
-  if(name==='settings' && await page.locator('input[type="checkbox"]').count()!==7)throw new Error('Expected six notification switches and the Today switch');
+  if(name==='settings' && await page.locator('input[type="checkbox"]').count()!==8)throw new Error('Expected six notification switches, the Today switch and journal consent');
   if(name==='today-missing' && await page.getByText("Today's focus").count())throw new Error('Missing-data variant still shows a call');
   if(name==='readiness'){
    await page.getByText('Readiness history').waitFor();
