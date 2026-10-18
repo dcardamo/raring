@@ -962,7 +962,9 @@ async fn request(
         return Some(Got::Later);
     }
     report.requests += 1;
-    let response = if kind == "health_status" {
+    let response = if kind == "journal" {
+        client.endpoint_guarded(kind, key, name, || store.settings().journal_enabled).await
+    } else if kind == "health_status" {
         if NaiveDate::parse_from_str(key, "%Y-%m-%d").is_err() {
             Err(garmin::Error::Decode)
         } else {
@@ -984,14 +986,16 @@ async fn request(
                         });
                     valid.then(|| summary.clone()).ok_or(garmin::Error::Decode)
                 })
+                .map(Some)
         }
     } else if kind == "exercise_catalog" {
         client
             .exercise_catalog()
             .await
             .and_then(|v| strength::reduce_catalog(&v).ok_or(garmin::Error::Decode))
+            .map(Some)
     } else {
-        client.endpoint(kind, key, name).await
+        client.endpoint(kind, key, name).await.map(Some)
     };
     // Never treat a reply after opt-out as a journal result. Authentication
     // and rate-limit errors still update their global backoff state.
@@ -1002,7 +1006,8 @@ async fn request(
         return None;
     }
     match response {
-        Ok(v) => {
+        Ok(None) => None,
+        Ok(Some(v)) => {
             if kind != "journal" { let _ = store.set_cursor(&retry_key, "0"); }
             Some(Got::Value(v))
         }
@@ -1143,6 +1148,163 @@ mod naps_journal_tests {
         assert_eq!(report.stored, 0);
         assert!(store.cursor("backoff_until").and_then(|s| s.parse::<i64>().ok()).is_some_and(|t| t > now.timestamp()));
         assert_eq!(store.get("journal", &day), None);
+    }
+
+    #[tokio::test]
+    async fn opt_out_during_client_pacing_never_sends_unsent_get() {
+        use std::{io::{Read, Write}, net::TcpListener, sync::{Arc, atomic::{AtomicUsize, Ordering}}};
+        let store = Arc::new(Store::open(":memory:").unwrap());
+        let mut settings = store.settings();
+        settings.journal_enabled = true;
+        store.set_settings(&settings).unwrap();
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let server = std::thread::spawn({
+            let listener = listener.try_clone().unwrap();
+            move || {
+                let (mut stream, _) = listener.accept().unwrap();
+                let mut buf = [0; 2048];
+                assert!(stream.read(&mut buf).unwrap() > 0);
+                stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}").unwrap();
+            }
+        });
+        let client = Client::with_urls(Tokens {
+            access_token: "synthetic".into(), refresh_token: "synthetic".into(),
+            client_id: "synthetic".into(), expires_at: Utc::now() + Duration::days(1),
+        }, &url, &url, std::time::Duration::from_secs(60)).unwrap();
+        client.get("/prime", &[]).await.unwrap();
+        server.join().unwrap();
+        tokio::time::pause();
+        let checks = Arc::new(AtomicUsize::new(0));
+        let (entered_tx, mut entered_rx) = tokio::sync::mpsc::unbounded_channel();
+        let worker = tokio::spawn({
+            let store = Arc::clone(&store); let checks = Arc::clone(&checks);
+            async move {
+                client.get_guarded("/lifestylelogging-service/dailyLog/2025-10-16", &[], || {
+                    let enabled = store.settings().journal_enabled;
+                    if checks.fetch_add(1, Ordering::SeqCst) == 2 { let _ = entered_tx.send(()); }
+                    enabled
+                }).await
+            }
+        });
+        entered_rx.recv().await.unwrap(); // Third guard: entered the client and about to wait for pacing.
+        assert!(store.settings().journal_enabled);
+        settings.journal_enabled = false;
+        store.set_settings(&settings).unwrap();
+        tokio::time::advance(std::time::Duration::from_secs(61)).await;
+        assert!(worker.await.unwrap().unwrap().is_none());
+        assert!(checks.load(Ordering::SeqCst) >= 4, "guard must run after pacing");
+        listener.set_nonblocking(true).unwrap();
+        assert!(listener.accept().is_err(), "paced journal GET was cancelled before dispatch");
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn opt_out_during_401_refresh_keeps_tokens_but_skips_retry_get() {
+        use std::{io::{Read, Write}, net::TcpListener, sync::{Arc, mpsc}};
+        let store = Arc::new(Store::open(":memory:").unwrap());
+        let mut settings = store.settings();
+        settings.journal_enabled = true;
+        store.set_settings(&settings).unwrap();
+        let now = Utc::now();
+        let today = Local::now().date_naive();
+        for i in 0..2 {
+            store.put("naps", &date(today - Duration::days(i)), &now.to_rfc3339(), &serde_json::json!([])).unwrap();
+        }
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let client = Arc::new(Client::with_urls(Tokens {
+            access_token: "old-access".into(), refresh_token: "old-refresh".into(),
+            client_id: "synthetic".into(), expires_at: now + Duration::days(1),
+        }, &url, &url, std::time::Duration::ZERO).unwrap());
+        let (arrived_tx, arrived_rx) = mpsc::channel();
+        let (release_tx, release_rx) = mpsc::channel();
+        let server = std::thread::spawn({
+            let listener = listener.try_clone().unwrap();
+            move || {
+                let (mut first, _) = listener.accept().unwrap();
+                let mut buf = [0; 2048];
+                let size = first.read(&mut buf).unwrap();
+                assert!(String::from_utf8_lossy(&buf[..size]).starts_with("GET /lifestylelogging-service/dailyLog/"));
+                first.write_all(b"HTTP/1.1 401 Unauthorized\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").unwrap();
+                let (mut stream, _) = listener.accept().unwrap();
+                let size = stream.read(&mut buf).unwrap();
+                arrived_tx.send(String::from_utf8_lossy(&buf[..size]).lines().next().unwrap().to_owned()).unwrap();
+                release_rx.recv_timeout(std::time::Duration::from_secs(5)).unwrap();
+                let body = r#"{"access_token":"rotated-access","refresh_token":"rotated-refresh","expires_in":3600}"#;
+                write!(stream, "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).unwrap();
+            }
+        });
+        let worker = tokio::spawn({
+            let store = Arc::clone(&store); let client = Arc::clone(&client);
+            async move {
+                let mut report = SyncReport::default();
+                sync_naps_journal(&store, &client, &mut report, today, 20, now).await;
+                report
+            }
+        });
+        assert!(arrived_rx.recv_timeout(std::time::Duration::from_secs(5)).unwrap().starts_with("POST "));
+        settings.journal_enabled = false;
+        store.set_settings(&settings).unwrap();
+        release_tx.send(()).unwrap();
+        let report = tokio::time::timeout(std::time::Duration::from_secs(5), worker).await.unwrap().unwrap();
+        server.join().unwrap();
+        assert_eq!(report.requests, 1); // The first GET counts; its retry was cancelled.
+        assert_eq!(report.data_failures, 0);
+        assert_eq!(report.stored, 0);
+        assert_eq!(store.get("journal", &date(today)), None);
+        let rotated = client.tokens().await;
+        assert_eq!(rotated.access_token, "rotated-access");
+        assert_eq!(rotated.refresh_token, "rotated-refresh");
+        listener.set_nonblocking(true).unwrap();
+        assert!(listener.accept().is_err(), "refresh must not dispatch a cancelled journal GET");
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn opt_out_before_401_skips_refresh_and_retry_get() {
+        use std::{io::{Read, Write}, net::TcpListener, sync::{Arc, mpsc}};
+        let store = Arc::new(Store::open(":memory:").unwrap());
+        let mut settings = store.settings();
+        settings.journal_enabled = true;
+        store.set_settings(&settings).unwrap();
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let client = Arc::new(Client::with_urls(Tokens {
+            access_token: "synthetic".into(), refresh_token: "synthetic".into(),
+            client_id: "synthetic".into(), expires_at: Utc::now() + Duration::days(1),
+        }, &url, &url, std::time::Duration::ZERO).unwrap());
+        let (arrived_tx, arrived_rx) = mpsc::channel();
+        let (release_tx, release_rx) = mpsc::channel();
+        let server = std::thread::spawn({
+            let listener = listener.try_clone().unwrap();
+            move || {
+                let (mut stream, _) = listener.accept().unwrap();
+                let mut buf = [0; 2048];
+                assert!(stream.read(&mut buf).unwrap() > 0);
+                arrived_tx.send(()).unwrap();
+                release_rx.recv_timeout(std::time::Duration::from_secs(5)).unwrap();
+                stream.write_all(b"HTTP/1.1 401 Unauthorized\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").unwrap();
+            }
+        });
+        let worker = tokio::spawn({
+            let store = Arc::clone(&store); let client = Arc::clone(&client);
+            async move {
+                let mut report = SyncReport::default();
+                fetch(&store, &client, &mut report, "journal", &date(Local::now().date_naive()), None, 1, Utc::now()).await;
+                report
+            }
+        });
+        arrived_rx.recv_timeout(std::time::Duration::from_secs(5)).unwrap();
+        settings.journal_enabled = false;
+        store.set_settings(&settings).unwrap();
+        release_tx.send(()).unwrap();
+        let report = tokio::time::timeout(std::time::Duration::from_secs(5), worker).await.unwrap().unwrap();
+        server.join().unwrap();
+        assert_eq!(report.requests, 1);
+        assert_eq!(report.data_failures, 0);
+        assert!(!report.auth_failed);
+        assert_eq!(report.stored, 0);
+        listener.set_nonblocking(true).unwrap();
+        assert!(listener.accept().is_err(), "neither refresh nor retry may dispatch after opt-out");
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

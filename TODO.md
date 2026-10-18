@@ -299,8 +299,9 @@ faces, screens, sensors and audio prompts stay in Connect.
   use the shared budget, pacing and 429 backoff: recent naps and, after
   consent only, seven journal days at six-hour/twenty-four-hour cadences,
   with cached empty and unavailable responses. Consent is checked before
-  each journal request and atomically with caching each reply, including
-  across database connections; opt-out discards in-flight results without
+  each journal request, after client mutex/refresh/pacing and before a 401
+  retry, and atomically with caching each reply across database connections;
+  opt-out discards in-flight results without
   clearing previously downloaded logs. Live Health journals follow the actual
   local day across the sleep-day handover, while historical views keep the
   requested date. Nap cards show dated endpoints across midnight and label

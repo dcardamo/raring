@@ -268,6 +268,14 @@ impl Client {
         self.state.lock().await.0.clone()
     }
     pub async fn get(&self, path: &str, params: &[(&str, &str)]) -> Result<Value> {
+        self.get_guarded(path, params, || true).await?.ok_or(Error::Decode)
+    }
+    /// Cancellation is distinct from a missing or failed response. The guard
+    /// runs without holding a database lock, including immediately before a
+    /// paced send and a 401 retry; refreshed tokens remain in the client.
+    pub(crate) async fn get_guarded<F: Fn() -> bool + Sync>(
+        &self, path: &str, params: &[(&str, &str)], may_send: F,
+    ) -> Result<Option<Value>> {
         if !path.starts_with('/')
             || path.contains("..")
             || path.contains('?')
@@ -276,25 +284,30 @@ impl Client {
         {
             return Err(Error::Decode);
         }
+        if !may_send() { return Ok(None); }
         let mut guard = self.state.lock().await;
+        if !may_send() { return Ok(None); }
         if guard.0.is_expiring(Utc::now(), Duration::minutes(5)) {
             guard.0 = refresh_at(&self.http, &self.auth, &guard.0).await?;
+            if !may_send() { return Ok(None); }
         }
         for attempt in 0..2 {
+            if !may_send() { return Ok(None); }
             if let Some(last) = guard.1 {
                 if let Some(wait) = self.interval.checked_sub(last.elapsed()) {
                     tokio::time::sleep(wait).await;
                 }
             }
-            guard.1 = Some(Instant::now());
-            let r = native(self.http.get(format!("{}{path}", self.api)))
+            let request = native(self.http.get(format!("{}{path}", self.api)))
                 .bearer_auth(&guard.0.access_token)
-                .query(params)
-                .send()
-                .await
-                .map_err(map_network)?;
+                .query(params);
+            if !may_send() { return Ok(None); }
+            guard.1 = Some(Instant::now());
+            let r = request.send().await.map_err(map_network)?;
             if r.status() == StatusCode::UNAUTHORIZED && attempt == 0 {
+                if !may_send() { return Ok(None); }
                 guard.0 = refresh_at(&self.http, &self.auth, &guard.0).await?;
+                if !may_send() { return Ok(None); }
                 continue;
             }
             if !r.status().is_success() {
@@ -303,7 +316,7 @@ impl Client {
             if r.status() == StatusCode::NO_CONTENT {
                 return Err(Error::NotFound);
             }
-            return r.json().await.map_err(|_| Error::Decode);
+            return r.json().await.map(Some).map_err(|_| Error::Decode);
         }
         Err(Error::NeedsSignIn)
     }
@@ -368,6 +381,11 @@ impl Client {
         Err(Error::NeedsSignIn)
     }
     pub async fn endpoint(&self, kind: &str, key: &str, display: Option<&str>) -> Result<Value> {
+        self.endpoint_guarded(kind, key, display, || true).await?.ok_or(Error::Decode)
+    }
+    pub(crate) async fn endpoint_guarded<F: Fn() -> bool + Sync>(
+        &self, kind: &str, key: &str, display: Option<&str>, may_send: F,
+    ) -> Result<Option<Value>> {
         let d = display.unwrap_or("");
         // display names are URL path segments; never allow them to alter the route.
         let d = url::form_urlencoded::byte_serialize(d.as_bytes())
@@ -614,7 +632,7 @@ impl Client {
             }
             _ => return Err(Error::Decode),
         };
-        self.get(&path, &params).await
+        self.get_guarded(&path, &params, may_send).await
     }
 }
 

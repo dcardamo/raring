@@ -292,8 +292,9 @@ Questions go to GitHub; the address is shown as text.
   Live Health anchors those seven dates to the actual local calendar day even
   when its vitals still show the retained sleep day; explicit historical Health
   reads remain anchored to their requested date. Only consented syncs fetch
-  the daily log: check before every request, and atomically check consent
-  again when caching each reply. Closing or leaving Health hides entries.
+  the daily log: recheck at dispatch after client serialization, token
+  refresh, pacing and before any 401 retry; atomically check consent again
+  when caching each reply. Closing or leaving Health hides entries.
   Garmin's `dailyLogsReport` rows may carry `name`, `logStatus`
   (YES/NO) and `details` with `amount` and `subTypeName` (no generic unit).
   A null report or unknown log status is not a recorded zero/no; completion
