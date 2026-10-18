@@ -7,12 +7,12 @@
  import {SPORTS, type Sport} from '../lib/sports';
  // One visual language for state: filled = recorded, outlined = your plan,
  // diamond = Garmin schedule, moon = rest, hatched = paused, dotted = unknown.
- let {sport = 'other', mark = 'recorded', size = 28, label}: {sport?: Sport, mark?: Mark, size?: number, label?: string} = $props();
+ let {sport = 'other', mark = 'recorded', size = 28, label, named = false}: {sport?: Sport, mark?: Mark, size?: number, label?: string, named?: boolean} = $props();
  let color = $derived(mark === 'rest' || mark === 'unknown' ? '#8E98AC' : SPORTS[sport].color);
  let name = $derived(label ?? (mark === 'rest' ? 'Rest day' : mark === 'paused' ? 'Paused' : mark === 'unknown' ? 'Awaiting evidence' : `${MARK_NAMES[mark]}: ${SPORTS[sport].name}`));
  const id = $props.id();
 </script>
-<span class="glyph m-{mark}" style:--c={color} style:width={size + 'px'} style:height={size + 'px'} role="img" aria-label={name}>
+<span class="glyph m-{mark}" style:--c={color} style:width={size + 'px'} style:height={size + 'px'} role={named ? 'img' : undefined} aria-label={named ? name : undefined} aria-hidden={named ? undefined : 'true'}>
  <svg viewBox="0 0 32 32" width={size} height={size} aria-hidden="true">
   <defs><pattern id="h{id}" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="1.6" height="4" fill={color} opacity=".55"/></pattern></defs>
   {#if mark === 'garmin'}<rect x="6" y="6" width="20" height="20" rx="3.5" transform="rotate(45 16 16)" fill="rgba(11,15,26,.6)" stroke={color} stroke-width="2"/>

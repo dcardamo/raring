@@ -2,105 +2,124 @@
  import Icon from '../../lib/components/Icon.svelte';
  import {colors, stressColors, stressLevel} from '../../lib/charts';
  import {SPORTS} from '../lib/sports';
- import {hm, toMin, dur} from '../lib/dates';
- import {stagesFor, type Activity} from '../lib/world';
+ import {hm, toMin, dur, dayLabel} from '../lib/dates';
+ import {stagesFor} from '../lib/world';
  import type {Ctx} from '../lib/rules';
- import {timelines} from '../lib/views';
- // The signature "your day" strip: last night's stages, stress shading, heart
- // rate, activities and naps, now, and tonight's window ahead. Every part is an
- // existing view field (stages, stress and HR timelines, activities, naps, sleep plan).
+ import {bodyBatteryDay, timelines} from '../lib/views';
+ // "Your day" at a glance: last night as one band in stage colours, Body Battery
+ // as the line that tells the charge and drain, stress as a soft band, activities
+ // and naps on their own lane, now, and tonight's window ahead. Each part opens
+ // its detail. Sources: sleep stages, the stress timeline, activities and naps are
+ // view fields; the Body Battery line is stored but not yet exposed (see the
+ // provenance table in docs/experience-design.md).
  let {ctx, navigate}: {ctx: Ctx, navigate: (route: string) => void} = $props();
- const START = -150, END = 1530, W = 340;
+ const START = -120, END = 1500, W = 340, H = 132;
  const x = (m: number) => (Math.max(START, Math.min(END, m)) - START) / (END - START) * W;
- const pct = (m: number) => x(m) / W * 100;
+ const px = (m: number) => x(m) / W * 100;
+ const SLEEP = [4, 18], LANE = [26, 46], BB = [54, 104], STRESS = [108, 116];
+ const py = (y: number) => y / H * 100;
  let day = $derived(ctx.clock.phase === 'late' ? ctx.day : ctx.calendarDate);
  let now = $derived(toMin(ctx.clock.time) + (ctx.clock.phase === 'late' ? 1440 : 0));
  let waiting = $derived(ctx.phase === 'waiting');
  let night = $derived(waiting ? null : ctx.nightOf(day));
  let bed = $derived(night ? (toMin(night.bed) > 720 ? toMin(night.bed) - 1440 : toMin(night.bed)) : -60);
+ let wake = $derived(night ? toMin(night.wake) : 400);
  let stages = $derived(night ? stagesFor(day, night.asleep) : []);
- let span = $derived(night ? toMin(night.wake) - bed : 0);
  let total = $derived(stages.length ? stages.at(-1)!.startMin + stages.at(-1)!.minutes : 1);
- let tl = $derived(timelines(ctx, day));
- let acts = $derived(ctx.world.activities.filter(a => a.date === day));
- let naps = $derived(ctx.napList.filter(n => n.start[0] === day));
- let windowStart = $derived(toMin(ctx.tonight.windowStart)), windowEnd = $derived(toMin(ctx.tonight.windowEnd)), windDown = $derived(toMin(ctx.tonight.windDown));
- const laneY = 8, laneH = 34;
- const stageY: Record<string, number> = {awake: 0, rem: 8, light: 16, deep: 24};
- let hrPath = $derived.by(() => {
-  const v = tl.hr; let d = '', pen = false;
-  const lo = 40, hi = 175;
-  v.forEach((b, i) => { if (b == null) { pen = false; return; } const px = x(i * 2), py = 120 - (b - lo) / (hi - lo) * 46; d += `${pen ? 'L' : 'M'}${px.toFixed(1)},${py.toFixed(1)}`; pen = true; });
-  return d;
+ const stageColor: Record<string, string> = {deep: colors.deep, light: colors.light, rem: colors.rem, awake: '#C9D3E6'};
+ let bb = $derived(waiting ? null : bodyBatteryDay(ctx, day, now));
+ const by = (v: number) => BB[1] - v / 100 * (BB[1] - BB[0]);
+ let bbLine = $derived(bb ? bb.points.map(([m, v], i) => `${i ? 'L' : 'M'}${x(m).toFixed(1)},${by(v).toFixed(1)}`).join('') : '');
+ let bbArea = $derived(bb && bb.points.length ? `${bbLine}L${x(bb.points.at(-1)![0]).toFixed(1)},${BB[1]}L${x(bb.points[0][0]).toFixed(1)},${BB[1]}Z` : '');
+ let nowV = $derived(bb?.now ?? null);
+ let sampleMinute = $derived(bb?.points.at(-1)?.[0] ?? now);
+ // Stress in 15-minute buckets, Garmin's category colours; gaps stay empty.
+ let stress = $derived.by(() => {
+  const s = timelines(ctx, day).stress, out: {x: number, w: number, c: string}[] = [];
+  for (let i = 0; i < s.length; i += 5) {
+   const vals = s.slice(i, i + 5).filter((v): v is number => v != null);
+   if (vals.length < 2) continue;
+   const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+   out.push({x: x(i * 3), w: x(i * 3 + 15) - x(i * 3) + .4, c: stressColors[stressLevel(avg)]});
+  }
+  return out;
  });
- let stressCells = $derived(tl.stress.map((v, i) => v == null ? null : {x: x(i * 3), w: Math.max(.6, x(i * 3 + 3) - x(i * 3)), c: stressColors[stressLevel(v)], o: .25 + v / 140}).filter(c => c != null));
- const actLabel = (a: Activity) => `${a.name}, ${a.start}, ${a.min} min`;
+ // Activities and naps share a lane; short blocks get room for their glyph.
+ let blocks = $derived.by(() => {
+  const items = [
+   ...ctx.world.activities.filter(a => a.date === day).map(a => ({m: toMin(a.start), len: a.min, color: SPORTS[a.sport].color, icon: SPORTS[a.sport].icon, label: `${a.name}, ${a.start}, ${a.min} min`, go: `workout/${a.id}`})),
+   ...ctx.napList.filter(n => n.start[0] === day).map(n => ({m: toMin(n.start[1]), len: n.min, color: colors.rem, icon: 'moon' as const, label: `Nap at ${n.start[1]}, ${n.min} min`, go: 'sleep/naps'})),
+  ].sort((a, b) => a.m - b.m);
+  let end = -Infinity;
+  return items.map(it => { const x0 = Math.max(x(it.m), end + 2), w = Math.max(20, x(it.m + it.len) - x(it.m)); end = x0 + w; return {...it, x0, w}; });
+ });
+ let win0 = $derived(toMin(ctx.tonight.window ? ctx.tonight.windowStart : '23:20')), windDown = $derived(toMin(ctx.tonight.windDown));
 </script>
 <section class="ribbon card" aria-labelledby="ribbon-t">
- <h3 id="ribbon-t"><span>Your day</span><span class="legend-btn"><button class="link" onclick={() => navigate('help/legend')}>Key</button></span></h3>
+ <h3 id="ribbon-t"><span>Your day{day !== ctx.calendarDate ? ` · ${dayLabel(day)}` : ''}</span><button class="key" onclick={() => navigate('help/legend')}>Key</button></h3>
  <div class="rb-wrap">
-  <svg viewBox={`0 0 ${W} 142`} class="rb" aria-hidden="true">
+  <svg viewBox={`0 0 ${W} ${H}`} class="rb" aria-hidden="true">
    <defs>
-    <pattern id="future" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="1" height="5" fill="#fff" opacity=".05"/></pattern>
-    <linearGradient id="wd" x1="0" x2="1"><stop stop-color="#A9C8FF" stop-opacity="0"/><stop offset="1" stop-color="#A9C8FF" stop-opacity=".28"/></linearGradient>
+    <linearGradient id="bbfill" x1="0" y1={BB[0]} x2="0" y2={BB[1]} gradientUnits="userSpaceOnUse"><stop stop-color="#3DDC97" stop-opacity=".32"/><stop offset="1" stop-color="#3DDC97" stop-opacity=".02"/></linearGradient>
+    <filter id="soft" x="-5%" y="-50%" width="110%" height="200%"><feGaussianBlur stdDeviation="1.4 .6"/></filter>
+    <clipPath id="sleepclip"><rect x={x(bed)} y={SLEEP[0]} width={x(wake) - x(bed)} height={SLEEP[1] - SLEEP[0]} rx="7"/></clipPath>
    </defs>
-   {#each [0, 360, 720, 1080, 1440] as t}<line x1={x(t)} x2={x(t)} y1="4" y2="124" stroke="rgba(255,255,255,.06)"/>{/each}
-   <!-- last night -->
+   {#each [0, 360, 720, 1080, 1440] as t}<line x1={x(t)} x2={x(t)} y1={SLEEP[0]} y2={STRESS[1]} stroke="rgba(255,255,255,.05)"/>{/each}
+   <line x1="0" x2={W} y1={by(50)} y2={by(50)} stroke="rgba(255,255,255,.05)" stroke-dasharray="2 3"/>
+   <!-- last night: one continuous band -->
    {#if night}
-    {#each stages as s}<rect x={x(bed + s.startMin / total * span)} y={laneY + stageY[s.stage]} width={Math.max(.8, x(bed + (s.startMin + s.minutes) / total * span) - x(bed + s.startMin / total * span))} height={laneH - stageY[s.stage]} rx="1.5" fill={({deep: colors.deep, light: colors.light, rem: colors.rem, awake: colors.awake} as Record<string, string>)[s.stage]} opacity={s.stage === 'awake' ? .7 : 1}/>{/each}
-   {:else}
-    <rect x={x(-60)} y={laneY} width={x(400) - x(-60)} height={laneH} rx="6" fill="none" stroke="#8E98AC" stroke-dasharray="2 3"/>
-   {/if}
-   <!-- naps and activities -->
-   {#each naps as n}<rect x={x(toMin(n.start[1]))} y={laneY + 10} width={Math.max(4, x(toMin(n.start[1]) + n.min) - x(toMin(n.start[1])))} height={laneH - 10} rx="3" fill={colors.rem} opacity=".85"/>{/each}
-   {#each acts as a}<rect x={x(toMin(a.start))} y={laneY} width={Math.max(7, x(toMin(a.start) + a.min) - x(toMin(a.start)))} height={laneH} rx="5" fill={SPORTS[a.sport].color}/>{/each}
+    <g clip-path="url(#sleepclip)">{#each stages as s}<rect x={x(bed + s.startMin / total * (wake - bed))} y={SLEEP[0]} width={x(bed + (s.startMin + s.minutes) / total * (wake - bed)) - x(bed + s.startMin / total * (wake - bed)) + .3} height={SLEEP[1] - SLEEP[0]} fill={stageColor[s.stage]}/>{/each}</g>
+   {:else}<rect x={x(-60)} y={SLEEP[0]} width={x(420) - x(-60)} height={SLEEP[1] - SLEEP[0]} rx="7" fill="none" stroke="#8E98AC" stroke-dasharray="2 3"/>{/if}
+   <!-- activity and nap lane -->
+   <rect x="0" y={LANE[0]} width={W} height={LANE[1] - LANE[0]} rx="6" fill="rgba(255,255,255,.025)"/>
+   {#each blocks as b}<rect x={b.x0} y={LANE[0] + 1} width={b.w} height={LANE[1] - LANE[0] - 2} rx="6" fill={b.color}/>{/each}
+   <!-- stress: a soft band -->
+   <g filter="url(#soft)" opacity=".8">{#each stress as c}<rect x={c.x} y={STRESS[0]} width={c.w} height={STRESS[1] - STRESS[0]} fill={c.c}/>{/each}</g>
+   <!-- Body Battery -->
+   {#if bb}<path d={bbArea} fill="url(#bbfill)"/><path d={bbLine} fill="none" stroke="#3DDC97" stroke-width="2" stroke-linejoin="round"/>{/if}
+   <!-- the rest of the day is quieter, not hatched -->
+   <rect x={x(now)} y="0" width={W - x(now)} height={STRESS[1] + 2} fill="#141a27" opacity=".55"/>
    <!-- tonight -->
    {#if !ctx.stale}
-    <rect x={x(windDown)} y={laneY} width={x(windowStart) - x(windDown)} height={laneH} fill="url(#wd)"/>
-    <rect x={x(windowStart)} y={laneY} width={Math.max(6, x(windowEnd) - x(windowStart))} height={laneH} rx="4" fill="rgba(169,200,255,.18)" stroke="#A9C8FF" stroke-width="1.2" stroke-dasharray="3 2"/>
-    <rect x={x(windowEnd)} y={laneY + 14} width={x(END) - x(windowEnd)} height={laneH - 14} rx="2" fill="rgba(47,111,224,.18)"/>
+    <rect x={x(windDown)} y={SLEEP[0]} width={Math.max(0, x(win0) - x(windDown))} height={SLEEP[1] - SLEEP[0]} fill="#A9C8FF" opacity=".1"/>
+    <rect x={x(win0)} y={SLEEP[0]} width={W - x(win0) + 8} height={SLEEP[1] - SLEEP[0]} rx="7" fill="rgba(169,200,255,.16)" stroke="rgba(169,200,255,.45)" stroke-dasharray="3 2"/>
    {/if}
-   <!-- stress and heart rate -->
-   <text x="0" y="55" font-size="7.5" fill="#8E98AC" font-weight="600">STRESS</text>
-   {#each stressCells as c}<rect x={c.x} y="58" width={c.w} height="9" fill={c.c} opacity={c.o}/>{/each}
-   <path d={hrPath} fill="none" stroke="#FF6B6B" stroke-opacity=".9" stroke-width="1.5" stroke-linejoin="round"/>
-   <text x="0" y="80" font-size="7.5" fill="#8E98AC" font-weight="600">HR</text>
-   <!-- future and now -->
-   <rect x={x(now)} y="4" width={x(END) - x(now)} height="120" fill="url(#future)"/>
-   <line x1={x(now)} x2={x(now)} y1="2" y2="126" stroke="#EEF1F7" stroke-width="1.4"/>
-   <circle cx={x(now)} cy="2.5" r="2.5" fill="#EEF1F7"/>
-   {#each [[0, '00'], [360, '06'], [720, '12'], [1080, '18'], [1440, '00']] as [t, l]}<text x={x(t as number)} y="139" font-size="9" fill="#8E98AC" text-anchor="middle">{l}</text>{/each}
+   <!-- now -->
+   <line x1={x(now)} x2={x(now)} y1={SLEEP[0]} y2={STRESS[1] + 2} stroke="#EEF1F7" stroke-opacity=".35"/>
+   {#if nowV != null}<circle cx={x(sampleMinute)} cy={by(nowV)} r="7" fill="#3DDC97" opacity=".22"/><circle cx={x(sampleMinute)} cy={by(nowV)} r="4.2" fill="#EEF1F7" stroke="#0B0F1A" stroke-width="1.5"/>{/if}
+   {#each [[0, '00'], [360, '06'], [720, '12'], [1080, '18'], [1440, '00']] as [t, l]}<text x={x(t as number)} y={H - 2} font-size="9" fill="#8E98AC" text-anchor="middle">{l}</text>{/each}
   </svg>
+  {#if nowV != null}<span class="nowtag" style:left={px(sampleMinute) + '%'} style:top={py(by(nowV) - 16) + '%'}><b class="n">{nowV}</b></span>{/if}
   <!-- tappable parts -->
-  {#if night}<button class="hit" style:left={pct(bed) + '%'} style:width={pct(toMin(night.wake)) - pct(bed) + '%'} aria-label={`Last night's sleep, ${night.bed} to ${night.wake}, ${dur(night.asleep)}`} onclick={() => navigate('sleep')}></button>
-  {:else}<button class="hit" style:left={pct(-60) + '%'} style:width={pct(400) - pct(-60) + '%'} aria-label="Last night: waiting for your watch to sync" onclick={() => navigate('sleep')}></button>{/if}
-  {#each naps as n}<button class="hit" style:left={pct(toMin(n.start[1])) + '%'} style:width={Math.max(4, pct(toMin(n.start[1]) + n.min) - pct(toMin(n.start[1]))) + '%'} aria-label={`Nap at ${n.start[1]}, ${n.min} min`} onclick={() => navigate('sleep/naps')}></button>{/each}
-  {#each acts as a}<button class="hit act" style:left={pct(toMin(a.start)) + '%'} style:width={Math.max(5, pct(toMin(a.start) + a.min) - pct(toMin(a.start))) + '%'} aria-label={actLabel(a)} onclick={() => navigate(`workout/${a.id}`)}><Icon name={SPORTS[a.sport].icon} size={12}/></button>{/each}
-  {#if !ctx.stale}<button class="hit" style:left={pct(windowStart - 20) + '%'} style:width={pct(windowEnd + 40) - pct(windowStart - 20) + '%'} aria-label={`Tonight: Garmin's window ${ctx.tonight.windowStart} to ${ctx.tonight.windowEnd}`} onclick={() => navigate('sleep/tonight')}></button>{/if}
-  <button class="hit band" aria-label="Stress through the day" onclick={() => navigate('metric/stress')}></button>
-  <button class="hit hrband" aria-label="Heart rate through the day" onclick={() => navigate('metric/heartRate')}></button>
+  <button class="hit" style:left={px(night ? bed : -60) + '%'} style:width={px(night ? wake : 420) - px(night ? bed : -60) + '%'} style:top="0" style:height={py(22) + '%'}
+   aria-label={night ? `Last night's sleep, ${night.bed} to ${night.wake}, ${dur(night.asleep)}` : 'Last night: not synced yet'} onclick={() => navigate('sleep')}></button>
+  {#each blocks as b}<button class="hit blk" style:left={b.x0 / W * 100 + '%'} style:width={b.w / W * 100 + '%'} style:top={py(LANE[0]) + '%'} style:height={py(LANE[1] - LANE[0]) + '%'} aria-label={b.label} onclick={() => navigate(b.go)}><Icon name={b.icon} size={12}/></button>{/each}
+  {#if !ctx.stale}<button class="hit moon" style:left={px(win0) + '%'} style:right="0" style:top="0" style:height={py(22) + '%'} aria-label={`Tonight: ${ctx.tonight.window ? `Garmin's window ${ctx.tonight.window}` : 'asleep by 23:20'}`} onclick={() => navigate('sleep/tonight')}><Icon name="moon" size={11}/></button>{/if}
+  {#if bb}<button class="hit" style:left="0" style:width={px(now) + '%'} style:top={py(BB[0]) + '%'} style:height={py(BB[1] - BB[0]) + '%'} aria-label={`Body Battery through the day, ${nowV} at watch upload ${ctx.upload.at}`} onclick={() => navigate('metric/bodyBattery')}></button>{/if}
+  <button class="hit" style:left="0" style:width={px(now) + '%'} style:top={py(STRESS[0] - 2) + '%'} style:height={py(STRESS[1] - STRESS[0] + 6) + '%'} aria-label="Stress through the day" onclick={() => navigate('metric/stress')}></button>
  </div>
- <div class="rb-key" aria-hidden="true">
-  {#if night}<span><i style:background={colors.light}></i>Slept {dur(night.asleep)}</span>{:else}<span><i class="dot"></i>{waiting ? 'Night syncing' : 'No night'}</span>{/if}
-  {#if acts.length}<span><i style:background={SPORTS[acts[0].sport].color}></i>{acts.length === 1 ? acts[0].name : `${acts.length} activities`}</span>{/if}
+ <div class="rb-key">
+  <button onclick={() => navigate('sleep')}><i class="sw sleep"></i>{night ? `Slept ${dur(night.asleep)}` : waiting ? 'Night syncing' : 'No night'}</button>
+  {#if bb}<button onclick={() => navigate('metric/bodyBattery')}><i class="sw bb"></i>Body Battery</button>{/if}
+  <button onclick={() => navigate('metric/stress')}><i class="sw st"></i>Stress</button>
   <span class="now">Now {hm(now)}</span>
-  {#if !ctx.stale}<span><i class="win"></i>Tonight {ctx.tonight.windowStart}</span>{/if}
  </div>
 </section>
 <style>
- .ribbon h3{margin-bottom:6px}
- .legend-btn .link{font:600 11px Inter;letter-spacing:.06em;color:var(--text3);background:none;border:0;padding:6px 0;min-height:32px;text-transform:uppercase}
+ .ribbon h3{margin-bottom:8px}
+ .key{font:600 11px Inter;letter-spacing:.06em;color:var(--text3);background:none;border:0;padding:6px 0;min-height:32px;text-transform:uppercase;text-decoration:underline;text-underline-offset:3px}
  .rb-wrap{position:relative}
  .rb{display:block;width:100%;height:auto;overflow:visible}
- .hit{position:absolute;top:5%;height:26%;background:none;border:0;padding:0;border-radius:6px;cursor:pointer}
+ .hit{position:absolute;background:none;border:0;padding:0;border-radius:6px;cursor:pointer;min-height:24px}
  .hit:focus-visible{outline:2px solid var(--ink)}
- .hit.act{display:grid;place-items:center;color:#0B0F1A;min-width:24px;transform:translateX(0)}
- .hit.band{left:0;right:0;width:auto;top:38%;height:10%}
- .hit.hrband{left:0;right:0;width:auto;top:50%;height:36%}
- .rb-key{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font:500 12px Inter;color:var(--text2)}
- .rb-key span{display:inline-flex;align-items:center;gap:6px}
- .rb-key i{width:10px;height:10px;border-radius:3px;display:inline-block}
- .rb-key i.dot{border:1.5px dashed #8E98AC;background:none}
- .rb-key i.win{border:1.5px dashed #A9C8FF;background:rgba(169,200,255,.18)}
- .rb-key .now{color:var(--text);font-weight:600}
+ .hit.blk{display:grid;place-items:center;color:#0B0F1A}
+ .hit.moon{display:flex;align-items:center;justify-content:flex-start;padding-left:6px;color:#A9C8FF}
+ .nowtag{position:absolute;transform:translate(-50%,-50%);pointer-events:none;font-size:11px;color:#3DDC97;background:#141a27;padding:0 4px;border-radius:6px;line-height:1.3}
+ .rb-key{display:flex;flex-wrap:wrap;gap:0 12px;margin-top:6px;font:500 12px Inter;color:var(--text2);align-items:center}
+ .rb-key button{display:inline-flex;align-items:center;gap:6px;background:none;border:0;color:inherit;font:inherit;padding:6px 0;min-height:32px}
+ .sw{width:12px;height:8px;border-radius:3px;display:inline-block}
+ .sw.sleep{background:linear-gradient(90deg,#2F6FE0,#5C9BFF,#A9C8FF)}
+ .sw.bb{height:3px;background:#3DDC97}
+ .sw.st{background:linear-gradient(90deg,#B4BCCB,#3DDC97,#FFB547);filter:blur(.4px)}
+ .rb-key .now{color:var(--text);font-weight:600;margin-left:auto}
 </style>

@@ -11,7 +11,7 @@
  import {SPORTS} from '../lib/sports';
  import {contribution, effortFor, type Ctx} from '../lib/rules';
  import {routeFor, hrTrace, stagesFor} from '../lib/world';
- import {strengthSession, todayView} from '../lib/views';
+ import {bodyBatteryDay, strengthSession, todayView} from '../lib/views';
  import {dur, dayLabel, hm, toMin} from '../lib/dates';
  import {elapsed} from '../../lib/format';
  // Today's one adaptive hero: its picture matches what matters now.
@@ -25,19 +25,25 @@
   : l.kind === 'sleep' && ['evening', 'winddown', 'late'].includes(ctx.phase) ? 'tonight' : l.kind === 'sleep' ? 'sleep' : 'readiness');
  let tint = $derived(variant === 'tonight' ? '#5C7CFF' : variant === 'rest' ? '#A9C8FF' : variant === 'sync' ? '#8E98AC' : variant === 'workout' ? (l.activity ? SPORTS[l.activity.sport].color : colors.good) : variant === 'sleep' ? colors.light : toneColor(rTone));
  let factors = $derived(r ? todayView(ctx).factors.filter(f => f.percent != null).sort((a, b) => (a.percent ?? 0) - (b.percent ?? 0)) : []);
- let effort = $derived(effortFor(r));
+ let effort = $derived(ctx.hasLimits || ctx.restActive || ctx.paused || ctx.stale || ctx.phase === 'waiting' ? null : effortFor(r));
  const act = () => l.action.sheet ? openSheet(l.action.sheet) : navigate(l.action.go!);
  let a = $derived(l.activity);
  let session = $derived(a?.sport === 'strength' ? strengthSession(a) : null);
  let contrib = $derived(a ? contribution(ctx, a) : null);
  let pending = $derived(ctx.intentionsToday.find(i => !i.link));
+ // Rest and pause lead with recovery: today's Body Battery, charged overnight.
+ let bb = $derived(variant === 'rest' && ctx.bodyBattery != null ? bodyBatteryDay(ctx) : null);
+ const bbX = (m: number) => (m + 120) / (toMin(ctx.clock.time) + 120) * 220;
+ const bbY = (v: number) => 62 - v / 100 * 58;
+ let bbPath = $derived(bb ? bb.points.map(([m, v], i) => `${i ? 'L' : 'M'}${bbX(m).toFixed(1)},${bbY(v).toFixed(1)}`).join('') : '');
+ let bbNight = $derived(n ? [bbX(toMin(n.bed) > 720 ? toMin(n.bed) - 1440 : toMin(n.bed)), bbX(toMin(n.wake))] : null);
 </script>
 
 <section class="hero v-{variant}" style:--tint={tint} aria-labelledby="hero-h">
  {#if variant === 'workout' && a}
   <div class="hero-pic" class:strength={!!session}>
    {#if routeFor(a).length}<RouteHero route={routeFor(a)} samples={hrTrace(a)} floors={[118, 136, 150, 163]} color={SPORTS[a.sport].color} h={176} label={`${a.name} route, coloured by heart-rate zone`}/>
-   {:else if session?.setsRecorded}<div class="bm-hero"><BodyMap figure="female" muscles={session.muscles} width={86} max={6} legend={false}/></div>
+   {:else if session?.setsRecorded}<div class="bm-hero"><span class="bm-sum"><b class="n">{session.exercises.filter(e => e.key).length}</b> {session.exercises.filter(e => e.key).length === 1 ? 'exercise' : 'exercises'}<br><b class="n">{session.sets}</b> sets</span><BodyMap figure="female" muscles={session.muscles} width={92} max={6} legend={false}/></div>
    {:else}<div class="art-hero" style:color={SPORTS[a.sport].color}><Icon name={SPORTS[a.sport].icon} size={72}/></div>{/if}
    <span class="pic-kicker"><Glyph sport={a.sport} size={22}/>Recorded today · {a.start}</span>
   </div>
@@ -63,20 +69,17 @@
 
  {:else if variant === 'tonight'}
   <div class="hero-body tn-body">
-   <div class="tonight-top">
-    <TonightDial now={ctx.clock.time} windDown={ctx.tonight.windDown} windowStart={ctx.tonight.window ? ctx.tonight.windowStart : '23:20'} windowEnd={ctx.tonight.window ? ctx.tonight.windowEnd : '23:20'} estimate={!ctx.tonight.window} wake={ctx.tonight.wake} lastBed={n?.bed} lastWake={n?.wake} need={dur(ctx.tonight.need)} size={164}/>
-    <div class="tonight-text">
-     <span class="kicker"><Icon name="moon" size={14}/>{ctx.tonight.nightLabel}</span>
-     <h2 id="hero-h">{l.headline}</h2>
-     {#if l.line}<p class="line">{l.line}</p>{/if}
-     <dl class="tkeys">
-      <div><dt><i class="k wd"></i>Wind down</dt><dd class="n">{ctx.tonight.windDown}</dd></div>
-      <div><dt><i class="k win"></i>{ctx.tonight.window ? 'Garmin’s window' : 'Asleep by'}</dt><dd class="n">{ctx.tonight.window ?? '23:20'}</dd></div>
-      <div><dt><i class="k wake"></i>Wake</dt><dd class="n">{ctx.tonight.wake}</dd></div>
-     </dl>
-    </div>
+   <span class="kicker"><Icon name="moon" size={14}/>Tonight · {ctx.tonight.nightLabel.split(' → ')[0]}</span>
+   <h2 id="hero-h">{l.headline}</h2>
+   {#if l.line}<p class="line">{l.line}</p>{/if}
+   <div class="tonight-row">
+    <TonightDial now={ctx.clock.time} windDown={ctx.tonight.windDown} windowStart={ctx.tonight.window ? ctx.tonight.windowStart : '23:20'} windowEnd={ctx.tonight.window ? ctx.tonight.windowEnd : '23:20'} estimate={!ctx.tonight.window} wake={ctx.tonight.wake} lastBed={n?.bed} lastWake={n?.wake} need={dur(ctx.tonight.need)} size={170}/>
+    {#if n}<button class="lastnight" onclick={() => navigate('sleep')} aria-label={`Last night ${dur(n.asleep)}, need ${dur(n.need)}. Open sleep`}>
+     <small>Last night</small><b class="n">{dur(n.asleep)}</b>
+     <span class="stagebar" aria-hidden="true">{#each stagesFor(ctx.displayedDay, n.asleep) as st}<i style:flex={st.minutes} style:background={({deep: colors.deep, light: colors.light, rem: colors.rem, awake: '#C9D3E6'} as Record<string, string>)[st.stage]}></i>{/each}</span>
+     <em>{n.bed}–{n.wake} · need {dur(n.need)}</em>
+    </button>{/if}
    </div>
-   {#if n}<button class="lastnight" onclick={() => navigate('sleep')} aria-label={`Last night ${dur(n.asleep)}, open sleep`}><span class="ln-l"><small>Last night</small><b class="n">{dur(n.asleep)}</b></span><span class="ln-h"><Hypnogram segments={stagesFor(ctx.displayedDay, n.asleep)} startLocal={`${ctx.displayedDay}T${n.bed}:00`}/></span></button>{/if}
    {#if pending && ctx.phase !== 'late'}<button class="ctx-row" onclick={() => navigate(`intention/${pending.id}`)}><Glyph sport={pending.sport} mark="plan" size={26}/><span><b>{SPORTS[pending.sport].name}{pending.time ? ` · ${pending.time}` : ''}</b><small>Still in your plan</small></span><Icon name="chevron" size={16}/></button>{/if}
    <div class="actions"><button class="primary" onclick={act}>{l.action.label}</button><button class="link" onclick={() => openSheet('why')}>Why this?</button></div>
   </div>
@@ -84,16 +87,7 @@
  {:else if variant === 'rest'}
   <div class="hero-body rest-body">
    <div class="rest-top">
-    <div class="rest-vis" aria-hidden="true">
-     <svg viewBox="0 0 140 140" width="132" height="132">
-      <defs><pattern id="rhatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2" height="6" fill="#A9C8FF" opacity=".4"/></pattern>
-       <radialGradient id="restglow"><stop offset=".4" stop-color="#A9C8FF" stop-opacity=".22"/><stop offset="1" stop-color="#A9C8FF" stop-opacity="0"/></radialGradient></defs>
-      <circle cx="70" cy="70" r="68" fill="url(#restglow)"/>
-      {#if l.kind === 'paused'}<circle cx="70" cy="70" r="50" fill="none" stroke="url(#rhatch)" stroke-width="12"/>
-      {:else}<circle cx="70" cy="70" r="50" fill="none" stroke="rgba(169,200,255,.16)" stroke-width="12"/><path class="rest-arc" d={`M70,20 A50,50 0 1 1 ${70 - 50 * Math.sin(0.6)},${70 - 50 * Math.cos(0.6)}`} fill="none" stroke="#A9C8FF" stroke-width="12" stroke-linecap="round"/>{/if}
-     </svg>
-     <span class="rest-ico"><Icon name={l.kind === 'paused' ? 'pause' : 'moon'} size={40}/></span>
-    </div>
+    <span class="rest-ico" aria-hidden="true">{#if l.kind === 'paused'}<Icon name="pause" size={30}/>{:else}<Icon name="moon" size={30}/>{/if}</span>
     <div>
      <span class="kicker">{l.kind === 'paused' ? 'Adapt · paused' : 'Adapt · rest'}</span>
      <h2 id="hero-h">{l.headline}</h2>
@@ -101,6 +95,17 @@
      {#if r}<button class="chip-btn" onclick={() => navigate('readiness')} aria-label={`Readiness ${r.value}, ${r.level}`}><i style:background={toneColor(rTone)}></i>Readiness {r.value} · {r.level}</button>{/if}
     </div>
    </div>
+   {#if bb}
+    <button class="bbrest" onclick={() => navigate('metric/bodyBattery')} aria-label={`Body Battery ${bb.now}, charged ${bb.charged} overnight. Open Body Battery`}>
+     <span class="bbr-n"><small>Body Battery</small><b class="n">{bb.now}</b><em>+{bb.charged} overnight</em></span>
+     <svg viewBox="0 0 220 64" class="bbr-c" aria-hidden="true" preserveAspectRatio="none">
+      <defs><linearGradient id="bbr" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#A9C8FF" stop-opacity=".35"/><stop offset="1" stop-color="#A9C8FF" stop-opacity="0"/></linearGradient></defs>
+      {#if bbNight}<rect x={bbNight[0]} y="0" width={bbNight[1] - bbNight[0]} height="64" fill="#5C9BFF" opacity=".1" rx="4"/>{/if}
+      <path d={`${bbPath}L${bbX(bb.points.at(-1)![0])},64L0,64Z`} fill="url(#bbr)"/><path d={bbPath} fill="none" stroke="#A9C8FF" stroke-width="2"/>
+      <circle cx={bbX(bb.points.at(-1)![0])} cy={bbY(bb.now ?? 0)} r="4" fill="#EEF1F7"/>
+     </svg>
+    </button>
+   {/if}
    {#if l.schedule}<div class="ctx-row static"><Glyph sport={l.schedule.sport} mark="garmin" size={26}/><span><b>{l.schedule.name}</b><small>Garmin schedule</small></span></div>{/if}
    <div class="actions"><button class="primary" onclick={act}>{l.action.label}</button><button class="link" onclick={() => openSheet('why')}>Why this?</button></div>
   </div>
@@ -141,7 +146,7 @@
      <Gauge size={136} stroke={12} value={r?.value ?? null} caption="Readiness" label={r?.level ?? ''} color={toneColor(rTone)}/>
     </button>
     <div class="r-text">
-     <span class="kicker">{l.kind === 'schedule' || l.kind === 'conflict' || l.kind === 'review' ? 'Garmin schedule' : l.kind === 'intention' ? 'Your plan' : 'Readiness · Garmin'}</span>
+     <span class="kicker">{l.schedule ? 'Garmin schedule' : l.intention ? 'Your plan' : l.kind === 'review' ? 'Your limits' : 'Readiness · Garmin'}</span>
      <h2 id="hero-h">{l.headline}</h2>
      {#if l.line}<p class="line">{l.line}</p>{/if}
     </div>
@@ -171,14 +176,14 @@
 <style>
  .hero{position:relative;margin-top:12px;border-radius:26px;overflow:hidden;background:linear-gradient(180deg,color-mix(in srgb,var(--tint) 13%,rgba(255,255,255,.05)),rgba(255,255,255,.04) 70%);border:1px solid color-mix(in srgb,var(--tint) 26%,rgba(255,255,255,.08));box-shadow:0 18px 50px -24px color-mix(in srgb,var(--tint) 60%,transparent)}
  .hero-body{padding:18px 18px 16px}
- .kicker{display:inline-flex;align-items:center;gap:6px;font:600 11px Inter;letter-spacing:.12em;text-transform:uppercase;color:color-mix(in srgb,var(--tint) 60%,#B4BCCB)}
+ .kicker{display:inline-flex;align-items:center;gap:6px;font:600 11px Inter;letter-spacing:.1em;text-transform:uppercase;color:color-mix(in srgb,var(--tint) 60%,#B4BCCB)}
  h2{font:600 26px/1.12 Outfit,Inter;margin-top:6px;color:var(--text);display:flex;align-items:center;gap:8px}
  .line{font-size:14px;color:var(--text2);margin-top:6px;line-height:1.35}
  .actions{display:flex;align-items:center;gap:16px;margin-top:16px;flex-wrap:wrap}
  .actions .primary{width:auto;margin:0;padding:13px 22px;flex:none}
  .link{background:none;border:0;color:var(--text);font-weight:600;text-decoration:underline;text-underline-offset:3px;padding:10px 0;min-height:44px}
  .link.inline{min-height:0;padding:0}
- .chip-btn{display:inline-flex;align-items:center;gap:7px;margin-top:10px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.06);font:600 12px Inter;color:var(--text)}
+ .chip-btn{display:inline-flex;align-items:center;gap:7px;margin-top:10px;padding:7px 12px;min-height:34px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.06);font:600 12px Inter;color:var(--text)}
  .chip-btn i{width:8px;height:8px;border-radius:50%}
  .ctx-row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;width:100%;text-align:left;margin-top:14px;padding:10px 12px;border-radius:16px;background:rgba(11,15,26,.35);border:1px solid var(--line);color:var(--text)}
  .ctx-row.static{grid-template-columns:auto 1fr}
@@ -202,8 +207,11 @@
  .fixed-note{margin-top:8px}
  /* workout */
  .hero-pic{position:relative;height:176px;background:#0E1424;overflow:hidden}
- .hero-pic.strength{height:168px}
- .bm-hero,.art-hero{height:100%;display:grid;place-items:center;background:radial-gradient(80% 90% at 50% 40%,color-mix(in srgb,var(--tint) 24%,#121829),#0E1424)}
+ .hero-pic.strength{height:190px}
+ .bm-hero,.art-hero{height:100%;display:grid;place-items:center;background:radial-gradient(80% 90% at 70% 45%,color-mix(in srgb,var(--tint) 24%,#121829),#0E1424)}
+ .bm-hero{display:flex;align-items:flex-end;justify-content:space-between;padding:0 28px 10px 18px}
+ .bm-sum{font-size:12px;color:var(--text2);line-height:1.5;padding-bottom:6px}
+ .bm-sum b{font-size:20px;color:var(--text);font-weight:600}
  .pic-kicker{position:absolute;left:12px;top:12px;display:inline-flex;align-items:center;gap:8px;padding:5px 10px 5px 5px;border-radius:999px;background:rgba(11,15,26,.72);backdrop-filter:blur(4px);font:600 12px Inter;color:var(--text)}
  .hero-title{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
  .hero-title h2{margin-top:0}
@@ -221,25 +229,21 @@
  .te b{color:var(--text);font-weight:600}
  .effects-row .chip-btn{margin-top:0;margin-left:auto}
  /* tonight */
- .tonight-top{display:flex;gap:14px;align-items:center}
- .tonight-text{min-width:0}
- .tkeys{margin:10px 0 0;display:grid;gap:5px}
- .tkeys div{display:flex;justify-content:space-between;gap:10px;font-size:13px}
- .tkeys dt{color:var(--text2);display:flex;align-items:center;gap:6px}
- .tkeys dd{margin:0;color:var(--text);font-weight:600}
- .k{width:9px;height:9px;border-radius:2px;display:inline-block}
- .k.wd{background:#FFB547}.k.win{background:#A9C8FF}.k.wake{background:#EEF1F7;border-radius:50%}
- .lastnight{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;width:100%;margin-top:14px;padding:8px 12px;border-radius:16px;background:rgba(11,15,26,.35);border:1px solid var(--line);color:var(--text);text-align:left}
- .ln-l small{display:block;font-size:11px;color:var(--text3)}
- .ln-l b{font-size:18px}
- .ln-h{display:block;opacity:.9}
- .ln-h :global(.plot){max-height:64px}
+ .tonight-row{display:grid;grid-template-columns:auto 1fr;gap:6px 30px;align-items:center;margin-top:8px}
+ .lastnight{display:block;width:100%;text-align:left;background:none;border:0;padding:4px 0;color:var(--text);min-width:0}
+ .lastnight small{display:block;font-size:11px;color:var(--text3)}
+ .lastnight b{display:block;font-size:22px;font-weight:600}
+ .lastnight em{display:block;font-style:normal;font-size:11.5px;color:var(--text2);margin-top:6px}
+ .stagebar{display:flex;height:10px;border-radius:5px;overflow:hidden;margin-top:6px}
+ .stagebar i{display:block;height:100%}
  /* rest */
  .rest-top{display:flex;gap:16px;align-items:center}
- .rest-vis{position:relative;flex:none;width:132px;height:132px}
- .rest-ico{position:absolute;inset:0;display:grid;place-items:center;color:#A9C8FF}
- .rest-arc{animation:restsweep 1.4s ease-out both}
- @keyframes restsweep{from{stroke-dasharray:0 400}to{stroke-dasharray:400 400}}
+ .rest-ico{width:64px;height:64px;flex:none;border-radius:50%;display:grid;place-items:center;color:#A9C8FF;background:radial-gradient(circle,rgba(169,200,255,.22),rgba(169,200,255,.04))}
+ .bbrest{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center;width:100%;margin-top:14px;padding:12px 14px;border-radius:18px;background:rgba(11,15,26,.35);border:1px solid rgba(169,200,255,.2);color:var(--text);text-align:left}
+ .bbr-n small{display:block;font-size:11px;color:var(--text3)}
+ .bbr-n b{display:block;font-size:34px;font-weight:600;line-height:1.05}
+ .bbr-n em{font-style:normal;font-size:12px;color:#A9C8FF}
+ .bbr-c{width:100%;height:64px;display:block}
  /* sync */
  .sync-vis{display:flex;align-items:center;gap:6px;margin:4px 0 16px}
  .dev{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--text2);flex:none}
@@ -255,6 +259,6 @@
  .needbar2 u{position:absolute;top:-4px;bottom:-4px;width:2px;background:#EEF1F7;text-decoration:none}
  .needbar2 u span{position:absolute;top:22px;left:50%;transform:translateX(-60%);white-space:nowrap;font-size:11px;color:var(--text2)}
  .hyp{margin-top:4px}
- @media (prefers-reduced-motion:reduce){.spark,.rest-arc{animation:none}}
- @media(max-width:370px){.r-top{gap:8px}.tonight-top{flex-direction:column;align-items:flex-start}.rest-top{gap:10px}}
+ @media (prefers-reduced-motion:reduce){.spark{animation:none}}
+ @media(max-width:370px){.r-top{gap:8px}.tonight-row{column-gap:22px}.rest-top{gap:10px}}
 </style>

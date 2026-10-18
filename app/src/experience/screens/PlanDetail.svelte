@@ -8,7 +8,7 @@
  import CommitmentBars from '../components/CommitmentBars.svelte';
  import {store} from '../lib/store.svelte';
  import {A} from '../lib/actions';
- import {addDays, dayLabel, weekRange, weekId} from '../lib/dates';
+ import {addDays, dayLabel, weekRange, weekId, weekMonday} from '../lib/dates';
  import {SPORTS} from '../lib/sports';
  import {latestReviewWeek, versionFor} from '../lib/rules';
  import {PLAN_WEEKS, SCHEDULE, activityById} from '../lib/world';
@@ -91,7 +91,7 @@
    <Card title="Over time"><CommitmentBars weeks={commitmentWeeks(ctx, 'strength')} name="Strength sessions" color={SPORTS.strength.color} onWeek={id => go(`review/${id}`)}/><CommitmentBars weeks={commitmentWeeks(ctx, 'im')} name="Intensity minutes" unit=" min" color="#36C9C6" onWeek={id => go(`review/${id}`)}/></Card>
   {/if}
   <Card title="Versions"><ol class="hist">
-   {#each versions.versions.filter(v => v.from <= p.wk) as v}<li><b>{v.from.replace(/\d{4}-W/, 'Week ')}</b><span>{v.strength} strength · {v.im} min · {v.note}</span></li>{/each}
+   {#each versions.versions.filter(v => v.from <= p.wk) as v}<li><b>From {dayLabel(weekMonday(v.from))}</b><span>{v.strength} strength · {v.im} min · {v.note}</span></li>{/each}
    {#each p.revisions as r}<li><b>{dayLabel(r.from)}</b><span>{r.strength} strength · {r.im} min · this week from then</span></li>{/each}
    {#if p.pause}<li><b>{dayLabel(p.pause.since)}{p.pause.until ? `–${dayLabel(p.pause.until)}` : ''}</b><span>Paused</span></li>{/if}
   </ol></Card>
@@ -133,7 +133,7 @@
  .cand{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
  .cand .secondary{width:auto;margin:0;padding:10px 14px}
  .hist{list-style:none;padding:0;margin:0;display:grid;gap:8px}
- .hist li{display:grid;grid-template-columns:96px 1fr;gap:10px;font-size:13px}
+ .hist li{display:grid;grid-template-columns:118px 1fr;gap:10px;font-size:13px}
  .hist span{color:var(--text2)}
  .rrow{display:flex;align-items:center;gap:12px}
  .rrow b{display:block}.rrow small{color:var(--text2);font-size:12px}

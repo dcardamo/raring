@@ -24,7 +24,7 @@ import {addDays, between, daysBetween, dur, hm, range, toMin, weekStart} from '.
 import {effortFor, type Ctx} from './rules';
 import {SPORTS} from './sports';
 import {
-  ACTIVITIES, CHRONOLOGICAL_AGE, EXERCISES, GEAR, JOURNAL, dayTimelines, fitnessAgeFor, hrTrace, hrvFor, nightFor, rand, readinessFor,
+  ACTIVITIES, CHRONOLOGICAL_AGE, EXERCISES, GEAR, JOURNAL, bodyBatteryFor, dayTimelines, fitnessAgeFor, hrTrace, hrvFor, nightFor, rand, readinessFor,
   respirationFor, restingHrFor, routeFor, setsFor, skinTempFor, sleepHrFor, splitsFor, spo2For, stagesFor, stressAvgFor, vo2maxFor, weightFor, type Activity,
 } from './world';
 
@@ -124,10 +124,48 @@ export function sleepView(ctx: Ctx, date = ctx.displayedDay): SleepView {
 }
 
 // ---------- day timelines ----------
-const untilFor = (ctx: Ctx, date: string) => date === ctx.calendarDate ? toMin(ctx.clock.time) : 1440;
+const untilFor = (ctx: Ctx, date: string) => date === ctx.upload.date ? toMin(ctx.upload.at) : date > ctx.upload.date ? 0 : 1440;
 export function timelines(ctx: Ctx, date = ctx.calendarDate) {
   return dayTimelines(date, ctx.world.activities, ctx.state.profile === 'sleep', untilFor(ctx, date));
 }
+/**
+ * Garmin's intraday Body Battery, shaped like the stored dailyStress
+ * bodyBatteryValuesArray: charge while asleep, drain with stress and activity.
+ * Today's curve ends at the value of the last upload. Minutes run from 22:00
+ * the evening before (−120) to the given end.
+ */
+export function bodyBatteryDay(ctx: Ctx, date = ctx.calendarDate, end?: number) {
+  const night = ctx.nightOf(date);
+  const until = Math.min(end ?? 1440, untilFor(ctx, date));
+  const t = timelines(ctx, date);
+  const bed = night ? (toMin(night.bed) > 720 ? toMin(night.bed) - 1440 : toMin(night.bed)) : null;
+  const wake = night ? toMin(night.wake) : null;
+  const target = date === ctx.upload.date ? bodyBatteryFor(date) : null;
+  const charge = night ? Math.round(night.asleep / 8) : 0;
+  let low = Math.round(16 + rand(date + 'bblow') * 14);
+  if (target != null) low = Math.max(5, Math.min(low, 100 - charge), Math.min(100, target + 8) - charge);
+  const high = Math.min(100, low + charge);
+  // Unscaled drain per 3-minute step after waking; scaled so today ends at the upload value.
+  const steps: number[] = [];
+  for (let m = wake ?? 0; m < Math.min(until, 1440); m += 3) {
+    const s = t.stress[Math.floor(m / 3)];
+    const act = ctx.world.activities.find(a => a.date === date && m >= toMin(a.start) && m < toMin(a.start) + a.min);
+    steps.push(act ? act.load / act.min * .55 : s == null ? .08 : .04 + s / 900);
+  }
+  const raw = steps.reduce((a, b) => a + b, 0);
+  const scale = target != null && raw > 0 ? Math.max(0, high - target) / raw : 1;
+  const points: [number, number][] = [];
+  let v = low + 4, k = 0;
+  for (let m = -120; m <= Math.min(until, 1500); m += 3) {
+    if (bed != null && wake != null && m >= bed && m < wake) v = low + charge * Math.sqrt((m - bed) / (wake - bed));
+    else if (bed != null && m < bed) v = low + 4 * (bed - m) / Math.max(1, bed + 120);
+    else if (wake != null && m >= wake && m < 1440) v = Math.max(5, v - (steps[k++] ?? 0) * scale);
+    else if (m >= 1440) v = Math.max(5, v - .03);
+    points.push([m, Math.round(v)]);
+  }
+  return {points, charged: high - low, high, low, now: points.at(-1)?.[1] ?? null, until};
+}
+
 export function stressCard(ctx: Ctx, date = ctx.calendarDate): StressCard {
   const t = timelines(ctx, date);
   const vals = t.stress.filter((v): v is number => v != null);
@@ -143,7 +181,7 @@ export function stressCard(ctx: Ctx, date = ctx.calendarDate): StressCard {
 export function heartRateDay(ctx: Ctx, date = ctx.calendarDate): HeartRateDay {
   const t = timelines(ctx, date);
   const vals = t.hr.filter((v): v is number => v != null);
-  return {date, resting: restingHrFor(date), minimum: vals.length ? Math.min(...vals) : null, maximum: vals.length ? Math.max(...vals) : null, timeline: t.hr, durationMin: 1440, sleep: t.sleep, activities: t.active};
+  return {date, resting: vals.length ? restingHrFor(date) : null, minimum: vals.length ? Math.min(...vals) : null, maximum: vals.length ? Math.max(...vals) : null, timeline: t.hr, durationMin: 1440, sleep: t.sleep, activities: t.active};
 }
 
 // ---------- today, health, training, strength ----------
@@ -184,11 +222,11 @@ export function todayView(ctx: Ctx): TodayView {
     readinessTrend: range(addDays(ctx.displayedDay, -29), ctx.displayedDay).map(d => ctx.readinessOf(d)?.value ?? null),
     sleep: n ? {value: n.score, max: 100, label: n.score >= 80 ? 'Good' : n.score >= 60 ? 'Fair' : 'Poor', tone: tone(n.score, 80, 60), band: null} : null,
     load: {value: acute, max: 1000, label: acute > 560 ? 'High' : acute < 260 ? 'Low' : 'Optimal', tone: acute > 560 ? 'fair' : 'good', band: [300, 560]},
-    headline: r ? (r.value >= 75 ? 'Ready when you are' : r.value >= 50 ? 'A steady day' : 'Take it easier') : 'Your day is taking shape',
-    factors, call: effortFor(r) as Effort | null, callNote: null, chips: [],
-    readinessWhy: r ? {...base.readinessWhy!, title: `Why readiness is ${r.level}`, summary: `${r.limit} holds readiness back most.`} : null,
-    bodyBattery: {now: ctx.bodyBattery, charged: n ? Math.round(n.asleep / 8) : null, drained: 22},
-    bodyBatteryWhy: ctx.bodyBattery != null ? {...base.bodyBatteryWhy!, title: `Why Body Battery is ${ctx.bodyBattery}`, summary: n ? `Sleep charged it by ${Math.round(n.asleep / 8)}.` : 'No recorded night charged it.', inputs: base.bodyBatteryWhy!.inputs.slice(0, 2)} : null,
+    headline: ctx.stale || ctx.phase === 'waiting' ? 'Waiting for your watch' : ctx.paused ? 'Training is paused' : ctx.restActive ? 'Rest day' : ctx.hasLimits ? 'Your limits apply' : r ? (r.value >= 75 ? 'Ready when you are' : r.value >= 50 ? 'A steady day' : 'Take it easier') : 'Your day is taking shape',
+    factors, call: ctx.paused || ctx.restActive || ctx.hasLimits || ctx.stale || ctx.phase === 'waiting' ? null : effortFor(r) as Effort | null, callNote: null, chips: [],
+    readinessWhy: r ? {title: `Why readiness is ${r.level}`, summary: `${r.limit} holds readiness back most.`, feedback: null, source: 'Garmin readiness factors', inputs: factors.map(f => ({key:f.key,name:f.name,value:f.key === 'sleep' ? String(n?.score ?? '—') : f.key === 'hrv' ? `${hrvFor(ctx.displayedDay)} ms` : f.key === 'acuteLoad' ? String(acute) : f.key === 'recovery' ? `${Math.round(acute / 30)} h` : null,rating:f.percent == null ? null : f.tone === 'good' ? 'Good' : f.tone === 'fair' ? 'Fair' : 'Poor',tone:f.tone,detail:f.detail}))} : null,
+    bodyBattery: {now: ctx.bodyBattery, charged: n ? bodyBatteryDay(ctx, ctx.displayedDay).charged : null, drained: 22},
+    bodyBatteryWhy: ctx.bodyBattery != null ? {title: `Why Body Battery is ${ctx.bodyBattery}`, summary: n ? `Sleep charged it by ${bodyBatteryDay(ctx, ctx.displayedDay).charged}.` : 'No recorded night.', feedback:null,source:'Garmin Body Battery events and feedback',inputs:[{key:'overnight',name:'Overnight',value:n ? `+${bodyBatteryDay(ctx, ctx.displayedDay).charged}` : null,rating:null,tone:'neutral',detail:n ? `${n.bed}–${n.wake}` : 'No recorded night'},{key:'stress',name:'Stress',value:String(stressCard(ctx).average ?? '—'),rating:stressCard(ctx).qualifier,tone:stressCard(ctx).tone,detail:'Average through the day at the last upload'}]} : null,
     stress: stressCard(ctx), heartRateDay: heartRateDay(ctx), hrv: {lastNight: n ? hrvFor(ctx.displayedDay) : null, status: 'Balanced', tone: 'good', baseline: [38, 56], week: range(addDays(ctx.displayedDay, -6), ctx.displayedDay).map(d => nightFor(d) ? hrvFor(d) : null)},
     vitals: vitalsFor(ctx), activities: ctx.actsToday.map(activityCard), fitnessAge: fitnessAgeCard(ctx), checkinReady: false,
     focus: {...base.focus, lastNight: n ? {asleepMin: n.asleep, needMin: n.need, woke: n.wake} : null}, plan: null, sleepPlan: sleepPlanFor(ctx),
@@ -203,7 +241,7 @@ export function healthView(ctx: Ctx): HealthView {
   const weekIm = ctx.world.activities.filter(a => between(a.date, ctx.weekFrom, ctx.calendarDate)).reduce((t, a) => t + a.im, 0);
   return {
     ...base, date: ctx.displayedDay, journalEnabled: ctx.state.journal.consent,
-    journal: JOURNAL.filter(d => d.date <= ctx.calendarDate).map(d => ({date: d.date, state: d.state, entries: d.entries.map(([name, value]) => ({name, value}))})),
+    journal: JOURNAL.filter(d => d.date <= ctx.calendarDate && d.date >= addDays(ctx.calendarDate, -6)).map(d => ({date: d.date, state: d.state, entries: d.entries.map(([name, value]) => ({name, value}))})),
     fitnessAge: fitnessAgeCard(ctx), lever: {key: 'vigorousMinutes', name: 'Vigorous minutes', current: Math.round(vig), target: 75, unit: 'min/wk', ageIfMet: null},
     drivers: [
       {key: 'vo2max', name: 'VO₂ max', value: 47, unit: '', target: 45, met: true, tone: 'good'},
@@ -237,6 +275,7 @@ export function trainingView(ctx: Ctx): TrainingView {
   return {
     ...base, acute: {value: acute, max: 1000, label: acute > 560 ? 'High' : acute < 260 ? 'Low' : 'Optimal', tone: acute > 560 ? 'fair' : 'good', band: [300, 560]},
     status: 'Productive', statusTone: 'good', headline: acute < 260 ? 'Room to build' : 'Building steadily',
+    statusWhy: {title:'Why Productive',summary:'Garmin’s training status and load inputs.',feedback:null,source:'Garmin training status',inputs:[{key:'acuteLoad',name:'Acute load',value:String(acute),rating:acute > 560 ? 'High' : acute < 260 ? 'Low' : 'Optimal',tone:acute > 560 ? 'fair' : 'good',detail:'Weighted recent exercise load'},{key:'vo2max',name:'VO₂ max',value:'47',rating:null,tone:'neutral',detail:'Latest recorded Garmin estimate'}]},
     chips: [{icon: 'flame', value: '1.0', text: 'Load ratio', tone: 'good'}, {icon: 'clock', value: `${Math.round(acute / 30)}h`, text: 'Recovery', tone: 'neutral'}],
     week: range(addDays(ctx.calendarDate, -6), ctx.calendarDate).map(d => ({date: d, load: acts.filter(a => a.date === d).reduce((t, a) => t + a.load, 0)})),
     loadFocus: [
@@ -254,7 +293,7 @@ export function trainingView(ctx: Ctx): TrainingView {
     planned: ctx.world.schedule.length ? {state: 'available', session: {name: ctx.world.schedule.find(s => s.date >= ctx.calendarDate)?.name ?? 'Leg day A', date: ctx.world.schedule.find(s => s.date >= ctx.calendarDate)?.date ?? '2026-11-21'}, coach: null, coverageStart: ctx.calendarDate, coverageEnd: addDays(ctx.calendarDate, 14)} : {state: 'empty', session: null, coach: null, coverageStart: ctx.calendarDate, coverageEnd: addDays(ctx.calendarDate, 14)},
     race: ctx.world.ambitions.find(a => a.id === 'event') ? {name: 'Winter 10K', date: '2026-12-12', daysUntil: daysBetween(ctx.calendarDate, '2026-12-12')} : null,
     raceState: ctx.world.ambitions.find(a => a.id === 'event') ? 'available' : 'empty',
-    strength: strength.length && sv ? {figure: 'female', weekStart: ctx.weekFrom, sets: sv.thisWeek.reduce((t, m) => t + m.sets, 0) || 0, sessionsWithSets: strength.filter(a => !a.timerOnly).length, strengthActivities: strength.length, records: strength.filter(a => a.record).length, muscles: sv.thisWeek} : null,
+    strength: strength.length && sv ? {figure: 'female', weekStart: ctx.weekFrom, sets: strength.reduce((n, a) => n + (setsFor(a) ?? []).reduce((t, e) => t + e.sets.length, 0), 0), sessionsWithSets: strength.filter(a => !a.timerOnly).length, strengthActivities: strength.length, records: strength.filter(a => a.record).length, muscles: sv.thisWeek} : null,
   };
 }
 

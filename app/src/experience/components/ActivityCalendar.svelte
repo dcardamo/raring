@@ -12,8 +12,8 @@
  <div class="grid">
   {#each Array(month.lead) as _}<span></span>{/each}
   {#each month.days as d}
-   <button class="day s-{d.state}" class:today={d.today} disabled={d.state === 'future' || d.state === 'before'} onclick={() => onDay(d.date)}
-    aria-label={`${dayLabel(d.date)}: ${d.acts.length ? d.acts.map(a => SPORTS[a.sport].name).join(', ') : d.state === 'rest' ? 'rest day' : d.state === 'paused' ? 'paused' : d.state === 'unknown' ? 'awaiting evidence' : d.state === 'before' ? 'before downloaded history' : 'nothing recorded'}`}>
+   <button class="day s-{d.state}" class:today={d.today} class:partial={!d.covered && d.acts.length > 0} disabled={d.state === 'future' || d.state === 'before'} onclick={() => onDay(d.date)}
+    aria-label={`${dayLabel(d.date)}${!d.covered && d.acts.length ? ', incomplete coverage, known activities' : ''}: ${d.acts.length ? d.acts.map(a => SPORTS[a.sport].name).join(', ') : d.state === 'rest' ? 'rest day' : d.state === 'paused' ? 'paused' : d.state === 'unknown' ? 'awaiting evidence' : d.state === 'before' ? 'before downloaded history' : 'nothing recorded'}`}>
     <span class="num n">{Number(d.date.slice(8))}</span>
     {#if d.acts.length}
      <span class="dots">{#each d.acts.slice(0, 3) as a}<i style:background={SPORTS[a.sport].color}></i>{/each}</span>
@@ -30,6 +30,7 @@
  .s-active{background:rgba(255,255,255,.07);color:var(--text)}
  .s-paused{background-image:repeating-linear-gradient(45deg,rgba(169,200,255,.14) 0 3px,transparent 3px 7px)}
  .s-unknown{background:none;border:1.5px dotted rgba(142,152,172,.55)}
+ .partial{border:1.5px dotted rgba(142,152,172,.75)}
  .s-rest{background:rgba(169,200,255,.08)}
  .s-future,.s-before{background:none;color:rgba(142,152,172,.4)}
  .today{border-color:var(--ink)}

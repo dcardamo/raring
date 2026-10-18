@@ -56,7 +56,7 @@ export const onStatusChanged = (): Promise<() => void> => Promise.resolve(() => 
 // Daily values from the synthetic world; gaps stay null, never zero.
 function value(metric: TrendMetric, date: string): number | null {
   const c = ctx();
-  if (date < c.world.historyStart || date > c.calendarDate) return null;
+  if (date < c.world.historyStart || date > c.calendarDate || date > c.upload.date) return null;
   const night = c.nightOf(date);
   switch (metric) {
     case 'readiness': return c.readinessOf(date)?.value ?? null;
@@ -88,10 +88,16 @@ function series(metric: TrendMetric, list: [string, string][]): TrendSeries {
 }
 export const trend = (query: TrendQuery): Promise<TrendView> => Promise.resolve().then(() => {
   const today = ctx().calendarDate, first = ctx().world.historyStart;
-  const end = query.end && query.end <= today ? query.end : today;
+  const validDate = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d) && Number.isFinite(Date.parse(d + 'T12:00:00Z')) && new Date(d + 'T12:00:00Z').toISOString().slice(0,10) === d;
+  for (const d of [query.start,query.end,query.comparisonStart]) {
+    if (d == null) continue;
+    if (!validDate(d) || d < '1990-01-01' || d > today) throw Error(`Choose a valid date from 1990-01-01 through ${today}`);
+  }
+  const end = query.end ?? today;
   if (query.range === 'custom' && (!query.start || query.start > end)) throw Error('Choose a block start on or before its end');
   const length = Math.round((Date.parse(end) - Date.parse(query.start ?? end)) / 86400000) + 1;
   const {from, bucket, shift} = query.range === 'custom' ? {from: query.start ?? end, bucket: bucketFor(length), shift: length} : period(query.range, end, first);
+  if (query.previous && query.comparisonStart && shift && addDays(query.comparisonStart,shift-1) > today) throw Error('The comparison block runs past today');
   const list = spans(from, end, bucket);
   const now = series(query.metric, list);
   const offset = query.comparisonStart ? Math.round((Date.parse(from) - Date.parse(query.comparisonStart)) / 86400000) : (shift ?? 0);

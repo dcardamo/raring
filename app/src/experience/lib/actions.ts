@@ -1,6 +1,6 @@
 // Prototype actions: every user choice the journeys exercise. Local only; nothing
 // is sent to Garmin, and offline changes apply immediately.
-import {store, setCaseHook, fresh} from './store.svelte';
+import {store, setCaseHook, fresh, LEGACY} from './store.svelte';
 import {derive, type State} from './rules';
 import {CASES} from './cases';
 import {dayLabel, weekId} from './dates';
@@ -66,7 +66,7 @@ export const A = {
  journalAllow() { store.set(st => ({journal: {...st.journal, consent: true, downloaded: true}}), 'Journal reads allowed'); store.closeSheet(); },
  journalOpen(open: boolean) { store.set(st => ({journal: {...st.journal, open}})); },
  journalConsent(on: boolean) { store.set(st => ({journal: {...st.journal, consent: on, open: false, downloaded: st.journal.downloaded || on}}), on ? 'Journal reads allowed' : 'Journal reads off · downloaded logs stay until you erase local data'); },
- exportData() { store.toast('Export created (prototype: no file). Includes plans, circumstances, self-reports and downloaded journal logs; no tokens.'); },
+ exportData() { store.toast('Prototype export disclosure only; no file created. Plans, circumstances, self-reports and downloaded journal logs are included; tokens are excluded.'); },
  signout() { store.sheetThen(() => { store.reset('simple'); store.external('onboarding'); store.toast('Prototype choices erased. No Garmin account was connected.'); }); },
  keep() { store.toast('Commitments kept for next week'); },
  connect() { store.toast('Would open Garmin Connect (prototype)'); },
@@ -86,3 +86,13 @@ export const A = {
  },
 };
 setCaseHook((id, cold) => A.applyCase(id, cold));
+
+// Prototype test hooks for the browser checks; the shipped app has none of these.
+Object.assign(window as unknown as Record<string, unknown>, {
+ RaringApp: {
+  get state() { return store.state; }, set: (p: Partial<State>) => store.set(p), external: (r: string) => store.external(r), navigate: (r: string) => store.navigate(r),
+  openSheet: (n: string, a?: string) => store.openSheet(n, a), sync: (k?: 'exception') => A.sync(k), background: () => A.background(),
+  canonical: (r: string) => store.canonical(r), defaultTrail: (r: string) => store.defaultTrail(r), get LEGACY() { return LEGACY; },
+ },
+ RaringRules: {derive}, RaringCases: CASES,
+});

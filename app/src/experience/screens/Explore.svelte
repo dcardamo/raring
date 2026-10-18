@@ -3,15 +3,16 @@
  import Gauge from '../../lib/components/Gauge.svelte';
  import Hypnogram from '../../lib/components/Hypnogram.svelte';
  import BodyMap from '../../lib/components/BodyMap.svelte';
- import Sparkline from '../../lib/components/Sparkline.svelte';
+ import TrendSpark from '../components/TrendSpark.svelte';
  import {toneColor} from '../../lib/charts';
  import RootHeader from '../components/RootHeader.svelte';
  import RouteHero from '../components/RouteHero.svelte';
  import XIcon from '../components/XIcon.svelte';
  import {store} from '../lib/store.svelte';
  import {METRICS} from '../lib/metrics';
- import {addDays, dur, range} from '../lib/dates';
- import {EXERCISES, routeFor, hrTrace, stagesFor, restingHrFor, hrvFor, stressAvgFor, bodyBatteryHigh, vo2maxFor, fitnessAgeFor, sleepHrFor, respirationFor, spo2For, skinTempFor, weightFor} from '../lib/world';
+ import {addDays, dur, range, weekday} from '../lib/dates';
+ import {rand} from '../lib/world';
+ import {EXERCISES, routeFor, hrTrace, stagesFor, restingHrFor, hrvFor, stressAvgFor, bodyBatteryHigh, vo2maxFor, fitnessAgeFor, sleepHrFor, respirationFor, spo2For, skinTempFor, weightFor, enduranceFor, hillFor} from '../lib/world';
  import {acuteLoad, musclesBetween, todayView} from '../lib/views';
  import {SPORTS} from '../lib/sports';
  let ctx = $derived(store.ctx);
@@ -28,10 +29,11 @@
   sleepHr: d => ctx.nightOf(d) ? sleepHrFor(d) : null, bodyBattery: bodyBatteryHigh, stress: stressAvgFor, heartRate: restingHrFor, restingHr: restingHrFor,
   hrv: d => ctx.nightOf(d) ? hrvFor(d) : null, respiration: d => ctx.nightOf(d) ? respirationFor(d) : null, spo2: d => ctx.nightOf(d) ? spo2For(d) : null,
   skinTemp: d => ctx.nightOf(d) ? skinTempFor(d) : null, vo2max: vo2maxFor, fitnessAge: fitnessAgeFor, acuteLoad: d => acuteLoad(ctx, d), weight: weightFor,
-  endurance: d => 5800 + Math.round(Math.sin(d.length) * 60), hill: () => 61, runningTolerance: () => 31,
+  endurance: enduranceFor, hill: hillFor, runningTolerance: d => weekday(d) === 1 ? 29 + Math.round(rand(d + 'rt') * 5) : null,
  };
- const spark = (id: string) => range(addDays(ctx.calendarDate, -27), ctx.calendarDate).map(d => d < ctx.world.historyStart ? null : series[id]?.(d) ?? null);
- const latest = (id: string) => { for (let d = ctx.calendarDate; d >= addDays(ctx.calendarDate, -90); d = addDays(d, -1)) { const v = series[id]?.(d); if (v != null) return v; } return null; };
+ const SPARSE = ['vo2max', 'fitnessAge', 'weight', 'endurance', 'hill', 'runningTolerance'];
+ const spark = (id: string) => range(addDays(ctx.calendarDate, SPARSE.includes(id) ? -119 : -27), ctx.calendarDate).map(d => d < ctx.world.historyStart ? null : series[id]?.(d) ?? null);
+ const latest = (id: string) => { for (let d = ctx.calendarDate; d >= addDays(ctx.calendarDate, -180); d = addDays(d, -1)) { const v = series[id]?.(d); if (v != null) return v; } return null; };
  const fmt = (id: string, v: number | null) => v == null ? '—' : id === 'sleepTime' ? dur(v) : `${id === 'skinTemp' && v > 0 ? '+' : ''}${Math.round(v * (['respiration', 'skinTemp', 'weight'].includes(id) ? 10 : 1)) / (['respiration', 'skinTemp', 'weight'].includes(id) ? 10 : 1)}`;
  const INDEX: [string, string, string, string | null][] = ([
   ...Object.entries(METRICS).map(([id, m]) => [m.name, `metric/${id}`, m.area, id] as [string, string, string, string]),
@@ -50,7 +52,7 @@
 <label class="search"><XIcon name="search" size={18}/><span class="sr">Search metrics and exercises</span><input type="search" placeholder="Search metrics and exercises" value={q} oninput={e => store.setUi({q: e.currentTarget.value})} autocomplete="off"/></label>
 {#if q.trim()}
  <section class="card"><h3>{results.length} result{results.length === 1 ? '' : 's'}</h3>
-  {#each results as [nm, route, area, id]}<button class="rowlink" onclick={() => go(route)}><span class="az-i">{#if id}<Sparkline values={spark(id)} w={56} h={22} fill={false}/>{:else}<Icon name="chevron" size={14}/>{/if}</span><span><b>{nm}</b><small>{area}</small></span>{#if id}<span class="val">{fmt(id, latest(id))}</span>{/if}</button>{:else}<p class="small">Nothing by that name. Every metric lives in one of the areas below.</p>{/each}
+  {#each results as [nm, route, area, metricId]}{@const id = metricId === 'weight' ? null : metricId}<button class="rowlink" onclick={() => go(route)}><span class="az-i">{#if id}<TrendSpark values={spark(id)} w={56} h={22} sparse={SPARSE.includes(id)}/>{:else}<Icon name="chevron" size={14}/>{/if}</span><span><b>{nm}</b><small>{area}</small></span>{#if id}<span class="val">{fmt(id, latest(id))}</span>{/if}</button>{:else}<p class="small">Nothing by that name. Every metric lives in one of the areas below.</p>{/each}
  </section>
 {/if}
 
@@ -73,7 +75,7 @@
 
 <div class="sec-h"><h2>Everything A–Z</h2></div>
 <section class="card az">
- {#each INDEX as [nm, route, area, id]}<button class="rowlink" onclick={() => go(route)}><span class="az-i">{#if id}<Sparkline values={spark(id)} w={56} h={22} fill={false} color={id === 'fitnessAge' || id === 'vo2max' || id === 'weight' ? '#B4BCCB' : '#E4E8F0'} points={id === 'fitnessAge' || id === 'vo2max' || id === 'weight'}/>{/if}</span><span><b>{nm}</b><small>{area}</small></span>{#if id}<span class="val">{fmt(id, latest(id))}<small>{METRICS[id].unit && METRICS[id].unit !== 'h' ? ' ' + METRICS[id].unit : ''}</small></span>{:else}<Icon name="chevron" size={16}/>{/if}</button>{/each}
+ {#each INDEX as [nm, route, area, metricId]}{@const id = metricId === 'weight' ? null : metricId}<button class="rowlink" onclick={() => go(route)}><span class="az-i">{#if id}<TrendSpark values={spark(id)} w={64} h={SPARSE.includes(id) ? 30 : 22} color={SPARSE.includes(id) ? '#B4BCCB' : '#E4E8F0'} sparse={SPARSE.includes(id)} decimals={id === 'weight' ? 1 : 0}/>{/if}</span><span><b>{nm}</b><small>{area}</small></span>{#if id}<span class="val">{fmt(id, latest(id))}<small>{METRICS[id].unit && METRICS[id].unit !== 'h' ? ' ' + METRICS[id].unit : ''}</small></span>{:else}<Icon name="chevron" size={16}/>{/if}</button>{/each}
 </section>
 
 <style>
@@ -100,6 +102,6 @@
  .more{margin-top:12px;padding-top:6px;padding-bottom:6px}
  .more .rowlink>:global(svg:first-child){color:var(--text2)}
  .az{padding-top:4px;padding-bottom:4px}
- .az-i{width:56px;display:grid;place-items:center;color:var(--text3)}
+ .az-i{width:64px;display:grid;place-items:center;color:var(--text3)}
  .val small{font:500 11px Inter;color:var(--text3)}
 </style>

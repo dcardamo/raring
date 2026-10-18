@@ -1,5 +1,6 @@
 <script lang="ts">
- import {untrack,getContext} from 'svelte';
+ import {untrack,getContext,onDestroy} from 'svelte';
+ import type {ChartStateContext} from '../chart-state';
  import {addDays,historyScale,readinessTone} from '../history';
  import {dateLabel} from '../format';
  import {colors,toneColor} from '../charts';
@@ -18,13 +19,15 @@
   bandLabel?:string;readiness?:boolean;nights?:boolean;color?:string;metric?:TrendMetric;initialRange?:TrendRange;
  }=$props();
  const id=$props.id();
- // The initial range only; the person picks ranges after that.
- let range=$state<TrendRange>(untrack(()=>initialRange)),offset=$state(0),width=$state(320);
+ // A caller can retain controls when its canonical detail is reopened by Back.
+ const saved=untrack(()=>getContext<ChartStateContext|undefined>('chart-state')?.(metric ?? label));
+ let range=$state<TrendRange>(saved?.initial?.range ?? untrack(()=>initialRange)),offset=$state(saved?.initial?.offset ?? 0),width=$state(320);
  const generation=getContext<()=>number>('trend-generation') ?? (()=>0);
- let primary=$state<TrendMetric|null>(null);
+ let primary=$state<TrendMetric|null>(saved?.initial?.primary ?? null);
  let activeMetric=$derived(primary ?? metric);
- let customStart=$state(''),customEnd=$state(''),comparisonStart=$state('');
- let compare=$state<'off'|'previous'|'metric'>('off'),overlayMetric=$state<TrendMetric|null>(null);
+ let customStart=$state(saved?.initial?.customStart ?? ''),customEnd=$state(saved?.initial?.customEnd ?? ''),comparisonStart=$state(saved?.initial?.comparisonStart ?? '');
+ let compare=$state<'off'|'previous'|'metric'>(saved?.initial?.compare ?? 'off'),overlayMetric=$state<TrendMetric|null>(saved?.initial?.overlayMetric ?? null);
+ onDestroy(()=>saved?.save({range,offset,primary,customStart,customEnd,comparisonStart,compare,overlayMetric}));
  let view=$state<TrendView|null>(null),loadError=$state('');
  let days=$derived(ranges.find(r=>r.range===range)?.days ?? 0);
  let local=$derived(!activeMetric);

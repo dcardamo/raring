@@ -43,7 +43,8 @@ export type Sheet = {name: string, arg?: string} | null;
 export type Ui = Record<string, unknown> & {scroll?: number};
 
 class Store {
-  state = $state<State>(fresh('simple'));
+  // The first look is the full design: the mixed profile's Wednesday.
+  state = $state<State>(fresh('mixed'));
   trail = $state<string[]>(['today']);
   sheet = $state<Sheet>(null);
   ui = $state<Ui>({});
@@ -67,8 +68,8 @@ class Store {
   load() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
-      this.state = saved?.profile ? {...base(), ...saved} : fresh('simple');
-    } catch { this.state = fresh('simple'); }
+      this.state = saved?.profile ? {...base(), ...saved} : fresh('mixed');
+    } catch { this.state = fresh('mixed'); }
     // Explicit opening never survives a cold start.
     this.state.journal.open = false;
   }
@@ -107,6 +108,10 @@ class Store {
     if (route === '') return {route: 'today'};
     if (route in LEGACY && LEGACY[route] !== route) return {route: this.resolveAlias(LEGACY[route]), alias: route};
     route = this.resolveAlias(route);
+    if (/^workout\/[\w-]+\/evidence$/.test(route)) {
+      const workout = route.slice(0, -9);
+      if (this.validRoute(workout)) return {route: workout, alias: route};
+    }
     if (this.validRoute(route)) return {route};
     return {route: 'today', invalid: route};
   }
@@ -266,7 +271,8 @@ class Store {
     requestAnimationFrame(() => {
       if (!this.scroller) return;
       const r = this.route;
-      const anchor = r.includes('/') && !r.startsWith('metric/') && !r.startsWith('workout/') ? document.getElementById(`sec-${r.split('/')[1]}`) : null;
+      const sections: Record<string, string> = {'sleep/naps': '.card.naps', 'sleep/stages': '.dashboard .card', 'health/journal': '.card.journal', 'training/performance': '.threshold-list'};
+      const anchor = r.includes('/') && !r.startsWith('metric/') && !r.startsWith('workout/') ? document.getElementById(`sec-${r.split('/')[1]}`) ?? (sections[r] ? document.querySelector(sections[r]) : null) : null;
       if (want === 0 && anchor) anchor.scrollIntoView({block: 'start'});
       else if (want != null) this.scroller.scrollTop = want;
       if (want === 0) (document.querySelector('main h1') as HTMLElement | null)?.focus({preventScroll: true});

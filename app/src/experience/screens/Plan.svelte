@@ -7,7 +7,7 @@
  import XIcon from '../components/XIcon.svelte';
  import {store} from '../lib/store.svelte';
  import {A} from '../lib/actions';
- import {addDays, dayLabel, daysBetween, shortDay} from '../lib/dates';
+ import {addDays, dayLabel, daysBetween, weekMonday} from '../lib/dates';
  import {SPORTS} from '../lib/sports';
  import {contribution, versionFor} from '../lib/rules';
  import {activityById} from '../lib/world';
@@ -64,10 +64,11 @@
     </div>
    {/each}
   </div>
-  <div class="vers" aria-label="Commitment versions">
-   {#each versions.versions.filter(v => v.from <= ctx.plan!.wk) as v}<span class="ver" class:cur={v === versions.base}>{v.from.replace(/\d{4}-W/, 'W')} · {v.strength} strength · {v.im} min</span>{/each}
-   {#each ctx.plan.revisions as r}<span class="ver cur">{shortDay(r.from)} · {r.strength} strength · {r.im} min</span>{/each}
-   {#if ctx.plan.pause}<span class="ver hatch">Paused {shortDay(ctx.plan.pause.since)}{ctx.plan.pause.until ? '–' + shortDay(ctx.plan.pause.until) : ''}</span>{/if}
+  <div class="vers">
+   {#if ctx.plan.revisions.length}{@const r = ctx.plan.revisions.at(-1)!}<p><b>From {dayLabel(r.from)}:</b> {r.strength} strength · {r.im} min</p>
+   {:else if versions.base}<p><b>Since {dayLabel(weekMonday(versions.base.from))}:</b> {versions.base.strength} strength · {versions.base.im} min</p>{/if}
+   {#if ctx.plan.pause}<p class="hatch">Paused {dayLabel(ctx.plan.pause.since)}{ctx.plan.pause.until ? ` – ${dayLabel(ctx.plan.pause.until)}` : ''}</p>{/if}
+   {#if versions.versions.length > 1 || ctx.plan.revisions.length}<button class="link quiet" onclick={() => store.openSheet('versions')}>Earlier targets</button>{/if}
   </div>
   <p class="small">Plan week {dayLabel(ctx.weekFrom)}–{dayLabel(ctx.weekTo)} · Garmin’s intensity week</p>
  {:else}
@@ -133,10 +134,10 @@
  .st{font-weight:600}
  .s-reached,.s-reached-adjusted{color:var(--good)!important}.s-unknown,.s-paused,.s-adjusted-paused{color:var(--text3)!important}
  .rv{font-size:20px}.rv small{font-size:12px;color:var(--text3)}
- .vers{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
- .ver{font:600 11px Inter;padding:5px 9px;border-radius:999px;background:rgba(255,255,255,.04);color:var(--text3);border:1px solid var(--line)}
- .ver.cur{color:var(--text);border-color:rgba(255,255,255,.2)}
- .ver.hatch{background:repeating-linear-gradient(45deg,rgba(169,200,255,.14) 0 3px,transparent 3px 7px);color:#D8E6FF}
+ .vers{margin-top:16px;padding-top:12px;border-top:1px solid var(--line);font-size:13px;color:var(--text2);display:grid;gap:4px;justify-items:start}
+ .vers b{color:var(--text);font-weight:600}
+ .vers .hatch{padding:2px 8px;border-radius:6px;background:repeating-linear-gradient(45deg,rgba(169,200,255,.14) 0 3px,transparent 3px 7px);color:#D8E6FF}
+ .vers .link{min-height:32px;padding:4px 0;font-size:13px}
  .nocom{display:flex;gap:12px;align-items:center}
  .nocom b{display:block}.nocom small{display:block;color:var(--text2);font-size:12px}
  .amb-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}

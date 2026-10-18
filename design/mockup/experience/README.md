@@ -1,69 +1,69 @@
-# Raring experience prototype — unshipped
+# Raring experience prototype v2 — unshipped
 
-Stage 1 of item 26. Independently synthetic data; no account connection, Garmin
-writes, analytics or remote assets. Existing `../index.html` and the product app
-remain unchanged. This is a journey prototype, not a second implementation of
-the Rust core. Source-truth and native behaviour need later implementation tests.
+Stage 1 of item 26. The prototype uses the shipped Svelte components and view
+contract, with independently synthetic data. No credentials, Garmin writes,
+analytics, external fonts or map tiles. Production behaviour remains unchanged.
 
-Open `index.html` directly, or serve **only this directory**:
+**Preview:** http://neptune:48726/ · first visit opens mixed Wednesday. **Scenario**
+selects simple, sleep-first, mixed or sparse; U01–U64; time/day; offline; sync;
+background/resume; naps; calendar coverage; Explore-tab/header variants; status
+surfaces; legacy links; and **Compare** (shipped | retired v1 | v2 captures).
+Prototype-only choices persist in this browser. Export is disclosure-only.
 
-```sh
-nix develop -c python3 -m http.server 48726 --bind 0.0.0.0 --directory design/mockup/experience
-```
+## Run and check
 
-On neptune: `http://neptune:48726/index.html`. The current review server PID is
-recorded privately in `.data/experience-preview.pid` at the repository root.
-Do not serve the repository root or share private observations.
-
-## Controls and checks
-
-The purple **Scenario** control is test tooling, not product navigation. Choose
-one of four profiles or U01–U64, change the day/phase, simulate offline/resume/sync,
-and inspect illustrative status surfaces or legacy links. Choices persist in a
-prototype-only browser storage key; **Reset choices** resets the synthetic profile.
-The clock selector represents existing personal phases, not a new fixed coaching
-clock. `?case=U13` loads a case once; `?text=1.3` or `?text=2` scales text.
+From the repo, inside `nix develop`:
 
 ```sh
-nix develop -c node design/mockup/experience/check.mjs --shots
+cd app
+npm run experience                  # separate Vite entry: /experience.html
+npm run check                       # real view-contract type checks
+npm run test:experience             # U starts, journeys, layout/privacy checks
+npm run test:experience -- --shots   # regenerate synthetic captures here
+npm run build:experience            # app/dist-experience/index.html
 ```
 
-Requires `nix develop -c npm ci --prefix app`. The script uses the project's
-Playwright and installed Chromium; `CHROMIUM`, `RARING_NODE_MODULES` and
-`EXPERIENCE_URL` override paths. Results are written to ignored
-`.data/experience-check.json`; synthetic screenshots go to `shots/`.
-Cases contain expected start-page copy, not claims that every journey passed
-with real people. See the stage-1 checkpoint in `docs/experience-design.md`.
+Serve **only** `app/dist-experience`, never the repository or `.data`:
 
-## Short unfamiliar-person walkthrough
+```sh
+nix develop -c python3 -m http.server 48726 --bind 0.0.0.0 --directory app/dist-experience
+```
 
-The moderator chooses the case **before** showing the screen, dismisses the case
-label, and does not explain the menu. Ask what the screen means before hints.
-Record time to meaning/action, first destination, wrong turns, configuration,
-source confusion and pressure. Keep consented observations under ignored `.data/`
-or `.research/`; do not commit participants or personal screenshots.
+The active server's verified PID is in ignored `.data/experience-preview.pid`.
+Stop only that verified PID. To check the served build:
+`cd app && EXPERIENCE_URL=http://neptune:48726/ npm run test:experience`.
 
-1. **U01**, new/no-plan: “What matters now? What would you do next?”
-2. **U03**, sleep-first: “How was last night? What about tonight? Is there a pattern?”
-3. **U19**, mixed: “Find your workout and explain what counted. Where would you
-   find strength bests, a rare metric, gear, a comparison and your exported data?”
-4. **U11**: “Plan something for tomorrow. Now choose a day of rest.” Return after
-   simulated offline/resume. “What changed? What didn’t?”
-5. **U30/U31**: “What does this restriction do? Is this routine compatible?”
-   Misunderstood compatibility is a blocker, not a partial success.
-6. **U52/U53**: “Find your lifestyle logs, decide whether to allow reads, open
-   them, leave, return, turn reads off, and explain what an export still contains.”
-7. **Interrupted week:** choose Mixed, Mon 16 Nov daytime. Open recorded strength;
-   advance to Tue evening and mark wind-down; Wed morning inspect the poor night;
-   Wed daytime review intervals and rest. Advance past midnight (rest persists),
-   Thu daytime pause training, Fri inspect high readiness and status surfaces,
-   Sun explicitly resume, inspect weekly review and week 46's original targets.
-   Add an activity exclusion/movement note and an optional supplied routine if
-   relevant. “Did the pause create a failure, catch-up task or achievement?”
+Source: `app/src/experience/`. Shipped screen extraction: `app/src/lib/screens/`.
+Provenance, proposed period rules, parity and evidence limits:
+[`docs/experience-design.md`](../../../docs/experience-design.md).
+The vanilla v1 renderer is retired; git keeps it and Compare keeps its captures.
+The original mockup at `../index.html` still describes the shipped app.
 
-At least three unfamiliar participants are required, including simple-needs and
-detail-oriented people. Browser/AI reviews are not participants. If discovery
-fails, reconsider Explore as primary navigation rather than coaching people to
-use it. **Stop before stage 2** for the coordinator/Dan decision: proceed with
-explicitly named limited evidence, or pause and release exclusivity. No merge,
-push, release or automatic next stage is authorised.
+## Unfamiliar-person walkthrough
+
+Choose the case before showing the screen, dismiss the case label, and give no
+navigation hints. Record first meaning/action time, wrong turns, extra setup,
+source confusion and pressure. Keep consented observations in ignored `.data/`
+or `.research/`, never committed.
+
+1. **U01:** “What matters now? What would you do next?”
+2. **U03:** “How was last night? What about tonight? Is there a pattern?”
+3. **U19:** “Find your workout and explain what counted. Find strength bests,
+   a rare metric, gear, a comparison and exported data.”
+4. **U11:** “Plan something tomorrow, then choose a rest day.” Repeat offline
+   and after resume. “What changed? What didn’t?”
+5. **U30/U31:** “What does the restriction do? Is this routine compatible?”
+   Misunderstood compatibility blocks progression.
+6. **U52/U53:** “Find lifestyle logs, decide whether to allow reads, open,
+   leave, return, turn reads off, and explain what an export contains.”
+7. **Interrupted week:** Monday strength → Tuesday wind-down self-report →
+   Wednesday short night/conflicting intervals → rest through midnight →
+   Thursday pause → Friday high readiness without a training prompt → Sunday
+   explicit resume and review. Inspect the original targets and pause interval.
+
+At least three unfamiliar participants, including simple-needs and
+detail-oriented people, must complete the usability gate. Browser checks and
+AI review are not participants. Android/device, real data, long-history
+performance and migrations remain unverified. **Stop before stage 2** for the
+coordinator/Dan decision: proceed with named limited evidence, or pause and
+release exclusivity. No main merge, push or release is authorised.

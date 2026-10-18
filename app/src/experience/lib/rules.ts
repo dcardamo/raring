@@ -86,7 +86,8 @@ export function derive(state: State): Ctx {
   // Nothing recorded after the synthetic "now" exists yet.
   world.activities = world.activities.filter(a => a.date < calendarDate || (a.date === calendarDate && a.start <= clock.time));
   const sleepFirst = state.profile === 'sleep';
-  const night = (d: string): Night => state.profile === 'sparse' && (d === '2026-11-17' || d === '2026-11-18') ? null : nightFor(d, sleepFirst);
+  const knownNight = clock.phase === 'waiting' ? addDays(day, -1) : day;
+  const night = (d: string): Night => d > knownNight || state.profile === 'sparse' && d >= '2026-11-17' ? null : nightFor(d, sleepFirst);
   // Displayed (sleep/readiness) day keeps last night until the handover.
   const displayedDay = clock.phase === 'waiting' ? addDays(day, -1) : day;
   const lastNight = night(displayedDay);
@@ -126,7 +127,7 @@ export function derive(state: State): Ctx {
     state, world, clock, phase, fixedReason, day, calendarDate, displayedDay, night: lastNight, nightOf: night, readiness, readinessOf, stale, upload,
     restActive: restActive || restCarry, paused, reviewDue, limits, hasLimits, weekFrom, weekTo, actsToday, lateArrivals,
     scheduleToday, intentionsToday, napList, napsToday, offline: state.offline,
-    bodyBattery: stale || clock.phase === 'waiting' ? null : bodyBatteryFor(calendarDate),
+    bodyBattery: stale || clock.phase === 'waiting' || upload.date < calendarDate ? null : bodyBatteryFor(calendarDate),
     plan: null as PlanStatus | null, tonight: null as unknown as Tonight, notices: [] as Notice[], lead: null as unknown as Lead, adaptLabel: 'Adapt today',
   };
   ctx.plan = planStatus(ctx);
@@ -149,13 +150,14 @@ type Nap = {start: [string, string], end: [string, string] | null, min: number};
 function tonight(ctx: {state: State, clock: typeof CLOCKS[ClockKey], day: string, calendarDate: string, stale: boolean, napsToday: Nap[]}): Tonight {
   const sleepOnly = ctx.state.profile === 'sleep';
   const nightOf = ctx.clock.phase === 'late' ? ctx.day : ctx.calendarDate;
-  const need = sleepOnly ? 505 : 490;
+  const adjustedForNap = sleepOnly && ctx.napsToday.length > 0;
+  const need = adjustedForNap ? 505 : 490;
   return {
     nightOf, nightLabel: `${shortDay(nightOf)} night → ${shortDay(addDays(nightOf, 1))} morning`,
     window: ctx.stale ? null : '22:45–23:15', windowStart: '22:45', windowEnd: '23:15', windDown: '22:15', wake: sleepOnly ? '06:30' : '06:55', need,
     source: ctx.stale ? 'Raring estimate' : 'Garmin plan',
     estimate: ctx.stale ? 'Asleep by 23:20 · from your usual wake 07:10 (12 recorded wake times)' : null,
-    reason: sleepOnly ? 'Garmin raised tonight’s need after several short nights, and added 15 min after your nap.' : 'Garmin added 20 min for recent short sleep.',
+    reason: adjustedForNap ? 'Garmin raised tonight’s need after several short nights, and added 15 min after your nap.' : 'Garmin added 20 min for recent short sleep.',
     savedNeed: 490,
     updated: sleepOnly && ctx.napsToday.length ? 'Need updated 13:58 after Garmin’s nap adjustment. The plan saved this morning for timing stays 8h 10.' : null,
   };
@@ -183,7 +185,7 @@ function planStatus(ctx: {state: State, world: World, calendarDate: string, week
   const target = {strength: last ? last.strength : base.strength, im: last ? last.im : base.im};
   const ended = (ctx.state.pauses || []).filter(x => x.since <= ctx.calendarDate && (x.until ?? '') >= ctx.weekFrom).at(-1);
   const pause = ctx.state.pause && ctx.state.pause.since <= ctx.calendarDate ? ctx.state.pause : ended || null;
-  const wholePause = !!pause && !pause.until && pause.since <= ctx.weekFrom;
+  const wholePause = !!pause && pause.since <= ctx.weekFrom && (!pause.until || pause.until >= ctx.weekTo);
   const midPause = !!pause && !wholePause && pause.since <= ctx.calendarDate;
   const daysLeft = Math.max(0, Math.round((parse(ctx.weekTo).getTime() - parse(ctx.calendarDate).getTime()) / 86400000));
   const incomplete = ctx.world.coverageIncompleteFrom;
@@ -304,9 +306,9 @@ function lead(ctx: Ctx): Lead {
       line: n ? `${n.asleep < n.need ? dur(n.need - n.asleep) + ' below' : 'Met'} last night’s need` : 'A gap in the record', action: {label: 'Last night’s sleep', go: 'sleep'}});
   }
   const id = `suggest:${ctx.calendarDate}`;
-  if (ctx.limits.note) {
-    trace.push({gate: 'Relevance', result: 'Workout contents need review; readiness cannot establish compatibility.'});
-    return done({id: `limits:${ctx.calendarDate}`, kind: 'review', headline: 'Your movement limits apply', line: 'Workouts need your review', action: {label: 'Review limits', go: 'adapt/limits'}});
+  if (ctx.hasLimits) {
+    trace.push({gate: 'Relevance', result: 'Your exclusions and movement notes constrain training suggestions.'});
+    return done({id: `limits:${ctx.calendarDate}`, kind: 'review', headline: ctx.limits.note ? 'Your movement limits apply' : 'Your activity limits apply', line: ctx.limits.note ? 'Workouts need your review' : ctx.limits.exclude.map(s => SPORTS[s].name).join(', ') + ' excluded', action: {label: 'Review limits', go: 'adapt/limits'}});
   }
   if (s.dismissed[id]) {
     trace.push({gate: 'Relevance', result: 'You chose “Not today” for training ideas; it stays dismissed after sync and resume.'});
@@ -337,7 +339,7 @@ export function surfaces(ctx: Ctx) {
       sub: ctx.paused ? 'Training paused · factual update only' : ctx.restActive ? 'Rest day · no training call' : focus,
       lock: 'Raring · Readiness update', go: 'readiness'},
     statusEnabled: s.permission === 'granted' && s.channels.status,
-    status: {bb: ctx.bodyBattery, stress: ctx.stale || ctx.phase === 'waiting' ? null : 27, hr: ctx.stale || ctx.phase === 'waiting' ? null : 61, focus, go: 'today'},
+    status: {bb: ctx.bodyBattery, stress: ctx.stale || ctx.phase === 'waiting' || ctx.upload.date < ctx.calendarDate ? null : 27, hr: ctx.stale || ctx.phase === 'waiting' || ctx.upload.date < ctx.calendarDate ? null : 61, focus, go: 'today'},
     bedtime: s.permission === 'granted' && s.notifyBedtime && ctx.phase !== 'waiting' ? {title: 'Wind-down', body: `Tonight’s window ${ctx.tonight.window || '—'} · wind down from ${ctx.tonight.windDown}`, go: 'sleep/tonight'} : null,
     weekly: s.permission === 'granted' && s.channels.weekly ? {title: 'Your week in review', body: 'One win, one observation, one choice', go: 'review/latest'} : null,
   };

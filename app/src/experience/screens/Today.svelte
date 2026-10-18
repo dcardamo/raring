@@ -26,7 +26,8 @@
  let n = $derived(ctx.night);
  let heroSleep = $derived(lead.kind === 'sleep');
  let vitals = $derived(waiting ? null : todayView(ctx).vitals);
- let off = $derived(vitals?.readings.filter(v => v.status && v.status !== 'IN_RANGE').length ?? 0);
+ let off = $derived(vitals?.readings.filter(v => v.value != null && v.status && v.status !== 'IN_RANGE').length ?? 0);
+ let comparable = $derived(vitals?.readings.filter(v => v.value != null && v.normal != null).length ?? 0);
 </script>
 
 <RootHeader title="Today" adapt/>
@@ -62,10 +63,10 @@
   <span class="bbrow"><span class="batt"><i style:height={(ctx.bodyBattery ?? 0) + '%'} style:background={ctx.bodyBattery != null ? batteryColor(ctx.bodyBattery) : 'transparent'}></i></span><b class="n">{ctx.bodyBattery ?? '—'}</b></span>
   <em>{ctx.bodyBattery != null ? `At ${ctx.upload.at}` : 'Waiting'}</em>
  </button>
- <button class="tile" onclick={() => go('health')} aria-label={vitals ? `Overnight vitals: ${off ? `${off} outside usual range` : 'all within usual range'}` : 'Vitals waiting'}>
+ <button class="tile" onclick={() => go('health')} aria-label={vitals ? `Overnight vitals: ${off ? `${off} outside usual range` : comparable ? `${comparable} comparable readings within usual range` : 'no comparable readings'}` : 'Vitals waiting'}>
   <small>Vitals</small>
   <span class="dots" aria-hidden="true">{#each vitals?.readings ?? Array(5).fill(null) as v}<i class:off={v?.status && v.status !== 'IN_RANGE'} class:none={!v || v.value == null} style:background={v && v.value != null ? toneColor(v.tone) : undefined}></i>{/each}</span>
-  <em>{vitals ? (off ? `${off} outside range` : 'Usual range') : 'Waiting'}</em>
+  <em>{vitals ? (off ? `${off} outside range` : comparable ? 'Usual range' : 'No comparable readings') : 'Waiting'}</em>
  </button>
 </div>
 

@@ -218,16 +218,17 @@ such as "70% race-ready" or "80% healthy".
 
 ### Working navigation design
 
-Prototype **three stable task destinations: Today, Plan and Progress**, with a
-persistent, text-labelled **Explore** entry in each root header. Explore opens
-the full library; it is not inside Settings, an overflow menu or a hidden gesture.
-Settings is a separate conventional control.
+Prototype **four stable destinations: Today, Plan, Progress and Explore**.
+Today, Plan and Progress describe the daily loop; Explore is the library and the
+stable escape route to any data. Explore is a tab by default because it is the
+safer discoverability choice; the variant with Explore as a text-labelled button
+in each root header stays available in the prototype's scenario control so
+participant tests can compare the two. Settings is a separate header control,
+not inside Explore, an overflow menu or a hidden gesture.
 
-This is a testable navigation proposal, not a requirement to preserve a number
-of tabs. Three task destinations describe the daily loop; Explore is the stable
-escape route to any data. If the prototype's library entry fails the discovery
-criteria in section 15, promote Explore into primary navigation before building
-the shell. Do not preserve three destinations at the cost of hidden features.
+This remains a testable proposal, not a validated architecture. If the header
+variant performs as well in the section 15 discovery tasks, three tabs can be
+reconsidered; do not drop the tab at the cost of hidden features.
 
 On larger screens the same destinations can use a rail. Reading order and
 content hierarchy remain the same; extra width does not justify displaying
@@ -274,6 +275,33 @@ A collapsed wall of twenty accordion headings is still a wall. Move genuine
 analysis into focused destinations rather than merely folding all the cards.
 No necessary explanation should depend on reading documentation outside the app.
 
+### Picture first, then words
+
+The meaning depth is visual. Every overview card leads with a meaningful
+picture of the person's own data (an arc, curve, bars, route, body map,
+calendar, ring or timeline) and carries labels plus at most one short line.
+Paragraphs live in "Why" and help sheets. Previews are data-bearing: a recorded
+walk on Today shows its route, distance, time, pace and heart rate, not a
+"walk recorded" row.
+
+The guardrails in this document decide **what is shown**; they are never
+printed as on-screen disclaimers. Don't show a streak, rather than writing "no
+streak"; don't show a verdict, rather than writing "not a verdict". States are
+told by shape and colour with an accessible name, never colour alone: filled
+sport glyph = recorded, outlined = your plan, diamond = Garmin schedule,
+moon = rest, hatched = paused, dotted = unknown or awaiting evidence. Days still
+to come are blank, not missing. One key explains this in a sheet.
+
+### Detail parity
+
+A canonical detail never loses something the shipped app shows. Workout keeps
+training load with Garmin's aerobic/anaerobic effect, the stats grid, route map,
+heart-rate chart, time in zones, splits, and for strength the sets, flags,
+bests, prior sets, body map and help; Sleep, Health, Training and Readiness keep
+their shipped cards. Implementation reuses the shipped components (now also
+`app/src/lib/screens/`) rather than re-drawing them. New overview pictures may
+add to a detail, such as a map-first workout header, but each number appears once.
+
 ## 5. Today: a briefing with an ending
 
 ### Content hierarchy
@@ -282,7 +310,8 @@ At ordinary phone text size, the first viewport should contain enough to answer
 "what matters now?" and act. Do not force a full-screen decorative gauge before
 the answer.
 
-1. **Context header:** date, quiet watch-upload freshness, Explore and Settings.
+1. **Context header:** date, quiet watch-upload freshness and Settings (plus
+   Explore in the header-entry variant).
    Keep a text-labelled "Adapt today" action in a stable position even when no
    adaptation is active; it changes to its state, such as "Rest today". Plan has
    the same entry. Use a second header row if necessary rather than squeezing
@@ -292,8 +321,8 @@ the answer.
    action and an optional "Why this?" link.
 3. **Compact context:** relevant readings and direct links, not three dominant
    gauges. Readiness, energy and sleep are possible facts, not mandatory panels.
-4. **What counted today:** at most two preview rows, followed by "Today's
-   activities" when there is more. Recorded naps can be a quiet dated event,
+4. **What counted today:** at most two rich activity cards, with maps/body maps
+   and inline stats, followed by "All today's activities" when there is more. Recorded naps can be a quiet dated event,
    never a sleep-completion badge.
 5. **One supporting look-ahead or progress line:** for example tonight's
    wind-down or a relevant weekly commitment. No full plan dashboard.
@@ -690,6 +719,22 @@ No plan does not mean no Progress. Recorded workouts, sleep patterns and Garmin
 changes can be useful without a configured commitment. One reading does not
 justify a trend; a flat trend does not imply that an effort was wasted.
 
+### Progress periods
+
+Progress is a visual report for a chosen period: **Week · Month · 3 months ·
+Year**, with previous/next. Month is the default. A current period is compared
+with the same elapsed days of the previous period, labelled compactly ("vs
+1–18 Oct"). Volume changes are shown neutrally; more is not presented as better.
+The page holds, in order: the period report (activities, active time, distance,
+intensity minutes, time by activity type per day/week/month), an activity
+calendar ("Active on n of m days"; chosen rest as rest; paused hatched; unknown
+coverage dotted; future blank), commitments over time against each week's own
+target, fitness and health trend tiles that open their canonical metric detail,
+strength progress (best-set charts, period muscle map, sets per week), records
+and milestones, sleep against need, and weekly reviews. Without commitments the
+page stays rich, with one optional "Add a commitment" affordance. The period
+arithmetic is specified under "Proposed rules for Progress" below.
+
 ### Weekly progress board
 
 Use separate tracks for accepted commitments: session markers for counts,
@@ -848,8 +893,9 @@ Implementation must replace, rather than leave contradictory versions of:
 - The fixed four-domain bottom-tab requirement and route/prefetch assumptions.
 - The three dominant Today gauges and full weekly-plan/Fitness Age cards there.
 - The visual-first interpretation that makes a large gauge the default hero.
-  Retain concise visual communication, but let meaning and action determine the
-  visual; do not replace a stats dump with paragraphs of coaching.
+  Keep the picture-first overview, but let meaning and action choose the
+  picture (readiness arc, workout route, tonight's dial, recovery curve, sync
+  state); never replace a stats dump with paragraphs of coaching or disclaimers.
 - Long unstructured domain-card stacks and full comparison controls on overviews.
 - Default Strength-preset previews being mistaken for accepted commitments.
   The current spec does not require a primary goal, and this design does not add one.
@@ -1035,102 +1081,219 @@ exception does not turn unverified usability into a passed result.
 ### Stage-1 prototype checkpoint (unshipped)
 
 The 9+10 prerequisite is confirmed at `2580ffb`; the design handoff is `8d593fd`.
-Stage 1 checkpoint `302a69e` provides a linked, independently synthetic prototype in
-[`design/mockup/experience/`](../design/mockup/experience/README.md). No production
-shell, Rust rules/storage, native code or generated types were changed. The old
-visual reference and released app remain intact. `spec.md` still describes the
-shipped product, not this prototype.
+The first linked prototype (`302a69e`, vanilla renderer) proved the journeys and
+privacy semantics but was rejected by Dan as text-heavy and a step back from the
+shipped app: simplified renderers lost the route map, HR chart, zones, splits and
+gauges, and design guardrails had been printed as disclaimers. **v2 replaces it**
+(commits from `b3567c8`): a high-fidelity prototype built on the shipped Svelte
+components, with v1's journey and privacy rules ported. Git keeps v1's code.
 
-**Decision gate: not validated for cutover.** Today / Plan / Progress with labelled
-header Explore is the working hypothesis, not a selected-by-users architecture.
-No unfamiliar participants have tested it. Three are required, including
-simple-needs and detail-oriented people. AI review and scripted clicks below do
-not satisfy first-value, discovery, comprehension or pressure criteria. Do not
-start stage 2 until Dan explicitly chooses to proceed with the named limitations
-or pause and release the exclusivity hold. No merge/push/release is authorised.
+No production shell, Rust rules/storage, native code or generated types were
+changed. The shipped detail screens were extracted from `App.svelte` into
+`app/src/lib/screens/` as a behaviour-preserving refactor: all 136 real-app
+browser captures were byte-identical before and after, and `npm run test:ui`
+passed. `spec.md` still describes the shipped product.
+
+**Decision gate: not validated for cutover.** No unfamiliar participants have
+tested v2. Three are required, including simple-needs and detail-oriented people.
+AI review and scripted clicks below do not satisfy first-value, discovery,
+comprehension or pressure criteria. Do not start stage 2 until Dan explicitly
+chooses to proceed with named limitations or to pause and release exclusivity.
+No merge/push/release is authorised.
+
+#### How the prototype is built
+
+- A separate Vite entry, `app/experience.html` → `app/src/experience/`, built by
+  `app/vite.experience.config.ts` (`npm run experience`, `npm run build:experience`).
+  The production `vite.config.ts`, `index.html` and Tauri bundle are unchanged.
+- Only in this build, `lib/api` resolves to `app/src/experience/api.ts`, which
+  answers every shipped command from an independently synthetic world
+  (`experience/lib/world.ts`, `views.ts`): about 14 months of mixed activities
+  with routes, HR traces, zones, splits and strength sets, nightly sleep stages,
+  stress/HR/Body Battery day timelines and trend series. The real view types
+  type-check the projections under `npm run check`.
+- Prototype-only concepts (intentions, circumstances, commitment versions,
+  links, milestones, period summaries) are prototype types and browser-local
+  state. Rules and cases are ported from v1 (`experience/lib/rules.ts`,
+  `cases.ts`). There is no network beyond the prototype's own origin.
+- Served for review at `http://neptune:48726/` (built prototype only; `.git` and
+  `.data` return 404). The verified server PID is kept in `.data/experience-preview.pid`.
+  The first visit opens the mixed profile's Wednesday; **Scenario** selects
+  profiles, U01–U64 starts, day/time, offline, sync, naps, calendar coverage,
+  the Explore tab/header variant, status surfaces, old links and a **Compare**
+  page (synthetic shipped | v1 | v2 captures of Today, workout and Progress).
+
+#### What v2 shows
+
+- **Today:** a compact header (date, upload freshness, a labelled Adapt control
+  that shows its state, Settings) and one adaptive hero whose picture matches the
+  moment: readiness arc with Garmin's effort scale and helping/holding factors;
+  after a workout, its route coloured by HR zone (body map for strength), big
+  stats, Garmin's effect and the commitment ring; in the evening a 24-hour
+  Tonight dial with wind-down, Garmin's window, wake and now, plus last night's
+  stages; rest and pause lead with the Body Battery recharge; missing data shows
+  the watch → Garmin Connect → Raring sync state. Then **Your day** (last night as
+  one stage-coloured band, Body Battery line with a now dot, a soft stress band
+  in Garmin's category colours, activities and naps with glyphs, tonight as a
+  quiet moon band; each part opens its detail), rich activity cards (map or body
+  map, distance, time, pace or speed, avg HR, zone strip, Garmin's benefit and
+  aerobic effect, contribution), compact sleep/Body Battery/vitals tiles, and a
+  glyph week strip with commitment rings.
+- **Workout (canonical):** map-first header, a "how it counted" row (commitment
+  ring, Garmin benefit, best in available history, user link), then the shipped
+  workout cards in full; each stat appears once.
+- **Progress:** the period report, calendar, commitments over time, trend tiles
+  (gaps never bridged; sparse estimates as labelled dots), strength progress,
+  records and milestones, sleep against need and weekly reviews.
+- **Plan:** a visual week (tap a day for its agenda), commitment rings with the
+  current targets in words ("Since Mon 16 Nov: 2 strength · 150 min"; earlier
+  targets in a sheet), ambition countdowns, one-sheet Add to my plan.
+- **Explore:** live tiles (hypnogram, readiness arc, load bars, body map, latest
+  route, vitals dots), search, and an A–Z list with sparklines and latest values.
+
+#### Data provenance for new visuals
+
+Prototype pictures are not proof that the data is available. Each new visual is
+classed as **view**: an existing view field; **stored**: already fetched and
+stored but not exposed (a core/view change, no new request); or **new**: a new
+or unverified endpoint or history. Prefer the first two.
+
+| Visual | Data | Class |
+| --- | --- | --- |
+| Readiness arc, level, effort scale, factors | `TodayView.readiness/call/factors` | view |
+| Workout hero route coloured by HR zone; card route thumbnails | `WorkoutView.route/heartRate/zoneFloors` from stored activity `details`; fetched only for the recent 90 days (`RECENT_DAYS`), older activities fall back to sport art | view (one local read per card) |
+| Activity card distance, time, zones, benefit, aerobic/anaerobic effect, load | `ActivityCard` | view |
+| Activity card avg HR | `averageHR` in the stored activity payload (`WorkoutView.stats`), absent from `ActivityCard` | stored: view change |
+| Contribution ring on cards and hero | `PlanWeek` evidence; user links are new local state | view + new local state |
+| Your day: sleep band, naps, activities, stress band | `SleepView.stages/naps`, `StressCard.timeline/active`, activity start/duration | view |
+| Your day and rest hero: Body Battery line | Garmin's `bodyBatteryValuesArray` in the stored `dailyStress` payload (read today only by `battery_latest` in `crates/core/src/screens.rs`) | stored: view change, no new request |
+| Tonight dial | `SleepPlan` (wind-down, window, wake, need), last night's `startLocal/endLocal` | view |
+| Vitals dots, sleep tile, Body Battery tile | `VitalsCard`, `SleepView`, `BodyBatteryCard` | view |
+| Week strip: recorded, Garmin schedule | Stored activity list; stored `scheduled_workouts` snapshot (only the next session is exposed today) | stored: view change |
+| Week strip: your plan, rest, pause | Local intentions and circumstances | new local state |
+| Progress period report, time by activity type, calendar, records | Stored activity summaries: recent pages plus the `activities_range` history backfill | stored: new period-summary view |
+| Calendar unknown coverage | Stored history cursors (`history:activities:lo/hi`) and plan evidence coverage | stored: view change |
+| Commitments over time with stepping targets | `PlanView.history` holds a completion fraction only; per-track values and versioned targets need the plan schema change in section 7 | stored + core change |
+| Trend tiles (VO₂ max, Fitness Age, resting HR, HRV, time asleep, Body Battery high, stress, acute load) | `TrendView` via the existing trend command | view |
+| Sleep against need per night | Time asleep is a trend metric; nightly need is in the stored sleep payload, not a trend series | stored: view change |
+| Strength best-set charts, muscle map, sets per week | `StrengthView` (12 weeks); longer periods need older stored sets, coverage unverified | view (12 weeks); longer: new |
+| Endurance and hill score history (Explore sparklines) | Only the latest value is exposed; history storage unverified | new |
+| Ambition countdowns | Garmin race (`UpcomingRace`) or local event | view + new local state |
+
+#### Proposed rules for Progress
+
+These are proposals for `spec.md`'s Rules section. They ship only once specified
+there and tested in the core. The prototype's synthetic `Activity.im` amounts
+are fixture contributions, not a claim that Garmin exposes authoritative
+per-activity intensity minutes; implementation must use daily/weekly Garmin
+intensity evidence and preserve its coverage rules.
+
+1. **Periods.** Week = Monday–Sunday (the plan week, aligned with Garmin's
+   intensity week). Month = calendar month. 3 months = the anchor month and the
+   two before it. Year = the anchor month and the eleven before it. Dates are the
+   activity's local start date. A period never extends past today.
+2. **Totals.** Activities = recorded activities whose local start date is in the
+   period. Active time = the sum of their recorded durations. Distance = the sum
+   of recorded distances; activities without a distance add nothing and are not
+   zero-distance. Intensity minutes = Garmin's daily values (moderate plus twice
+   vigorous) summed over the period's days, not recomputed from zones.
+3. **Comparison.** A current period is compared with the same number of elapsed
+   days at the start of the previous equal period (Month on 18 Nov compares
+   1–18 Nov with 1–18 Oct). A completed period compares with the whole previous
+   period. No comparison is shown when either window has incomplete coverage, the
+   previous period begins before downloaded history, or a shorter prior month
+   cannot supply the same elapsed-day count without overlapping this month. Partial report numbers are
+   explicitly known totals, not complete totals. Changes are signed values, never coloured good or bad.
+4. **Active days.** Active on n of m days: n = days in the period with at least
+   one recorded activity; m = days up to today that are covered by downloaded
+   history and not inside an activity-coverage gap. Both n and m use covered
+   days; known workouts on incomplete days still have calendar marks, with a
+   dotted coverage border, but do not silently expand either count. Rest, pause and unknown are
+   distinct day states; no streak is computed or shown.
+5. **Coverage.** A day before downloaded history, or inside a gap where the
+   activity list is incomplete, is unknown: dotted, excluded from m, and never
+   drawn as zero. Days after today are blank.
+6. **Bests in available history.** A best is the heaviest weight for a given
+   rep count (1, 3, 5, 8, 10 or more) for one named exercise, or the longest
+   recorded distance per sport, over all downloaded history, labelled "in
+   available history" with the history start date. Bodyweight and unnamed sets
+   are not weighted bests. If a source edit removes a best, the record moves to
+   the next valid set and the milestone shows "corrected once"; no award repeats.
+7. **Trend tiles.** Dense metrics show the period average and its change from
+   the previous comparison window, drawn per contiguous run of readings.
+   Sparse Garmin estimates (VO₂ max, Fitness Age, endurance, hill score) show the
+   latest recorded value and its date and are drawn as dated dots; nothing is
+   interpolated between estimates. An older fallback says "No new estimate" and
+   has no change comparison. Readings stop at the last upload; nights stop at
+   the last synced, completed night, not the current calendar date.
+8. **Sleep against need.** Each night compares Garmin's recorded duration with
+   that night's recorded need. "An hour or more below need" counts nights where
+   both exist. No running total or debt is computed.
 
 #### Runnable journeys and observed paths
 
-Open the isolated preview at `http://neptune:48726/index.html`, or open its HTML
-file directly. **Scenario** is prototype tooling: it selects profiles, U cases,
-phase/day, offline, background/resume, sync, naps and calendar coverage. It is
-not part of the proposed navigation. Local browser storage holds only prototype
-choices. The server serves only this directory (bundled fonts included), not the
-repository, `.data`, `.git` or any real account data. Its verified PID is recorded
-privately in `.data/experience-preview.pid`.
+`cd app && npm run test:experience` drives real browser clicks against a dev
+server (or `EXPERIENCE_URL` for a served build): all 64 U-case starts with
+expected/forbidden copy, counted journeys, the interrupted week, privacy and
+old-link transitions, layout budgets and accessibility heuristics; `-- --shots`
+also writes the screenshots. Counts are **scripted paths**, not observed
+unfamiliar-user performance. Typing is excluded from counts.
 
-[`README.md`](../design/mockup/experience/README.md) contains the short moderator
-walkthrough. [`cases.js`](../design/mockup/experience/cases.js) names every U case,
-its deterministic start state, expected/forbidden copy and residual evidence
-class. [`check.mjs`](../design/mockup/experience/check.mjs) drives real browser
-clicks, not just rule calls. These counts are **scripted paths**, not observed
-unfamiliar-user performance; no wrong-turn/time-to-meaning results exist yet.
-Typing is excluded from counts, as defined above.
-
-| Task | Actually exercised path | Actions |
+| Task | Scripted path | Actions |
 | --- | --- | --- |
-| Last night | Today → Sleep compact fact | 1 |
-| Tonight | Today supporting line → Sleep at Tonight section | 1 |
-| Recorded workout | Today recorded row → canonical workout | 1 |
-| Add intention | Plan a session → Strength → Add to plan (Today preselected) | 3, one sheet; another day adds 1 |
+| Last night | Today → Last night's sleep | 1 |
+| Tonight | Today → Tonight row (scrolls to Tonight section) | 1 |
+| Recorded workout | Today → Open workout; map/stats/HR/zones/splits present | 1 |
+| Add intention | Plan a session → Strength → Add to plan | 3, one sheet; today preselected |
 | Rest | Adapt today → Rest today | 2 |
 | Pause | Adapt today → Pause training → Pause from today | 3 |
-| Resume | Paused → Pause training → Resume training → Resume as they are | 4; commitments shown before confirming |
-| Restriction | Adapt today → Avoid activities or movements → Run | 3 plus optional typed movement note |
-| Link activity | Plan → local intention → This was my session | 2 from Plan; recorded work already counts |
-| Six core areas | Each of Today, Plan, Progress → Explore → named area | 2 for each of 18 paths |
-| Rare metric | Root → Explore → Training → Hill score | 3; search alternative 2 plus typing |
-| Gear | Root → Explore → Gear | 2 |
-| Comparison | Root → Explore → Trends & comparisons → VO₂ max → Previous period | 4 |
-| Journal | Health → Allow reads → confirm consent → Open journal | 3 after reaching Health; entries hide on leave/background |
-| Dismiss | Today → Not today | 1; retained through sync/reload, new vitals notice stays distinct |
-| Export discovery | Root → Settings | 1 to disclosure/control; prototype export is disclosure-only, not a real ZIP |
-| Sign out | Settings → Sign out and erase → confirmation | 2 from Settings; resets prototype choices, not an account |
+| Resume | Paused → Pause training → Resume training → Resume as they are | 4 |
+| Link activity | Plan → Monday → local strength intention → This was my session | 3 |
+| Core areas | Any root → Explore → Sleep/Readiness/Training/Strength/Activities/Health | 2 each |
+| Rare metric | Explore → Hill score via A–Z or search | 2 from a root, plus typing for search |
+| Journal | Health → Allow local journal reads → consent → Open journal | 3 after Health |
+| Export/erase | Root → Settings → Sign out and erase confirmation | 2 to confirmation; export disclosure on Settings |
 
-Browser Back restores an actually scrolled Activities list (52 px), sport filter,
-metric custom dates/comparison and caller. New routes use a single detail from
-multiple entrances. Cold/legacy entries build a canonical parent chain; typed
-fragments no longer leave stray obsolete history entries. The nap/missing-end
-and journal journeys have specific data/consent states, not generic placeholders.
-
-The interrupted week is interactive: Monday's recorded strength → Tuesday
-wind-down self-report → Wednesday's short night and conflicting intervals → rest
-through midnight → Thursday illness pause → Friday high readiness without training
-encouragement → Sunday explicit resume and adjusted review. The original targets,
-pause interval and prior week's review remain inspectable. Optional movement
-restrictions, supplied checklist and busy-week revisions can be composed. These
-are modelled prototype transitions, not proof of the future SQLite migration.
+Browser Back restores the scrolled Activities list and sport filter. Local
+intention time edits preserve activity/day; date/type edits clear incompatible
+confirmed links with a history entry. Rest survives offline reload and midnight;
+pause intervals survive explicit resume; later revisions do not change older
+workout contributions. Journal entries hide on immediate Back, navigation away,
+background visibility events and cold reload; opt-out retains the export
+retention disclosure. The interrupted week is exercised Monday through Sunday.
+These are prototype transitions, not proof of SQLite migrations.
 
 #### Preservation destinations and old-link mappings
 
 This map is grounded in `app/src/lib/navigation.ts`, `App.svelte`,
-`crates/core/src/view.rs`, and Android `StatusSurfaces.kt`. A mapped destination
-is not a claim that the prototype duplicates every existing chart renderer.
-Existing typed projections, evidence coverage, request gates and native behaviour
-must be retained at cutover; stage 1 changes none of them.
+`crates/core/src/view.rs`, and Android `StatusSurfaces.kt`. The v2 prototype
+renders these destinations with the shipped components, so the visual parity is
+structural; the data is still synthetic. Existing typed projections, evidence
+coverage, request gates and native behaviour must be retained at cutover; stage 1
+changes none of them.
 
 | Shipped capability | Canonical prototype destination / caller-aware entrances | Preservation boundary |
 | --- | --- | --- |
 | Today, readiness factors and Why | `today`, `readiness`; metric history at `metric/readiness` | Rated/unrated factors and source date stay distinct; prototype Why traces eligibility |
-| Body Battery, stress and explanations | `metric/bodyBattery`, `metric/stress` from Today or Health | Current upload vs daily-highest/daily-average history distinguished; detailed timelines are schematic |
-| Sleep, need, stages, overnight readings | `sleep`, sections `sleep/tonight`, `sleep/stages`; `metric/sleepScore`, `metric/sleepTime`, `metric/sleepHr` | Main sleep, tonight and calendar-day identities separate; real hypnogram projection retained later |
+| Body Battery, stress and explanations | `metric/bodyBattery`, `metric/stress` from Today or Health | Current upload vs daily-highest/daily-average history distinguished; shipped stress timeline; intraday Body Battery line needs a view change (provenance below) |
+| Sleep, need, stages, overnight readings | `sleep`, sections `sleep/tonight`, `sleep/stages`; `metric/sleepScore`, `metric/sleepTime`, `metric/sleepHr` | Main sleep, tonight and calendar-day identities separate; shipped hypnogram, stages, overnight, consistency, alignment and naps |
 | Alignment, consistency, prospective timing | `sleep/patterns`, `sleep/timing` | Current guidance never rewrites saved timing; historical observations aren't preparation self-reports |
 | Naps | `sleep/naps`, quiet Today row | Dated/missing endpoints, empty/unavailable/stale differ; no addition to overnight totals |
 | Load, focus, status, recovery context | `training`, `metric/acuteLoad`, `help/acute-load` | No daily allowance; existing full load-focus/status inputs remain authoritative |
 | VO₂ max, endurance, hill, tolerance | `metric/vo2max`, `metric/endurance`, `metric/hill`, `metric/runningTolerance` | Units and dated/sparse coverage; no runner-first overview for no-running case |
 | Predictions, running thresholds/power, cycling FTP, heat/altitude | `training/performance` | Independent dates and missing values; explicit 0% heat is not missing |
 | Gear | `gear` from Training or Explore | Garmin distance/threshold, retired items, list-fetch date; no replacement advice |
-| Activity filters, workout evidence | `activities` → `workout/:id` → `workout/:id/evidence` | Canonical workout from Today/Plan/Progress/Strength; synthetic route, HR, zones and splits; no personal GPS |
+| Activity filters, workout evidence | `activities` → `workout/:id` → `workout/:id/evidence` | Canonical workout from Today/Plan/Progress/Strength; shipped load/effect, stats, HR chart, zones and splits under a map-first header; synthetic routes, no map tiles or personal GPS |
 | Strength sets, flags, prior sets, bests | `strength`, `strength/:exercise`, `workout/:id` | Timer-only participation, unknown/flagged/bodyweight sets honest; no load-as-strength-quality claim |
-| Muscle map/coverage, 4-/12-week history, complete lists | `strength/muscles` plus `strength` | Prototype schematic coverage; existing body-map figure, heatmap, pagination/show-all and complete history must be reused, not replaced by the small fixture |
-| Weekly targets, revisions, history | `plan`, `plan/commitments`, `progress` | Original/revised strength and intensity tracks exercised; full Zone 2 editing/migration and all week-boundary arithmetic need the implemented Plan projection |
+| Muscle map/coverage, 4-/12-week history, complete lists | `strength/muscles` plus `strength` | Shipped body map and StrengthHistory (heatmap, pagination, bests); synthetic sets |
+| Weekly targets, revisions, history | `plan`, `plan/commitments`, `progress` | Original/revised strength and intensity tracks exercised; full Zone 2 editing/migration and week-boundary arithmetic need the implemented Plan projection |
 | Sleep target migration | Plan one-time explanation → `sleep/timing`; optional separate wind-down sheet | No automatic habit or completion; pre-migration history preserved |
 | Garmin schedule, Coach, race | Plan dated list → `scheduled/:id`; coexisting ambitions | Read-only; full-page/stale bounds and unverified populated semantics remain limits |
 | Local intentions, circumstances, supplied routines | `intention/:id`, `adapt/pause`, `adapt/limits`, `adapt/routines` | New unshipped concepts; explicit links/resume, unknown movements require review, self-reports never Garmin activities |
 | Fitness Age/drivers, weight/body composition | `metric/fitnessAge`, Health → `health/weight` → `metric/weight` | Flat/sparse estimate separate from participation; no weight promotion/notifications |
 | Vitals, all-day HR, resting vs Sleep HR | `health`, `metric/heartRate`, `metric/restingHr`, `metric/sleepHr`, `metric/hrv`, `metric/respiration`, `metric/spo2`, `metric/skinTemp` | Independent measures/ranges, neutral calibration; HR day controls present; DST elapsed-axis/source-zone evidence still device-gated |
 | Consented journal | Health → `health/journal`; Settings → journal privacy | Consent then explicit open; route exit, real visibility event and reload hide rows; actual local-day window, downloaded retention/export disclosure |
-| Trends/comparisons | `trends` → canonical `metric/:id`, also linked from Progress | 7D/30D/90D/1Y/All/Dates, prior period and separate-metric plot; current chart library, bucket/source arithmetic and full historical performance preserved later |
+| Trends/comparisons | `trends` → canonical `metric/:id`, also linked from Progress | Shipped HistoryChart/MetricDetail (ranges, dates, previous period, overlay) over synthetic series; full historical performance unmeasured |
 | Weekly check-in and dated reviews | `review/:week`, `reviews` | The dated review list is newly prototyped, not claimed shipped; prior versions visible |
 | Help and sync guidance | `help`, `help/strength-start`, `help/strength-sets`, `help/strength-muscles`, `help/strength-watches`, `help/sync` | Offline destinations; no real Connect launch in prototype |
 | Welcome, privacy, Settings, export/erase | `onboarding`, `settings`, `settings/export`, `settings/journal` | No credentials accepted; export is simulated; import/restore and Android backup/transfer remain unshipped/disabled |
@@ -1152,77 +1315,96 @@ All existing routes have explicit aliases, not a fallback assumption:
   In-app entries return to the actual caller instead. Invalid links display an
   explanation, never masquerade as a valid workout/metric redirected to Today.
 
+#### Parity checklist against the shipped details
+
+| Shipped detail | v2 | Notes |
+| --- | --- | --- |
+| Workout: training load, aerobic/anaerobic effect, recovery | Shipped component | Plus a "how it counted" row |
+| Workout: stats grid, route map, HR chart, zones, splits | Shipped component; map moved to a larger header | Route coloured by HR zone; stats shown once |
+| Strength workout: sets, flags, bests, prior sets, body map, help, timer-only | Shipped `StrengthWorkout` and help sheet | Timer-only session keeps the shipped "No sets recorded" card |
+| Sleep: score, need, hypnogram, stages, overnight, consistency, naps, history, alignment, tonight's plan | Shipped `SleepDetail` | Tonight jump link, dial and self-report alongside it |
+| Health: vitals monitor, all-day HR, stress, weight, journal, Fitness Age and drivers, intensity | Shipped `HealthDetail` | Journal consent and explicit open preserved |
+| Training: load gauge, status, week bars, load focus, VO₂ max, race times, thresholds, history, strength summary, gear, workouts | Shipped `TrainingDetail` | — |
+| Readiness: gauge, factors, trend, effort | Shipped `ReadinessDetail` | — |
+| Metric details and trend charts with controls | Shipped `MetricDetail` and `HistoryChart` | New metric routes use the shipped chart |
+| Strength history: heatmap, exercises, bests, sessions | Shipped `StrengthHistory` | — |
+
 #### Evaluation ledger and limitations
 
-The browser suite exercises all 64 deterministic case starts plus linked paths
-and transitions. **State-copy assertions are not complete journey passes.** The
-following evidence divisions prevent an all-green catalogue:
+The read-only native reviewer approved the richness/parity direction against
+the shipped screenshots and reproduced seven honesty issues: canonical
+Readiness still suggesting effort during rest; unqualified totals/comparisons
+with incomplete coverage; activity marks silently inflating calendar coverage;
+period sleep summaries counting chart buckets; wrong-week review rings; missing
+estimate attribution/date/comparison states; and local restrictions labelled as
+Garmin schedule. Fixes now suppress effort in the adapter, label partial totals
+and omit unsupported comparisons, separate coverage from known activity marks,
+summarize bounded raw nights before drawing buckets, use the review's own
+week evidence, retain source dates and unavailable states, and choose source
+labels from actual evidence. Follow-up review confirmed those fixes and found
+additional boundaries: sport-only exclusions in the hero, unfinished/unsynced
+nights, scalar history after the last watch upload, an old estimate compared
+with itself, and strength totals using a different period from their chart.
+These now use shared suppression, the displayed-night/upload bounds, explicit
+"No new estimate" states, and period-bounded strength counts/bars. Why sheets
+also use the current synthetic inputs rather than the shipped sample's values.
+Prototype unit tests cover these boundaries.
 
-| Catalogue | Prototype evidence now | Gate still open |
-| --- | --- | --- |
-| U01–U07 | No-plan/partial/sleep/casual/returning/unsupported states and direct sleep/workout paths | Ten-second first meaning, restraint and unfamiliar-user comprehension; real first sync/return |
-| U08–U14 | Stale/offline/waiting, optional planning and rest/low-readiness states; local changes survive reload | Production freshness, core date gates and actual resumed/offline native context |
-| U15–U24 | Contributions, timer-only/sets, mixed/event/calendar/linking, bounded previews, early completion | Full watch strength read-back, populated Garmin schedule semantics, real correction/dedup identities |
-| U25–U34 | Partial evidence, historical revisions, pause/resume intervals, exclusions, review-needed routine and optional self-report | User understanding of compatibility and state distinctions; full persistent schema/versioning and evidence arithmetic |
-| U35–U38 | Evening/intentions/midnight and untrusted-timing fallback | Actual phase/timezone engine, notification night identity and shift-work comprehension |
-| U39 | Illustrative DST copy only — **not a prototype proof of DST** | Existing rule tests plus real DST/travel/device observations |
-| U40–U46 | Per-night patterns, migration explanation, separate preparation/poor sleep, dated/absent naps, saved/current need distinction | Actual immutable plan storage, authoritative Garmin updates and native reminder rescheduling |
-| U47–U51 | Flat estimates apart from participation; load explanation; rare-metric/gear/comparison discovery paths; explicit missing historic detail | Unfamiliar-user discovery; full chart math/history/request-budget preservation in implemented app |
-| U52–U53 | Consent/open/leave/real visibility event/reload/opt-out with retention/export disclosure | Dispatch/retry/in-flight consent protection remains in unchanged core; actual ZIP/erase/account lifecycle tests for new records |
-| U54–U55 | **Not built:** usage learning omitted; stable library demonstrated | No claim to have evaluated a learning algorithm; only reconsider if it improves discovery |
-| U56–U58 | Dismiss/sync/resume/new exception, denied permission, canonical legacy/surface links | Android permission lifecycle, Back intents and snapshot refresh/Doze |
-| U59–U60 | Layout/keyboard/name/target heuristics, reduced-motion, 360/390/720/1280 px, 1.3×/2× text | TalkBack, touch ergonomics, real foldable/font rendering; heuristics are not an accessibility audit |
-| U61 | **Not measured:** small synthetic fixture is not long-history/cold-start evidence | Implemented-app/device cached-render and detail latency; no speed claim |
-| U62–U63 | Gap and corrected-best stories represented without streak/failure/duplicate award copy | Real source correction, backfill, stable identities and achievement deduplication |
-| U64 | Settings/export/erase discovery and record-category disclosures | Unfamiliar-user discovery; actual export inclusion/credential exclusion, migration and sign-out isolation for new records |
+The remaining gate is **three unfamiliar participants**, including simple-needs
+and detail-oriented people, attempting the section 15 journeys without hints.
+No participant timings, discovery outcomes or pressure/comprehension results
+exist. Maintainer approval of direction, scripted checks and AI review do not
+replace that gate.
 
-Observed 390×844 Today height, excluding the optional case-identification banner:
-1.00–1.15 viewports across 11 lead variants; meaning, primary action and essential
-exception are above the fold at ordinary text. At 360 px the same checks pass.
-At 1.3×, the stale-data variant needs scrolling to the action; at 2× all variants
-do. Text is not reduced or exceptions hidden: fact tiles and controls reflow.
-Details also pass horizontal-overflow checks at 360 px, 1×/1.3×/2×. At 720/1280
-reading order stays lead-first; desktop uses a rail without a dashboard expansion.
+- U01–U07: synthetic no-plan/partial/sleep/casual/unsupported starts; real first
+  sync, ten-second understanding and newcomer discovery remain unverified.
+- U08–U34, U56–U58: local rules/transitions, rest, pauses, restrictions, links,
+  revisions, offline reload, notification illustrations and aliases exercised;
+  native lifecycle, dispatch, permissions and Garmin populated semantics remain
+  unverified by this prototype.
+- U35–U46: phase/night identity, naps and preparation represented. U39 is not
+  proof of real DST/travel; immutable saved plans and actual reminder scheduling
+  remain implemented-app/device checks.
+- U47–U53: trends, canonical details, privacy consent/open/hide and retention
+  disclosure are exercised on synthetic data; real corrections, request budgets,
+  actual exports and core in-flight consent protection require later checks.
+- U54–U55: usage learning deliberately absent; no learning result is claimed.
+- U59–U60: browser layout/name/keyboard and reduced-motion heuristics, not an
+  accessibility audit or TalkBack/device proof. Large-text tooling uses CSS zoom
+  plus content-width reflow (combined display/text-size stress), not a claim to
+  emulate Android font scaling exactly.
+- U61: no device cold-start or long-history performance evidence. The larger
+  synthetic fixture is useful for presentation, not a performance benchmark.
+- U62–U64: gaps, corrections and export/erase disclosure are represented; real
+  backfill deduplication, schema migration and account isolation remain open.
 
-Synthetic screenshots are in
-[`design/mockup/experience/shots/`](../design/mockup/experience/shots/), including
-phone Today states, sheets, Plan/Progress/Explore, privacy, naps, status surfaces,
-360 px, unfolded, desktop and large type. These are browser captures, **not Android
-or personal screenshots**. Layouts were also inspected visually; no screenshots
-alone validate the navigation hypothesis.
+Verification: workspace Rust tests and Clippy (`-D warnings`), Svelte/TypeScript
+checks, 73 UI/rule unit tests, existing browser regressions, the production
+build and whole-history secret scan pass. The separate prototype build and
+browser suite pass against the isolated HTTP preview, including all 64 case
+starts, counted journeys, interrupted-week transitions, explicit journal
+consent/open/leave/background/opt-out, offline persistence, canonical/legacy Back,
+chart-control retention and mobile touch at 390×844 with DPR 3. `.git/config` and
+`.data/` requests return 404. Generated types remain unchanged.
 
-Observed problems corrected during this checkpoint: header wrapping and focus
-outline noise; Plan row chevrons; large-type tile/tab/detail overflow; future
-activities/naps; ambiguous after-midnight source labels; fragment Back entries;
-comparison crash; rest saved against the wrong retained sleep day; journal rows
-surviving background/Back; restrictions not gating illustrative surfaces; and
-revisions leaking into earlier dates. Regression checks now exercise those
-transitions, including a retained partial-pause interval after resume.
-A subsequent read-only whole-stage review reproduced four additional transitions:
-movement notes missing from non-strength local intentions, fixed presentation
-changing the night across midnight, time-only edits losing the intention draft,
-and links surviving a date/type edit. These were corrected and added as browser
-regressions. Changing presentation now leaves tonight/self-report identity alone;
-all intention types retain review-needed context; edits preserve the draft and
-clear incompatible confirmed links with an explicit history entry. No remaining
-journal-privacy blocker was reproduced by that review; this is still not native
-or unfamiliar-user evidence.
+Ordinary 390×844 Today runs 1.25–2.29 viewports across the checked variants,
+including the navigation padding; the primary meaning and action fit above the
+fold at 390 and 360 px. At 1.3×/2× combined display/text scaling the page reflows
+without horizontal overflow, but actions often require scrolling; nothing is
+shrunk or hidden to claim a fold pass. Unfolded (720 px) and desktop (1280 px),
+keyboard names/focus and reduced motion are browser-checked. Small chart marks
+are also reachable through named overview/detail controls; these checks are not
+TalkBack or touch-target certification.
 
-Remaining design risks for participant testing: Plan's first-visit migration
-explanation is wordy; Progress's eight-week history may obscure outcomes; Explore
-has a long A–Z list below its six areas; three-tab header discovery is still an
-assumption. Source fixtures, simple renderers and disclosure-only export are
-intentional limitations, **not replacements for shipped charts, storage, auth or
-native surfaces**. No endpoint verification, precise sleep debt, full FR970
-named/weighted set read-back, phone battery or real-user evidence was added.
+Synthetic captures are in `design/mockup/experience/shots/`; the Compare page's
+captures live in `app/experience-public/compare/`. They are browser renders,
+not Android or personal-data screenshots. No physical device, actual Garmin
+account, populated endpoint verification, native battery/performance test or
+new-record migration run was performed.
 
-Repository regression checks run alongside the isolated prototype: workspace
-Rust tests and Clippy (`-D warnings`), Svelte/TypeScript checks, 57 UI unit tests,
-existing browser regressions, production build and whole-history secret scan all
-pass. The isolated browser suite also passes over the reachable HTTP preview;
-`.git/config` and `.data/` requests there return 404. Generated types are unchanged. No new APK, physical device or native instrumentation run is claimed.
-The coordinator must now obtain the named unfamiliar-user / limited-evidence
-proceed-versus-pause decision; the lane must not advance silently.
+The coordinator must obtain Dan's explicit proceed-with-named-limited-evidence
+versus pause/release-exclusivity decision. No stage 2, main merge, push, APK or
+release is authorised.
 
 ## 16. Sequential delivery and completion
 

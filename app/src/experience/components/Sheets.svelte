@@ -5,7 +5,8 @@
  import XIcon from './XIcon.svelte';
  import {store} from '../lib/store.svelte';
  import {A} from '../lib/actions';
- import {addDays, dayLabel} from '../lib/dates';
+ import {addDays, dayLabel, weekMonday} from '../lib/dates';
+ import {versionFor} from '../lib/rules';
  import {PLAN_SPORTS, SPORTS, type Sport} from '../lib/sports';
  let sheet = $derived(store.sheet);
  let ctx = $derived(store.ctx);
@@ -31,7 +32,7 @@
   }
  }
  const days = $derived(Array.from({length: 8}, (_, i) => addDays(ctx.calendarDate, i)));
- const TITLES: Record<string, string> = {adapt: 'Adapt today', add: 'Add to my plan', why: 'Why this?', notices: 'Notices', permission: 'Allow notifications?', winddown: 'A wind-down intention', consent: 'Allow Garmin journal reads?', resume: 'Resume training', ambition: 'Add an ambition', signout: 'Sign out and erase?', legend: 'Key'};
+ const TITLES: Record<string, string> = {adapt: 'Adapt today', add: 'Add to my plan', why: 'Why this?', notices: 'Notices', permission: 'Allow notifications?', winddown: 'A wind-down intention', consent: 'Allow Garmin journal reads?', resume: 'Resume training', ambition: 'Add an ambition', signout: 'Sign out and erase?', legend: 'Key', versions: 'Commitment targets'};
  const LEGEND: [Mark, Sport, string][] = [['recorded', 'running', 'Recorded by your watch'], ['plan', 'running', 'Your plan, on this phone'], ['garmin', 'running', 'Garmin schedule, read-only'], ['self', 'yoga', 'Self-reported'], ['rest', 'other', 'Rest day'], ['paused', 'other', 'Paused'], ['unknown', 'other', 'Awaiting evidence']];
 </script>
 <svelte:window onkeydown={keys}/>
@@ -94,6 +95,13 @@
    <p class="small">Sign-in tokens are removed. Nothing in Garmin changes.</p>
    <button class="secondary" onclick={() => store.navigate('settings/export')}>Export first</button><button class="danger" onclick={A.signout}>Sign out and erase</button>
 
+  {:else if sheet.name === 'versions'}
+   {@const vs = versionFor(ctx)}
+   <p class="small">Each week is measured against the targets it had. Changes never rewrite earlier weeks.</p>
+   <ol class="steps">
+    {#each vs.versions.filter(v => v.from <= vs.wk) as v}<li><span class="when">From {dayLabel(weekMonday(v.from))}</span><span class="dots" aria-hidden="true">{#each Array(v.strength) as _}<i></i>{/each}</span><span class="what">{v.strength} strength · {v.im} min<small>{v.note}</small></span></li>{/each}
+    {#each vs.revisions as r}<li><span class="when">From {dayLabel(r.from)}</span><span class="dots" aria-hidden="true">{#each Array(r.strength) as _}<i></i>{/each}</span><span class="what">{r.strength} strength · {r.im} min<small>Changed this week</small></span></li>{/each}
+   </ol>
   {:else if sheet.name === 'legend'}
    <ul class="legend">{#each LEGEND as [m, s, t]}<li><Glyph sport={s} mark={m} size={30} label={MARK_NAMES[m]}/><span><b>{MARK_NAMES[m]}</b><small>{t}</small></span></li>{/each}</ul>
    <p class="small">Activity colours: {#each ['running', 'cycling', 'strength', 'walking', 'hiit', 'swimming', 'yoga'] as s}<span class="sw" style:background={SPORTS[s as Sport].color}></span>{SPORTS[s as Sport].name} {/each}</p>
@@ -118,5 +126,10 @@
  .legend{list-style:none;padding:0;margin:0;display:grid;gap:10px}
  .legend li{display:flex;gap:12px;align-items:center}
  .legend b{display:block}.legend small{color:var(--text2);font-size:12px}
+ .steps{list-style:none;padding:0;margin:12px 0 0;display:grid;gap:10px}
+ .steps li{display:grid;grid-template-columns:120px 44px 1fr;gap:10px;align-items:center;font-size:14px}
+ .when{color:var(--text2);font-size:13px}
+ .dots{display:flex;gap:3px}.dots i{width:9px;height:9px;border-radius:50%;background:#FF7DB8}
+ .what small{display:block;color:var(--text3);font-size:12px}
  .sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin:0 4px 0 8px}
 </style>

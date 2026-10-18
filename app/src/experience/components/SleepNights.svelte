@@ -1,17 +1,18 @@
 <script lang="ts">
  import {dur, dayLabel} from '../lib/dates';
- // Recorded duration against that night's recorded need. A missing night is a
- // gap, not zero; each night stands alone, with no running total.
- type N = {date: string, asleep: number | null, need: number | null, label: string};
+ // Recorded duration against that night's recorded need. A past night without
+ // a record is dotted; nights still to come are blank. Each night stands alone,
+ // with no running total.
+ type N = {date: string, asleep: number | null, need: number | null, label: string, future?: boolean};
  let {nights, h = 96}: {nights: N[], h?: number} = $props();
  let max = $derived(Math.max(540, ...nights.map(n => Math.max(n.asleep ?? 0, n.need ?? 0))));
  let step = $derived(nights.length > 16 ? Math.ceil(nights.length / 7) : 1);
 </script>
-<div class="sn" style:--h={h + 'px'} role="img" aria-label={`Nightly sleep against need: ${nights.filter(n => n.asleep != null).map(n => `${dayLabel(n.date)} ${dur(n.asleep)} of ${dur(n.need)}`).join('; ')}`}>
+<div class="sn" style:--h={h + 'px'} role="img" aria-label={`Nightly sleep against need: ${nights.filter(n => !n.future).map(n => n.asleep != null ? `${dayLabel(n.date)} ${dur(n.asleep)} of ${dur(n.need)}` : `${dayLabel(n.date)} no recorded night`).join('; ')}`}>
  {#each nights as n, i}
   <div class="nt">
    <div class="plot">
-    {#if n.asleep != null}<i class:short={n.need != null && n.need - n.asleep >= 60} style:height={n.asleep / max * 100 + '%'}></i>{:else}<span class="gap"></span>{/if}
+    {#if n.future}{:else if n.asleep != null}<i class:short={n.need != null && n.need - n.asleep >= 60} style:height={n.asleep / max * 100 + '%'}></i>{:else}<span class="gap"></span>{/if}
     {#if n.need != null}<u style:bottom={n.need / max * 100 + '%'}></u>{/if}
    </div>
    <span class="lbl">{i % step === 0 ? n.label : ''}</span>

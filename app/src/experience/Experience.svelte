@@ -14,10 +14,16 @@
  import Details from './screens/Details.svelte';
  import Compare from './screens/Compare.svelte';
  import {toneColor} from '../lib/charts';
+ import type {ChartState,ChartStateContext} from '../lib/chart-state';
  let scroller: HTMLElement;
  let scenario = $state(false);
  // Trend charts re-read when the scenario changes the synthetic "today".
  setContext('trend-generation', () => store.state.day + store.state.clock + store.state.profile);
+ const chartStates = new Map<string,ChartState>();
+ setContext<ChartStateContext>('chart-state', key => {
+  const scope = `${store.state.profile}:${store.state.day}:${store.route}:${key}`;
+  return {initial:chartStates.get(scope),save:state=>chartStates.set(scope,state)};
+ });
  onMount(() => { store.scroller = scroller; store.start(); });
  let route = $derived(store.route);
  let ctx = $derived(store.ctx);
@@ -47,7 +53,7 @@
   </div>
  </main>
  <nav class="tabs" aria-label="Main navigation" inert={!!store.sheet || scenario}>
-  {#each tabs as t}<button class="tab" aria-current={store.root === t.route && (isRoot || true) ? 'page' : undefined} onclick={() => store.navigate(t.route)}><span class="tab-icon"><XIcon name={t.icon} size={23}/></span>{t.label}</button>{/each}
+  {#each tabs as t}<button class="tab" aria-current={store.root === t.route ? 'page' : undefined} onclick={() => store.navigate(t.route)}><span class="tab-icon"><XIcon name={t.icon} size={23}/></span>{t.label}</button>{/each}
  </nav>
  <Sheets/>
  <div class="toast" class:on={store.toastOn} role="status" aria-live="polite">{store.toastText}</div>

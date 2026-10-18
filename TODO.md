@@ -18,8 +18,13 @@ availability on every account or watch.
 ### 26. A focused, adaptive Raring experience — exclusive
 
 **Design:** [A focused, adaptive Raring experience](docs/experience-design.md).
-**Stage 1 implemented as an isolated linked prototype**, not production shell
-changes: `design/mockup/experience/`, checkpoint `302a69e`. See the design's stage-1 checkpoint for
+**Stage 1 v2 rebuilt; stopped at the usability gate**, not production shell changes: the rejected v1
+(`302a69e`) is replaced by a Svelte prototype in `app/src/experience/`, starting
+with `b3567c8` (shared shipped details) and `b965aa4` (checkpoint A). The coordinator
+approved the richer visual direction; its A–K follow-ups and read-only review
+findings are fixed. The prototype has 64 scenario starts, linked browser checks,
+73 unit tests, rich synthetic captures and an explicit data-provenance table.
+See the design's stage-1 checkpoint for
 working routes, preservation/legacy mappings, measured scripted paths, screenshots
 and U01–U64 evidence limits. The redesign and usability/discoverability work remain
 **one item**, not a feature project followed by a UX cleanup.
@@ -30,13 +35,16 @@ the old merge queue are archived; no other Raring implementation lane is
 active. This initiative uses the single `feat/experience-redesign` branch.
 Stage 1 has linked Today/Plan/Progress/Explore journeys, interrupted-week and
 privacy transitions, browser checks and synthetic screenshots. Preview:
-`http://neptune:48726/index.html` (synthetic directory only).
+`http://neptune:48726/` (built prototype only). Intraday Body Battery is already
+stored in `dailyStress.bodyBatteryValuesArray` (`screens.rs::battery_latest`);
+the ribbon needs a view change, not a new Garmin request. No endpoint spike is
+needed for that curve.
 
-**Stop gate reached; no stage 2 authorised.** No unfamiliar people have evaluated
+**Usability gate remains pending; no stage 2 authorised.** No unfamiliar people have evaluated
 first meaning, discovery, comprehension or pressure. Three participants (including
 simple-needs and detail-oriented people) remain required. Ask Dan through the
 coordinator for explicit proceed-with-named-limited-evidence versus pause/release
-exclusivity. Header Explore is a hypothesis, not validated navigation. Later
+exclusivity. Explore is the fourth tab by default; the header variant stays in Scenario for comparison. Neither has unfamiliar-user validation. Later
 implemented-app/Android, real-data and full migration/evidence checks also remain
 unverified; no endpoint claims or shipped-feature contracts were changed.
 
@@ -55,8 +63,8 @@ indefinitely.
   recovery and longer-term health; only the leading message is focused.
 - Prove the navigation and progressive disclosure through whole user journeys
   before restructuring the app. The current four tabs are not a constraint.
-  The working design is Today, Plan and Progress with stable labelled Explore
-  access; discovery tests decide whether Explore needs primary navigation.
+  The working design is Today, Plan, Progress and Explore; participant tests
+  compare the default fourth tab with the header-entry variant.
 - Replace the stats-led Today with timely context, one useful next decision and
   recorded accomplishments. Show direct contributions separately from Garmin's
   estimates and longer-term outcomes; no invented strain or wellbeing score.

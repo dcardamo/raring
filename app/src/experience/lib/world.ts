@@ -63,7 +63,7 @@ function make(id: string, date: string, start: string, sport: Sport, o: Partial<
   const km = o.km ?? (kpm ? round1(min * kpm) : undefined);
   const avgHr = o.avgHr ?? Math.round(hr + (benefit === 'Tempo' ? 8 : benefit === 'Threshold' ? 12 : benefit === 'Recovery' ? -10 : 0) + (r('h') - .5) * 8);
   const load = o.load ?? Math.round(min * lpm * (benefit === 'Recovery' ? .6 : benefit === 'Base' ? 1 : 1.3) * (.9 + r('l') * .2));
-  const aerobic = o.aerobic ?? round1(Math.min(5, ae + (benefit === 'Recovery' ? -1 : benefit === 'Base' ? 0 : .6) + (r('a') - .5) * .5));
+  const aerobic = o.aerobic ?? round1(Math.max(.4, Math.min(5, ae + (benefit === 'Recovery' ? -.3 : benefit === 'Base' ? 0 : .6) + (r('a') - .5) * .4)));
   const im = o.im ?? (sport === 'walking' || sport === 'yoga' ? (r('i') > .7 ? Math.round(min * .25) : 0) : Math.round(min * (benefit === 'Recovery' ? .3 : benefit === 'Base' ? .8 : 1.2)));
   const names: Partial<Record<Sport, string[]>> = {
     running: ['Morning Run', 'Run', 'River Run', 'Easy Run', 'Tempo Run'], cycling: ['Ride', 'Evening Ride', 'Commute Ride', 'Long Ride'],
@@ -72,7 +72,7 @@ function make(id: string, date: string, start: string, sport: Sport, o: Partial<
   };
   return {
     id, date, start, sport, name: o.name ?? pick(k + 'n', names[sport] ?? ['Activity']), min, km, im, load, benefit, aerobic,
-    anaerobic: o.anaerobic ?? round1(sport === 'hiit' ? 2.4 + r('an') : sport === 'strength' ? 1.2 + r('an') * .8 : benefit === 'Threshold' || benefit === 'Tempo' ? 1 + r('an') * .8 : r('an') * .6),
+    anaerobic: o.anaerobic ?? round1(sport === 'hiit' ? 2.4 + r('an') : sport === 'strength' ? 1.2 + r('an') * .8 : benefit === 'Threshold' || benefit === 'Tempo' ? 1 + r('an') * .8 : r('an') * .5),
     avgHr, maxHr: o.maxHr ?? Math.round(avgHr + 14 + r('x') * 14), zones: o.zones ?? zonesFor(sport, benefit, min, k),
     calories: o.calories ?? Math.round(min * (avgHr - 40) * .085), ascent: km ? Math.round(km * (6 + r('e') * 9)) : undefined,
     routeKind: Math.floor(r('route') * 3), ...o,
@@ -167,7 +167,7 @@ const LIFTS: Record<string, Lift> = {
   calf: {name: 'Standing calf raise', key: 'CALF_RAISE/STANDING_CALF_RAISE', muscles: ['calves'], start: 16, end: 24, reps: 15, step: 2},
   plank: {name: 'Plank', key: 'PLANK/PLANK', muscles: ['core'], start: 0, end: 0, reps: 1, step: 0},
 };
-export const EXERCISES = Object.entries(LIFTS).filter(([k]) => k !== 'plank').map(([id, l]) => ({id: l.name.toLowerCase().replace(/[^a-z]+/g, '-'), lift: id, ...l}));
+export const EXERCISES = Object.entries(LIFTS).map(([id, l]) => ({id: l.name.toLowerCase().replace(/[^a-z]+/g, '-'), lift: id, ...l}));
 
 const FIXED_SETS: Record<string, ExerciseLog[]> = {
   'a-1201': [
@@ -257,7 +257,21 @@ export function stagesFor(date: string, asleep: number) {
     }
     cycle++;
   }
-  return out;
+  // Preserve the recorded duration and endpoints: the drawing must agree with
+  // the headline and stage totals, rather than rounding into extra sleep.
+  const regular = nightFor(date);
+  const night = regular?.asleep === asleep ? regular : nightFor(date, true);
+  const elapsed = night ? (toMin(night.wake) - toMin(night.bed) + 1440) % 1440 : asleep + 18;
+  const awake = Math.max(0, elapsed - asleep);
+  if (awake && !out.some(s => s.stage === 'awake')) out.push({stage:'awake',startMin:0,minutes:1});
+  for (const [isAwake, target] of [[false, asleep], [true, awake]] as const) {
+    const selected = out.filter(s => (s.stage === 'awake') === isAwake);
+    const sum = selected.reduce((n,s) => n + s.minutes,0);
+    let remaining = target;
+    selected.forEach((s,i) => {s.minutes = i === selected.length - 1 ? remaining : Math.floor(s.minutes / sum * target); remaining -= s.minutes;});
+  }
+  let startMin = 0;
+  return out.filter(s => s.minutes > 0).map(s => {const segment={...s,startMin};startMin+=s.minutes;return segment;});
 }
 
 // ---------- readiness, energy, vitals ----------
@@ -304,6 +318,15 @@ export function fitnessAgeFor(date: string): number | null {
   return date >= '2026-09-07' ? 41 : date >= '2026-02-23' ? 42 : 43;
 }
 export const CHRONOLOGICAL_AGE = 44;
+/** Garmin endurance and hill scores: occasional estimates, not daily readings. */
+export function enduranceFor(date: string): number | null {
+  if (date < HISTORY_START || rand(date + 'end') > .1) return null;
+  return Math.round(5600 + daysBetween(HISTORY_START, date) / 2 + (rand(date + 'en') - .5) * 80);
+}
+export function hillFor(date: string): number | null {
+  if (date < HISTORY_START || rand(date + 'hill') > .07) return null;
+  return date >= '2026-08-01' ? 61 : 58;
+}
 export function weightFor(date: string): number | null {
   if (date < HISTORY_START || weekday(date) !== 6 || rand(date + 'wt') > .7) return null;
   return round1(75.4 - daysBetween(HISTORY_START, date) / 400 + (rand(date + 'w') - .5) * .8);
@@ -411,7 +434,6 @@ export const MILESTONES = [
   {id: 'm-bench', date: '2026-11-16', kind: 'best', title: 'Dumbbell bench press', value: '22 kg × 8', note: 'Best in available history', route: 'workout/a-1201'},
   {id: 'm-goblet', date: '2026-11-09', kind: 'best', title: 'Goblet squat', value: '20 kg × 10', note: 'Best in available history · corrected once', corrected: 'An earlier 24 kg set was edited in Garmin Connect to 14 kg, so it is no longer a best.', route: 'workout/a-1102'},
   {id: 'm-vo2', date: '2026-11-03', kind: 'estimate', title: 'VO₂ max', value: '47', note: 'Garmin estimate · first at this value', route: 'metric/vo2max'},
-  {id: 'm-ride', date: '2026-10-17', kind: 'distance', title: 'Longest ride', value: '44.6 km', note: 'In available history', route: 'activities'},
   {id: 'm-week', date: '2026-10-11', kind: 'plan', title: 'First plan week', value: 'Every commitment met', note: '2 of 2 strength · 168 of 150 min', route: 'review/2026-W41'},
 ];
 export const GEAR = {unit: 'km', fetchedAt: '2026-11-18T07:12:00Z', items: [

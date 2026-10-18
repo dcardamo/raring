@@ -41,7 +41,7 @@
 </script>
 <svg class="routehero" class:compact viewBox={`0 0 ${w} ${h}`} role="img" aria-label={label} preserveAspectRatio="xMidYMid meet">
  <defs>
-  <linearGradient id="fade{id}" x1="0" y1="0" x2="0" y2={h} gradientUnits="userSpaceOnUse"><stop offset=".55" stop-color="#0E1424" stop-opacity="0"/><stop offset="1" stop-color="#0E1424" stop-opacity={compact ? 0 : .85}/></linearGradient>
+  <linearGradient id="fade{id}" x1="0" y1="0" x2="0" y2={h} gradientUnits="userSpaceOnUse"><stop offset=".45" stop-color="#0E1424" stop-opacity="0"/><stop offset="1" stop-color="#0E1424" stop-opacity={compact ? 0 : .95}/></linearGradient>
   <pattern id="grid{id}" width="34" height="34" patternUnits="userSpaceOnUse" patternTransform={`rotate(${-12 + rnd(5) * 24})`}><path d="M0 0H34M0 0V34" stroke="#B4BCCB" stroke-opacity=".07" stroke-width="1.2" fill="none"/><path d="M17 0V34" stroke="#B4BCCB" stroke-opacity=".035" stroke-width="1" fill="none"/></pattern>
  </defs>
  <rect x={-w} y={-h} width={w * 3} height={h * 3} fill="#0E1424"/>

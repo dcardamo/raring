@@ -14,6 +14,7 @@
     "test": "vitest run",
     "test:ui": "node src/scripts/ui-regression.mjs",
     "test:site": "node src/scripts/site-regression.mjs",
+    "test:experience": "node src/scripts/experience-check.mjs",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
     "tauri": "tauri"
   },

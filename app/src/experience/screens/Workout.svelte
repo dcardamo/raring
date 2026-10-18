@@ -1,10 +1,8 @@
 <script lang="ts">
  import Icon from '../../lib/components/Icon.svelte';
- import Gauge from '../../lib/components/Gauge.svelte';
  import HelpSheet from '../../lib/components/HelpSheet.svelte';
  import WorkoutDetail from '../../lib/screens/WorkoutDetail.svelte';
  import {colors} from '../../lib/charts';
- import {elapsed} from '../../lib/format';
  import RouteHero from '../components/RouteHero.svelte';
  import Ring from '../components/Ring.svelte';
  import Glyph from '../components/Glyph.svelte';
@@ -39,12 +37,6 @@
   </div>
  </div>
  {#if view.route.length}
-  <div class="wo-stats">
-   <div><b class="n">{a.km}<small>km</small></b><span>Distance</span></div>
-   <div><b class="n">{elapsed(a.min * 60)}</b><span>Time</span></div>
-   {#if a.sport === 'cycling'}<div><b class="n">{(a.km! / (a.min / 60)).toFixed(1)}<small>km/h</small></b><span>Speed</span></div>{:else}<div><b class="n">{elapsed(a.min * 60 / a.km!)}<small>/km</small></b><span>Pace</span></div>{/if}
-   <div><b class="n">{a.avgHr}<small>bpm</small></b><span>Avg HR</span></div>
-  </div>
   <p class="zone-key"><span>Route colour: heart-rate zone</span>{#each colors.z as z, i}<i style:background={i ? z : SPORTS[a.sport].color} title={`Zone ${i + 1}`}></i>{/each}</p>
  {/if}
 </header>
@@ -54,7 +46,7 @@
  <div class="ch-row">
   {#if c.ring}<div class="hc"><Ring value={c.ring[0]} target={c.ring[1]} size={40} stroke={4.5} color={SPORTS[a.sport].color} state={c.ring[0] >= c.ring[1] ? 'reached' : 'open'} label={c.short}/><span><small>Your week</small><b>{c.short}</b></span></div>
   {:else}<div class="hc"><Glyph sport={a.sport} size={36}/><span><small>Recorded</small><b>{a.timerOnly ? 'Strength session · no sets' : `${SPORTS[a.sport].name} session`}</b></span></div>{/if}
-  {#if !a.timerOnly}<div class="hc"><Gauge size={42} stroke={4.5} value={a.aerobic} max={5} color={colors.ink}/><span><small>Garmin</small><b>{a.benefit} · {a.aerobic.toFixed(1)}</b></span></div>{/if}
+  {#if !a.timerOnly}<div class="hc"><Ring value={a.aerobic} target={5} size={40} stroke={4.5} color={colors.ink} label={`Garmin aerobic effect ${a.aerobic.toFixed(1)} of 5`}><b class="n te">{a.aerobic.toFixed(1)}</b></Ring><span><small>Garmin</small><b>{a.benefit} benefit</b></span></div>{/if}
   {#if a.record}<div class="hc best"><span class="star"><Icon name="star" size={18}/></span><span><small>Best in available history</small><b>{a.record}</b></span></div>{/if}
   {#if linked}<button class="hc" onclick={() => store.navigate(`intention/${linked.id}`)}><Glyph sport={linked.sport} mark="plan" size={36}/><span><small>Linked by you</small><b>Your plan · {dayLabel(linked.date)}</b></span></button>{/if}
  </div>
@@ -73,10 +65,6 @@
  .wo-title>div{flex:1;min-width:0}
  .wo-title h1{margin:2px 0 0;font-size:28px;text-shadow:0 2px 12px rgba(0,0,0,.6)}
  .wo-title .eyebrow{color:var(--text2);letter-spacing:.08em}
- .wo-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:14px 4px 0}
- .wo-stats b{display:block;font-size:22px;font-weight:600;line-height:1.1}
- .wo-stats small{font:500 11px Inter;color:var(--text3);margin-left:2px}
- .wo-stats span{font-size:12px;color:var(--text3)}
  .zone-key{display:flex;align-items:center;gap:5px;margin:10px 4px 0;font-size:11px;color:var(--text3)}
  .zone-key span{margin-right:4px}
  .zone-key i{width:14px;height:6px;border-radius:3px}
@@ -89,5 +77,5 @@
  .hc.best{border-color:rgba(255,214,102,.35);background:rgba(255,214,102,.07)}
  .star{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:rgba(255,214,102,.16);color:#FFD666}
  .late{margin:8px 4px 0}
- @media(max-width:360px){.wo-stats b{font-size:18px}}
+ .te{font-size:12px}
 </style>

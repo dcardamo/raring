@@ -27,6 +27,13 @@ export const weekId = (s: string) => {
   const n = 1 + Math.round(((dt.getTime() - first.getTime()) / 86400000 - 3 + ((first.getUTCDay() + 6) % 7)) / 7);
   return `${dt.getUTCFullYear()}-W${String(n).padStart(2, '0')}`;
 };
+/** The Monday that starts an ISO week id such as 2026-W45. */
+export const weekMonday = (id: string) => {
+  const [y, w] = id.split('-W').map(Number);
+  const jan4 = new Date(Date.UTC(y, 0, 4));
+  jan4.setUTCDate(jan4.getUTCDate() - (jan4.getUTCDay() + 6) % 7 + (w - 1) * 7);
+  return iso(jan4);
+};
 export const weekRange = (from: string) => {
   const to = addDays(from, 6);
   return from.slice(5, 7) === to.slice(5, 7) ? `${Number(from.slice(8))}–${dayMonth(to)}` : `${dayMonth(from)}–${dayMonth(to)}`;

@@ -2,7 +2,7 @@
  import Header from '../../lib/components/Header.svelte';
  import Icon from '../../lib/components/Icon.svelte';
  import Card from '../../lib/components/Card.svelte';
- import Sparkline from '../../lib/components/Sparkline.svelte';
+ import TrendSpark from '../components/TrendSpark.svelte';
  import HistoryChart from '../../lib/components/HistoryChart.svelte';
  import MetricDetail from '../../lib/components/MetricDetail.svelte';
  import StrengthHistory from '../../lib/components/StrengthHistory.svelte';
@@ -24,7 +24,7 @@
  import {store, titleOf} from '../lib/store.svelte';
  import {METRICS} from '../lib/metrics';
  import {addDays, dayLabel, dur, range, weekRange, weekStart} from '../lib/dates';
- import {healthView, sleepView, strengthView, todayView, trainingView, acuteLoad, musclesBetween} from '../lib/views';
+ import {bodyBatteryDay, healthView, sleepView, strengthView, todayView, trainingView, acuteLoad, musclesBetween} from '../lib/views';
  import {EXERCISES, GEAR, weightFor, hrvFor, vo2maxFor, fitnessAgeFor} from '../lib/world';
  import {SPORTS, type Sport} from '../lib/sports';
  let {route}: {route: string} = $props();
@@ -122,7 +122,7 @@
 
 {:else if key === 'health' && sub === 'weight'}
  {@render header('Weight', 'Garmin weigh-ins · kg')}
- <Card title="Last weigh-in"><div class="big n">74.2<span class="unit">kg</span></div><p class="small">Sat 14 Nov · body fat 19.8%</p><div class="wspark"><Sparkline values={weekly} w={320} h={80} points fill={false}/></div><p class="small">12 weeks · weeks without a weigh-in stay blank</p></Card>
+ <Card title="Last weigh-in"><div class="big n">74.2<span class="unit">kg</span></div><p class="small">Sat 14 Nov · body fat 19.8%</p><div class="wspark"><TrendSpark values={weekly} w={320} h={80} sparse decimals={1}/></div><p class="small">12 weeks · weeks without a weigh-in stay blank</p></Card>
  <Card onclick={() => go('metric/weight')}><p class="small">Trend and comparisons</p></Card>
 
 {:else if key === 'health'}
@@ -130,25 +130,26 @@
  {#if store.state.vitalsException}<div class="notice-strip"><Icon name="alert" size={18}/><p>Two overnight readings are outside your usual ranges</p></div>{/if}
  <HealthDetail healthData={healthView(ctx)} navigate={go} toggleJournal={on => on ? store.openSheet('consent') : (store.set(s => ({journal: {...s.journal, consent: false, open: false}}), 'Journal reads off'))} bind:journalOpen={() => store.state.journal.open, v => store.set(st => ({journal: {...st.journal, open: v}}))} bind:journalDayOpen/>
  {#if !store.state.journal.consent && store.state.journal.downloaded}<p class="small">Downloaded journal days stay on this phone and in exports you create until you erase local data.</p>{/if}
- <section class="card"><button class="rowlink" onclick={() => go('health/weight')}><Icon name="scale" size={18}/><span><b>Weight</b><small>Private to Health</small></span><Icon name="chevron" size={16}/></button><button class="rowlink" onclick={() => go('settings/journal')}><Icon name="info" size={18}/><span><b>Journal privacy</b><small>Settings</small></span><Icon name="chevron" size={16}/></button></section>
+ <section class="card"><button class="rowlink" onclick={() => go('metric/bodyBattery')}><Icon name="bolt" size={18}/><span><b>Body Battery {ctx.bodyBattery ?? '—'}</b><small>At watch upload · {ctx.upload.detail}</small></span><Icon name="chevron" size={16}/></button><button class="rowlink" onclick={() => go('health/weight')}><Icon name="scale" size={18}/><span><b>Weight</b><small>Private to Health</small></span><Icon name="chevron" size={16}/></button><button class="rowlink" onclick={() => go('settings/journal')}><Icon name="info" size={18}/><span><b>Journal privacy</b><small>Settings</small></span><Icon name="chevron" size={16}/></button></section>
 
 {:else if key === 'metric'}
  {@const m = METRICS[sub]}
  <Header title={m.name} eyebrow={m.source.toUpperCase()} back={() => store.back()} backLabel={store.parentLabel}/>
  {#if m.shipped}
+  {#if sub === 'bodyBattery' && ctx.bodyBattery != null}{@const bb = bodyBatteryDay(ctx)}<Card title="Body Battery · through the day"><TrendSpark values={bb.points.map(p => p[1])} w={320} h={110} color="#3DDC97"/><p class="small">22:00 yesterday → {ctx.clock.time} · +{bb.charged} overnight · Garmin</p></Card>{/if}
   <MetricDetail metric={sub} data={['vo2max', 'endurance', 'hill', 'runningTolerance'].includes(sub) ? trainingView(ctx) : ['bodyBattery', 'stress'].includes(sub) ? todayView(ctx) : healthView(ctx)}/>
  {:else}
   {@const [v, note] = metricValue(sub)}
   <div class="metric-hero"><div class="metric-value n">{v}{#if m.unit && m.unit !== 'h' && v !== '—'}<span class="unit">{m.unit}</span>{/if}</div><p class="small">{note}</p></div>
   {#if m.trend}<Card title="History"><HistoryChart values={[]} endDate={ctx.calendarDate} label={m.name} unit={m.unit === 'h' ? 'min' : m.unit} metric={m.trend} initialRange={sub === 'fitnessAge' ? 'year' : 'days30'} nights={sub.startsWith('sleep')}/></Card>
-  {:else if sub === 'weight'}<Card title="12 weeks"><Sparkline values={weekly} w={320} h={90} points fill={false}/></Card>{/if}
+  {:else if sub === 'weight'}<Card title="12 weeks"><TrendSpark values={weekly} w={320} h={90} sparse decimals={1}/></Card>{/if}
   {#if sub === 'fitnessAge'}<Card title="Garmin’s drivers"><dl class="kv"><dt>VO₂ max</dt><dd>47</dd><dt>Resting HR</dt><dd>54 bpm</dd><dt>Body fat</dt><dd>19.8%</dd><dt>Vigorous · 4-week average</dt><dd>62 min/wk</dd></dl><p class="small">Garmin’s attainable estimate: 39</p></Card>{/if}
   {#if sub === 'acuteLoad'}<Card onclick={() => go('help/acute-load')} title="What acute load is"><p class="small">Context, not a budget</p></Card>{/if}
  {/if}
 
 {:else if key === 'trends'}
  {@render header('Trends', 'From the history on this phone')}
- <section class="card">{#each Object.entries(METRICS) as [id, m]}<button class="rowlink" onclick={() => go(`metric/${id}`)}><span class="tr-i"><Sparkline values={range(addDays(ctx.calendarDate, -27), ctx.calendarDate).map(d => id === 'hrv' ? (ctx.nightOf(d) ? hrvFor(d) : null) : id === 'vo2max' ? vo2maxFor(d) : id === 'fitnessAge' ? fitnessAgeFor(d) : id === 'sleepTime' ? ctx.nightOf(d)?.asleep ?? null : id === 'acuteLoad' ? acuteLoad(ctx, d) : ctx.nightOf(d)?.score ?? null)} w={56} h={22} fill={false}/></span><span><b>{m.name}</b><small>{m.area} · {m.source}</small></span><Icon name="chevron" size={16}/></button>{/each}</section>
+ <section class="card">{#each Object.entries(METRICS) as [id, m]}<button class="rowlink" onclick={() => go(`metric/${id}`)}><span class="tr-i"><Icon name={id === 'weight' ? 'scale' : 'trend-up'} size={22}/></span><span><b>{m.name}</b><small>{m.area} · {m.source}</small></span><Icon name="chevron" size={16}/></button>{/each}</section>
 
 {:else if key === 'intention' || key === 'scheduled' || route === 'plan/commitments' || key === 'review' || key === 'reviews'}
  <PlanDetail {route}/>
