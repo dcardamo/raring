@@ -9,7 +9,6 @@
  import Today from './screens/Today.svelte';
  import Plan from './screens/Plan.svelte';
  import Progress from './screens/Progress.svelte';
- import Explore from './screens/Explore.svelte';
  import Workout from './screens/Workout.svelte';
  import Details from './screens/Details.svelte';
  import Compare from './screens/Compare.svelte';
@@ -30,7 +29,7 @@
  let key = $derived(route.split('/')[0]);
  let isRoot = $derived(store.roots.includes(route));
  let glow = $derived(route === 'today' ? (ctx.lead.kind === 'sleep' && ['evening', 'winddown', 'late'].includes(ctx.phase) ? '#5C7CFF' : ctx.readiness ? toneColor(ctx.readiness.value >= 75 ? 'good' : ctx.readiness.value >= 50 ? 'fair' : 'poor') : '#5C9BFF') : route === 'progress' ? '#A48BFF' : route === 'plan' ? '#36C9C6' : null);
- const TABS = [{route: 'today', label: 'Today', icon: 'today'}, {route: 'plan', label: 'Plan', icon: 'plan'}, {route: 'progress', label: 'Progress', icon: 'progress'}, {route: 'explore', label: 'Explore', icon: 'explore'}] as const;
+ const TABS = [{route: 'today', label: 'Today', icon: 'today'}, {route: 'plan', label: 'Plan', icon: 'plan'}, {route: 'training', label: 'Training', icon: 'training'}, {route: 'health', label: 'Health', icon: 'health'}, {route: 'progress', label: 'Progress', icon: 'progress'}] as const;
  let tabs = $derived(TABS.filter(t => store.roots.includes(t.route)));
  let textScale = $derived(Number(new URLSearchParams(location.search).get('text') || 1));
 </script>
@@ -45,8 +44,7 @@
     {#if route === 'today'}<Today/>
     {:else if route === 'plan'}<Plan/>
     {:else if route === 'progress'}<Progress/>
-    {:else if route === 'explore'}<Explore/>
-    {:else if key === 'workout'}<Workout id={route.slice(8)}/>
+        {:else if key === 'workout'}<Workout id={route.slice(8)}/>
     {:else if key === 'compare'}<Compare/>
     {:else}<Details {route}/>{/if}
    {/key}

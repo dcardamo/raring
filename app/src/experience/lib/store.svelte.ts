@@ -34,7 +34,7 @@ export const fresh = (profile: Profile, extra: Partial<State> = {}): State => ({
 export const LEGACY: Record<string, string> = {
   today: 'today', sleep: 'sleep', training: 'training', health: 'health', readiness: 'readiness',
   checkin: 'review/latest', plan: 'plan', 'plan-setup': 'plan/commitments', settings: 'settings',
-  onboarding: 'onboarding', strength: 'strength', help: 'help',
+  onboarding: 'onboarding', strength: 'strength', help: 'help', explore: 'training',
 };
 const DETAIL_DOMAINS = ['sleep', 'readiness', 'training', 'strength', 'activities', 'health'];
 const HELP_PAGES = ['strength-start', 'strength-sets', 'strength-muscles', 'strength-watches', 'sync', 'adapt', 'acute-load', 'legend'];
@@ -62,7 +62,7 @@ class Store {
 
   ctx = $derived.by<Ctx>(() => { void this.version; return derive(this.state); });
   route = $derived(this.trail.at(-1) ?? 'today');
-  roots = $derived(this.state.navVariant === 'tabs' ? ['today', 'plan', 'progress', 'explore'] : ['today', 'plan', 'progress']);
+  roots = ['today', 'plan', 'training', 'health', 'progress'];
   root = $derived(this.roots.includes(this.trail[1]) ? this.trail[1] : this.roots.includes(this.trail[0]) && this.trail.length === 1 ? this.trail[0] : 'today');
 
   load() {
@@ -89,7 +89,7 @@ class Store {
   // ---------- routes ----------
   validRoute(route: string): boolean {
     if (['today', 'plan', 'progress', 'explore', 'onboarding', ...DETAIL_DOMAINS].includes(route)) return true;
-    if (['gear', 'trends', 'reviews', 'settings', 'help', 'adapt', 'surfaces', 'legacy', 'compare', 'plan/commitments', 'health/weight', 'health/journal', 'strength/muscles', 'training/performance'].includes(route)) return true;
+    if (['gear', 'trends', 'reviews', 'settings', 'help', 'adapt', 'surfaces', 'legacy', 'compare', 'plan/commitments', 'health/weight', 'health/journal', 'strength/muscles', 'training/performance', 'training/fitness', 'health/vitals', 'health/long-term'].includes(route)) return true;
     if (/^sleep\/(tonight|patterns|naps|stages|timing)$/.test(route)) return true;
     if (/^adapt\/(pause|limits|routines|lighter)$/.test(route)) return true;
     if (/^settings\/(export|journal)$/.test(route)) return true;
@@ -119,7 +119,10 @@ class Store {
   parentOf(route: string): string {
     if (['sleep', 'readiness', 'adapt', 'settings', 'compare'].includes(route)) return 'today';
     if (route === 'explore') return 'today';
-    if (['training', 'strength', 'activities', 'health', 'trends', 'help'].includes(route)) return 'explore';
+    if (['strength', 'activities'].includes(route)) return 'training';
+    if (route === 'trends') return 'progress';
+    if (route === 'help') return 'settings';
+    if (route === 'training' || route === 'health') return 'today';
     if (route === 'gear') return 'training';
     if (route === 'reviews' || route.startsWith('review/')) return 'progress';
     if (route.startsWith('sleep/')) return 'sleep';

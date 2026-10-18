@@ -1,9 +1,11 @@
 <script lang="ts">
  // Navigation glyphs the shipped icon set doesn't have.
- let {name, size = 22}: {name: 'today' | 'plan' | 'progress' | 'explore' | 'settings' | 'adapt' | 'search' | 'lock' | 'offline' | 'calendar' | 'flag' | 'diamond', size?: number} = $props();
+ let {name, size = 22}: {name: 'today' | 'plan' | 'progress' | 'training' | 'health' | 'explore' | 'settings' | 'adapt' | 'search' | 'lock' | 'offline' | 'calendar' | 'flag' | 'diamond', size?: number} = $props();
 </script>
 <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
- {#if name === 'today'}<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4L6 18M18 6l1.4-1.4"/>
+ {#if name === 'training'}<path d="M13 2L4 14h7l-1 8 10-12h-8l1-8z"/>
+ {:else if name === 'health'}<path d="M12 21S3 15 3 8.5a4.5 4.5 0 0 1 9-1 4.5 4.5 0 0 1 9 1C21 15 12 21 12 21z"/>
+ {:else if name === 'today'}<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4L6 18M18 6l1.4-1.4"/>
  {:else if name === 'plan' || name === 'calendar'}<rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>
  {:else if name === 'progress'}<path d="M5 19v-7M10 19V6M15 19v-9M20 19V9M3 21h18"/>
  {:else if name === 'explore'}<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>

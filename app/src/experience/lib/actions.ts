@@ -1,17 +1,35 @@
 // Prototype actions: every user choice the journeys exercise. Local only; nothing
 // is sent to Garmin, and offline changes apply immediately.
 import {store, setCaseHook, fresh, LEGACY} from './store.svelte';
-import {derive, type State} from './rules';
+import {derive, type State, type GoalTargets, type Intention} from './rules';
+import {candidates, movedIntention} from './allocation';
 import {CASES} from './cases';
 import {dayLabel, weekId} from './dates';
 import {SPORTS, type Sport} from './sports';
 
+let nextAllocation = 0;
 const S = () => store.state;
 const ctx = () => derive(store.state);
 const now = () => dayLabel(ctx().calendarDate);
 const endPause = (st: State): Partial<State> => ({pause: null, pauses: [...(st.pauses || []), {...st.pause!, until: derive(st).calendarDate}]});
 
 export const A = {
+ saveGoals(targets: GoalTargets) {
+  const c=ctx();
+  store.set(st=>({goalVersions:[...(st.goalVersions??[]),{from:c.calendarDate,targets}],
+   ...(c.plan ? {revisions:[...st.revisions,{week:c.plan.wk,from:c.calendarDate,strength:targets.strength,im:targets.im}]} : {ownCommitments:{from:weekId(c.calendarDate),strength:targets.strength,im:targets.im,note:'Goals chosen by you'}})}),'Weekly goals saved');
+ },
+ allocate(draft: Omit<Intention,'id'|'link'|'history'>, close = true) {
+  const id='n'+Date.now().toString(36)+(++nextAllocation).toString(36);
+  store.set(st=>({intentions:[...st.intentions,{...draft,id,link:null,history:[[now(),`Placed on ${dayLabel(draft.date)}${draft.garminId?' · local allocation for a Garmin session':''}`]]}],...(draft.date===ctx().calendarDate && draft.kind!=='sleep'?{todayChoice:{day:draft.date,id}}:{})}),'Added to your plan');
+  if(close) store.closeSheet();
+ },
+ selectToday(id: string) { store.set({todayChoice:{day:ctx().calendarDate,id}},'Your choice for today'); store.closeSheet(); },
+ keepGarmin(id: string) { store.set(st=>({keptGarmin:{...(st.keptGarmin??{}),[id]:true},todayChoice:{day:ctx().calendarDate,id}}),'Kept in today’s agenda · Garmin unchanged'); },
+ finishIntention(id: string,status: 'released'|'missed') {
+  store.set(st=>({intentions:st.intentions.map(i=>i.id===id?{...i,status,link:null,history:[...i.history,[now(),status==='released'?'Let go by you':'Marked missed by you'] as [string,string]]}:i)}),status==='released'?'Let go':'Marked missed');
+ },
+ reschedule(id:string,date:string) {store.set(st=>({intentions:st.intentions.map(i=>i.id===id?movedIntention(i,date,now()):i)}),'Rescheduled locally');store.closeSheet();},
  dismiss(id: string) { store.set(s => ({dismissed: {...s.dismissed, [id]: true}}), 'Hidden for today'); store.closeSheet(); },
  rest() { store.set({rest: {day: ctx().calendarDate}}, 'Rest day, through tonight'); store.closeSheet(); },
  unrest() { store.set({rest: null}, 'Rest removed'); store.closeSheet(); },
@@ -43,7 +61,7 @@ export const A = {
   store.closeSheet();
  },
  removeIntention(id: string) { store.set(st => ({intentions: st.intentions.filter(i => i.id !== id)}), 'Removed from your plan'); },
- link(id: string, aid: string) { store.set(st => ({intentions: st.intentions.map(i => i.id === id ? {...i, link: aid, history: [...i.history, [now(), 'You linked a recorded activity'] as [string, string]]} : i)}), 'Linked by you'); },
+ link(id: string, aid: string) { const i=S().intentions.find(i=>i.id===id); if(!i || !candidates(ctx(),i).some(a=>a.id===aid)){store.toast('Choose a recording from the same day and sport');return;} if(S().intentions.some(i=>i.id!==id&&i.link===aid)){store.toast('That recording is already linked to a session');return;} store.set(st => ({intentions: st.intentions.map(i => i.id === id ? {...i, link: aid, history: [...i.history, [now(), 'You linked a recorded activity'] as [string, string]]} : i)}), 'Linked by you'); },
  unlink(id: string) { store.set(st => ({intentions: st.intentions.map(i => i.id === id ? {...i, link: null, history: [...i.history, [now(), 'Link removed'] as [string, string]]} : i)}), 'Link removed'); },
  winddown() { const k = ctx().tonight.nightOf; store.set(st => ({winddown: {...st.winddown, [k]: !st.winddown[k]}}), 'Wind-down self-report saved'); },
  bedtime() {

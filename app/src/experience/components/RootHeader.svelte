@@ -15,7 +15,7 @@
   <h1 tabindex="-1">{title}</h1>
   <div class="hctl">
    {#if adapt}<button class="adapt" class:on={ctx.adaptLabel !== 'Adapt today'} aria-haspopup="dialog" onclick={() => store.openSheet('adapt')}>{#if ctx.paused}<Icon name="pause" size={15}/>{:else if ctx.restActive}<Icon name="moon" size={15}/>{:else}<XIcon name="adapt" size={15}/>{/if}{ctx.adaptLabel}</button>{/if}
-   {#if store.state.navVariant === 'header'}<button class="hbtn" onclick={() => store.navigate('explore')}><XIcon name="explore" size={17}/>Explore</button>{/if}
+   
    <button class="hbtn icon" aria-label="Settings" onclick={() => store.navigate('settings')}><XIcon name="settings" size={19}/></button>
   </div>
  </div>

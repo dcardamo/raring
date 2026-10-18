@@ -416,6 +416,8 @@ export const SCHEDULE = [
   {id: 'g-legs', date: '2026-11-21', name: 'Leg day A', sport: 'strength' as Sport, source: 'garmin', routine: true, min: 45},
 ];
 export type Schedule = typeof SCHEDULE[number];
+/** An active Garmin Coach plan is context only: Garmin doesn't say which schedule items belong to it. */
+export const COACH = {name: '10K plan', since: '2026-11-02'};
 export const COMMITMENT_VERSIONS = [
   {from: '2026-W41', strength: 2, im: 150, note: 'First saved plan'},
   {from: '2026-W45', strength: 3, im: 150, note: 'Raised strength'},

@@ -23,7 +23,10 @@ export const PROFILES = {
 } as const;
 export type Profile = keyof typeof PROFILES;
 
-export type Intention = {id: string, sport: Sport, date: string, time: string | null, link: string | null, history: [string, string][]};
+export type Allocation = {strength?: number, zone2?: number, im?: number, sleep?: number};
+export type GoalTargets = {strength: number, zone2: number, im: number, sleep: number, sleepTime: string, sleepKind: 'winddown' | 'bedtime'};
+export type GoalVersion = {from: string, targets: GoalTargets};
+export type Intention = {id: string, sport: Sport, date: string, time: string | null, link: string | null, history: [string, string][], name?: string, durationMin?: number, allocation?: Allocation, kind?: 'workout' | 'sleep', garminId?: string, status?: 'open' | 'released' | 'missed'};
 export type Pause = {since: string, review: string | null, until?: string};
 export type Revision = {week: string, from: string, strength: number, im: number};
 export type Commitments = {from: string, strength: number, im: number, note: string};
@@ -38,6 +41,7 @@ export type State = {
   permission: 'not-asked' | 'granted' | 'declined', channels: Record<'morning' | 'weekly' | 'metrics' | 'vitals' | 'training' | 'status', boolean>,
   signedOut: boolean, dst: boolean, returning: boolean, noRunning: boolean, savedSleepTarget: boolean, winddownIntention: boolean,
   navVariant: 'tabs' | 'header', reviewDraft: string | null,
+  goalVersions?: GoalVersion[], todayChoice?: {day: string, id: string}, keptGarmin?: Record<string, boolean>,
 };
 
 export function profileWorld(state: State) {
@@ -115,7 +119,7 @@ export function derive(state: State): Ctx {
   const actsToday = world.activities.filter(a => a.date === calendarDate);
   const lateArrivals = world.activities.filter(a => a.lateUpload === calendarDate);
   const scheduleToday = world.schedule.filter(s => s.date === calendarDate);
-  const intentionsToday = state.intentions.filter(i => i.date === calendarDate);
+  const intentionsToday = state.intentions.filter(i => i.date === calendarDate && i.status !== 'released' && i.status !== 'missed');
   const napList = (state.profile === 'sleep' || state.profile === 'mixed'
     ? (state.napCase === 'cross' ? NAPS.cross : state.napCase === 'same' ? NAPS.same : []) : []).filter(n => {
       const [date, time] = n.end || n.start;
@@ -289,7 +293,7 @@ function lead(ctx: Ctx): Lead {
       line: conflict ? `${sched.name} · ${SPORTS[sched.sport].name.toLowerCase()} excluded` : lowR ? `Garmin: ${sched.name}` : 'Garmin schedule',
       action: {label: 'Review session', go: `scheduled/${sched.id}`}});
   }
-  const intent = ctx.intentionsToday.find(i => !i.link);
+  const intent = ctx.intentionsToday.find(i => !i.link && i.kind !== 'sleep');
   if (intent) {
     if (ctx.limits.note) {
       trace.push({gate: 'Decisions', result: 'Your intention; its movements are unknown to Raring, so your movement note applies.'});
