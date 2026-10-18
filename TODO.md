@@ -18,19 +18,27 @@ availability on every account or watch.
 ### 26. A focused, adaptive Raring experience — exclusive
 
 **Design:** [A focused, adaptive Raring experience](docs/experience-design.md).
-Design documented; implementation has not started. **Start after the already
-in-flight “Raring 9+10: Status notification and widgets” workspace is complete,
-integrated and checked.** Then item 26 is the sole implementation priority; do
-not start another backlog item between them. An idle agent alone does not establish
-that the workspace is finished. The redesign and progressive usability/discoverability
-work are **one item**, not a feature project followed by a UX cleanup.
+**Stage 1 implemented as an isolated linked prototype**, not production shell
+changes: `design/mockup/experience/`. See the design's stage-1 checkpoint for
+working routes, preservation/legacy mappings, measured scripted paths, screenshots
+and U01–U64 evidence limits. The redesign and usability/discoverability work remain
+**one item**, not a feature project followed by a UX cleanup.
 
 **Start gate confirmed:** items 9+10 are integrated in `2580ffb`; repository,
 Android unit/instrumentation and release checks passed. Their workspace and
 the old merge queue are archived; no other Raring implementation lane is
 active. This initiative uses the single `feat/experience-redesign` branch.
-Stage 1 begins with linked prototypes, not product-shell changes. Unfamiliar-user
-usability remains unverified and must reach its explicit decision gate.
+Stage 1 has linked Today/Plan/Progress/Explore journeys, interrupted-week and
+privacy transitions, browser checks and synthetic screenshots. Preview:
+`http://neptune:48726/index.html` (synthetic directory only).
+
+**Stop gate reached; no stage 2 authorised.** No unfamiliar people have evaluated
+first meaning, discovery, comprehension or pressure. Three participants (including
+simple-needs and detail-oriented people) remain required. Ask Dan through the
+coordinator for explicit proceed-with-named-limited-evidence versus pause/release
+exclusivity. Header Explore is a hypothesis, not validated navigation. Later
+implemented-app/Android, real-data and full migration/evidence checks also remain
+unverified; no endpoint claims or shipped-feature contracts were changed.
 
 **Exclusive workstream:** once implementation starts, suspend other feature work
 and parallel implementation lanes, including unrelated items below. Work through
