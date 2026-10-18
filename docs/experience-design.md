@@ -24,7 +24,14 @@ other feature work, independent redesign branches or parallel implementation
 lanes. Its stages are checkpoints in one workstream, not separate projects to
 implement concurrently. Read-only reviews and checks can support that workstream.
 An urgent unrelated fix requires an explicit decision to pause this initiative.
-Do not silently expand it to include the rest of the backlog. Time-sensitive
+Do not silently expand it to include the rest of the backlog.
+
+Dan explicitly authorised one exception: a second isolated item-26 candidate,
+`experiment/raring-26-deepseek` (workspace `wks_ed18d1aad5f3d96a`, port 48727),
+starting independently from `3b213ff` and the original v2 brief/images. This lane
+retains port 48726 and must not inspect, copy or modify that candidate or preview.
+Only one candidate will merge; this permits neither unrelated work nor a main
+merge/push/release. Time-sensitive
 verification, such as a real daylight-saving transition, may continue as checks
 and feed this initiative; the freeze is not a reason to miss that evidence.
 
@@ -1087,6 +1094,13 @@ shipped app: simplified renderers lost the route map, HR chart, zones, splits an
 gauges, and design guardrails had been printed as disclaimers. **v2 replaces it**
 (commits from `b3567c8`): a high-fidelity prototype built on the shipped Svelte
 components, with v1's journey and privacy rules ported. Git keeps v1's code.
+
+**Model provenance (coordinator-supplied routing records):** this session used
+Opus 5.5 through checkpoint A, `b965aa4`, then switched to GPT-6 Astra at 13:05Z.
+Use `b965aa4` as the pre-switch Opus checkpoint for comparison. Later work,
+including completion commit `adbb43e`, is mixed-model, not an Opus-only result.
+The isolated second candidate starts from `3b213ff`, not this checkpoint or its
+review feedback.
 
 No production shell, Rust rules/storage, native code or generated types were
 changed. The shipped detail screens were extracted from `App.svelte` into

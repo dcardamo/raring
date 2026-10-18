@@ -22,7 +22,9 @@ availability on every account or watch.
 (`302a69e`) is replaced by a Svelte prototype in `app/src/experience/`, starting
 with `b3567c8` (shared shipped details) and `b965aa4` (checkpoint A). The coordinator
 approved the richer visual direction; its A–K follow-ups and read-only review
-findings are fixed. The prototype has 64 scenario starts, linked browser checks,
+findings are fixed in `adbb43e`. Routing provenance: `b965aa4` is the pre-switch
+Opus 5.5 checkpoint; the session switched to GPT-6 Astra at 13:05Z, so the later
+whole result is mixed-model. The prototype has 64 scenario starts, linked browser checks,
 73 unit tests, rich synthetic captures and an explicit data-provenance table.
 See the design's stage-1 checkpoint for
 working routes, preservation/legacy mappings, measured scripted paths, screenshots
@@ -48,7 +50,13 @@ exclusivity. Explore is the fourth tab by default; the header variant stays in S
 implemented-app/Android, real-data and full migration/evidence checks also remain
 unverified; no endpoint claims or shipped-feature contracts were changed.
 
-**Exclusive workstream:** once implementation starts, suspend other feature work
+**Authorised comparison exception:** Dan approved one independent item-26
+candidate on `experiment/raring-26-deepseek`, workspace `wks_ed18d1aad5f3d96a`,
+from the same `3b213ff` baseline and original brief/images. It owns port 48727;
+this lane keeps 48726. No inspecting/copying between candidates; only one merges.
+No unrelated work, main merge, push or release is authorised.
+
+**Exclusive workstream:** apart from that explicit comparison, suspend other feature work
 and parallel implementation lanes, including unrelated items below. Work through
 this initiative's stages sequentially on one integration branch; do not release
 an unfinished shell through `main`'s automatic release workflow. Read-only reviews
