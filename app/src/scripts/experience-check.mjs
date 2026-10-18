@@ -81,7 +81,7 @@ if (!shotsOnly) {
 // ---------- 2. Journeys ----------
 await journey('U03 Sleep-only: last night from Today', 'U03', async (page, j) => {
  await j.tap('Last night’s sleep');
- await expectRoute(page, 'sleep', 'U03'); await expectText(page, 'Night ending Wed 18 Nov', 'U03');
+ await expectRoute(page, 'sleep/last', 'U03'); await expectText(page, 'Night ending Wed 18 Nov', 'U03');
  j.done('sleep', 1);
  await page.locator('.back').click(); await settle(page); await expectRoute(page, 'today', 'U03 Back');
 });
@@ -209,14 +209,15 @@ await journey('U50 Rare metric by browsing', 'U19', async (page, j) => {
  await tabTo(page, j, 'Training'); await j.tap(/Hill score/);
  await expectRoute(page, 'metric/hill', 'U50 browse'); j.done('metric/hill', 2);
 });
-await journey('U50 Gear', 'U19', async (page, j) => {
- await tabTo(page, j, 'Training'); await j.tap(/^Gear/);
- await expectRoute(page, 'gear', 'U50 gear'); j.done('gear', 2);
+await journey('U50 Gear lives in Profile', 'U19', async (page, j) => {
+ await tabTo(page, j, 'Training'); await j.tap('Profile and settings');
+ await expectRoute(page, 'profile', 'U50 profile'); await expectText(page, 'Gear', 'gear on Profile'); await expectText(page, 'Not available yet', 'weight write marked');
+ j.done('profile', 2);
 });
 await journey('U50 Comparison', 'U19', async (page, j) => {
- await tabTo(page, j, 'Progress'); await j.tap('All trends'); await j.tap(/^VO₂ max/);
+ await tabTo(page, j, 'Training'); await j.tap('All history');
  await expectRoute(page, 'metric/vo2max', 'U50 compare'); await expectText(page, 'VO₂ max', 'U50 metric');
- j.done('metric/vo2max', 3, 'shipped metric detail with ranges and previous period');
+ j.done('metric/vo2max', 2, 'shipped metric detail with ranges and previous period');
 });
 await journey('Back keeps filter and scroll', 'U19', async (page, j) => {
  await tabTo(page, j, 'Training'); await page.getByRole('tab', {name: 'Activities', exact: true}).click(); j.path.push('Activities'); await settle(page);
@@ -343,6 +344,62 @@ await journey('Race goal: countdown, prediction and weeks', 'U13', async (page, 
  await expectText(page, 'prediction', 'Garmin prediction'); await expectText(page, 'Your weeks toward it', 'weeks');
  j.done('plan/race/event', 1);
 });
+// ---------- P3b: focused tabs, help, Profile ----------
+await journey('Help sheets on every root and on cards', 'U13', async (page) => {
+ for (const r of ['today', 'plan', 'training', 'health', 'progress']) {
+  await ext(page, r);
+  const btn = page.locator('.rhead').getByRole('button', {name: /^Help:/});
+  if (!await btn.count()) throw new Error(`no ? on ${r}`);
+  await btn.click(); await settle(page);
+  if (!(await page.locator('.sheet .qh-p').count())) throw new Error(`empty help on ${r}`);
+  await page.keyboard.press('Escape'); await settle(page);
+ }
+ await ext(page, 'training');
+ if (await page.locator('main').getByRole('button', {name: /^Help:/}).count() < 4) throw new Error('Training cards lack ? help');
+});
+await journey('Sleep opens the tab closer in time', 'U13', async (page) => {
+ await ext(page, 'sleep');
+ if (await page.getByRole('tab', {name: 'Last night'}).getAttribute('aria-selected') !== 'true') throw new Error('daytime should open Last night');
+ await set(page, {clock: 'evening'}); await ext(page, 'sleep');
+ if (await page.getByRole('tab', {name: 'Tonight'}).getAttribute('aria-selected') !== 'true') throw new Error('evening should open Tonight');
+ await expectText(page, 'Asleep by', 'Tonight is a plan'); await expectText(page, 'Last 7 nights against need', 'recent nights vs need');
+ await page.getByRole('tab', {name: 'Last night'}).click(); await settle(page); await expectRoute(page, 'sleep/last', 'tab switch');
+});
+await journey('Health: long-term, then vitals; charts have axes; no Your day', 'U13', async (page) => {
+ await ext(page, 'health');
+ const order = await page.evaluate(() => { const lt = document.querySelector('.lt').getBoundingClientRect().top, v = [...document.querySelectorAll('main h2')].find(h => h.textContent.includes('This morning'))?.getBoundingClientRect().top; return lt < v; });
+ if (!order) throw new Error('vitals not below long-term');
+ if (await page.locator('main .day-rows').count()) throw new Error('Your day duplicated on Health');
+ const card = page.locator('.mc').first();
+ await card.getByRole('button', {name: '90D'}).click(); await settle(page);
+ const lbl = await card.locator('svg[role=img]').getAttribute('aria-label');
+ if (!lbl.includes('last 90 days') || !lbl.includes('usual')) throw new Error(`range picker/usual missing: ${lbl}`);
+ if (await card.locator('text.yt').count() < 3) throw new Error('no y axis');
+});
+await journey('Progress: Overall, Cardio, Strength, Long-term', 'U13', async (page) => {
+ await ext(page, 'progress');
+ for (const [t, want] of [['Overall', 'Your weeks'], ['Cardio', 'Zone 2 minutes per week'], ['Strength', 'Strength sessions per week'], ['Long-term', 'Resting heart rate']]) {
+  await page.getByRole('tab', {name: t, exact: true}).click(); await settle(page); await expectText(page, want, t);
+ }
+ for (const gone of ['Weekly goals over time', 'Weekly reviews']) { await page.getByRole('tab', {name: 'Overall', exact: true}).click(); await settle(page); await expectNoText(page, gone, 'cut'); }
+});
+await journey('Profile: Garmin facts, limitations, gear, settings', 'U13', async (page, j) => {
+ await j.tap('Profile and settings');
+ for (const t of ['What Garmin knows', 'Limitations and injuries', 'Gear', 'Settings']) await expectText(page, t, 'Profile');
+ if (!await page.getByRole('button', {name: /Add a weight/}).isDisabled()) throw new Error('weight write enabled');
+ await j.tap(/^Manage limitations/); await expectRoute(page, 'adapt/limits', 'limitations');
+ j.done('adapt/limits', 2);
+});
+await journey('Training: three questions, activities show what they worked', 'U13', async (page) => {
+ await ext(page, 'training');
+ for (const q of ['Enough, or too much?', 'Is my fitness improving?', 'What am I ready for?']) await expectText(page, q, 'Fitness');
+ await expectNoText(page, 'What acute load is', 'explainer cards cut');
+ const wk = await page.locator('.tw svg[role=img]').getAttribute('aria-label');
+ if (!wk.includes('usual day')) throw new Error('week chart lacks usual day');
+ await page.getByRole('tab', {name: 'Strength', exact: true}).click(); await settle(page); await expectText(page, 'Muscles, last 4 weeks', 'strength gaps');
+ await page.getByRole('tab', {name: 'Activities', exact: true}).click(); await settle(page);
+ if (!await page.locator('.atile .worked').count()) throw new Error('activities lack contribution');
+});
 await journey('U53 Journal consent, open, leave, background, opt out', 'U52', async (page, j) => {
  await j.tap('Allow local journal reads'); await j.tap('Allow journal reads'); await j.tap('Open journal');
  await expectText(page, 'Caffeine', 'U53 open'); j.done('health/journal', 3, 'consent sheet then explicit open');
@@ -375,11 +432,11 @@ await journey('U56 A choice survives sync and resume; new notice is distinct', '
  await kept('U56 still kept');
 });
 await journey('U64 Settings, export disclosure, sign out', 'U64', async (page, j) => {
- await j.tap('Settings'); await expectText(page, 'circumstances and notes, routine checklist and self-reports', 'U64 export');
+ await j.tap('Profile and settings'); await j.tap(/^Settings/); await expectText(page, 'circumstances and notes, routine checklist and self-reports', 'U64 export');
  await j.tap('Sign out and erase…');
  const sheet = await page.locator('.sheet').innerText();
  if (!sheet.includes('Rest, pauses, limits and notes')) throw new Error('U64: erase disclosure misses circumstances');
- j.done('settings', 2, 'export disclosure visible on Settings');
+ j.done('settings', 3, 'via Profile; export disclosure visible on Settings');
 });
 await journey('U58 Old links and Back', 'U58', async (page) => {
  const map = await page.evaluate(() => Object.keys(window.RaringApp.LEGACY).map(from => [from, window.RaringApp.canonical(from).route, window.RaringApp.defaultTrail(window.RaringApp.canonical(from).route)]));
@@ -623,7 +680,7 @@ for (const scale of [1, 1.3, 2]) {
  const order = [];
  for (let i = 0; i < 8; i++) { await page.keyboard.press('Tab'); order.push(await page.evaluate(() => (document.activeElement.getAttribute('aria-label') || document.activeElement.textContent).trim().slice(0, 24))); }
  notes.push(`keyboard order on Today: ${order.join(' → ')}`);
- if (!order.some(o => o.startsWith('Adapt today')) || !order.includes('Settings')) fail('keyboard', `Settings/Adapt not early in tab order: ${order.join(' → ')}`);
+ if (!order.some(o => o.startsWith('Adapt today')) || !order.includes('Profile and settings')) fail('keyboard', `Settings/Adapt not early in tab order: ${order.join(' → ')}`);
  await page.getByRole('button', {name: /^Adapt today/}).focus(); await page.keyboard.press('Enter'); await settle(page);
  if (!await page.evaluate(() => document.activeElement.closest('.sheet') != null)) fail('keyboard', 'focus did not move into the Adapt sheet');
  await page.keyboard.press('Escape'); await settle(page);

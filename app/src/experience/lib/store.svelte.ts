@@ -89,8 +89,8 @@ class Store {
   // ---------- routes ----------
   validRoute(route: string): boolean {
     if (['today', 'plan', 'progress', 'onboarding', ...DETAIL_DOMAINS].includes(route)) return true;
-    if (['gear', 'trends', 'reviews', 'settings', 'help', 'adapt', 'surfaces', 'legacy', 'compare', 'plan/commitments', 'plan/garmin', 'health/weight', 'health/journal', 'strength/muscles', 'training/performance', 'training/fitness', 'health/vitals', 'health/long-term'].includes(route)) return true;
-    if (/^sleep\/(tonight|patterns|naps|stages|timing)$/.test(route)) return true;
+    if (['profile', 'gear', 'trends', 'reviews', 'settings', 'help', 'adapt', 'surfaces', 'legacy', 'compare', 'plan/commitments', 'plan/garmin', 'health/weight', 'health/journal', 'strength/muscles', 'training/performance', 'training/fitness', 'health/vitals', 'health/long-term'].includes(route)) return true;
+    if (/^sleep\/(last|tonight|patterns|naps|stages|timing)$/.test(route)) return true;
     if (/^adapt\/(pause|limits|routines|lighter)$/.test(route)) return true;
     if (/^settings\/(export|journal)$/.test(route)) return true;
     if (/^workout\/[\w-]+$/.test(route)) return !!activityById(route.slice(8));
@@ -122,7 +122,8 @@ class Store {
     if (['strength', 'activities'].includes(route)) return 'training';
     if (route === 'trends') return 'progress';
     if (route === 'help') return 'settings';
-    if (route === 'gear') return 'training';
+    if (route === 'gear') return 'profile';
+    if (route === 'profile') return 'today';
     if (route === 'reviews' || route.startsWith('review/')) return 'progress';
     if (route.startsWith('sleep/')) return 'sleep';
     if (route.startsWith('adapt/')) return 'adapt';
@@ -202,6 +203,13 @@ class Store {
     const c = this.canonical(route);
     this.desired = this.nextTrail(c.route, this.desired);
     void this.apply();
+  }
+  /** Swap the current page for a sibling (tabs within a page) without a new history entry. */
+  replace(route: string) {
+    if (this.processing) return;
+    const c = this.canonical(route), t = [...this.trail.slice(0, -1), c.route];
+    history.replaceState(this.entry(t), '', `#${c.route}`);
+    this.trail = t; this.desired = t; this.ui = {};
   }
   external(raw: string, label?: string) {
     const c = this.canonical(raw);
@@ -324,7 +332,7 @@ export const setCaseHook = (fn: (id: string, cold: boolean) => void) => { applyC
 const TITLES: Record<string, string> = {
   onboarding: 'Welcome', today: 'Today', plan: 'Plan', progress: 'Progress', sleep: 'Sleep', readiness: 'Readiness', training: 'Training',
   strength: 'Strength', activities: 'Activities', health: 'Health', gear: 'Gear', trends: 'Trends', reviews: 'Weekly reviews',
-  settings: 'Settings', help: 'Help', adapt: 'Adapt', surfaces: 'Status surfaces', legacy: 'Old links', compare: 'Compare', 'plan/commitments': 'Commitments', 'plan/garmin': 'Garmin Coach',
+  settings: 'Settings', help: 'Help', adapt: 'Adapt', surfaces: 'Status surfaces', legacy: 'Old links', compare: 'Compare', 'plan/commitments': 'Commitments', 'plan/garmin': 'Garmin Coach', profile: 'Profile',
   'health/weight': 'Weight', 'health/journal': 'Journal', 'health/vitals': 'Health readings', 'sleep/patterns': 'Sleep patterns', 'strength/muscles': 'Muscles', 'training/performance': 'Performance',
 };
 export function titleOf(route: string): string {

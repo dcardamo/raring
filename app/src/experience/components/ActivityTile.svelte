@@ -13,7 +13,17 @@
  import {dayLabel} from '../lib/dates';
  // A data-bearing activity preview: picture, the key numbers including heart
  // rate, zones, Garmin's benefit and effect, and what it did for the person's plan.
- let {a, ctx, navigate, showDate = false}: {a: Activity, ctx: Ctx, navigate: (route: string) => void, showDate?: boolean} = $props();
+ let {a, ctx, navigate, showDate = false, contributes = false}: {a: Activity, ctx: Ctx, navigate: (route: string) => void, showDate?: boolean, contributes?: boolean} = $props();
+ // Garmin's own labels for what a session worked: benefit, training effect,
+ // recorded zone time, and the muscle groups of recorded sets.
+ let worked = $derived.by(() => {
+  if (a.timerOnly) return [];
+  const out = [`aerobic ${a.aerobic.toFixed(1)} · anaerobic ${a.anaerobic.toFixed(1)}`];
+  const z2 = Math.floor((a.zones[1] ?? 0) / 60), hi = Math.floor(((a.zones[3] ?? 0) + (a.zones[4] ?? 0)) / 60);
+  if (z2) out.push(`Zone 2 ${z2} min`); if (hi) out.push(`Zone 4–5 ${hi} min`);
+  if (session?.setsRecorded) out.push(session.muscles.filter(m => m.sets > 0).sort((x, y) => y.sets - x.sets).slice(0, 4).map(m => m.muscle).join(', '));
+  return out;
+ });
  let route = $derived(routeFor(a));
  let sets = $derived(setsFor(a));
  let session = $derived(a.sport === 'strength' ? strengthSession(a) : null);
@@ -46,9 +56,10 @@
  </span>
  <span class="stats">{#each stats as [v, u, l]}<span><b class="n">{v}<small>{u}</small></b><em>{l}</em></span>{/each}</span>
  <span class="zones"><ZoneStrip seconds={a.zones}/></span>
+ {#if contributes && worked.length}<span class="worked"><em>Worked</em>{a.benefit} · {worked.join(' · ')}</span>{/if}
 </button>
 <style>
- .atile{display:grid;grid-template-columns:96px 1fr;grid-template-areas:'pic head' 'stats stats' 'zones zones';column-gap:12px;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:10px 12px 12px 10px;margin-top:10px;color:var(--text)}
+ .atile{display:grid;grid-template-columns:96px 1fr;grid-template-areas:'pic head' 'stats stats' 'zones zones' 'worked worked';column-gap:12px;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:10px 12px 12px 10px;margin-top:10px;color:var(--text)}
  .pic{grid-area:pic;position:relative;border-radius:14px;overflow:hidden;height:80px;background:radial-gradient(120% 90% at 30% 20%,color-mix(in srgb,var(--c) 26%,#121829),#0E1424);display:grid;place-items:center}
  .pic :global(.routehero){position:absolute;inset:0}
  .art{color:var(--c);opacity:.9}
@@ -71,6 +82,7 @@
  .stats b small{font:500 10.5px Inter;color:var(--text3);margin-left:1px}
  .stats em{font-style:normal;font-size:11px;color:var(--text3)}
  .zones{grid-area:zones}
+ .worked{grid-area:worked;margin-top:8px;font-size:11.5px;color:var(--text2);text-transform:none}.worked em{font-style:normal;font:700 9.5px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-right:6px}
  .zones :global(.zbar){margin-top:10px;height:6px}
  @media(max-width:360px){.stats b{font-size:16px}}
 </style>

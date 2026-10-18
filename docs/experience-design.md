@@ -1258,6 +1258,23 @@ screens link to it. This table drives P3; anything marked *cut* is removed.
 | Progress · Overall + Cardio/Strength/Long-term | Know progress toward goals and races, and why | Change (P3b) |
 | Progress · weekly goals over time, sleep, weekly reviews | — | Cut (P3b): replaced by rings and the week review |
 
+**P3b as built.** Every chart uses one component with a y-axis and unit,
+x labels, labelled values and, where one exists, a goal line, usual-range band
+and hatched ill/paused or dotted missing-data spans. Training: a week chart of
+minutes by sport against the usual day (previous 8 weeks), then Fitness as
+three questions, Strength led by the goal and recent muscle gaps, Activities
+with Garmin's benefit, training effect, zone time and muscles. Health: Fitness
+Age and drivers, this morning's readings, then daily metrics with 7D/30D/90D/1Y
+in place (canonical details remain for comparisons and all history). Sleep:
+Last night and Tonight tabs, defaulting to the closer one; Tonight shows
+wind-down, asleep-by, wake and Garmin's need, the week's sleep goals and the
+last 7 nights against need. Progress: Overall (12 weeks of goal rings with the
+reasons weeks didn't count, events, period report, ring month, records),
+Cardio, Strength and Long-term (training per month above resting HR, HRV,
+VO₂ max and Fitness Age). Profile is behind the header avatar; Settings is
+inside it. Monthly training hours and the 12-week goal strip are proposed
+period summaries under the Progress rules above.
+
 #### Day and week rings
 
 Each date cell shows its day number inside **nested rings, one per active

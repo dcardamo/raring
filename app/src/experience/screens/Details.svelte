@@ -16,6 +16,7 @@
  import SleepScreen from './SleepScreen.svelte';
  import Adapt from './Adapt.svelte';
  import PlanDetail from './PlanDetail.svelte';
+ import Profile from './Profile.svelte';
  import Settings from './Settings.svelte';
  import Misc from './Misc.svelte';
  import ActivityTile from '../components/ActivityTile.svelte';
@@ -87,6 +88,9 @@
  {#snippet th()}<Header title={sub === 'performance' ? 'Performance' : 'Training'} eyebrow="Last 7 days · Garmin" back={() => store.back()} backLabel={store.parentLabel}/>{/snippet}
  <TrainingDetail trainingData={trainingView(ctx)} header={th} navigate={go}/>
  <section class="card"><button class="rowlink" onclick={() => go('help/acute-load')}><Icon name="info" size={18}/><span><b>What acute load is</b><small>Context, not a budget</small></span><Icon name="chevron" size={16}/></button><button class="rowlink" onclick={() => go('metric/acuteLoad')}><Icon name="trend-up" size={18}/><span><b>Acute load trend</b><small>With Garmin’s range</small></span><Icon name="chevron" size={16}/></button><button class="rowlink" onclick={() => go('activities')}><Icon name="run" size={18}/><span><b>All activities</b><small>{ctx.world.activities.length} in available history</small></span><Icon name="chevron" size={16}/></button></section>
+
+{:else if key === 'profile'}
+ <Profile/>
 
 {:else if key === 'gear'}
  {@render header('Gear', 'Garmin gear list · fetched Wed 18 Nov 07:12')}

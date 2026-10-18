@@ -3,6 +3,7 @@
  import Icon from '../../lib/components/Icon.svelte';
  import GoalEditor from './GoalEditor.svelte';
  import PlanWeek from './PlanWeek.svelte';
+ import {HELP} from '../lib/help';
  import AllocationEditor from './AllocationEditor.svelte';
  import SessionChoices from './SessionChoices.svelte';
  import {dayEvidence} from '../lib/allocation';
@@ -41,7 +42,7 @@
   }
  }
  const days = $derived(Array.from({length: 8}, (_, i) => addDays(ctx.calendarDate, i)));
- const TITLES: Record<string, string> = {adapt: 'Adapt today', add: 'Add to my plan', why: 'Why this?', notices: 'Notices', permission: 'Allow notifications?', winddown: 'A wind-down intention', consent: 'Allow Garmin journal reads?', resume: 'Resume training', ambition: 'Add an ambition', signout: 'Sign out and erase?', legend: 'Key', versions: 'Commitment targets', search: 'Search', planweek: 'Plan your week', move: 'Move to another day', goals:'Your weekly goals', allocate:'Place in your week', choose:'Choose another', reschedule:'Reschedule locally', day:'Your day'};
+ const TITLES: Record<string, string> = {adapt: 'Adapt today', add: 'Add to my plan', why: 'Why this?', notices: 'Notices', permission: 'Allow notifications?', winddown: 'A wind-down intention', consent: 'Allow Garmin journal reads?', resume: 'Resume training', ambition: 'Add an ambition', signout: 'Sign out and erase?', legend: 'Key', versions: 'Commitment targets', search: 'Search', qhelp: 'Help', planweek: 'Plan your week', move: 'Move to another day', goals:'Your weekly goals', allocate:'Place in your week', choose:'Choose another', reschedule:'Reschedule locally', day:'Your day'};
  const LEGEND: [Mark, Sport, string][] = [['recorded', 'running', 'Recorded by your watch'], ['plan', 'running', 'Your plan, on this phone'], ['garmin', 'running', 'Garmin schedule, read-only'], ['self', 'yoga', 'Self-reported'], ['rest', 'other', 'Rest day'], ['paused', 'other', 'Paused'], ['unknown', 'other', 'Awaiting evidence']];
 </script>
 <svelte:window onkeydown={keys}/>
@@ -53,6 +54,7 @@
   {#if sheet.name === 'search'}
    <label class="field col"><span class="sr">Search metrics and details</span><input type="search" data-autofocus placeholder="Search metrics, sleep, exercises…" bind:value={query} autocomplete="off"/></label>
    {#each search(query) as e}<button class="rowlink" onclick={() => { const r = e.route; query = ''; store.navigate(r); }}><Icon name="chevron" size={14}/><span><b>{e.name}</b><small>{e.area}</small></span><Icon name="arrow-right" size={14}/></button>{:else}{#if query.trim()}<p class="small">Nothing by that name. Training and Health hold every metric.</p>{/if}{/each}
+  {:else if sheet.name === 'qhelp'}{@const h=HELP[sheet.arg??'']}{#if h}<h3 class="lg-h">{h.title}</h3>{#each h.body as para}<p class="qh-p">{para}</p>{/each}{/if}
   {:else if sheet.name === 'planweek'}<PlanWeek/>
   {:else if sheet.name === 'move'}
    {@const mi=store.state.intentions.find(x=>x.id===sheet!.arg)}
@@ -154,6 +156,7 @@
 {/if}
 <style>
  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+ .qh-p{font-size:14px;line-height:1.5;color:var(--text);margin:0 0 10px}
  .lg-h{font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin:10px 0 4px}.lg-g{width:30px;text-align:center;color:#BDAAFF;font-size:18px}
  .day-head{display:flex;gap:14px;align-items:center;margin:4px 0 12px}.day-head b{display:block;font:600 18px Outfit}.day-head small{font-size:12px;color:var(--text2)}
  .dgoals{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px}.dgoals th,.dgoals td{padding:7px 4px;border-bottom:1px solid var(--line);text-align:right}.dgoals thead th{font:600 10.5px Inter;color:var(--text3)}.dgoals tbody th{text-align:left;font-weight:600}.dgoals i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--c);margin-right:7px}.dgoals td{font-family:Outfit}

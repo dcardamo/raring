@@ -1,0 +1,20 @@
+// Short "?" help sheets: what a number is, where it comes from, how to read it.
+export const HELP: Record<string, {title: string, body: string[]}> = {
+  'training-week': {title: 'This week’s training', body: ['Each bar is the recorded minutes that day, coloured by sport. Bars differ because sessions differ in length; rest days are empty.', 'The dashed line is your usual day: the average over the previous 8 weeks.']},
+  'acute-load': {title: 'Acute load', body: ['Garmin’s 7-day weighted sum of training load. The green band is Garmin’s optimal range for you.', 'Below the band: room to build. Above: more than your recent normal. It is context, not a budget to fill.']},
+  'load-focus': {title: 'Load focus', body: ['Garmin splits your last 4 weeks of load into low aerobic, high aerobic and anaerobic, each with its own target range.', 'A bar short of its range is where Garmin suggests adding work.']},
+  'vo2max': {title: 'VO₂ max', body: ['Garmin’s estimate of aerobic fitness, updated after qualifying runs or rides. Dots are estimates on the date Garmin made them; nothing is drawn between them.']},
+  'ready-for': {title: 'What you’re ready for', body: ['Race predictions and thresholds are Garmin’s latest readings, each with the date it was recorded. Older readings are marked.']},
+  'strength-gaps': {title: 'Muscle coverage', body: ['Sets per muscle group from your recorded strength sessions in the last 4 weeks, using Garmin’s exercise categories.', 'Groups with no sets are listed so you can choose to cover them. This is coverage, not muscle size or strength.']},
+  'activity-contribution': {title: 'What an activity contributes', body: ['Garmin’s primary benefit and aerobic/anaerobic training effect (0–5) for the session, plus recorded heart-rate zone time and, for strength, the muscle groups Garmin recorded.']},
+  'vitals': {title: 'Overnight readings', body: ['Garmin’s overnight readings with your usual range (the green band). Outside the range is worth noticing, not a diagnosis.']},
+  'metric-range': {title: 'Reading the chart', body: ['The line is Garmin’s daily value; the green band is your usual range. Use the range buttons to look at the last week, month, quarter or year. Gaps are days without a reading.']},
+  'fitness-age': {title: 'Fitness Age', body: ['Garmin’s estimate from VO₂ max, resting heart rate, body composition and activity. The bars show where each driver sits.']},
+  'sleep-tonight': {title: 'Tonight’s plan', body: ['Bedtime comes from Garmin’s sleep need and your usual wake time. Wind-down is your own choice. Recent nights show recorded sleep against need; no running debt is computed.']},
+  'sleep-last': {title: 'Last night', body: ['Garmin’s Sleep Score, stages and overnight readings for the night that ended this morning. Naps are separate.']},
+  'progress-overall': {title: 'Progress', body: ['Rings show each goal per day. The week strip shows which weeks were met, partly met, ill, paused or missing data, so changes in fitness can be read against what actually happened.']},
+  'rings': {title: 'Rings', body: ['One ring per weekly goal, same order everywhere. Filled is recorded; a thin line is planned but not recorded; no ring means nothing planned. Moon: rest. Hatched: ill or paused. Dotted: awaiting Garmin data.']},
+  'plan': {title: 'Planning your week', body: ['Choose weekly goals, then place sessions on days or leave them in the backlog. Garmin schedule sessions can count toward your goals. Your plan stays on this phone; sending to Garmin is not available yet.']},
+  'today': {title: 'Today', body: ['Last night and readiness come from Garmin. Raring suggests only an effort level from readiness; the session choice is yours.']},
+  'profile': {title: 'Profile', body: ['What Garmin knows about you, your gear and your limitations. Changing Garmin data from Raring is not available yet.']},
+};

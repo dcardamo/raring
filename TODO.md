@@ -70,8 +70,14 @@ proposed goals needing acceptance → place → done; Today's backlog with Do it
 today; one-tap Ill), nested goal rings on every date cell and a week ring,
 compact Plan with steppers, Move, inline Garmin items, Zone 4–5 and Sleep
 Score goals, a race page and a disabled Send to Garmin; Today's effort
-chevrons, HR row and nap Body Battery. P3b (Training, Health, Sleep tabs,
-Progress, help sheets, Profile) follows. This does not authorise stage 2 or a release.
+chevrons, HR row and nap Body Battery. **P3b** rebuilds Training around three
+questions (enough or too much? improving? ready for what?) with a labelled
+week chart against the usual day, goal-led Strength with muscle gaps, and
+activities showing what they worked; Health with vitals under long-term and
+range-picker charts with usual ranges; Sleep tabs (Last night / Tonight as a
+plan); Progress as Overall / Cardio / Strength / Long-term; "?" help sheets;
+and a Profile (Garmin facts, limitations, gear, settings; weight write
+disabled). Remaining: usability, device, real-data and migration gates. This does not authorise stage 2 or a release.
 
 **Usability gate remains pending; no stage 2 authorised.** No unfamiliar people have evaluated
 first meaning, discovery, comprehension or pressure. Three participants (including

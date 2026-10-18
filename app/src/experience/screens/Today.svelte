@@ -33,12 +33,12 @@
  const go=(r:string)=>store.navigate(r);
  const keep=()=>own?A.selectToday(own.id):garmin?A.keepGarmin(garmin.id):undefined;
 </script>
-<RootHeader title="Today" adapt/>
+<RootHeader title="Today" help="today"/>
 {#if ctx.notices.length}<div class="notice-strip" role="status"><Icon name="alert" size={16}/><p>{ctx.notices[0].text}</p><button class="link inline" onclick={()=>go(ctx.notices[0].action.go)}>{ctx.notices[0].action.label}</button></div>{/if}
 {#if ctx.state.dst}<p class="small">Clocks changed by an hour overnight</p>{/if}
 
 <section class="morning" aria-label="Last night and readiness">
- <button class="sleep-fact" onclick={()=>go('sleep')} aria-label="Last night’s sleep">
+ <button class="sleep-fact" onclick={()=>go('sleep/last')} aria-label="Last night’s sleep">
   <span class="ml"><Icon name="moon" size={16}/>Last night</span>
   <b class="n sleep-num">{n?dur(n.asleep):'Waiting'}</b>
   <div class="sleep-need"><i style:width={n?Math.min(100,n.asleep/n.need*100)+'%':'0%'}></i><u></u></div>

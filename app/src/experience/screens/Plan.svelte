@@ -27,7 +27,7 @@
  let weekPauses=$derived(ctx.state.pauses.filter(p=>p.since<=ctx.weekTo&&(!p.until||p.until>=ctx.weekFrom)&&p.until));
  const go=(r:string)=>store.navigate(r);
 </script>
-<RootHeader title="Plan"/>
+<RootHeader title="Plan" help="plan"/>
 <section class="card wk">
  <div class="wk-h"><div><h2>{weekRange(ctx.weekFrom)}</h2>{#if changed}<small>Targets changed {shortDay(changed)}</small>{/if}</div><span class="wk-b"><button class="small-edit" onclick={()=>store.openSheet('planweek')}>Plan week</button><button class="small-edit" onclick={()=>store.openSheet('goals')}><Icon name="pencil" size={13}/>Goals</button></span></div>
  {#if ctx.paused||ctx.restActive||ctx.hasLimits}<button class="adapt-state" onclick={()=>go('adapt')}><Icon name={ctx.paused?'pause':ctx.restActive?'moon':'info'} size={15}/>{ctx.paused?`${ctx.paused.reason==='ill'?'Ill':'Training paused'} since ${shortDay(ctx.paused.since)} · rings hatched, no catch-up`:ctx.restActive?'Rest day · through tonight':'Your limits apply'}<Icon name="chevron" size={14}/></button>{/if}
