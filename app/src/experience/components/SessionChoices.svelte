@@ -16,6 +16,5 @@
  <h3>Pick a sport</h3><div class="sports">{#each sports as s}<button disabled={ctx.limits.exclude.includes(s)} onclick={()=>store.openSheet('allocate','sport:'+s)}><Glyph sport={s} mark="plan" size={30}/>{SPORTS[s].name}{ctx.limits.exclude.includes(s)?' · excluded':''}</button>{/each}</div>
  {#if ctx.limits.note}<p class="small">Review needed · {ctx.limits.note}</p>{/if}
  <button class="secondary" onclick={A.rest}><Icon name="moon" size={16}/>Rest today</button>
- <p class="small">Your choices stay local. Garmin’s calendar is unchanged.</p>
 {/if}
 <style>h3{font:600 11px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin:18px 0 4px}.sports{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.sports button{display:flex;gap:8px;align-items:center;padding:8px 12px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--text);font:600 14px Inter}button:disabled{opacity:.4}</style>

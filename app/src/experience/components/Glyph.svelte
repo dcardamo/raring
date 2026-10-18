@@ -3,6 +3,7 @@
  export const MARK_NAMES: Record<Mark, string> = {recorded: 'Recorded', plan: 'Your plan', garmin: 'Garmin schedule', rest: 'Rest', paused: 'Paused', unknown: 'Awaiting evidence', self: 'Self-reported'};
 </script>
 <script lang="ts">
+ import SportIcon from './SportIcon.svelte';
  import Icon from '../../lib/components/Icon.svelte';
  import {SPORTS, type Sport} from '../lib/sports';
  // One visual language for state: filled = recorded, outlined = your plan,
@@ -24,7 +25,7 @@
   {:else}<circle cx="16" cy="16" r="14" fill="rgba(142,152,172,.14)"/>{/if}
  </svg>
  {#if mark === 'rest'}<span class="gi" style:color="#B4BCCB"><Icon name="moon" size={Math.round(size * .5)}/></span>
- {:else if mark !== 'unknown'}<span class="gi" style:color={mark === 'recorded' ? '#0B0F1A' : color}><Icon name={SPORTS[sport].icon} size={Math.round(size * (mark === 'garmin' ? .44 : .54))}/></span>{/if}
+ {:else if mark !== 'unknown'}<span class="gi" style:color={mark === 'recorded' ? '#0B0F1A' : color}><SportIcon {sport} size={Math.round(size * (mark === 'garmin' ? .44 : .54))}/></span>{/if}
 </span>
 <style>
  .glyph{position:relative;display:inline-grid;place-items:center;flex:none}

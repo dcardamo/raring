@@ -1,4 +1,5 @@
 <script lang="ts">
+ import SportIcon from './SportIcon.svelte';
  import ZoneStrip from '../../lib/components/ZoneStrip.svelte';
  import BodyMap from '../../lib/components/BodyMap.svelte';
  import Icon from '../../lib/components/Icon.svelte';
@@ -32,8 +33,8 @@
  <span class="pic" style:--c={SPORTS[a.sport].color}>
   {#if route.length}<RouteHero {route} color={SPORTS[a.sport].color} w={120} h={96} compact label={`${a.name} route`}/>
   {:else if session?.setsRecorded}<span class="bm"><BodyMap figure="female" muscles={session.muscles} width={56} max={6} legend={false}/></span>
-  {:else}<span class="art"><Icon name={SPORTS[a.sport].icon} size={36}/></span>{/if}
-  <span class="badge" style:background={SPORTS[a.sport].color}><Icon name={SPORTS[a.sport].icon} size={13}/></span>
+  {:else}<span class="art"><SportIcon sport={a.sport} size={36}/></span>{/if}
+  <span class="badge" style:background={SPORTS[a.sport].color}><SportIcon sport={a.sport} size={13}/></span>
  </span>
  <span class="head">
   <span class="top"><b>{a.name}</b><small>{showDate ? dayLabel(a.date) + ' · ' : ''}{a.start}</small></span>

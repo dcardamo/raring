@@ -25,7 +25,7 @@ export const A = {
   if(close) store.closeSheet();
  },
  selectToday(id: string) { store.set({todayChoice:{day:ctx().calendarDate,id}},'Your choice for today'); store.closeSheet(); },
- keepGarmin(id: string) { store.set(st=>({keptGarmin:{...(st.keptGarmin??{}),[id]:true},todayChoice:{day:ctx().calendarDate,id}}),'Kept in today’s agenda · Garmin unchanged'); },
+ keepGarmin(id: string) { store.set(st=>({keptGarmin:{...(st.keptGarmin??{}),[id]:true},todayChoice:{day:ctx().calendarDate,id}}),'Kept for today'); },
  finishIntention(id: string,status: 'released'|'missed') {
   store.set(st=>({intentions:st.intentions.map(i=>i.id===id?{...i,status,link:null,history:[...i.history,[now(),status==='released'?'Let go by you':'Marked missed by you'] as [string,string]]}:i)}),status==='released'?'Let go':'Marked missed');
  },
@@ -94,7 +94,7 @@ export const A = {
   if (kind === 'exception') store.set({vitalsException: true});
   store.toast(kind === 'exception' ? 'Synced: a new notice arrived; dismissed suggestions stay dismissed.' : 'Synced: nothing you chose has changed.');
  },
- background() { store.background(); store.toast('Resumed from the background. Your choices are unchanged.'); },
+ background() { store.background(); store.toast('Resumed from the background'); },
  applyCase(id: string, cold = false) {
   const c = CASES.find(x => x.id === id);
   if (!c) return;

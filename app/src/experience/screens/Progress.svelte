@@ -66,6 +66,16 @@
 
 <RootHeader title="Progress"/>
 
+{#if strengthW.length || imW.length}
+ <div class="sec-h"><h2>Weekly goals over time</h2><button class="link" onclick={() => go('plan')}>Plan</button></div>
+ <section class="card">
+  {#if strengthW.length}<CommitmentBars weeks={strengthW} name="Strength sessions" color={SPORTS.strength.color} onWeek={id => go(id === ctx.plan?.wk ? 'plan' : `review/${id}`)}/>{/if}
+  {#if imW.length}<CommitmentBars weeks={imW} name="Intensity minutes" unit=" min" color="#36C9C6" onWeek={id => go(id === ctx.plan?.wk ? 'plan' : `review/${id}`)}/>{/if}
+ </section>
+{:else if ctx.world.activities.length}
+ <button class="add-c" onclick={() => store.openSheet('goals')}><Ring value={0} target={2} size={34} stroke={4} label="No weekly goals yet" center={false}/><span><b>Choose weekly goals</b><small>Optional · strength, Zone 2, intensity or sleep timing</small></span><Icon name="chevron" size={16}/></button>
+{/if}
+
 <div class="pctl">
  <div class="seg" role="tablist" aria-label="Period">{#each PERIODS as p}<button role="tab" aria-selected={period === p.key} onclick={() => setP(p.key)}>{p.label}</button>{/each}</div>
  <div class="pnav"><button class="iconbtn" aria-label="Previous period" disabled={!canPrev} onclick={() => move(-1)}><Icon name="arrow-left" size={16}/></button><b>{s.label}</b><button class="iconbtn" aria-label="Next period" disabled={!canNext} onclick={() => move(1)}><Icon name="arrow-right" size={16}/></button></div>
@@ -93,15 +103,6 @@
  <p class="cal-key" aria-hidden="true"><span><i class="k a"></i>Recorded</span><span><i class="k r"></i>Rest</span><span><i class="k p"></i>Paused</span><span><i class="k u"></i>Awaiting evidence</span></p>
 </section>
 
-{#if strengthW.length || imW.length}
- <div class="sec-h"><h2>Commitments over time</h2><button class="link" onclick={() => go('plan/commitments')}>Edit</button></div>
- <section class="card">
-  {#if strengthW.length}<CommitmentBars weeks={strengthW} name="Strength sessions" color={SPORTS.strength.color} onWeek={id => go(id === ctx.plan?.wk ? 'plan' : `review/${id}`)}/>{/if}
-  {#if imW.length}<CommitmentBars weeks={imW} name="Intensity minutes" unit=" min" color="#36C9C6" onWeek={id => go(id === ctx.plan?.wk ? 'plan' : `review/${id}`)}/>{/if}
- </section>
-{:else if ctx.world.activities.length}
- <button class="add-c" onclick={() => go('plan/commitments')}><Ring value={0} target={2} size={34} stroke={4} label="No commitment yet" center={false}/><span><b>Add a commitment</b><small>Optional · e.g. 2 strength sessions a week</small></span><Icon name="chevron" size={16}/></button>
-{/if}
 
 <div class="sec-h"><h2>Fitness and health</h2><button class="link" onclick={() => go('trends')}>All trends</button></div>
 <div class="tgrid">
@@ -154,7 +155,7 @@
   {#each reviewWeeks.filter(w => w.id !== latestReviewWeek(ctx)) as w}<button class="rv" onclick={() => go(`review/${w.id}`)}><span class="rv-rings">{#if w.strength && w.im}<Ring value={w.strength[0]} target={w.strength[1]} size={30} stroke={3.5} state={w.state === 'paused' ? 'paused' : w.state === 'unknown' ? 'unknown' : w.strength[0] >= w.strength[1] ? 'reached' : 'open'} center={false} label={`Strength ${w.strength[0]} of ${w.strength[1]}`}/><Ring value={w.im[0]} target={w.im[1]} size={30} stroke={3.5} state={w.state === 'paused' ? 'paused' : w.state === 'unknown' ? 'unknown' : w.im[0] >= w.im[1] ? 'reached' : 'open'} center={false} label={`Intensity ${w.im[0]} of ${w.im[1]}`}/>{:else}<Ring value={0} target={1} size={30} stroke={3.5} state="none" center={false} label="No plan yet"/>{/if}</span><b>{w.label}</b><small>{weekRange(w.from)}</small></button>{/each}
  </div>
 {/if}
-<p class="end-note">Looking for something else? <button class="link inline" onclick={() => go('explore')}>Explore</button></p>
+
 
 <style>
  .pctl{margin-top:12px}

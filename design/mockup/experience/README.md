@@ -6,8 +6,10 @@ analytics, external fonts or map tiles. Production behaviour remains unchanged.
 
 **Preview:** http://neptune:48726/ · first visit opens mixed Wednesday. **Scenario**
 selects simple, sleep-first, mixed or sparse; U01–U64; time/day; offline; sync;
-background/resume; naps; calendar coverage; Explore-tab/header variants; status
-surfaces; legacy links; and **Compare** (shipped | retired v1 | v2 captures).
+background/resume; naps; calendar coverage; status surfaces; legacy links; and
+**Compare** (shipped | retired v1 | v2 captures). Tabs: Today · Plan · Training ·
+Health · Progress; the header search sheet finds any metric. Explore is retired
+and `#explore` opens Training.
 Prototype-only choices persist in this browser. Export is disclosure-only.
 
 **Comparison provenance:** coordinator routing records identify `b965aa4` as the
@@ -56,6 +58,8 @@ or `.research/`, never committed.
 2. **U03:** “How was last night? What about tonight? Is there a pattern?”
 3. **U19:** “Find your workout and explain what counted. Find strength bests,
    a rare metric, gear, a comparison and exported data.”
+   **U41:** “What is left of this week’s goals? Deal with the session you
+   didn’t record. Is the Garmin plan yours?”
 4. **U11:** “Plan something tomorrow, then choose a rest day.” Repeat offline
    and after resume. “What changed? What didn’t?”
 5. **U30/U31:** “What does the restriction do? Is this routine compatible?”

@@ -225,6 +225,12 @@ such as "70% race-ready" or "80% healthy".
 
 ### Working navigation design
 
+> **Superseded in the prototype by checkpoint P2:** after maintainer feedback
+> that Explore read as a dump, the prototype tests five focused tabs, **Today ·
+> Plan · Training · Health · Progress**, with a header search sheet and
+> `#explore` → Training. The four-destination text below is kept as the
+> earlier hypothesis; neither has unfamiliar-user validation.
+
 Prototype **four stable destinations: Today, Plan, Progress and Explore**.
 Today, Plan and Progress describe the daily loop; Explore is the library and the
 stable escape route to any data. Explore is a tab by default because it is the
@@ -1134,7 +1140,7 @@ No merge/push/release is authorised.
   `.data` return 404). The verified server PID is kept in `.data/experience-preview.pid`.
   The first visit opens the mixed profile's Wednesday; **Scenario** selects
   profiles, U01–U64 starts, day/time, offline, sync, naps, calendar coverage,
-  the Explore tab/header variant, status surfaces, old links and a **Compare**
+  status surfaces, old links and a **Compare**
   page (synthetic shipped | v1 | v2 captures of Today, workout and Progress).
 
 #### What v2 shows
@@ -1162,8 +1168,50 @@ No merge/push/release is authorised.
 - **Plan:** a visual week (tap a day for its agenda), commitment rings with the
   current targets in words ("Since Mon 16 Nov: 2 strength · 150 min"; earlier
   targets in a sheet), ambition countdowns, one-sheet Add to my plan.
-- **Explore:** live tiles (hypnogram, readiness arc, load bars, body map, latest
-  route, vitals dots), search, and an A–Z list with sparklines and latest values.
+- **Explore** (checkpoint A only): retired in P2; see the plan-led checkpoints below.
+
+#### Plan-led checkpoints P1 and P2
+
+Maintainer feedback after checkpoint A replaced the briefing-led Today and the
+Explore library. **P1** (`8b51cb9`) rebuilt Today and Plan; **P2** completes the
+navigation and counting. Five tabs: **Today · Plan · Training · Health ·
+Progress**; Settings and a metric search sheet sit in the header; Explore is
+retired and `#explore` opens Training.
+
+- **Today:** last night's sleep and readiness first; today's session with
+  **Keep · Choose another · Rest**. Choices list Garmin's schedule (read-only),
+  your saved plans and the sports you record; Raring suggests only an effort.
+  Rest, pause and limits keep today's sessions visible as context, marked
+  "Conflicts with your limits" or "Review needed".
+- **Your day:** sleep stages, Body Battery, stress (15-minute averages in
+  Garmin's stress colours) and recorded activities/naps share one 00–24 axis
+  with tick labels and a now marker; nothing is drawn past the last upload.
+- **Day cells:** Sleep = Garmin Sleep Score (a reading); Cardio = Zone 2 minutes
+  when a Zone 2 goal exists, otherwise recorded cardio minutes; Strength =
+  sessions; a ring appears only against what that day had planned. Health = a
+  vitals status, never a score. Future days are blank except for what is
+  planned (outlined); awaiting data is dotted; rest and paused are labelled.
+- **Plan:** goals → placed sessions → **recorded / planned / not yet placed**.
+  A local intention that passes unrecorded shows **Not recorded** with
+  Reschedule and Let it go (Mark as missed only in its detail, by the person).
+  Rescheduling moves only the local intention, keeps the original date in its
+  history and adds no catch-up. A same-day, same-sport recording that isn't
+  linked makes the intention **Needs review**: it is not planned, and linking
+  never changes the recorded count. Garmin Coach and schedule have their own
+  read-only detail (`plan/garmin`, `scheduled/:id`) with coverage and
+  "Completion unknown"; "Count toward my goals" creates a local allocation.
+- **Training:** this week's sessions by sport, then Fitness (shipped Training
+  detail), Strength (body map and shipped history) and Activities (filters).
+- **Health:** Fitness Age and drivers first, 90-day trends, sleep and
+  readiness, tonight, today's readings and day timeline, private weight and
+  journal entries.
+- **Progress:** weekly goals over time leads, then the period report and the
+  existing calendar, trends, strength, records and reviews.
+
+Unit tests (`allocation.test.ts`) pin the counting rules: one count per
+recording, no inferred Zone 2, unknown is not zero, Not recorded is not Missed,
+reschedule without debt, possible matches never planned. A self-reported
+session done without the watch is not built.
 
 #### Data provenance for new visuals
 
@@ -1259,13 +1307,13 @@ unfamiliar-user performance. Typing is excluded from counts.
 | Last night | Today → Last night's sleep | 1 |
 | Tonight | Today → Tonight row (scrolls to Tonight section) | 1 |
 | Recorded workout | Today → Open workout; map/stats/HR/zones/splits present | 1 |
-| Add intention | Plan a session → Strength → Add to plan | 3, one sheet; today preselected |
+| Add intention | Choose a session → sport → Place in my week | 3; today preselected |
 | Rest | Adapt today → Rest today | 2 |
 | Pause | Adapt today → Pause training → Pause from today | 3 |
 | Resume | Paused → Pause training → Resume training → Resume as they are | 4 |
 | Link activity | Plan → Monday → local strength intention → This was my session | 3 |
-| Core areas | Any root → Explore → Sleep/Readiness/Training/Strength/Activities/Health | 2 each |
-| Rare metric | Explore → Hill score via A–Z or search | 2 from a root, plus typing for search |
+| Core areas | Any root → Health → Sleep/Readiness; Training → Strength/Activities; Training or Health tab | 1–2 each |
+| Rare metric | Search → Hill score, or Training → Hill score | 2 from a root, plus typing for search |
 | Journal | Health → Allow local journal reads → consent → Open journal | 3 after Health |
 | Export/erase | Root → Settings → Sign out and erase confirmation | 2 to confirmation; export disclosure on Settings |
 

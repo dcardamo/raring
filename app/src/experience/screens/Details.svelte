@@ -126,7 +126,7 @@
  <Card onclick={() => go('metric/weight')}><p class="small">Trend and comparisons</p></Card>
 
 {:else if key === 'health'}
- <Header title="Health" eyebrow={`${dayLabel(ctx.displayedDay)} · Garmin`} back={() => store.back()} backLabel={store.parentLabel}/>
+ <Header title={sub === 'vitals' ? 'Health readings' : 'Health'} eyebrow={`${dayLabel(ctx.displayedDay)} · Garmin`} back={() => store.back()} backLabel={store.parentLabel}/>
  {#if store.state.vitalsException}<div class="notice-strip"><Icon name="alert" size={18}/><p>Two overnight readings are outside your usual ranges</p></div>{/if}
  <HealthDetail healthData={healthView(ctx)} navigate={go} toggleJournal={on => on ? store.openSheet('consent') : (store.set(s => ({journal: {...s.journal, consent: false, open: false}}), 'Journal reads off'))} bind:journalOpen={() => store.state.journal.open, v => store.set(st => ({journal: {...st.journal, open: v}}))} bind:journalDayOpen/>
  {#if !store.state.journal.consent && store.state.journal.downloaded}<p class="small">Downloaded journal days stay on this phone and in exports you create until you erase local data.</p>{/if}
@@ -151,7 +151,7 @@
  {@render header('Trends', 'From the history on this phone')}
  <section class="card">{#each Object.entries(METRICS) as [id, m]}<button class="rowlink" onclick={() => go(`metric/${id}`)}><span class="tr-i"><Icon name={id === 'weight' ? 'scale' : 'trend-up'} size={22}/></span><span><b>{m.name}</b><small>{m.area} · {m.source}</small></span><Icon name="chevron" size={16}/></button>{/each}</section>
 
-{:else if key === 'intention' || key === 'scheduled' || route === 'plan/commitments' || key === 'review' || key === 'reviews'}
+{:else if key === 'intention' || key === 'scheduled' || route === 'plan/commitments' || route === 'plan/garmin' || key === 'review' || key === 'reviews'}
  <PlanDetail {route}/>
 {:else if key === 'adapt'}
  <Adapt {route}/>

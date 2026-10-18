@@ -50,18 +50,26 @@ a future projection, not an index-based association or a gate-time schema change
 Focused rendered regressions vary unaligned HR array lengths/order and confirm
 that full and thumbnail maps keep the same single-colour route.
 
-**Further maintainer feedback remains open:** workout alternatives and clearer
-Garmin attribution; a more legible day/week summary; allocating weekly goals to
-chosen days and workouts; rescheduling unfinished intentions; distinct local and
-Garmin/Coach plans; focused category views instead of the Explore dump. Agree
-completion semantics and navigation before the next stage-1 design pass. This
-feedback does not authorise stage 2 or a release.
+**Plan-led rebuild (maintainer feedback), still stage 1:** checkpoint P1
+(`8b51cb9`) rebuilt Today (last night first; Keep · Choose another · Rest; Garmin
+schedule, your plan and Raring effort labelled apart) and Plan (weekly goals →
+placed sessions → recorded, planned, not yet placed). Checkpoint P2 adds focused
+Training, Health and Progress tabs, retires Explore (`#explore` opens Training;
+header search sheet), a shared 00–24 day axis with a now marker, day cells with
+blank future days, the Garmin Coach detail, and the Not recorded → reschedule /
+let go journey. Counting regressions: a recording and its linked intention count
+once; a same-day same-sport possible match "needs review" and is never planned;
+Zone 2 is only recorded zone time or intended minutes the person enters; unknown
+coverage shows "awaiting data"; Not recorded is never Missed unless the person
+marks it. Pinned Opus 5.5 continued P2 from a mixed-model P1. Not recorded
+without a recording offers Reschedule and Let it go only; a self-reported
+"done without the watch" is not built. This does not authorise stage 2 or a release.
 
 **Usability gate remains pending; no stage 2 authorised.** No unfamiliar people have evaluated
 first meaning, discovery, comprehension or pressure. Three participants (including
 simple-needs and detail-oriented people) remain required. Ask Dan through the
 coordinator for explicit proceed-with-named-limited-evidence versus pause/release
-exclusivity. Explore is the fourth tab by default; the header variant stays in Scenario for comparison. Neither has unfamiliar-user validation. Later
+exclusivity. The five tabs (Today · Plan · Training · Health · Progress) have no unfamiliar-user validation. Later
 implemented-app/Android, real-data and full migration/evidence checks also remain
 unverified; no endpoint claims or shipped-feature contracts were changed.
 

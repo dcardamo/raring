@@ -88,8 +88,8 @@ class Store {
 
   // ---------- routes ----------
   validRoute(route: string): boolean {
-    if (['today', 'plan', 'progress', 'explore', 'onboarding', ...DETAIL_DOMAINS].includes(route)) return true;
-    if (['gear', 'trends', 'reviews', 'settings', 'help', 'adapt', 'surfaces', 'legacy', 'compare', 'plan/commitments', 'health/weight', 'health/journal', 'strength/muscles', 'training/performance', 'training/fitness', 'health/vitals', 'health/long-term'].includes(route)) return true;
+    if (['today', 'plan', 'progress', 'onboarding', ...DETAIL_DOMAINS].includes(route)) return true;
+    if (['gear', 'trends', 'reviews', 'settings', 'help', 'adapt', 'surfaces', 'legacy', 'compare', 'plan/commitments', 'plan/garmin', 'health/weight', 'health/journal', 'strength/muscles', 'training/performance', 'training/fitness', 'health/vitals', 'health/long-term'].includes(route)) return true;
     if (/^sleep\/(tonight|patterns|naps|stages|timing)$/.test(route)) return true;
     if (/^adapt\/(pause|limits|routines|lighter)$/.test(route)) return true;
     if (/^settings\/(export|journal)$/.test(route)) return true;
@@ -118,11 +118,9 @@ class Store {
   resolveAlias(route: string) { return route === 'review/latest' ? `review/${latestReviewWeek(this.ctx)}` : route; }
   parentOf(route: string): string {
     if (['sleep', 'readiness', 'adapt', 'settings', 'compare'].includes(route)) return 'today';
-    if (route === 'explore') return 'today';
     if (['strength', 'activities'].includes(route)) return 'training';
     if (route === 'trends') return 'progress';
     if (route === 'help') return 'settings';
-    if (route === 'training' || route === 'health') return 'today';
     if (route === 'gear') return 'training';
     if (route === 'reviews' || route.startsWith('review/')) return 'progress';
     if (route.startsWith('sleep/')) return 'sleep';
@@ -134,7 +132,7 @@ class Store {
     if (route.startsWith('workout/')) return 'activities';
     if (route.startsWith('metric/')) return METRICS[route.slice(7)].parent;
     if (route.startsWith('strength/')) return 'strength';
-    if (route.startsWith('intention/') || route.startsWith('scheduled/') || route === 'plan/commitments') return 'plan';
+    if (route.startsWith('intention/') || route.startsWith('scheduled/') || route === 'plan/commitments' || route === 'plan/garmin') return 'plan';
     return 'today';
   }
   rootTrail(r: string) { return r === 'today' ? ['today'] : ['today', r]; }
@@ -148,7 +146,6 @@ class Store {
     if (this.roots.includes(route)) return this.rootTrail(route);
     const i = from.indexOf(route);
     if (i >= 0) return from.slice(0, i + 1);
-    if (route === 'explore') return [...this.rootTrail(this.rootOf(from)), 'explore'];
     if (route === 'settings') return [...from.filter(r => r !== 'settings' && !r.startsWith('settings/')), 'settings'];
     return [...from, route];
   }
@@ -324,10 +321,10 @@ let applyCaseHook: ((id: string, cold: boolean) => void) | null = null;
 export const setCaseHook = (fn: (id: string, cold: boolean) => void) => { applyCaseHook = fn; };
 
 const TITLES: Record<string, string> = {
-  onboarding: 'Welcome', today: 'Today', plan: 'Plan', progress: 'Progress', explore: 'Explore', sleep: 'Sleep', readiness: 'Readiness', training: 'Training',
+  onboarding: 'Welcome', today: 'Today', plan: 'Plan', progress: 'Progress', sleep: 'Sleep', readiness: 'Readiness', training: 'Training',
   strength: 'Strength', activities: 'Activities', health: 'Health', gear: 'Gear', trends: 'Trends', reviews: 'Weekly reviews',
-  settings: 'Settings', help: 'Help', adapt: 'Adapt', surfaces: 'Status surfaces', legacy: 'Old links', compare: 'Compare', 'plan/commitments': 'Commitments',
-  'health/weight': 'Weight', 'health/journal': 'Journal', 'sleep/patterns': 'Sleep patterns', 'strength/muscles': 'Muscles', 'training/performance': 'Performance',
+  settings: 'Settings', help: 'Help', adapt: 'Adapt', surfaces: 'Status surfaces', legacy: 'Old links', compare: 'Compare', 'plan/commitments': 'Commitments', 'plan/garmin': 'Garmin Coach',
+  'health/weight': 'Weight', 'health/journal': 'Journal', 'health/vitals': 'Health readings', 'sleep/patterns': 'Sleep patterns', 'strength/muscles': 'Muscles', 'training/performance': 'Performance',
 };
 export function titleOf(route: string): string {
   if (TITLES[route]) return TITLES[route];

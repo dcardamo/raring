@@ -1,4 +1,5 @@
 <script lang="ts">
+ import SportIcon from '../components/SportIcon.svelte';
  import Icon from '../../lib/components/Icon.svelte';
  import HelpSheet from '../../lib/components/HelpSheet.svelte';
  import WorkoutDetail from '../../lib/screens/WorkoutDetail.svelte';
@@ -29,7 +30,7 @@
 <header class="wo-head" style:--c={SPORTS[a.sport].color}>
  <div class="wo-pic" class:flat={!view.route.length}>
   {#if view.route.length}<RouteHero route={view.route} color={SPORTS[a.sport].color} h={210} label={`${a.name} recorded route`}/>
-  {:else}<div class="wo-art" aria-hidden="true"><Icon name={SPORTS[a.sport].icon} size={110}/></div>{/if}
+  {:else}<div class="wo-art" aria-hidden="true"><SportIcon sport={a.sport} size={110}/></div>{/if}
   <div class="wo-title">
    <Glyph sport={a.sport} size={34}/>
    <div><p class="eyebrow">{SPORTS[a.sport].name} · {dayLabel(a.date)} · {a.start}</p><h1 tabindex="-1">{a.name}</h1></div>

@@ -95,20 +95,20 @@ await journey('U04 Tonight from Today', 'U03', async (page, j) => {
 });
 await journey('U05 Recorded walk: picture and numbers on Today, then its workout', 'U05', async (page, j) => {
  await expectText(page, '2.2', 'U05 distance inline'); await expectText(page, '24:00', 'U05 time inline');
- if (!await page.locator('.hero .routehero path.seg').count()) throw new Error('U05: walk has no route picture on Today');
- await j.tap('Open workout');
+ if (!await page.locator('.hero .atile .routehero').count()) throw new Error('U05: walk has no route picture on Today');
+ await page.locator('.hero .atile').click(); j.path.push('Walk card'); await settle(page);
  await expectRoute(page, 'workout/a-1204', 'U05');
  if (!await page.locator('.wo-pic .routehero').count()) throw new Error('U05: workout detail lost its map');
  await expectText(page, 'Time in zones', 'U05 zones'); await expectText(page, 'Splits', 'U05 splits'); await expectText(page, 'Heart rate', 'U05 HR chart');
  j.done('workout/a-1204', 1);
 });
 await journey('U11 Add a local intention', 'U11', async (page, j) => {
- await j.tap('Plan a session'); await j.tap('Strength'); await j.tap('Add to plan');
+ await j.tap('Choose a session'); await j.tap(/^Walk/, '.sheet'); await j.tap('Place in my week');
  await expectRoute(page, 'today', 'U11');
  const s = await page.evaluate(() => window.RaringApp.state.intentions);
  if (s.length !== 1 || s[0].date !== '2026-11-20' || s[0].time) throw new Error(`U11: unexpected intention ${JSON.stringify(s)}`);
- await expectText(page, 'Strength today', 'U11 lead now shows the intention');
- j.done('today', 'one sheet', 'activity + day (today preselected), time optional');
+ if ((await page.locator('.hero .sname').innerText()).trim() !== 'Walk') throw new Error('U11: Today does not show the chosen session');
+ j.done('today', 3, 'sport, then today preselected; time optional');
 });
 await journey('U28 Rest today, offline, resume', 'U28', async (page, j) => {
  await j.tap(/^Adapt today/); await j.tap('Rest today');
@@ -135,7 +135,7 @@ await journey('U29 Pause then explicit resume', 'U12', async (page, j) => {
  await expectText(page, 'Training is paused', 'U29 high readiness stays paused');
  await expectNoText(page, 'Plan a session', 'U29');
  await ext(page, 'plan');
- await expectText(page, 'Paused since Thu', 'U26 mid-week pause label');
+ await expectText(page, 'Training paused since Thu', 'U26 mid-week pause label');
  await set(page, {day: '2026-11-22'}); await ext(page, 'today');
  const r = counter(page, 'U29 Resume');
  await r.tap(/^Paused/); await r.tap(/^Pause training/); await r.tap('Resume training…'); await r.tap('Resume as they are');
@@ -151,16 +151,16 @@ await journey('U30 Exclude an activity and add a movement note', 'U19', async (p
  await ext(page, 'today');
  await expectText(page, 'Conflicts with your limits', 'U30 Today');
  await ext(page, 'plan');
- await expectText(page, 'Garmin · conflicts with your limits', 'U30 Plan agenda');
+ await expectText(page, 'Conflicts with your limits', 'U30 Plan agenda');
  await set(page, {day: '2026-11-21'}); await ext(page, 'plan');
- await expectText(page, 'Garmin · review needed', 'U31 Plan');
+ await expectText(page, 'Review needed', 'U31 Plan');
  await set(page, {permission: 'granted'}); await ext(page, 'surfaces');
  if ((await text(page)).includes('knee')) throw new Error('U30: movement note leaked into a status surface');
 });
 await journey('U22 Link a recorded activity to an intention', 'U15', async (page, j) => {
  await ext(page, 'plan');
- await page.locator('.wday').first().click(); j.path.push('Mon'); await settle(page);
- await j.tap(/^Strength.*07:00/); await j.tap('This was my session');
+ await page.locator('.day-cells .dc').first().click(); j.path.push('Mon'); await settle(page);
+ await j.tap(/^Your plan.*Strength.*07:00/); await j.tap('This was my session');
  await expectText(page, 'Linked by you', 'U22');
  j.done('intention/i0', 3, 'from Plan, choosing Monday first');
 });
@@ -168,56 +168,102 @@ await journey('U22b Intention left unlinked is not missed', 'U15', async (page) 
  await set(page, {day: '2026-11-17'}); await ext(page, 'intention/i0');
  await expectText(page, 'Already counts', 'U22b'); await expectNoText(page, 'missed', 'U22b');
 });
+// Five focused tabs replace Explore: every area is one tab, or a tab and one tap.
+const tabTo = (page, j, name) => page.locator('.tabs').getByRole('button', {name, exact: true}).click().then(() => { j.path.push(`${name} tab`); return settle(page); });
+const AREAS = [
+ ['Sleep', 'sleep', 'health', async (page, j) => { await tabTo(page, j, 'Health'); await j.tap(/^Last night/); }],
+ ['Readiness', 'readiness', 'health', async (page, j) => { await tabTo(page, j, 'Health'); await j.tap(/^Readiness/); }],
+ ['Training', 'training', null, async (page, j) => { await tabTo(page, j, 'Training'); }],
+ ['Strength', 'training', null, async (page, j) => { await tabTo(page, j, 'Training'); await page.getByRole('tab', {name: 'Strength', exact: true}).click(); j.path.push('Strength'); await settle(page); }],
+ ['Activities', 'training', null, async (page, j) => { await tabTo(page, j, 'Training'); await page.getByRole('tab', {name: 'Activities', exact: true}).click(); j.path.push('Activities'); await settle(page); }],
+ ['Health', 'health', null, async (page, j) => { await tabTo(page, j, 'Health'); }],
+];
 for (const [root, label] of [['today', 'Today'], ['plan', 'Plan'], ['progress', 'Progress']]) {
- for (const area of ['Sleep', 'Readiness', 'Training', 'Strength', 'Activities', 'Health']) {
+ for (const [area, want, back, go] of AREAS) {
   await journey(`Discover ${area} from ${label}`, 'U19', async (page, j) => {
    await ext(page, root);
-   await j.tap('Explore'); await j.tap(new RegExp(`^${area}`));
-   await expectRoute(page, area.toLowerCase(), `${area} from ${label}`);
-   j.done(area.toLowerCase(), 2);
-   await page.locator('.back').click(); await settle(page); await expectRoute(page, 'explore', `${area} Back`);
+   await go(page, j);
+   await expectRoute(page, want, `${area} from ${label}`);
+   if (area === 'Strength' && !await page.locator('main').getByText('Heaviest set each session', {exact: false}).count()) throw new Error('Strength section lacks the shipped history');
+   if (area === 'Activities' && !await page.locator('main .atile').count()) throw new Error('Activities section is empty');
+   j.done(want, 2);
+   if (back) { await page.locator('.back').click(); await settle(page); await expectRoute(page, back, `${area} Back`); }
   });
  }
 }
-await journey('Explore header variant still reaches every area in two taps', 'U19', async (page, j) => {
- await set(page, {navVariant: 'header'}); await ext(page, 'progress');
- await j.tap('Explore', 'main'); await j.tap(/^Health/);
- await expectRoute(page, 'health', 'header variant'); j.done('health', 2);
- await page.locator('.back').click(); await settle(page); await page.locator('.back').click(); await settle(page);
- await expectRoute(page, 'progress', 'header variant Back returns to caller');
+await journey('Explore is retired; old links land in Training', 'U19', async (page) => {
+ await ext(page, 'explore'); await expectRoute(page, 'training', 'explore alias');
+ if (await page.locator('.tabs').getByRole('button', {name: 'Explore'}).count()) throw new Error('Explore tab still present');
+ const tabs = await page.locator('.tabs button').allInnerTexts();
+ if (tabs.map(t => t.trim()).join(',') !== 'Today,Plan,Training,Health,Progress') throw new Error(`tabs: ${tabs.join(',')}`);
 });
 await journey('U50 Rare metric by search', 'U19', async (page, j) => {
- await j.tap('Explore');
+ await ext(page, 'progress');
+ await j.tap('Search metrics');
  await page.getByRole('searchbox').fill('hill'); await settle(page);
- await j.tap(/^Hill score/);
- await expectRoute(page, 'metric/hill', 'U50 search'); j.done('metric/hill', 2, 'plus typing “hill”');
+ await j.tap(/^Hill score/, '.sheet');
+ await expectRoute(page, 'metric/hill', 'U50 search'); j.done('metric/hill', 2, 'header search sheet, plus typing “hill”');
+ await page.locator('.back').click(); await settle(page); await expectRoute(page, 'progress', 'U50 search Back returns to caller');
 });
 await journey('U50 Rare metric by browsing', 'U19', async (page, j) => {
- await j.tap('Explore'); await page.getByRole('searchbox').waitFor();
- await page.locator('.az').getByRole('button', {name: /^Hill score/}).click(); j.path.push('Hill score (A–Z)'); await settle(page);
+ await tabTo(page, j, 'Training'); await j.tap(/Hill score/);
  await expectRoute(page, 'metric/hill', 'U50 browse'); j.done('metric/hill', 2);
 });
 await journey('U50 Gear', 'U19', async (page, j) => {
- await j.tap('Explore'); await j.tap(/^Gear/);
+ await tabTo(page, j, 'Training'); await j.tap(/^Gear/);
  await expectRoute(page, 'gear', 'U50 gear'); j.done('gear', 2);
 });
 await journey('U50 Comparison', 'U19', async (page, j) => {
- await j.tap('Explore'); await j.tap(/^Trends/); await j.tap(/^VO₂ max/);
+ await tabTo(page, j, 'Progress'); await j.tap('All trends'); await j.tap(/^VO₂ max/);
  await expectRoute(page, 'metric/vo2max', 'U50 compare'); await expectText(page, 'VO₂ max', 'U50 metric');
  j.done('metric/vo2max', 3, 'shipped metric detail with ranges and previous period');
 });
 await journey('Back keeps filter and scroll', 'U19', async (page, j) => {
- await j.tap('Explore'); await j.tap(/^Activities/); await j.tap('Strength');
- await page.locator('.scroll').evaluate(el => { el.scrollTop = 420; }); await settle(page);
+ await tabTo(page, j, 'Training'); await page.getByRole('tab', {name: 'Activities', exact: true}).click(); j.path.push('Activities'); await settle(page);
+ await page.locator('.filt').getByRole('button', {name: 'Strength'}).click(); j.path.push('Strength'); await settle(page);
+ await page.locator('.scroll').evaluate(el => { el.scrollTop = 500; }); await settle(page);
  const before = await page.locator('.scroll').evaluate(el => el.scrollTop);
  await page.locator('.atile').nth(1).click(); await settle(page);
  await page.goBack(); await page.waitForTimeout(400);
- const pressed = await page.locator('.chipb[aria-pressed=true]').first().innerText();
+ const pressed = await page.locator('.filt .chipb[aria-pressed=true]').first().innerText();
  const after = await page.locator('.scroll').evaluate(el => el.scrollTop);
  if (pressed.trim() !== 'Strength') throw new Error(`filter lost on browser Back: ${pressed}`);
  if (Math.abs(after - before) > 2) throw new Error(`scroll not restored: ${before} → ${after}`);
- j.done('activities', 'n/a', `browser Back restored filter and scroll ${after}px`);
+ j.done('training', 'n/a', `browser Back restored filter and scroll ${after}px`);
 }, {width: 390, height: 640});
+await journey('Not recorded → Reschedule moves only the local intention', 'U41', async (page, j) => {
+ const card = page.locator('.unfinished').filter({hasText: 'Not recorded'}).first();
+ await card.getByRole('button', {name: 'Reschedule'}).click(); j.path.push('Reschedule'); await settle(page);
+ await page.getByLabel('New date').fill('2026-11-21'); await j.tap('Move my session');
+ const st = await page.evaluate(() => window.RaringApp.state);
+ const moved = st.intentions.find(i => i.date === '2026-11-21' && i.sport === 'strength');
+ if (!moved || moved.status && moved.status !== 'open' || !moved.history.at(-1)[1].includes('Wed 18 Nov')) throw new Error(`reschedule lost its original date: ${JSON.stringify(moved)}`);
+ if (st.intentions.some(i => i.status === 'missed')) throw new Error('reschedule marked something missed');
+ await expectNoText(page, 'issed', 'no missed verdict'); await expectNoText(page, 'Not recorded', 'nothing left unfinished');
+ j.done('plan', 2, 'plus choosing the date');
+ await ext(page, `intention/${moved.id}`); await expectText(page, 'Moved from Wed 18 Nov', 'history keeps the original date');
+});
+await journey('Possible match needs review, then counts once', 'U41', async (page, j) => {
+ const amounts = () => page.locator('.goal').first().locator('.amounts b').allInnerTexts();
+ const before = await amounts();
+ await expectText(page, 'Needs review', 'review flagged');
+ await page.locator('.unfinished.review').getByRole('button', {name: 'This was my session'}).click(); j.path.push('This was my session'); await settle(page);
+ const after = await amounts();
+ if (before[0] !== after[0] || before[1] !== after[1]) throw new Error(`linking changed recorded/planned: ${before} → ${after}`);
+ await expectNoText(page, 'Needs review', 'review resolved');
+ j.done('plan', 1, `strength recorded ${after[0]}, planned ${after[1]} before and after`);
+});
+await journey('Garmin Coach is read-only and can count toward a local goal', 'U41', async (page, j) => {
+ await j.tap(/^Garmin Coach/); await expectRoute(page, 'plan/garmin', 'Coach detail');
+ await expectText(page, 'Completion unknown', 'Coach completion'); await expectText(page, 'Garmin Connect', 'managed elsewhere');
+ const before = await page.evaluate(() => window.RaringApp.state.intentions.length);
+ await page.getByRole('button', {name: 'Count toward my goals'}).first().click(); j.path.push('Count toward my goals'); await settle(page);
+ await j.tap('Place in my week');
+ const st = await page.evaluate(() => window.RaringApp.state.intentions);
+ if (st.length !== before + 1 || !st.at(-1).garminId) throw new Error('Garmin session not counted as a local allocation');
+ await expectText(page, 'Counts toward your goals', 'local overlay shown');
+ j.done('plan/garmin', 3);
+});
 await journey('U53 Journal consent, open, leave, background, opt out', 'U52', async (page, j) => {
  await j.tap('Allow local journal reads'); await j.tap('Allow journal reads'); await j.tap('Open journal');
  await expectText(page, 'Caffeine', 'U53 open'); j.done('health/journal', 3, 'consent sheet then explicit open');
@@ -238,16 +284,16 @@ await journey('U53 Journal consent, open, leave, background, opt out', 'U52', as
  await expectText(page, 'Downloaded journal days stay on this phone', 'U53 retention after opt-out');
  await expectNoText(page, 'Caffeine', 'U53 entries hidden after opt-out');
 });
-await journey('U56 Dismiss survives sync and resume; new notice is distinct', 'U56', async (page, j) => {
- await j.tap('Not today');
- await expectText(page, 'Nothing else needs you today', 'U56');
- j.done('today', 1);
+await journey('U56 A choice survives sync and resume; new notice is distinct', 'U56', async (page, j) => {
+ await j.tap('Keep');
+ const kept = async label => { if ((await page.locator('.hero .keep').innerText()).trim() !== 'Kept') throw new Error(`${label}: Keep not retained`); };
+ await kept('U56'); j.done('today', 1);
  await page.evaluate(() => window.RaringApp.sync()); await settle(page);
  await page.reload(); await page.waitForSelector('main h1'); await settle(page);
- await expectText(page, 'Nothing else needs you today', 'U56 after sync + reload');
+ await kept('U56 after sync + reload');
  await page.evaluate(() => window.RaringApp.sync('exception')); await settle(page);
- await expectText(page, 'Two overnight readings outside your usual ranges', 'U56 new exception');
- await expectText(page, 'Nothing else needs you today', 'U56 still dismissed');
+ await expectText(page, 'Two overnight readings', 'U56 new exception');
+ await kept('U56 still kept');
 });
 await journey('U64 Settings, export disclosure, sign out', 'U64', async (page, j) => {
  await j.tap('Settings'); await expectText(page, 'circumstances and notes, routine checklist and self-reports', 'U64 export');
@@ -290,7 +336,7 @@ await journey('Interrupted week walkthrough', 'U15', async (page) => {
  await page.getByRole('button', {name: 'I wound down', exact: true}).click(); await settle(page);
  await at('2026-11-18', 'morning', 'sleep'); await expectText(page, 'Wound down · self-reported', 'Wed preparation separate'); await expectText(page, '5:10', 'Wed imperfect night');
  await at('2026-11-18', 'day'); await expectText(page, 'An easier day may fit', 'Wed conflict');
- await page.getByRole('button', {name: 'Review session'}).click(); await settle(page);
+ await page.locator('.hero .session-open').click(); await settle(page); await expectRoute(page, 'scheduled/g-int', 'Wed Garmin session');
  await page.getByRole('button', {name: 'Rest today'}).click(); await settle(page);
  await at('2026-11-18', 'day'); await expectText(page, 'Intervals 6 × 3 min', 'Wed rest keeps schedule as context'); await expectText(page, 'Rest day', 'Wed rest');
  await at('2026-11-18', 'late'); if ((await page.locator('.adapt').innerText()).trim() !== 'Rest day') fail('week', 'rest did not carry past midnight');
@@ -321,7 +367,7 @@ await journey('Movement review suppresses every training prompt', 'U31', async (
 });
 await journey('Historical revisions do not time travel', 'U26', async (page) => {
  await set(page, {day: '2026-11-16'}); await ext(page, 'plan');
- await expectNoText(page, 'Reached · adjusted Thu', 'Monday before revision');
+ await expectNoText(page, 'Target 1 since Thu', 'Monday before revision');
  await ext(page, 'workout/a-1107'); await expectText(page, 'Strength session · no sets', 'old timer evidence');
  await ext(page, 'workout/a-1102'); await expectText(page, '1 of 3', 'older workout uses week 46 targets');
 });
@@ -334,9 +380,10 @@ await journey('Intention edit, timing migration and routine self-report', 'U22',
  await j.tap('Edit'); await j.tap('Tue 17'); await j.tap('Save changes');
  await expectText(page, 'Changed to Strength', 'edit history');
  await ext(page, 'plan');
- await j.tap('Add a wind-down intention'); await j.tap('Add wind-down intention');
+ await j.tap('Goals'); await page.getByLabel('Sleep timing weekly target').fill('3'); await j.tap('Save weekly goals');
  const st = await page.evaluate(() => window.RaringApp.state);
- if (!st.winddownIntention || Object.values(st.winddown).some(Boolean)) throw new Error('migration inferred wind-down completion');
+ if (st.goalVersions?.at(-1)?.targets.sleep !== 3 || Object.values(st.winddown).some(Boolean)) throw new Error('sleep timing goal inferred completion');
+ await expectText(page, 'not yet placed', 'sleep timing nights start unplaced');
  await ext(page, 'adapt/routines');
  await page.getByLabel('Exercise name').fill('Wall sit 3 × 30 s'); await j.tap('Add to checklist'); await j.tap('Mark done today');
  await expectText(page, 'Done today · Self-reported', 'routine separate from Garmin');
@@ -357,12 +404,13 @@ await journey('First commitment does not adopt old targets', 'U01', async (page)
 await journey('Movement review covers a local Run intention', 'U01', async (page, j) => {
  await set(page, {limits: {exclude: [], note: 'No deep knee bends', routines: {}}});
  await page.locator('.tabs').getByRole('button', {name: 'Plan', exact: true}).click(); await settle(page);
- await j.tap('Add to my plan'); await j.tap('Run');
+ await j.tap('Add a session'); await j.tap(/^Walk/, '.sheet');
  if (!(await page.locator('.sheet').innerText()).includes('Review needed')) throw new Error('movement note missing in non-strength planning');
- await j.tap('Add to plan');
+ await j.tap('Today', '.sheet'); await j.tap('Place in my week');
  await page.locator('.tabs').getByRole('button', {name: 'Today', exact: true}).click(); await settle(page);
- await expectText(page, 'Review your session', 'movement review before readiness');
- await j.tap('Review session'); await expectText(page, 'No deep knee bends', 'note visible on the local intention');
+ await expectText(page, 'Your limits apply', 'movement review before readiness'); await expectText(page, 'Review needed', 'session marked for review');
+ await page.locator('.hero .ctx-row').filter({hasText: 'Walk'}).click(); await settle(page);
+ await expectText(page, 'No deep knee bends', 'note visible on the local intention');
 });
 await journey('Fixed layout preserves tonight and self-report identity', 'U37', async (page) => {
  const before = await page.evaluate(() => window.RaringRules.derive(window.RaringApp.state).tonight.nightOf);
@@ -404,7 +452,7 @@ await journey('Progress periods move and compare to date', 'U27', async (page, j
 });
 
 await journey('Mobile Chrome-sized touch screen at DPR 3', 'U13', async (page, j) => {
- await page.getByRole('button', {name:'Review session',exact:true}).tap();
+ await page.locator('.hero .session-open').tap();
  await settle(page); await expectRoute(page,'scheduled/g-int','touch review');
  await page.locator('.back').tap(); await settle(page);
  await page.getByRole('button',{name:'Adapt today',exact:true}).tap(); await settle(page);
@@ -443,8 +491,8 @@ for (const [name, viewport, scale] of VIEWS) {
    const scroll = document.querySelector('.scroll');
    const tab = document.querySelector('.tabs').getBoundingClientRect();
    const tabTop = tab.width < innerWidth / 2 ? innerHeight : tab.top;
-   const lead = r(document.querySelector('.hero h2')), act = r(document.querySelector('.hero .primary')), notice = r(document.querySelector('main .notice-strip'));
-   const ribbon = r(document.querySelector('.ribbon'));
+   const lead = r(document.querySelector('.hero h2')), act = r(document.querySelector('.hero .session-actions button, .hero .atile, .hero .calm-row button, .hero .tonight-line, .hero > .secondary')), notice = r(document.querySelector('main .notice-strip'));
+   const ribbon = r(document.querySelector('.day-rows'));
    const wide = [...document.querySelectorAll('main *')].filter(el => { const b = el.getBoundingClientRect(); return el instanceof HTMLElement && b.width && el.closest('.miles, .ch-row, .wstrip') == null && (b.right > innerWidth + 1 || b.left < -1); }).map(el => el.className || el.tagName).slice(0, 3);
    const clipped = [...document.querySelectorAll('.tile, .tab, .hbtn, .adapt, .chipb, .primary, .secondary, .hero h2, .rowlink b')].filter(el => el.offsetParent && el.scrollWidth > el.clientWidth + 1).map(el => (el.className || el.tagName) + ':' + el.textContent.trim().slice(0, 20)).slice(0, 3);
    return {height: scroll.scrollHeight * z, vh: innerHeight, tabTop, actionBottom: act ? act.bottom : null, noticeBottom: notice ? notice.bottom : null, leadBeforeRibbon: lead && ribbon ? lead.top < ribbon.top : null,
@@ -464,7 +512,7 @@ for (const [name, viewport, scale] of VIEWS) {
 for (const scale of [1, 1.3, 2]) {
  const {context, page} = await fresh({width: 360, height: 780});
  await open(page, `case=U19&text=${scale}`);
- for (const r of ['plan', 'progress', 'explore', 'sleep', 'sleep/patterns', 'readiness', 'training', 'strength', 'activities', 'health', 'settings', 'adapt', 'metric/hrv', 'workout/a-1203', 'workout/a-1201', 'review/2026-W46', 'plan/commitments']) {
+ for (const r of ['plan', 'progress', 'sleep', 'sleep/patterns', 'readiness', 'training', 'strength', 'activities', 'health', 'settings', 'adapt', 'metric/hrv', 'workout/a-1203', 'workout/a-1201', 'review/2026-W46', 'plan/commitments']) {
   await ext(page, r);
   const extra = await page.evaluate(() => { const s = document.querySelector('.scroll'); return s.scrollWidth - s.clientWidth; });
   if (extra > 1) fail(`detail ${r} text${scale}`, `horizontal overflow ${extra}px`);
@@ -479,7 +527,7 @@ for (const scale of [1, 1.3, 2]) {
  const running = await page.evaluate(() => document.getAnimations().filter(a => a.playState === 'running').length);
  if (running) fail('reduced motion', `${running} animations run with reduced motion`);
  if (!(await page.locator('.hero h2').innerText()).includes('Strength target reached')) fail('reduced motion', 'information lost without animation');
- const pages = ['today', 'plan', 'progress', 'explore', 'sleep', 'readiness', 'training', 'strength', 'activities', 'health', 'settings', 'adapt', 'workout/a-1201', 'workout/a-1203', 'metric/hrv', 'review/2026-W46', 'surfaces', 'plan/commitments'];
+ const pages = ['today', 'plan', 'progress', 'sleep', 'readiness', 'training', 'strength', 'activities', 'health', 'settings', 'adapt', 'workout/a-1201', 'workout/a-1203', 'metric/hrv', 'review/2026-W46', 'surfaces', 'plan/commitments'];
  for (const p of pages) {
   await ext(page, p);
   const unnamed = await page.evaluate(() => [...document.querySelectorAll('button, a, input, select, textarea')].filter(el => {
@@ -509,6 +557,7 @@ for (const scale of [1, 1.3, 2]) {
 if (shots) {
  await mkdir(outDir, {recursive: true});
  const list = [
+  ['phone', 'U19', 'tab:training'], ['phone', 'U19', 'tab:health'], ['phone', 'U19', 'full-tab:training'], ['phone', 'U19', 'full-tab:health'], ['phone', 'U41', 'full-tab:plan'],
   ['phone', 'U11', ''], ['phone', 'U01', ''], ['phone', 'U03', ''], ['phone', 'U05', ''], ['phone', 'U08', ''], ['phone', 'U10', ''], ['phone', 'U13', ''], ['phone', 'U24', ''], ['phone', 'U29', ''], ['phone', 'U30', ''], ['phone', 'U36', ''], ['phone', 'U37', ''], ['phone', 'U12', ''],
   ['phone', 'U11', 'full'], ['phone', 'U23', 'full'], ['phone', 'U19', 'full'], ['phone', 'U26', 'full'], ['phone', 'U27', 'full'], ['phone', 'U47', 'full'], ['phone', 'U50', 'full'], ['phone', 'U42', 'full'], ['phone', 'U15', 'full'], ['phone', 'U16', 'full'],
   ['phone', 'U15', 'run'], ['phone', 'U31', 'full'], ['phone', 'U53', ''], ['phone', 'U53', 'journal-open'], ['phone', 'U44', ''], ['phone', 'U40', 'full'], ['phone', 'U18', 'full'], ['phone', 'U17', 'full'],
@@ -522,14 +571,15 @@ if (shots) {
   await open(page, `case=${id}&text=${scale}`);
   await page.locator('.case-note button').click().catch(() => {}); await settle(page);
   if (mode === 'run') await ext(page, 'workout/a-1203');
+  if (mode.includes('tab:')) await ext(page, mode.split('tab:')[1]);
   if (mode === 'year') { await page.getByRole('tab', {name: 'Year'}).click(); await settle(page); }
   if (mode === 'journal-open') { await page.getByRole('button', {name: 'Open journal', exact: true}).click(); await settle(page); }
   if (mode.startsWith('sheet:')) { await page.evaluate(n => window.RaringApp.openSheet(n), mode.slice(6)); await settle(page); }
   if (mode === 'surfaces') { await set(page, {rest: {day: '2026-11-20'}, permission: 'granted', channels: {morning: true, weekly: true, status: true, metrics: true, vitals: true, training: false}}); await ext(page, 'surfaces'); }
   await page.waitForTimeout(1300);
-  if (['full', 'surfaces', 'run', 'year'].includes(mode)) { const full = await page.evaluate(() => { const s = document.querySelector('.scroll'); return s.scrollHeight * (parseFloat(getComputedStyle(s).zoom) || 1) + 20; }); if (full > hgt) { await page.setViewportSize({width: w, height: Math.min(9000, Math.ceil(full))}); await page.waitForTimeout(400); } }
+  if (['full', 'surfaces', 'run', 'year'].includes(mode) || mode.startsWith('full-')) { const full = await page.evaluate(() => { const s = document.querySelector('.scroll'); return s.scrollHeight * (parseFloat(getComputedStyle(s).zoom) || 1) + 20; }); if (full > hgt) { await page.setViewportSize({width: w, height: Math.min(9000, Math.ceil(full))}); await page.waitForTimeout(400); } }
   const r = (await route(page)).replace(/\//g, '-');
-  await page.screenshot({path: resolve(outDir, `${size}-${id}-${mode ? mode.replace(':', '-') + '-' : ''}${r}.png`)});
+  await page.screenshot({path: resolve(outDir, `${size}-${id}-${mode ? mode.replace(/:.*/, '') + '-' : ''}${r}.png`)});
   await context.close();
  }
  // Compare captures: synthetic v2 alongside the shipped app and retired v1.

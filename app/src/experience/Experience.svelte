@@ -9,6 +9,8 @@
  import Today from './screens/Today.svelte';
  import Plan from './screens/Plan.svelte';
  import Progress from './screens/Progress.svelte';
+ import Training from './screens/Training.svelte';
+ import Health from './screens/Health.svelte';
  import Workout from './screens/Workout.svelte';
  import Details from './screens/Details.svelte';
  import Compare from './screens/Compare.svelte';
@@ -44,6 +46,8 @@
     {#if route === 'today'}<Today/>
     {:else if route === 'plan'}<Plan/>
     {:else if route === 'progress'}<Progress/>
+    {:else if route === 'training'}<Training/>
+    {:else if route === 'health'}<Health/>
         {:else if key === 'workout'}<Workout id={route.slice(8)}/>
     {:else if key === 'compare'}<Compare/>
     {:else}<Details {route}/>{/if}

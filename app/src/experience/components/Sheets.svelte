@@ -5,6 +5,7 @@
  import AllocationEditor from './AllocationEditor.svelte';
  import SessionChoices from './SessionChoices.svelte';
  import {dayEvidence} from '../lib/allocation';
+ import {search} from '../lib/searchIndex';
  import Glyph, {MARK_NAMES, type Mark} from './Glyph.svelte';
  import XIcon from './XIcon.svelte';
  import {store} from '../lib/store.svelte';
@@ -17,7 +18,7 @@
  let box = $state<HTMLElement>();
  // Add-to-plan draft: activity and day are enough; time is optional.
  let draft = $state<{sport: Sport | null, date: string, time: string}>({sport: null, date: '', time: ''});
- let ambName = $state(''), ambDate = $state(''), rescheduleDate = $state('');
+ let query = $state(''), ambName = $state(''), ambDate = $state(''), rescheduleDate = $state('');
  $effect(() => {
   if (sheet?.name === 'reschedule') rescheduleDate=store.ctx.calendarDate;
   if (sheet?.name === 'add') {
@@ -37,7 +38,7 @@
   }
  }
  const days = $derived(Array.from({length: 8}, (_, i) => addDays(ctx.calendarDate, i)));
- const TITLES: Record<string, string> = {adapt: 'Adapt today', add: 'Add to my plan', why: 'Why this?', notices: 'Notices', permission: 'Allow notifications?', winddown: 'A wind-down intention', consent: 'Allow Garmin journal reads?', resume: 'Resume training', ambition: 'Add an ambition', signout: 'Sign out and erase?', legend: 'Key', versions: 'Commitment targets', goals:'Your weekly goals', allocate:'Place in your week', choose:'Choose another', reschedule:'Reschedule locally', day:'Your day'};
+ const TITLES: Record<string, string> = {adapt: 'Adapt today', add: 'Add to my plan', why: 'Why this?', notices: 'Notices', permission: 'Allow notifications?', winddown: 'A wind-down intention', consent: 'Allow Garmin journal reads?', resume: 'Resume training', ambition: 'Add an ambition', signout: 'Sign out and erase?', legend: 'Key', versions: 'Commitment targets', search: 'Search', goals:'Your weekly goals', allocate:'Place in your week', choose:'Choose another', reschedule:'Reschedule locally', day:'Your day'};
  const LEGEND: [Mark, Sport, string][] = [['recorded', 'running', 'Recorded by your watch'], ['plan', 'running', 'Your plan, on this phone'], ['garmin', 'running', 'Garmin schedule, read-only'], ['self', 'yoga', 'Self-reported'], ['rest', 'other', 'Rest day'], ['paused', 'other', 'Paused'], ['unknown', 'other', 'Awaiting evidence']];
 </script>
 <svelte:window onkeydown={keys}/>
@@ -46,11 +47,13 @@
  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-t" bind:this={box}>
   <div class="sheet-h"><h2 id="sheet-t" tabindex="-1">{sheet.name === 'add' && sheet.arg ? 'Edit your plan' : TITLES[sheet.name] ?? ''}</h2><button class="iconbtn" aria-label="Close" onclick={() => store.closeSheet()}><Icon name="close" size={18}/></button></div>
 
-  {#if sheet.name === 'goals'}<GoalEditor/>
+  {#if sheet.name === 'search'}
+   <label class="field col"><span class="sr">Search metrics and details</span><input type="search" data-autofocus placeholder="Search metrics, sleep, exercises…" bind:value={query} autocomplete="off"/></label>
+   {#each search(query) as e}<button class="rowlink" onclick={() => { const r = e.route; query = ''; store.navigate(r); }}><Icon name="chevron" size={14}/><span><b>{e.name}</b><small>{e.area}</small></span><Icon name="arrow-right" size={14}/></button>{:else}{#if query.trim()}<p class="small">Nothing by that name. Training and Health hold every metric.</p>{/if}{/each}
+  {:else if sheet.name === 'goals'}<GoalEditor/>
   {:else if sheet.name === 'allocate'}<AllocationEditor arg={sheet.arg}/>
   {:else if sheet.name === 'choose'}<SessionChoices/>
   {:else if sheet.name === 'reschedule'}
-   <p class="small">Moves your local intention. Its original date stays in history; Garmin is unchanged.</p>
    <label class="field"><span>New date</span><input aria-label="New date" type="date" min={ctx.calendarDate} bind:value={rescheduleDate}/></label>
    <button class="primary" disabled={!rescheduleDate || rescheduleDate<ctx.calendarDate} onclick={()=>A.reschedule(sheet!.arg!,rescheduleDate)}>Move my session</button>
   {:else if sheet.name === 'day'}
@@ -77,7 +80,6 @@
    <fieldset><legend>Day</legend><div class="chiprow">{#each days as d}<button class="chipb" aria-pressed={draft.date === d} onclick={() => draft.date = d}>{d === ctx.calendarDate ? 'Today' : dayLabel(d).replace(/ \w+$/, '')}</button>{/each}</div></fieldset>
    <label class="field"><span>Time (optional)</span><input type="time" bind:value={draft.time}/></label>
    <button class="primary" disabled={!draft.sport} onclick={() => draft.sport && A.saveIntention({sport: draft.sport, date: draft.date, time: draft.time || null}, sheet?.arg)}>{sheet.arg ? 'Save changes' : 'Add to plan'}</button>
-   <p class="small center">On this phone · not sent to Garmin</p>
 
   {:else if sheet.name === 'why'}
    <ol class="trace">{#each ctx.lead.trace as t, i}<li><span class="step n">{i + 1}</span><span><b>{t.gate}</b><small>{t.result}</small></span></li>{/each}</ol>
@@ -128,6 +130,7 @@
  </div>
 {/if}
 <style>
+ .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
  .day-facts{display:grid;grid-template-columns:1fr auto;gap:12px 8px;font-size:14px;margin:16px 0}.day-facts dt{color:var(--text2)}.day-facts dd{margin:0;font-family:Outfit;font-weight:600;text-align:right}
  .big{font-size:16px}
  .list{margin-top:10px}
