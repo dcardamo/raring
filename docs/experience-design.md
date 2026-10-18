@@ -1213,6 +1213,88 @@ recording, no inferred Zone 2, unknown is not zero, Not recorded is not Missed,
 reschedule without debt, possible matches never planned. A self-reported
 session done without the watch is not built.
 
+#### P3: every element earns its place
+
+Dan's P2 review set the rule: each section must let someone **know** something,
+**decide** something or be **motivated** to do something, and they must be
+able to understand what it means. Charts need axes, units, labelled values and
+a goal or usual range where one exists. A component appears once and other
+screens link to it. This table drives P3; anything marked *cut* is removed.
+
+| Screen · section | Job | Decision |
+| --- | --- | --- |
+| Header · Adapt today | Decide: rest, ill or pause in one tap from any screen | Keep; add **Ill** (pauses goals, no catch-up) |
+| Header · search | Know: find a rare metric without a library tab | Keep |
+| Header · avatar → Profile | Know what Garmin knows; manage gear and limitations | New (P3b); gear moves here from Training |
+| Any screen · Plan your week prompt | Decide: plan this week (or review last week) now, later or never | New; dismissable, setting in the prompt and Settings, never during wind-down/late |
+| Today · last night + readiness | Know how recovered you are before choosing | Keep |
+| Today · Raring effort | Know the suggested effort level from Garmin readiness | Change: a non-interactive chevron scale, not buttons |
+| Today · session (Keep / Choose another / Rest) | Decide what to do today | Keep |
+| Today · planned today + left this week | Decide: take a backlog item today in one tap | New |
+| Today · Your day (sleep, Body Battery, stress, HR, events) | Know how the day has gone on one axis | Change: add HR row and nap Body Battery change; shown only on Today |
+| Today · recorded today | Know what counted, including naps | Change: nap rows show their Body Battery change |
+| Today · This week cells | Know progress per day toward the plan | Change: nested goal rings plus a week ring |
+| Today · tonight link | Decide when to wind down | Keep (link to Sleep · Tonight) |
+| Plan · week summary | Know where each weekly goal stands | Change: nested week ring + one line per goal (compact) |
+| Plan · goals editor | Decide targets quickly | Change: +/− steppers; sleep and zone goal kinds |
+| Plan · day cells + day agenda | Decide what goes on which day; see Garmin items inline | Change: nested rings; Garmin schedule/Coach inline with a Garmin mark |
+| Plan · backlog | Decide: do a remaining item today or place it on a day | New |
+| Plan · move a session | Decide a new future day | New: Move action with future day chips |
+| Plan · unfinished plans | Decide: link, reschedule or let go | Keep |
+| Plan · race / event goal | Motivated: see the countdown and how weeks feed it | New |
+| Plan · From Garmin box | — | Cut: Garmin items move inline |
+| Plan · Send to Garmin | Know it is planned but not available yet | New, disabled and labelled |
+| Week review → next goals | Know what was met and why; decide next week's goals | New; proposals need acceptance |
+| Training · this week chart | Know minutes per day by sport against the usual week and goals | Change (P3b): labelled values, usual-week line |
+| Training · Fitness | Know: enough or too much? improving? ready for what? | Change (P3b): compact load, three questions |
+| Training · bottom explainers | — | Cut (P3b): "?" help sheets instead |
+| Training · Strength | Know goal progress and undertrained muscle groups | Change (P3b): goal-led, cut the busy weekly-sets chart |
+| Training · Activities | Know what each activity contributed (Garmin labels) | Keep, add contribution (P3b) |
+| Training · Gear | — | Move to Profile (P3b) |
+| Health · long-term, then vitals | Know long-term direction, then today's readings | Change (P3b): vitals directly below |
+| Health · 90-day sparklines | — | Cut (P3b): charts with axes, ranges and a range picker |
+| Health · Your day duplicate | — | Cut (P3b) |
+| Sleep · Last night / Tonight tabs | Know last night; decide tonight's bedtime | Change (P3b): two tabs, Tonight is a plan |
+| Progress · Overall + Cardio/Strength/Long-term | Know progress toward goals and races, and why | Change (P3b) |
+| Progress · weekly goals over time, sleep, weekly reviews | — | Cut (P3b): replaced by rings and the week review |
+
+#### Day and week rings
+
+Each date cell shows its day number inside **nested rings, one per active
+goal**, always in this order from the outside: strength, Zone 2, Zone 4–5,
+intensity minutes, sleep timing. A day's ring is measured against that day's
+planned share: the filled arc is recorded progress, the outlined remainder is
+planned but not recorded, and there is no ring where nothing was planned and
+nothing recorded. Recorded work on a day with nothing planned fills that ring,
+because it still counts toward the week. Rest shows a moon in the centre;
+illness and pause are hatched; days awaiting data are dotted; a future day is
+an outline only where something is planned, otherwise blank. The week summary
+uses the same rings against the weekly targets, plus the average Sleep Score
+against its target when that goal is on (a Garmin reading, not a reward).
+
+#### Proposed rules: next week's goals
+
+These are proposals for `spec.md` and ship only once specified and tested.
+
+1. **Counted weeks.** A week counts toward a proposal only if its activity
+   coverage was complete and it had at most one paused or ill day. Other weeks
+   are listed with their reason (pause, illness, coverage) and ignored.
+2. **Met.** Sessions: recorded ≥ target. Minutes: recorded ≥ target. A
+   minute goal is **met comfortably** at ≥ 110 % of target.
+3. **Nudge up** only if the last two counted weeks were both met and the most
+   recent was met comfortably (sessions: met in the last three counted weeks).
+   Minutes rise by 10 % rounded to 5 (at most +20); sessions by one (at most 5).
+4. **Ease back** if two of the last three counted weeks reached under 70 %
+   of target (sessions: under target), or if the week just ended had two or
+   more ill days. Minutes fall by 10 % rounded to 5; sessions by one (not
+   below one).
+5. **Otherwise keep.** With fewer than two counted weeks, keep.
+6. **Acceptance.** Every proposal shows its reason and needs the person's
+   acceptance; "Keep all" is always offered. Nothing escalates automatically
+   and an ignored proposal changes nothing.
+7. **Sleep.** Sleep timing nights follow rules 2–5 on nights asleep by the
+   chosen time. The Sleep Score goal is never nudged: it is a reading.
+
 #### Data provenance for new visuals
 
 Prototype pictures are not proof that the data is available. Each new visual is
