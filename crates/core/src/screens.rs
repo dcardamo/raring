@@ -1906,6 +1906,7 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
     let score = sscore(&raw);
     let asleep = num(v, &[&["sleepTimeSeconds"]]).map(|s| s / 60.);
     let need = sleep_need(&raw);
+    let (naps, naps_state) = crate::naps_journal::naps(store, date);
     let stage_history: Vec<Value> = (0..30)
         .filter_map(|i| store.get("sleep", &date_sub(date, i)))
         .collect();
@@ -1935,6 +1936,8 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
     };
     SleepView {
         date: date.into(),
+        naps,
+        naps_state,
         start_local: local_time(v, &["sleepStartTimestampLocal"]),
         end_local: local_time(v, &["sleepEndTimestampLocal"]),
         score: score.map(|v| {
@@ -2514,6 +2517,11 @@ fn body_weight(store: &Store, date: &str) -> Option<BodyWeightCard> {
 }
 
 pub fn health(store: &Store, date: &str) -> HealthView {
+    health_at_calendar(store, date, date)
+}
+/// Live Health retains its sleep-day vitals while the private journal follows
+/// the actual local calendar day, as planned Training does.
+pub fn health_at_calendar(store: &Store, date: &str, calendar: &str) -> HealthView {
     let body_weight = body_weight(store, date);
     let v = store.get("fitness_age", date).unwrap_or(Value::Null);
     let drivers: Vec<Driver> = [
@@ -2619,8 +2627,11 @@ pub fn health(store: &Store, date: &str) -> HealthView {
         })
         .max_by(|a, b| a.0.total_cmp(&b.0))
         .map(|(_, lever)| lever);
+    let journal_enabled = store.settings().journal_enabled;
     HealthView {
         date: date.into(),
+        journal_enabled,
+        journal: if journal_enabled { crate::naps_journal::journal(store, calendar) } else { vec![] },
         fitness_age: age(store, date),
         lever,
         drivers,

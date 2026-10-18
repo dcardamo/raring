@@ -16,4 +16,8 @@ bedtimeLeadMin: number,
 /**
  * Let Today's leading card follow the time of day; off for shift work.
  */
-adaptiveToday: boolean, };
+adaptiveToday: boolean, 
+/**
+ * Local consent for read-only lifestyle log downloads; never used in notifications.
+ */
+journalEnabled: boolean, };

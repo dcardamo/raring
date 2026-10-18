@@ -97,6 +97,7 @@ button:disabled{cursor:default}
 }
 .card.lead{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.12)}.phase-note{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;font-size:12px;color:var(--text2)}
 .setting-note{display:block;max-width:300px;margin-top:4px;font-size:12px;line-height:1.4;color:var(--text2)}
+.nap-row,.journal-day{padding:12px 0;border-top:1px solid var(--line);display:grid;gap:4px}.nap-row:first-of-type,.journal-day:first-of-type{margin-top:12px}.nap-row span,.journal-day small{color:var(--text2)}.nap-row b{font-size:17px}.journal-entry{display:flex;justify-content:space-between;gap:14px;color:var(--text2);padding:4px 0}.journal-entry span:last-child{color:var(--text);text-align:right}.journal-more{background:none;border:0;color:var(--text);text-align:left;padding:8px 0;text-decoration:underline}
 .strength-week{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .help-list{max-width:640px}
 .help-row{display:grid;grid-template-columns:36px 1fr 16px;align-items:center;gap:12px;width:100%;min-height:52px;padding:8px 0;border:0;border-top:1px solid var(--line);background:none;text-align:left;color:var(--text3)}

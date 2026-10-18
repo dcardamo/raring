@@ -71,6 +71,21 @@ impl Store {
         }
         Ok(())
     }
+    /// The consent check and journal write are one SQLite statement. Another
+    /// Store connection changing settings serializes with this write lock;
+    /// a response arriving after opt-out cannot repopulate the cache.
+    pub fn put_journal_if_enabled(&self, key: &str, at: &str, value: &Value) -> rusqlite::Result<bool> {
+        let db = self.db.lock().unwrap();
+        let changed = db.execute(
+            "INSERT INTO raw(endpoint,key,fetched_at,json)
+             SELECT 'journal', ?1, ?2, ?3
+             WHERE EXISTS (SELECT 1 FROM settings WHERE key='settings'
+                           AND json_extract(value,'$.journalEnabled')=1)
+             ON CONFLICT(endpoint,key) DO UPDATE SET fetched_at=excluded.fetched_at,json=excluded.json",
+            params![key, at, value.to_string()],
+        )?;
+        Ok(changed != 0)
+    }
     pub fn get(&self, endpoint: &str, key: &str) -> Option<Value> {
         let db = self.db.lock().unwrap();
         db.query_row(

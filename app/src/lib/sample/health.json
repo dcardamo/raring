@@ -680,6 +680,37 @@
     "offCount": 0,
     "baselineReady": true
   },
+  "journalEnabled": true,
+  "journal": [
+    {
+      "date": "2025-10-16",
+      "state": "available",
+      "entries": [
+        {
+          "name": "Stretching",
+          "value": "Yes"
+        },
+        {
+          "name": "Morning caffeine",
+          "value": "2 COFFEE"
+        },
+        {
+          "name": "Other reading",
+          "value": null
+        }
+      ]
+    },
+    {
+      "date": "2025-10-15",
+      "state": "empty",
+      "entries": []
+    },
+    {
+      "date": "2025-10-14",
+      "state": "unavailable",
+      "entries": []
+    }
+  ],
   "heartRateDay": {
     "date": "2025-10-16",
     "resting": 54,

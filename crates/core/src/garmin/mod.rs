@@ -390,6 +390,11 @@ impl Client {
                 format!("/wellness-service/wellness/dailySleepData/{d}"),
                 vec![("date", key), ("nonSleepBufferMinutes", "60")],
             ),
+            "naps" | "journal" => {
+                NaiveDate::parse_from_str(key, "%Y-%m-%d").map_err(|_| Error::Decode)?;
+                let path = if kind == "naps" { "sleep-service/sleep/naps" } else { "lifestylelogging-service/dailyLog" };
+                (format!("/{path}/{key}"), vec![])
+            }
             "hrv" => (format!("/hrv-service/hrv/{key}"), vec![]),
             "readiness" => (
                 format!("/metrics-service/metrics/trainingreadiness/{key}"),

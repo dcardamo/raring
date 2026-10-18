@@ -227,6 +227,9 @@ pub async fn sync(
     if budget >= 20 && !report.rate_limited && report.error.is_none() {
         sync_planned(store, client, &mut report, today, budget, now).await;
     }
+    if budget >= 20 && !report.rate_limited && report.error.is_none() {
+        sync_naps_journal(store, client, &mut report, today, budget, now).await;
+    }
     if !report.rate_limited && report.error.is_none() && report.requests < budget {
         // Scan newest-first on every run. A previous run may have exhausted its budget
         // after indexing a list but before retrieving its activity details.
@@ -945,7 +948,9 @@ async fn request(
     budget: usize,
     now: DateTime<Utc>,
 ) -> Option<Got> {
-    if report.requests >= budget || report.rate_limited || report.error.is_some() {
+    if report.requests >= budget || report.rate_limited || report.error.is_some()
+        || (kind == "journal" && !store.settings().journal_enabled)
+    {
         return None;
     }
     let retry_key = format!("retry:{kind}:{key}");
@@ -988,12 +993,21 @@ async fn request(
     } else {
         client.endpoint(kind, key, name).await
     };
+    // Never treat a reply after opt-out as a journal result. Authentication
+    // and rate-limit errors still update their global backoff state.
+    if kind == "journal"
+        && !matches!(&response, Err(garmin::Error::NeedsSignIn | garmin::Error::RateLimited { .. }))
+        && !store.settings().journal_enabled
+    {
+        return None;
+    }
     match response {
         Ok(v) => {
-            let _ = store.set_cursor(&retry_key, "0");
+            if kind != "journal" { let _ = store.set_cursor(&retry_key, "0"); }
             Some(Got::Value(v))
         }
         Err(garmin::Error::NotFound) => Some(Got::Absent),
+        Err(garmin::Error::Http(403)) if matches!(kind, "naps" | "journal") => Some(Got::Absent),
         Err(e @ (garmin::Error::Decode | garmin::Error::Http(_))) => {
             report.data_failures += 1;
             let _ = store.set_cursor(&retry_key, &(now.timestamp() + 3600).to_string());
@@ -1024,7 +1038,13 @@ async fn fetch(
         // Cache absence so optional device metrics do not consume backfill budget forever.
         Some(Got::Absent) => (Value::Null, false),
     };
-    if store.put(kind, key, &now.to_rfc3339(), &value).is_err() {
+    if kind == "journal" {
+        match store.put_journal_if_enabled(key, &now.to_rfc3339(), &value) {
+            Ok(true) => { let _ = store.set_cursor(&format!("retry:{kind}:{key}"), "0"); }
+            Ok(false) => return false,
+            Err(_) => { report.error = Some("local storage failed".into()); return false }
+        }
+    } else if store.put(kind, key, &now.to_rfc3339(), &value).is_err() {
         report.error = Some("local storage failed".into());
         return false;
     }
@@ -1035,6 +1055,186 @@ async fn fetch(
         }
     }
     true
+}
+
+/// Recent nap reads and consented journal reads share the regular budget and
+/// retry/backoff path. Cached empty days obey the same cadence as populated days.
+async fn sync_naps_journal(store: &Store, client: &Client, report: &mut SyncReport, today: NaiveDate, budget: usize, now: DateTime<Utc>) {
+    for (kind, days) in [("naps", 2), ("journal", 7)] {
+        for i in 0..days {
+            if kind == "journal" && !store.settings().journal_enabled { return }
+            let key = date(today - Duration::days(i));
+            let cadence = if i == 0 { 6 * 3600 } else if kind == "journal" || i == 1 { 24 * 3600 } else { 0 };
+            let recent = store.fetched_at(kind, &key)
+                .and_then(|t| DateTime::parse_from_rfc3339(&t).ok())
+                .is_some_and(|t| cadence == 0 || now.timestamp() - t.timestamp() < cadence);
+            if recent { continue }
+            if !fetch(store, client, report, kind, &key, None, budget, now).await { return }
+        }
+    }
+}
+
+#[cfg(test)]
+mod naps_journal_tests {
+    use super::*;
+    #[tokio::test]
+    async fn journal_never_requests_before_local_consent() {
+        let store = Store::open(":memory:").unwrap();
+        let today = Local::now().date_naive();
+        let now = Utc::now();
+        for i in 0..2 {
+            store.put("naps", &date(today - Duration::days(i)), &now.to_rfc3339(), &serde_json::json!([])).unwrap();
+        }
+        let client = Client::with_urls(Tokens {
+            access_token: "synthetic".into(), refresh_token: "synthetic".into(),
+            client_id: "synthetic".into(), expires_at: now + Duration::days(1),
+        }, "http://127.0.0.1:1", "http://127.0.0.1:1", std::time::Duration::ZERO).unwrap();
+        let mut report = SyncReport::default();
+        sync_naps_journal(&store, &client, &mut report, today, 20, now).await;
+        assert_eq!(report.requests, 0);
+        let mut settings = store.settings();
+        settings.journal_enabled = true;
+        store.set_settings(&settings).unwrap();
+        sync_naps_journal(&store, &client, &mut report, today, 20, now).await;
+        assert_eq!(report.requests, 1);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn journal_rate_limit_still_sets_global_backoff_after_opt_out() {
+        use std::{io::{Read, Write}, net::TcpListener, sync::{Arc, mpsc}};
+        let store = Arc::new(Store::open(":memory:").unwrap());
+        let mut settings = store.settings();
+        settings.journal_enabled = true;
+        store.set_settings(&settings).unwrap();
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let client = Arc::new(Client::with_urls(Tokens {
+            access_token: "synthetic".into(), refresh_token: "synthetic".into(),
+            client_id: "synthetic".into(), expires_at: Utc::now() + Duration::days(1),
+        }, &url, &url, std::time::Duration::ZERO).unwrap());
+        let (arrived_tx, arrived_rx) = mpsc::channel();
+        let (release_tx, release_rx) = mpsc::channel();
+        let server = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut buf = [0; 2048];
+            assert!(stream.read(&mut buf).unwrap() > 0);
+            arrived_tx.send(()).unwrap();
+            release_rx.recv_timeout(std::time::Duration::from_secs(5)).unwrap();
+            stream.write_all(b"HTTP/1.1 429 Too Many Requests\r\nRetry-After: 15\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").unwrap();
+        });
+        let now = Utc::now();
+        let day = Local::now().date_naive().to_string();
+        let worker = tokio::spawn({
+            let store = Arc::clone(&store); let client = Arc::clone(&client); let day = day.clone();
+            async move {
+                let mut report = SyncReport::default();
+                fetch(&store, &client, &mut report, "journal", &day, None, 1, now).await;
+                report
+            }
+        });
+        arrived_rx.recv_timeout(std::time::Duration::from_secs(5)).unwrap();
+        settings.journal_enabled = false;
+        store.set_settings(&settings).unwrap();
+        release_tx.send(()).unwrap();
+        let report = worker.await.unwrap();
+        server.join().unwrap();
+        assert!(report.rate_limited);
+        assert_eq!(report.data_failures, 0);
+        assert_eq!(report.stored, 0);
+        assert!(store.cursor("backoff_until").and_then(|s| s.parse::<i64>().ok()).is_some_and(|t| t > now.timestamp()));
+        assert_eq!(store.get("journal", &day), None);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn opt_out_during_reply_discards_it_across_store_connections() {
+        use std::{io::{Read, Write}, net::TcpListener, sync::{Arc, mpsc}};
+        let path = std::env::temp_dir().join(format!("raring-journal-race-{}-{}.sqlite", std::process::id(), Utc::now().timestamp_nanos_opt().unwrap()));
+        let store = Arc::new(Store::open(&path).unwrap());
+        let other = Store::open(&path).unwrap();
+        let now = Utc::now();
+        let today = Local::now().date_naive();
+        for i in 0..2 {
+            store.put("naps", &date(today - Duration::days(i)), &now.to_rfc3339(), &serde_json::json!([])).unwrap();
+        }
+        let mut settings = other.settings();
+        settings.journal_enabled = true;
+        other.set_settings(&settings).unwrap();
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let client = Arc::new(Client::with_urls(Tokens {
+            access_token: "synthetic".into(), refresh_token: "synthetic".into(),
+            client_id: "synthetic".into(), expires_at: now + Duration::days(1),
+        }, &url, &url, std::time::Duration::ZERO).unwrap());
+        let (arrived_tx, arrived_rx) = mpsc::channel();
+        let (release_tx, release_rx) = mpsc::channel();
+        let server = std::thread::spawn({
+            let listener = listener.try_clone().unwrap();
+            move || {
+                let (mut stream, _) = listener.accept().unwrap();
+                stream.set_read_timeout(Some(std::time::Duration::from_secs(5))).unwrap();
+                let mut buf = [0; 2048];
+                let size = stream.read(&mut buf).unwrap();
+                arrived_tx.send(String::from_utf8_lossy(&buf[..size]).lines().next().unwrap().to_owned()).unwrap();
+                release_rx.recv_timeout(std::time::Duration::from_secs(5)).unwrap();
+                let body = r#"{"dailyLogsReport":[]}"#;
+                write!(stream, "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).unwrap();
+            }
+        });
+        let worker = tokio::spawn({
+            let store = Arc::clone(&store); let client = Arc::clone(&client);
+            async move {
+                let mut report = SyncReport::default();
+                sync_naps_journal(&store, &client, &mut report, today, 20, now).await;
+                report
+            }
+        });
+        assert!(arrived_rx.recv_timeout(std::time::Duration::from_secs(5)).unwrap().contains("/lifestylelogging-service/dailyLog/"));
+        settings.journal_enabled = false;
+        other.set_settings(&settings).unwrap();
+        release_tx.send(()).unwrap();
+        let report = worker.await.unwrap();
+        server.join().unwrap();
+        assert_eq!(report.requests, 1);
+        assert_eq!(report.stored, 0);
+        assert_eq!(report.data_failures, 0);
+        assert!(report.error.is_none());
+        assert_eq!(store.get("journal", &date(today)), None);
+        assert_eq!(store.fetched_at("journal", &date(today)), None);
+        assert_eq!(store.cursor(&format!("retry:journal:{}", date(today))), None);
+        listener.set_nonblocking(true).unwrap();
+        assert!(listener.accept().is_err(), "opt-out must stop remaining journal requests");
+
+        settings.journal_enabled = true;
+        other.set_settings(&settings).unwrap();
+        let listener2 = listener.try_clone().unwrap();
+        let next = std::thread::spawn(move || {
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+            for _ in 0..2 {
+                let (mut stream, _) = loop {
+                    assert!(std::time::Instant::now() < deadline, "re-enabled journal did not fetch");
+                    match listener2.accept() {
+                        Ok(stream) => break stream,
+                        Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => std::thread::yield_now(),
+                        Err(e) => panic!("{e}"),
+                    }
+                };
+                let mut buf = [0; 2048];
+                assert!(stream.read(&mut buf).unwrap() > 0);
+                let body = r#"{"dailyLogsReport":[]}"#;
+                write!(stream, "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).unwrap();
+            }
+        });
+        let mut report = SyncReport::default();
+        sync_naps_journal(&store, &client, &mut report, today, 2, now).await;
+        next.join().unwrap();
+        assert_eq!(report.requests, 2);
+        assert_eq!(report.stored, 2);
+        assert!(store.fetched_at("journal", &date(today)).is_some());
+        assert!(store.fetched_at("journal", &date(today - Duration::days(1))).is_some());
+        drop(client); drop(store); drop(other); drop(listener);
+        let _ = std::fs::remove_file(&path);
+        for extension in ["-wal", "-shm"] { let _ = std::fs::remove_file(format!("{}{}", path.display(), extension)); }
+    }
 }
 
 /// One explicitly opened older day. Cached empty days stay cached; transient

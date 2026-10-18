@@ -4,6 +4,7 @@ mod export;
 pub mod garmin;
 mod gear;
 pub mod notifications;
+mod naps_journal;
 pub mod phase;
 pub mod plan;
 pub mod planned;
@@ -116,6 +117,9 @@ impl Raring {
     }
     pub fn health(&self, date: &str) -> view::HealthView {
         screens::health(&self.store, date)
+    }
+    pub fn health_live_at(&self, display_date: &str, now: DateTime<Local>) -> view::HealthView {
+        screens::health_at_calendar(&self.store, display_date, &now.date_naive().to_string())
     }
     pub fn heart_rate_day(&self, date: &str) -> view::HeartRateDay {
         screens::heart_rate_day(&self.store, date)

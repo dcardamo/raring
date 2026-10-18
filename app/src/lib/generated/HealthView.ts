@@ -4,6 +4,7 @@ import type { Driver } from "./Driver";
 import type { FitnessAgeCard } from "./FitnessAgeCard";
 import type { HeartRateDay } from "./HeartRateDay";
 import type { IntensityCard } from "./IntensityCard";
+import type { JournalDay } from "./JournalDay";
 import type { Lever } from "./Lever";
 import type { StressCard } from "./StressCard";
 import type { VitalsCard } from "./VitalsCard";
@@ -12,7 +13,7 @@ export type HealthView = {
 /**
  * Local date, YYYY-MM-DD.
  */
-date: string, fitnessAge: FitnessAgeCard, lever: Lever | null, drivers: Array<Driver>, vitals: VitalsCard, stress: StressCard, heartRateDay: HeartRateDay, bodyWeight: BodyWeightCard | null, 
+date: string, journal: Array<JournalDay>, journalEnabled: boolean, fitnessAge: FitnessAgeCard, lever: Lever | null, drivers: Array<Driver>, vitals: VitalsCard, stress: StressCard, heartRateDay: HeartRateDay, bodyWeight: BodyWeightCard | null, 
 /**
  * This week's intensity minutes, when Garmin reported any day of it.
  */

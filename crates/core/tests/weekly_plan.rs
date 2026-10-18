@@ -606,7 +606,11 @@ async fn garmin_intensity_weeks_are_read_daily() {
     assert_eq!(store.get("intensity_weeks", "me"), Some(rows));
 
     // Within a day the run moves on to activities without asking again.
-    // Isolate the intensity-week cadence from the latest threshold reads.
+    // Isolate the intensity-week cadence from latest-only and nap reads.
+    for i in 0..2 {
+        let day = (afternoon.date_naive() - chrono::Duration::days(i)).to_string();
+        store.put("naps", &day, &chrono::Utc::now().to_rfc3339(), &json!([])).unwrap();
+    }
     for kind in ["lactate_threshold", "running_power_threshold", "cycling_ftp", "acclimation"] {
         store.set_cursor(&format!("{kind}_checked"), &chrono::Utc::now().timestamp().to_string()).unwrap();
     }

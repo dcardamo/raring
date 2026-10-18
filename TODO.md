@@ -200,8 +200,9 @@ separate export. The offline JSON/CSV export does not make network requests.
 
 Each is a tile or detail in an existing screen first.
 
-18. **Naps and journal**: `/sleep-service/sleep/naps/{d}`; the lifestyle
-    log (`/lifestylelogging-service/dailyLog/{d}`) as the planned journal.
+18a. **Journal populated-shape follow-up**: when a consenting account has
+     entries, compare Garmin's actual fields/units with the community example,
+     then expand only verified display values. Never create an entry for QA.
 19. **Women's health (opt-in)**: cycle and pregnancy views
     (`/periodichealth-service/menstrualcycle/…`) as context on readiness and
     vitals. Sensitive: off by default, excluded from notifications unless
@@ -282,6 +283,30 @@ faces, screens, sensors and audio prompts stay in Connect.
 
 ## Done
 
+- **18. Naps and journal, read-only** (commit "Show Garmin naps and consented journal").
+  Sleep shows Garmin's separately recorded naps without changing main-sleep
+  totals; Health shows a seven-day lifestyle log only after local consent and
+  an explicit open action. GET `/sleep-service/sleep/naps/{d}` returned an
+  array (both empty and populated responses were seen): populated rows have
+  `napStartTimestampGMT`/`napEndTimestampGMT` (UTC wall strings),
+  `napStartTimeOffset`/`napEndTimeOffset` (seconds), `napTimeSec` (seconds),
+  `napFeedback` and `napSource`. GET
+  `/lifestylelogging-service/dailyLog/{d}` returned `calendarDate`,
+  `completionStats` and null `dailyLogsReport` in checked responses; null is
+  unavailable, not an empty journal. Community examples include report rows
+  with `name`, `logStatus` YES/NO and optional `details` with `amount` and
+  `subTypeName`; populated rows on this account are still unverified. Reads
+  use the shared budget, pacing and 429 backoff: recent naps and, after
+  consent only, seven journal days at six-hour/twenty-four-hour cadences,
+  with cached empty and unavailable responses. Consent is checked before
+  each journal request and atomically with caching each reply, including
+  across database connections; opt-out discards in-flight results without
+  clearing previously downloaded logs. Live Health journals follow the actual
+  local day across the sleep-day handover, while historical views keep the
+  requested date. Nap cards show dated endpoints across midnight and label
+  missing endpoints. Exports still include saved logs after opt-out until
+  local data is erased. Synthetic delayed-response, date-boundary and browser
+  consent/retention cases cover these constraints. No Garmin writes.
 - **17. Thresholds and acclimation** (commit "Show Garmin thresholds in Training").
   Training shows only recorded Garmin running lactate-threshold HR and pace,
   running threshold power, cycling FTP, heat percentage and acclimated

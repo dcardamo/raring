@@ -438,5 +438,26 @@
     "tip": "Your sleep lines up with Garmin's optimal window. Keep waking near 06:36.",
     "wakeNights": 14,
     "stale": false
-  }
+  },
+  "napsState": "available",
+  "naps": [
+    {
+      "startLocal": "2025-10-15T23:45:00",
+      "endLocal": "2025-10-16T00:15:00",
+      "durationMin": 30,
+      "feedback": null
+    },
+    {
+      "startLocal": "2025-10-16T13:10:00",
+      "endLocal": "2025-10-16T13:35:00",
+      "durationMin": 25,
+      "feedback": null
+    },
+    {
+      "startLocal": null,
+      "endLocal": "2025-10-16T16:30:00",
+      "durationMin": 15,
+      "feedback": null
+    }
+  ]
 }

@@ -27,6 +27,38 @@ try {
   await exportPage.close();
  }
  console.log('Export settings at 390/700/1100 and preview handoff: passed');
+ const privatePage=await browser.newPage({viewport:{width:390,height:844}});
+ await privatePage.goto(`${url}/?fixture=private#sleep`);
+ await privatePage.getByText('Wed 15 Oct 23:45 – Thu 16 Oct 00:15',{exact:true}).waitFor();
+ await privatePage.getByText('Start date/time unavailable – Thu 16 Oct 16:30',{exact:true}).waitFor();
+ await privatePage.screenshot({path:resolve(output,'naps-dated-midnight-390.png'),fullPage:true});
+ await privatePage.getByRole('navigation').getByRole('button',{name:'Health'}).click();
+ await privatePage.getByRole('button',{name:'Allow local journal reads'}).waitFor();
+ assert.equal(await privatePage.getByText('Stretching',{exact:true}).count(),0,'journal entries hidden before opt-in');
+ await privatePage.getByRole('button',{name:'Settings',exact:true}).click();
+ await privatePage.getByText('Already downloaded logs remain on this device and in future exports until you erase local data.',{exact:false}).waitFor();
+ assert.equal(await privatePage.locator('.card').filter({has:privatePage.getByRole('heading',{name:'Notifications',exact:true})}).locator('input[type=checkbox]').count(),6,'journal consent is not a notification switch');
+ const consent=privatePage.locator('.card').filter({hasText:'Journal privacy'}).locator('input[type=checkbox]');
+ assert.equal(await consent.isChecked(),false,'consent defaults off');
+ await privatePage.getByRole('navigation').getByRole('button',{name:'Health'}).click();
+ await privatePage.getByRole('button',{name:'Allow local journal reads'}).click();
+ await privatePage.getByRole('button',{name:'Open journal'}).click();
+ await privatePage.getByText('Stretching',{exact:true}).waitFor();
+ await privatePage.screenshot({path:resolve(output,'journal-consented-390.png'),fullPage:true});
+ await privatePage.getByRole('button',{name:'Settings',exact:true}).click();
+ const enabled=privatePage.locator('.card').filter({hasText:'Journal privacy'}).locator('input[type=checkbox]');
+ assert.equal(await enabled.isChecked(),true);
+ await enabled.uncheck();
+ await privatePage.getByText('Previously downloaded journal logs are included even if journal reads are now off',{exact:false}).waitFor();
+ await privatePage.getByRole('navigation').getByRole('button',{name:'Health'}).click();
+ await privatePage.getByRole('button',{name:'Allow local journal reads'}).waitFor();
+ assert.equal(await privatePage.getByText('Stretching',{exact:true}).count(),0,'cached private entries hidden on opt-out');
+ await privatePage.screenshot({path:resolve(output,'journal-disabled-390.png'),fullPage:true});
+ await privatePage.getByRole('button',{name:'Allow local journal reads'}).click();
+ await privatePage.getByRole('button',{name:'Open journal'}).click();
+ await privatePage.getByText('Stretching',{exact:true}).waitFor();
+ await privatePage.close();
+ console.log('Dated naps, opt-in/out cache, retained journal export copy and notification separation: passed');
  page.on('pageerror',e=>errors.push(e.message));
  for(const width of [390,700,1100]){
   const watch=await browser.newPage({viewport:{width,height:844}});

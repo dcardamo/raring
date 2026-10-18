@@ -245,7 +245,11 @@ async fn strength(
 #[tauri::command]
 async fn health(app: tauri::AppHandle, date: Option<String>) -> Result<HealthView, String> {
     read_view(app, move |core| {
-        Ok(core.health(&date.unwrap_or_else(|| core.current_date(Local::now()))))
+        let now = Local::now();
+        Ok(match date {
+            Some(day) => core.health(&day),
+            None => core.health_live_at(&core.current_date(now), now),
+        })
     })
     .await
 }

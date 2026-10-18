@@ -633,12 +633,55 @@ pub struct NightWindow {
     pub wake_hour: f64,
 }
 
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum ReadState {
+    #[default]
+    Unknown,
+    Unavailable,
+    Stale,
+    Empty,
+    Available,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct Nap {
+    pub start_local: Option<String>,
+    pub end_local: Option<String>,
+    pub duration_min: Option<f64>,
+    pub feedback: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct JournalEntry {
+    pub name: String,
+    pub value: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct JournalDay {
+    pub date: String,
+    pub state: ReadState,
+    pub entries: Vec<JournalEntry>,
+}
+
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct SleepView {
     /// The morning the night ended, YYYY-MM-DD.
     pub date: String,
+    #[serde(default)]
+    pub naps: Vec<Nap>,
+    #[serde(default)]
+    pub naps_state: ReadState,
     pub start_local: Option<String>,
     pub end_local: Option<String>,
     pub score: Option<Gauge>,
@@ -1121,6 +1164,10 @@ pub struct BodyWeightCard {
 pub struct HealthView {
     /// Local date, YYYY-MM-DD.
     pub date: String,
+    #[serde(default)]
+    pub journal: Vec<JournalDay>,
+    #[serde(default)]
+    pub journal_enabled: bool,
     pub fitness_age: FitnessAgeCard,
     pub lever: Option<Lever>,
     pub drivers: Vec<Driver>,
@@ -1214,6 +1261,9 @@ pub struct Settings {
     /// Let Today's leading card follow the time of day; off for shift work.
     #[serde(default = "default_adaptive_today")]
     pub adaptive_today: bool,
+    /// Local consent for read-only lifestyle log downloads; never used in notifications.
+    #[serde(default)]
+    pub journal_enabled: bool,
 }
 
 fn default_bedtime_lead() -> u32 {
@@ -1234,6 +1284,7 @@ impl Default for Settings {
             notify_bedtime: false,
             bedtime_lead_min: default_bedtime_lead(),
             adaptive_today: default_adaptive_today(),
+            journal_enabled: false,
         }
     }
 }

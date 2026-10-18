@@ -38,7 +38,8 @@ The visual reference is [design/mockup](../design/mockup/): open
   URI and schedules cleanup before writing, 24 hours after export creation,
   including an interrupted partial file; desktop saves it in Downloads.
   An export leaves the phone only when the user chooses to share it. FIT
-  originals are not downloaded as part of this offline export.
+  originals are not downloaded as part of this offline export. A user-created
+  export may include stored opted-in journal records; it never includes tokens.
 - **Its own identity.** Own name, palette, icons and copy. Garmin's metric
   names describe Garmin data. Nothing copied from other fitness apps.
 
@@ -171,6 +172,16 @@ optional after sign-in.
 - Stage timeline (awake, REM, light, deep) and a stage bar with each stage's
   change against your usual.
 - Overnight tiles with lines: HRV, heart rate, respiration, SpO2.
+- **Recorded naps** from Garmin's nap endpoint: dated local start/end from
+  GMT timestamps plus per-end offsets (seconds), `napTimeSec` in seconds,
+  and optional Garmin `napFeedback` without interpreting its enum. Display
+  both local dates with the clocks, including when a nap crosses midnight;
+  label missing start/end without reconstructing them from duration.
+  Show duration separately from main overnight sleep; never add it to sleep
+  score, asleep minutes or Raring's sleep plan. Garmin's own `napAdjustment`
+  for tonight's sleep need is distinct. An empty array is no recorded naps;
+  absent, failed and stale reads have separate neutral labels. Other populated
+  nap fields and feedback meanings require further verification before display.
 - **Consistency**: 14-night chart with your usual bed and wake windows
   shaded, and Garmin's seven-day average bedtime and wake time above it when
   synced. No rhythm score or chronotype of Raring's own.
@@ -276,6 +287,22 @@ Questions go to GitHub; the address is shown as text.
 
 ### Health
 
+- **Garmin journal**: a private, short dated view of the last seven lifestyle
+  log days, opened explicitly in Health and off by default until local consent.
+  Live Health anchors those seven dates to the actual local calendar day even
+  when its vitals still show the retained sleep day; explicit historical Health
+  reads remain anchored to their requested date. Only consented syncs fetch
+  the daily log: check before every request, and atomically check consent
+  again when caching each reply. Closing or leaving Health hides entries.
+  Garmin's `dailyLogsReport` rows may carry `name`, `logStatus`
+  (YES/NO) and `details` with `amount` and `subTypeName` (no generic unit).
+  A null report or unknown log status is not a recorded zero/no; completion
+  tracking statistics do not prove individual entries. Populated report rows
+  are known from community examples, not verified on this account. No new
+  scoring or correlations. No journal content in notifications or lock-screen
+  views. Opting out stops new journal reads and hides stored rows but does not
+  erase them; future user-created exports still include previously downloaded
+  logs until local data is erased.
 - **Vitals first**: Garmin's overnight average heart rate (labeled Sleep HR,
   not resting HR), HRV, respiration, SpO2 and skin-temperature change as
   tappable tiles when Health Status is available. Without it, use the
@@ -805,8 +832,8 @@ Sent by the phone itself.
 4. Health, notifications and the weekly check-in, then a screenshot review.
 5. Polish, first APK release, and the repo goes public after a final review.
 
-After v1: iOS, desktop apps, web app, a home-screen widget, and a journal (Garmin's
-lifestyle logging is readable through the same API).
+After v1: iOS, desktop apps, web app and a home-screen widget. Garmin
+lifestyle logs are available read-only in Health with explicit local consent.
 
 ## Testing
 
