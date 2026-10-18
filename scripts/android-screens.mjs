@@ -7,9 +7,17 @@ import {mkdirSync, writeFileSync} from 'node:fs';
 const adb=(...args)=>execFileSync('adb',args,{encoding:'utf8'});
 const pid=adb('shell','pidof','app.raring.debug').trim();
 adb('forward','tcp:9229',`localabstract:webview_devtools_remote_${pid}`);
-const pages=await (await fetch('http://127.0.0.1:9229/json')).json();
-const page=pages.find(x=>x.type==='page'&&x.url.startsWith('http://tauri.localhost/'));
-if(!page)throw Error('app page not found: '+JSON.stringify(pages));
+const pageReadyBy=Date.now()+20_000;
+let pages=[],page;
+while(Date.now()<pageReadyBy){
+ try{
+  pages=await (await fetch('http://127.0.0.1:9229/json')).json();
+  page=pages.find(x=>x.type==='page'&&x.url.startsWith('http://tauri.localhost/'));
+ }catch{}
+ if(page)break;
+ await new Promise(resolve=>setTimeout(resolve,100));
+}
+if(!page)throw Error('app page did not become ready: '+JSON.stringify(pages));
 const ws=new WebSocket(page.webSocketDebuggerUrl);
 await new Promise((ok,no)=>{ws.onopen=ok;ws.onerror=no});
 let id=0;const waiters=new Map();
