@@ -28,7 +28,7 @@
 <button class="back" onclick={() => store.back()}><Icon name="back" size={20}/> <span>{store.parentLabel}</span></button>
 <header class="wo-head" style:--c={SPORTS[a.sport].color}>
  <div class="wo-pic" class:flat={!view.route.length}>
-  {#if view.route.length}<RouteHero route={view.route} samples={view.heartRate} floors={view.zoneFloors} color={SPORTS[a.sport].color} h={210} label={`${a.name} route, coloured by heart-rate zone`}/>
+  {#if view.route.length}<RouteHero route={view.route} color={SPORTS[a.sport].color} h={210} label={`${a.name} recorded route`}/>
   {:else}<div class="wo-art" aria-hidden="true"><Icon name={SPORTS[a.sport].icon} size={110}/></div>{/if}
   <div class="wo-title">
    <Glyph sport={a.sport} size={34}/>
@@ -36,9 +36,6 @@
    {#if a.sport === 'strength'}<button class="avatar help-button" aria-label="Help" onclick={() => help = true}><Icon name="help" size={20}/></button>{/if}
   </div>
  </div>
- {#if view.route.length}
-  <p class="zone-key"><span>Route colour: heart-rate zone</span>{#each colors.z as z, i}<i style:background={i ? z : SPORTS[a.sport].color} title={`Zone ${i + 1}`}></i>{/each}</p>
- {/if}
 </header>
 
 <section class="counted" aria-labelledby="counted-t">
@@ -65,9 +62,6 @@
  .wo-title>div{flex:1;min-width:0}
  .wo-title h1{margin:2px 0 0;font-size:28px;text-shadow:0 2px 12px rgba(0,0,0,.6)}
  .wo-title .eyebrow{color:var(--text2);letter-spacing:.08em}
- .zone-key{display:flex;align-items:center;gap:5px;margin:10px 4px 0;font-size:11px;color:var(--text3)}
- .zone-key span{margin-right:4px}
- .zone-key i{width:14px;height:6px;border-radius:3px}
  .counted{margin-top:14px}
  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
  .ch-row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}

@@ -6,7 +6,7 @@
  import Ring from './Ring.svelte';
  import {SPORTS} from '../lib/sports';
  import {contribution, type Ctx} from '../lib/rules';
- import {routeFor, hrTrace, setsFor, type Activity} from '../lib/world';
+ import {routeFor, setsFor, type Activity} from '../lib/world';
  import {strengthSession} from '../lib/views';
  import {elapsed} from '../../lib/format';
  import {dayLabel} from '../lib/dates';
@@ -30,7 +30,7 @@
 </script>
 <button class="atile" onclick={() => navigate(`workout/${a.id}`)} aria-label={`${a.name}, ${showDate ? dayLabel(a.date) + ' ' : ''}${a.start}. ${stats.map(s => `${s[2]} ${s[0]}${s[1] ? ' ' + s[1] : ''}`).join(', ')}. Garmin: ${a.timerOnly ? 'no sets recorded' : `${a.benefit} benefit, aerobic effect ${a.aerobic.toFixed(1)}`}. Open workout`}>
  <span class="pic" style:--c={SPORTS[a.sport].color}>
-  {#if route.length}<RouteHero {route} samples={hrTrace(a)} floors={[118, 136, 150, 163]} color={SPORTS[a.sport].color} w={120} h={96} compact label={`${a.name} route`}/>
+  {#if route.length}<RouteHero {route} color={SPORTS[a.sport].color} w={120} h={96} compact label={`${a.name} route`}/>
   {:else if session?.setsRecorded}<span class="bm"><BodyMap figure="female" muscles={session.muscles} width={56} max={6} legend={false}/></span>
   {:else}<span class="art"><Icon name={SPORTS[a.sport].icon} size={36}/></span>{/if}
   <span class="badge" style:background={SPORTS[a.sport].color}><Icon name={SPORTS[a.sport].icon} size={13}/></span>

@@ -10,7 +10,7 @@
  import TonightDial from './TonightDial.svelte';
  import {SPORTS} from '../lib/sports';
  import {contribution, effortFor, type Ctx} from '../lib/rules';
- import {routeFor, hrTrace, stagesFor} from '../lib/world';
+ import {routeFor, stagesFor} from '../lib/world';
  import {bodyBatteryDay, strengthSession, todayView} from '../lib/views';
  import {dur, dayLabel, hm, toMin} from '../lib/dates';
  import {elapsed} from '../../lib/format';
@@ -42,7 +42,7 @@
 <section class="hero v-{variant}" style:--tint={tint} aria-labelledby="hero-h">
  {#if variant === 'workout' && a}
   <div class="hero-pic" class:strength={!!session}>
-   {#if routeFor(a).length}<RouteHero route={routeFor(a)} samples={hrTrace(a)} floors={[118, 136, 150, 163]} color={SPORTS[a.sport].color} h={176} label={`${a.name} route, coloured by heart-rate zone`}/>
+   {#if routeFor(a).length}<RouteHero route={routeFor(a)} color={SPORTS[a.sport].color} h={176} label={`${a.name} recorded route`}/>
    {:else if session?.setsRecorded}<div class="bm-hero"><span class="bm-sum"><b class="n">{session.exercises.filter(e => e.key).length}</b> {session.exercises.filter(e => e.key).length === 1 ? 'exercise' : 'exercises'}<br><b class="n">{session.sets}</b> sets</span><BodyMap figure="female" muscles={session.muscles} width={92} max={6} legend={false}/></div>
    {:else}<div class="art-hero" style:color={SPORTS[a.sport].color}><Icon name={SPORTS[a.sport].icon} size={72}/></div>{/if}
    <span class="pic-kicker"><Glyph sport={a.sport} size={22}/>Recorded today · {a.start}</span>

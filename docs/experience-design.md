@@ -1142,7 +1142,7 @@ No merge/push/release is authorised.
 - **Today:** a compact header (date, upload freshness, a labelled Adapt control
   that shows its state, Settings) and one adaptive hero whose picture matches the
   moment: readiness arc with Garmin's effort scale and helping/holding factors;
-  after a workout, its route coloured by HR zone (body map for strength), big
+  after a workout, its route outline in the sport colour (body map for strength), big
   stats, Garmin's effect and the commitment ring; in the evening a 24-hour
   Tonight dial with wind-down, Garmin's window, wake and now, plus last night's
   stages; rest and pause lead with the Body Battery recharge; missing data shows
@@ -1175,7 +1175,8 @@ or unverified endpoint or history. Prefer the first two.
 | Visual | Data | Class |
 | --- | --- | --- |
 | Readiness arc, level, effort scale, factors | `TodayView.readiness/call/factors` | view |
-| Workout hero route coloured by HR zone; card route thumbnails | `WorkoutView.route/heartRate/zoneFloors` from stored activity `details`; fetched only for the recent 90 days (`RECENT_DAYS`), older activities fall back to sport art | view (one local read per card) |
+| Workout hero route outline; card route thumbnails | `WorkoutView.route` contains lat/lon only; recent activity `details` cover 90 days (`RECENT_DAYS`), older activities fall back to sport art. Render the outline in one sport/neutral colour. | view (one local read per card) |
+| Future HR-by-location route colouring (not in this prototype) | Route points and HR samples can be simplified/downsampled independently; matching array indexes or lengths is not time alignment. Requires verified, time-aligned position/HR evidence and a future projection exposing that alignment. Do not infer timestamps or associations from the current arrays. | future projection; alignment unverified |
 | Activity card distance, time, zones, benefit, aerobic/anaerobic effect, load | `ActivityCard` | view |
 | Activity card avg HR | `averageHR` in the stored activity payload (`WorkoutView.stats`), absent from `ActivityCard` | stored: view change |
 | Contribution ring on cards and hero | `PlanWeek` evidence; user links are new local state | view + new local state |
@@ -1334,7 +1335,7 @@ All existing routes have explicit aliases, not a fallback assumption:
 | Shipped detail | v2 | Notes |
 | --- | --- | --- |
 | Workout: training load, aerobic/anaerobic effect, recovery | Shipped component | Plus a "how it counted" row |
-| Workout: stats grid, route map, HR chart, zones, splits | Shipped component; map moved to a larger header | Route coloured by HR zone; stats shown once |
+| Workout: stats grid, route map, HR chart, zones, splits | Shipped component; map moved to a larger header | Sport-coloured route outline; independent HR chart and zones; stats shown once |
 | Strength workout: sets, flags, bests, prior sets, body map, help, timer-only | Shipped `StrengthWorkout` and help sheet | Timer-only session keeps the shipped "No sets recorded" card |
 | Sleep: score, need, hypnogram, stages, overnight, consistency, naps, history, alignment, tonight's plan | Shipped `SleepDetail` | Tonight jump link, dial and self-report alongside it |
 | Health: vitals monitor, all-day HR, stress, weight, journal, Fitness Age and drivers, intensity | Shipped `HealthDetail` | Journal consent and explicit open preserved |
@@ -1393,7 +1394,7 @@ replace that gate.
   backfill deduplication, schema migration and account isolation remain open.
 
 Verification: workspace Rust tests and Clippy (`-D warnings`), Svelte/TypeScript
-checks, 73 UI/rule unit tests, existing browser regressions, the production
+checks, 76 UI/rule unit tests, existing browser regressions, the production
 build and whole-history secret scan pass. The separate prototype build and
 browser suite pass against the isolated HTTP preview, including all 64 case
 starts, counted journeys, interrupted-week transitions, explicit journal
@@ -1415,6 +1416,12 @@ captures live in `app/experience-public/compare/`. They are browser renders,
 not Android or personal-data screenshots. No physical device, actual Garmin
 account, populated endpoint verification, native battery/performance test or
 new-record migration run was performed.
+
+The stage-1 route correction removes index-based HR colouring from the map's
+interface and all callers. Focused rendered regressions vary HR count/order
+(including equally sized but unaligned arrays) and assert an unchanged,
+single-colour route in full and thumbnail views. HR charts and zone strips
+remain independent; this adds no timestamps, core feature or schema change.
 
 The coordinator must obtain Dan's explicit proceed-with-named-limited-evidence
 versus pause/release-exclusivity decision. No stage 2, main merge, push, APK or

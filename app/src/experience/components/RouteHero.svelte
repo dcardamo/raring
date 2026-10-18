@@ -1,10 +1,10 @@
 <script lang="ts">
- import type {HrSample} from '../../lib/generated/HrSample';
- import {colors} from '../../lib/charts';
- // A stylized, tile-free map: the recorded route over drawn streets and water,
- // coloured by heart-rate zone along the way. No network map tiles or places.
- let {route, samples = [], floors = [], w = 358, h = 190, compact = false, color = '#E4E8F0', label = 'Workout route'}: {
-  route: [number, number][], samples?: HrSample[], floors?: number[], w?: number, h?: number, compact?: boolean, color?: string, label?: string,
+ // The route is an outline in one sport/neutral colour. WorkoutView's lat/lon
+ // points have no timestamps and may be simplified independently of HR samples;
+ // array positions cannot associate heart rate with a geographic segment.
+ // Streets and water are tile-free decorative context, not geographic evidence.
+ let {route, w = 358, h = 190, compact = false, color = '#E4E8F0', label = 'Workout route'}: {
+  route: [number, number][], w?: number, h?: number, compact?: boolean, color?: string, label?: string,
  } = $props();
  const id = $props.id();
  let pts = $derived.by(() => {
@@ -16,22 +16,6 @@
   const s = Math.min((w - pad * 2) / (maxX - minX || 1), (h - pad * 2) / (maxY - minY || 1));
   const ox = (w - (maxX - minX) * s) / 2, oy = (h - (maxY - minY) * s) / 2;
   return route.map((_, i) => [ox + (xs[i] - minX) * s, h - oy - (ys[i] - minY) * s] as [number, number]);
- });
- const zoneOf = (bpm: number) => { let z = 0; floors.forEach((f, i) => { if (bpm >= f) z = i + 1; }); return z; };
- // Split the path into runs of the same zone, by elapsed share of the route.
- let runs = $derived.by(() => {
-  if (!pts.length) return [] as {d: string, c: string}[];
-  if (!samples.length || floors.length !== 4) return [{d: pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(''), c: color}];
-  const out: {d: string, c: string}[] = [];
-  let cur = -1, d = '';
-  pts.forEach((p, i) => {
-   const s = samples[Math.min(samples.length - 1, Math.floor(i / pts.length * samples.length))];
-   const z = zoneOf(s.bpm);
-   if (z !== cur) { if (d) out.push({d: d + `L${p[0].toFixed(1)},${p[1].toFixed(1)}`, c: cur <= 0 ? color : colors.z[cur]}); d = `M${p[0].toFixed(1)},${p[1].toFixed(1)}`; cur = z; }
-   else d += `L${p[0].toFixed(1)},${p[1].toFixed(1)}`;
-  });
-  if (d) out.push({d, c: cur <= 0 ? color : colors.z[cur]});
-  return out;
  });
  let full = $derived(pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(''));
  // Deterministic decoration from the route's own shape.
@@ -51,7 +35,7 @@
  <path d={river} stroke="#5CA8FF" stroke-opacity=".16" stroke-width={compact ? 10 : 18} fill="none" stroke-linecap="round"/>
  {#if pts.length}
   <path d={full} stroke="#0B0F1A" stroke-opacity=".9" stroke-width={compact ? 6 : 9} fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  {#each runs as r}<path class="seg" d={r.d} stroke={r.c} stroke-width={compact ? 3.2 : 4.5} fill="none" stroke-linecap="round" stroke-linejoin="round"/>{/each}
+  <path class="seg" d={full} stroke={color} stroke-width={compact ? 3.2 : 4.5} fill="none" stroke-linecap="round" stroke-linejoin="round"/>
   <circle cx={pts[0][0]} cy={pts[0][1]} r={compact ? 4 : 6.5} fill="#3DDC97" stroke="#0B0F1A" stroke-width="2.5"/>
   {#if !compact}<rect x={pts.at(-1)![0] - 5} y={pts.at(-1)![1] - 5} width="10" height="10" rx="2" fill="#EEF1F7" stroke="#0B0F1A" stroke-width="2"/>{/if}
  {:else}<text x={w / 2} y={h / 2} fill="#8E98AC" text-anchor="middle" font-size="12">No route recorded</text>{/if}

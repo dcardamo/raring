@@ -12,7 +12,7 @@
  import {METRICS} from '../lib/metrics';
  import {addDays, dur, range, weekday} from '../lib/dates';
  import {rand} from '../lib/world';
- import {EXERCISES, routeFor, hrTrace, stagesFor, restingHrFor, hrvFor, stressAvgFor, bodyBatteryHigh, vo2maxFor, fitnessAgeFor, sleepHrFor, respirationFor, spo2For, skinTempFor, weightFor, enduranceFor, hillFor} from '../lib/world';
+ import {EXERCISES, routeFor, stagesFor, restingHrFor, hrvFor, stressAvgFor, bodyBatteryHigh, vo2maxFor, fitnessAgeFor, sleepHrFor, respirationFor, spo2For, skinTempFor, weightFor, enduranceFor, hillFor} from '../lib/world';
  import {acuteLoad, musclesBetween, todayView} from '../lib/views';
  import {SPORTS} from '../lib/sports';
  let ctx = $derived(store.ctx);
@@ -61,7 +61,7 @@
  <button class="lt" onclick={() => go('readiness')}><span class="lt-h"><b>Readiness</b><small>{ctx.readiness?.level ?? (ctx.world.readinessSupported ? 'Waiting' : 'Not on watch')}</small></span><span class="lt-v center"><Gauge size={74} stroke={7} value={ctx.readiness?.value ?? null} color={toneColor(ctx.readiness ? (ctx.readiness.value >= 75 ? 'good' : ctx.readiness.value >= 50 ? 'fair' : 'poor') : 'neutral')}/></span><em>Garmin’s factors and trend</em></button>
  <button class="lt" onclick={() => go('training')}><span class="lt-h"><b>Training</b><small>Load {acuteLoad(ctx, ctx.calendarDate)}</small></span><span class="lt-v bars">{#each loads as l, i}<i style:height={Math.max(4, l / Math.max(1, ...loads) * 48) + 'px'} class:today={i === 6}></i>{/each}</span><em>Load, VO₂ max, race times, gear</em></button>
  <button class="lt" onclick={() => go('strength')}><span class="lt-h"><b>Strength</b><small>{ctx.world.activities.filter(a => a.sport === 'strength' && a.date >= ctx.weekFrom).length} this week</small></span><span class="lt-v center"><BodyMap figure="female" muscles={musclesBetween(ctx, addDays(ctx.weekFrom, -21), ctx.calendarDate)} width={60} max={16} legend={false}/></span><em>Sessions, exercises, bests</em></button>
- <button class="lt act" onclick={() => go('activities')}><span class="lt-h"><b>Activities</b><small>{last ? `${SPORTS[last.sport].name} · ${last.date === ctx.calendarDate ? 'today' : last.date.slice(8) + '/' + last.date.slice(5, 7)}` : 'None yet'}</small></span><span class="lt-v map">{#if gps}<RouteHero route={routeFor(gps)} samples={hrTrace(gps)} floors={[118, 136, 150, 163]} color={SPORTS[gps.sport].color} w={160} h={70} compact label={`${gps.name} route`}/>{/if}</span><em>Every workout, routes, filters</em></button>
+ <button class="lt act" onclick={() => go('activities')}><span class="lt-h"><b>Activities</b><small>{last ? `${SPORTS[last.sport].name} · ${last.date === ctx.calendarDate ? 'today' : last.date.slice(8) + '/' + last.date.slice(5, 7)}` : 'None yet'}</small></span><span class="lt-v map">{#if gps}<RouteHero route={routeFor(gps)} color={SPORTS[gps.sport].color} w={160} h={70} compact label={`${gps.name} route`}/>{/if}</span><em>Every workout, routes, filters</em></button>
  <button class="lt" onclick={() => go('health')}><span class="lt-h"><b>Health</b><small>Resting HR {restingHrFor(ctx.displayedDay)}</small></span><span class="lt-v dots">{#each vitals as v}<i style:background={v.value != null ? toneColor(v.tone) : 'transparent'} class:off={v.status && v.status !== 'IN_RANGE'}></i>{/each}</span><em>Vitals, heart rate, stress, weight, journal</em></button>
 </nav>
 

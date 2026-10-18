@@ -25,7 +25,7 @@ approved the richer visual direction; its A–K follow-ups and read-only review
 findings are fixed in `adbb43e`. Routing provenance: `b965aa4` is the pre-switch
 Opus 5.5 checkpoint; the session switched to GPT-6 Astra at 13:05Z, so the later
 whole result is mixed-model. The prototype has 64 scenario starts, linked browser checks,
-73 unit tests, rich synthetic captures and an explicit data-provenance table.
+76 unit tests, rich synthetic captures and an explicit data-provenance table.
 See the design's stage-1 checkpoint for
 working routes, preservation/legacy mappings, measured scripted paths, screenshots
 and U01–U64 evidence limits. The redesign and usability/discoverability work remain
@@ -41,6 +41,21 @@ privacy transitions, browser checks and synthetic screenshots. Preview:
 stored in `dailyStress.bodyBatteryValuesArray` (`screens.rs::battery_latest`);
 the ribbon needs a view change, not a new Garmin request. No endpoint spike is
 needed for that curve.
+
+**Stage-1 route evidence correction:** route outlines use one sport/neutral
+colour. `WorkoutView.route` has lat/lon without timestamps; independently
+sampled HR cannot truthfully colour geographic segments. HR charts and zones
+remain separate. Time-aligned colouring needs verified position/HR evidence and
+a future projection, not an index-based association or a gate-time schema change.
+Focused rendered regressions vary unaligned HR array lengths/order and confirm
+that full and thumbnail maps keep the same single-colour route.
+
+**Further maintainer feedback remains open:** workout alternatives and clearer
+Garmin attribution; a more legible day/week summary; allocating weekly goals to
+chosen days and workouts; rescheduling unfinished intentions; distinct local and
+Garmin/Coach plans; focused category views instead of the Explore dump. Agree
+completion semantics and navigation before the next stage-1 design pass. This
+feedback does not authorise stage 2 or a release.
 
 **Usability gate remains pending; no stage 2 authorised.** No unfamiliar people have evaluated
 first meaning, discovery, comprehension or pressure. Three participants (including
