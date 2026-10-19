@@ -11,6 +11,7 @@ pub mod notifications;
 mod naps_journal;
 pub mod phase;
 pub mod plan;
+pub mod progress;
 pub mod review;
 pub mod planned;
 pub mod rules;
@@ -207,6 +208,11 @@ impl Raring {
     pub fn week_review(&self, date: &str, now: DateTime<Local>) -> Result<view::WeekReview> {
         let anchor = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d").map_err(|_| Error::InvalidLocal("date"))?;
         Ok(review::week_review(&self.store, anchor, now.date_naive()))
+    }
+    /// Progress for the period containing `date`.
+    pub fn progress(&self, period: view::Period, date: &str, now: DateTime<Local>) -> Result<view::ProgressView> {
+        let anchor = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d").map_err(|_| Error::InvalidLocal("date"))?;
+        progress::progress(&self.store, period, anchor, now.date_naive())
     }
     /// Reviewed weeks with goals, newest first.
     pub fn reviews(&self, now: DateTime<Local>) -> Vec<view::ReviewRow> {

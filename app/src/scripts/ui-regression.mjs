@@ -640,6 +640,46 @@ try {
  const samples={};
  for(const name of ['today','sleep','training','health','status','workout'])samples[name]=JSON.parse(await readFile(resolve(`src/lib/sample/${name}.json`),'utf8'));
  samples.plan_board=JSON.parse(await readFile(resolve('src/lib/sample/board.json'),'utf8'));
+ samples.progress=JSON.parse(await readFile(resolve('src/lib/sample/progress.json'),'utf8'));
+ // Progress controls invoke the Rust contract. These responses are synthetic;
+ // period arithmetic, evidence coverage and awards are tested in the core.
+ {
+  const progressPage=await browser.newPage({viewport:{width:390,height:844}});
+  await progressPage.addInitScript(samples=>{
+   window.isTauri=true;
+   window.progressCalls=[];
+   window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
+    if(command.startsWith('plugin:event|'))return 1;
+    if(command==='app_status')return samples.status;
+    if(command==='progress'){
+     window.progressCalls.push(args);
+     const p=structuredClone(samples.progress);
+     if(args.period==='year'){p.period='year';p.from='2024-11-01';p.to='2025-10-31';p.calendar=[];}
+     if(args.period==='week'){p.period='week';p.from='2025-10-13';p.to='2025-10-19';}
+     return p;
+    }
+    if(command==='trend')return {range:'days30',bucket:'day',from:'2025-09-17',to:'2025-10-16',series:{metric:'hrv',name:'HRV',unit:'ms',points:[],average:null,days:0},overlay:null,previous:null,change:null,available:[]};
+    if(command in samples)return structuredClone(samples[command]);
+    throw Error('Unexpected progress test command '+command);
+   }};
+  },samples);
+  await progressPage.goto(`${url}/?fixture=progress#progress`);
+  await progressPage.getByRole('heading',{name:'October 2025',exact:true}).waitFor();
+  assert.ok((await progressPage.locator('.report').textContent()).includes('Active on 4 of 16 days'));
+  assert.ok((await progressPage.locator('.report').textContent()).includes('Intensity: known total from 4 of 16 days'));
+  assert.equal(await progressPage.locator('.cal .day.future').count(),15);
+  assert.ok((await progressPage.locator('.ms').first().textContent()).includes('Longest run'));
+  await progressPage.getByRole('group',{name:'Period',exact:true}).getByRole('button',{name:'Year',exact:true}).click();
+  await progressPage.waitForFunction(()=>window.progressCalls.some(c=>c.period==='year'));
+  await progressPage.getByRole('button',{name:'Year',exact:true}).getAttribute('aria-pressed').then(v=>assert.equal(v,'true'));
+  assert.equal(await progressPage.locator('.cal').count(),0);
+  await progressPage.getByRole('group',{name:'Period',exact:true}).getByRole('button',{name:'Week',exact:true}).click();
+  await progressPage.waitForFunction(()=>window.progressCalls.some(c=>c.period==='week'));
+  await progressPage.getByRole('button',{name:'Previous period',exact:true}).click();
+  await progressPage.waitForFunction(()=>window.progressCalls.some(c=>c.period==='week' && c.date==='2025-10-12'));
+  await progressPage.close();
+ }
+ console.log('Progress contract: periods, coverage labels, calendar and records passed');
  // The sample's phase ended long ago; phase expiry has its own check below.
  samples.today.focus.until=null;
  const statusDenied=await browser.newPage({viewport:{width:390,height:844}});

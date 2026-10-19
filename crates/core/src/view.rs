@@ -1961,6 +1961,8 @@ pub enum LocalAction {
     /// Accept some of a week's proposals (none keeps every goal). Accepted
     /// ones apply from the next week.
     DecideReview { week: String, accepted: Vec<GoalKind> },
+    /// Progress showed the new milestones.
+    MilestonesSeen,
 }
 
 // ---------------------------------------------------------------------------
@@ -2385,4 +2387,164 @@ pub struct EventLine {
     pub source: EventSource,
     /// Garmin's page was full: later races may exist.
     pub partial: bool,
+}
+
+// ---------------------------------------------------------------------------
+// Progress for a period (docs/spec.md, Rules: Progress periods to Milestones).
+
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum Period {
+    Week,
+    Month,
+    Quarter,
+    Year,
+}
+
+/// Known totals for a window: activities with a local start date in it.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PeriodTotals {
+    pub activities: u32,
+    pub active_min: f64,
+    /// Activities without a distance add nothing; they aren't zero-distance.
+    pub distance_km: f64,
+    /// Garmin's daily moderate plus twice vigorous minutes over the days that have them.
+    pub intensity_min: Option<f64>,
+    pub intensity_days: u32,
+    /// Covered days with at least one activity.
+    pub active_days: u32,
+    /// Days through today covered by a complete activity list.
+    pub covered_days: u32,
+    pub days: u32,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SportMinutes {
+    pub sport: Sport,
+    pub minutes: f64,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PeriodBucket {
+    pub from: String,
+    pub to: String,
+    pub minutes: Vec<SportMinutes>,
+    pub total: f64,
+    /// Some day in it is covered; otherwise no claim is made.
+    pub known: bool,
+    pub future: bool,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum CalendarState {
+    Active,
+    Rest,
+    Ill,
+    Paused,
+    None,
+    /// Inside a gap in the activity list: never drawn as zero.
+    Unknown,
+    Future,
+    /// Before downloaded history.
+    Before,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct CalendarDay {
+    pub date: String,
+    pub state: CalendarState,
+    pub activities: u32,
+    /// Known workouts on an incomplete day keep their mark with this false.
+    pub covered: bool,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct GoalWeek {
+    pub start: String,
+    pub rings: Vec<Ring>,
+    pub counted: bool,
+    pub met: u32,
+    pub goals: u32,
+    pub reasons: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum MilestoneKind {
+    /// The heaviest set at a rep count for one exercise.
+    Best,
+    /// The longest recorded distance for a sport.
+    Longest,
+    /// The first counted week with every goal met.
+    GoalWeek,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct Milestone {
+    /// Stable evidence identity; a milestone is awarded once.
+    pub id: String,
+    pub kind: MilestoneKind,
+    pub title: String,
+    pub value: String,
+    pub date: String,
+    pub route: Option<String>,
+    /// Not seen yet on Progress.
+    pub new: bool,
+    /// A Garmin edit moved it; corrected without a new award.
+    pub corrected: bool,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SleepNeedSummary {
+    /// Nights with both Garmin's recorded sleep and need.
+    pub nights: u32,
+    /// Of those, nights an hour or more below need. No running total.
+    pub below_hour: u32,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ProgressView {
+    pub period: Period,
+    pub from: String,
+    pub to: String,
+    /// The last day counted: the period's end, or today.
+    pub end: String,
+    pub current: bool,
+    /// The first day of downloaded activity history.
+    pub history_start: Option<String>,
+    pub totals: PeriodTotals,
+    /// The same elapsed days of the previous period; None when not comparable.
+    pub previous: Option<PeriodTotals>,
+    pub previous_from: Option<String>,
+    pub previous_to: Option<String>,
+    /// Some day so far isn't covered: totals are known totals, not complete ones.
+    pub partial: bool,
+    pub buckets: Vec<PeriodBucket>,
+    /// Days of a week or month period.
+    pub calendar: Vec<CalendarDay>,
+    /// Twelve plan weeks ending with this period's last week, oldest first.
+    pub goal_weeks: Vec<GoalWeek>,
+    /// Newest first, in available history.
+    pub milestones: Vec<Milestone>,
+    pub sleep: Option<SleepNeedSummary>,
 }

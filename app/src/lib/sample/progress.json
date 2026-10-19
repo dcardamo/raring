@@ -1,0 +1,529 @@
+{
+  "period": "month",
+  "from": "2025-10-01",
+  "to": "2025-10-31",
+  "end": "2025-10-16",
+  "current": true,
+  "historyStart": "2025-09-01",
+  "totals": {
+    "activities": 5,
+    "activeMin": 276,
+    "distanceKm": 48.6,
+    "intensityMin": 124,
+    "intensityDays": 4,
+    "activeDays": 4,
+    "coveredDays": 16,
+    "days": 16
+  },
+  "previous": null,
+  "previousFrom": null,
+  "previousTo": null,
+  "partial": false,
+  "buckets": [
+    {
+      "from": "2025-10-01",
+      "to": "2025-10-01",
+      "minutes": [],
+      "total": 0,
+      "known": true,
+      "future": false
+    },
+    {
+      "from": "2025-10-02",
+      "to": "2025-10-02",
+      "minutes": [],
+      "total": 0,
+      "known": true,
+      "future": false
+    },
+    {
+      "from": "2025-10-03",
+      "to": "2025-10-03",
+      "minutes": [],
+      "total": 0,
+      "known": true,
+      "future": false
+    },
+    {
+      "from": "2025-10-04",
+      "to": "2025-10-04",
+      "minutes": [],
+      "total": 0,
+      "known": true,
+      "future": false
+    },
+    {
+      "from": "2025-10-05",
+      "to": "2025-10-05",
+      "minutes": [],
+      "total": 0,
+      "known": true,
+      "future": false
+    },
+    {
+      "from": "2025-10-06",
+      "to": "2025-10-06",
+      "minutes": [],
+      "total": 0,
+      "known": true,
+      "future": false
+    },
+    {
+      "from": "2025-10-07",
+      "to": "2025-10-07",
+      "minutes": [],
+      "total": 0,
+      "known": true,
+      "future": false
+    },
+    {
+      "from": "2025-10-08",
+      "to": "2025-10-08",
+      "minutes": [],
+      "total": 0,
+      "known": true,
+      "future": false
+    },
+    {
+      "from": "2025-10-09",
+      "to": "2025-10-09",
+      "minutes": [],
+      "total": 0,
+      "known": true,
+      "future": false
+    },
+    {
+      "from": "2025-10-10",
+      "to": "2025-10-10",
+      "minutes": [],
+      "total": 0,
+      "known": true,
+      "future": false
+    },
+    {
+      "from": "2025-10-11",
+      "to": "2025-10-11",
+      "minutes": [],
+      "total": 0,
+      "known": true,
+      "future": false
+    },
+    {
+      "from": "2025-10-12",
+      "to": "2025-10-12",
+      "minutes": [],
+      "total": 0,
+      "known": true,
+      "future": false
+    },
+    {
+      "from": "2025-10-13",
+      "to": "2025-10-13",
+      "minutes": [
+        {
+          "sport": "strength",
+          "minutes": 40
+        }
+      ],
+      "total": 40,
+      "known": true,
+      "future": false
+    },
+    {
+      "from": "2025-10-14",
+      "to": "2025-10-14",
+      "minutes": [
+        {
+          "sport": "strength",
+          "minutes": 52
+        }
+      ],
+      "total": 52,
+      "known": true,
+      "future": false
+    },
+    {
+      "from": "2025-10-15",
+      "to": "2025-10-15",
+      "minutes": [
+        {
+          "sport": "strength",
+          "minutes": 48.03333333333333
+        },
+        {
+          "sport": "cycling",
+          "minutes": 84.16666666666667
+        }
+      ],
+      "total": 132.2,
+      "known": true,
+      "future": false
+    },
+    {
+      "from": "2025-10-16",
+      "to": "2025-10-16",
+      "minutes": [
+        {
+          "sport": "running",
+          "minutes": 52.233333333333334
+        }
+      ],
+      "total": 52.233333333333334,
+      "known": true,
+      "future": false
+    },
+    {
+      "from": "2025-10-17",
+      "to": "2025-10-17",
+      "minutes": [],
+      "total": 0,
+      "known": false,
+      "future": true
+    },
+    {
+      "from": "2025-10-18",
+      "to": "2025-10-18",
+      "minutes": [],
+      "total": 0,
+      "known": false,
+      "future": true
+    },
+    {
+      "from": "2025-10-19",
+      "to": "2025-10-19",
+      "minutes": [],
+      "total": 0,
+      "known": false,
+      "future": true
+    },
+    {
+      "from": "2025-10-20",
+      "to": "2025-10-20",
+      "minutes": [],
+      "total": 0,
+      "known": false,
+      "future": true
+    },
+    {
+      "from": "2025-10-21",
+      "to": "2025-10-21",
+      "minutes": [],
+      "total": 0,
+      "known": false,
+      "future": true
+    },
+    {
+      "from": "2025-10-22",
+      "to": "2025-10-22",
+      "minutes": [],
+      "total": 0,
+      "known": false,
+      "future": true
+    },
+    {
+      "from": "2025-10-23",
+      "to": "2025-10-23",
+      "minutes": [],
+      "total": 0,
+      "known": false,
+      "future": true
+    },
+    {
+      "from": "2025-10-24",
+      "to": "2025-10-24",
+      "minutes": [],
+      "total": 0,
+      "known": false,
+      "future": true
+    },
+    {
+      "from": "2025-10-25",
+      "to": "2025-10-25",
+      "minutes": [],
+      "total": 0,
+      "known": false,
+      "future": true
+    },
+    {
+      "from": "2025-10-26",
+      "to": "2025-10-26",
+      "minutes": [],
+      "total": 0,
+      "known": false,
+      "future": true
+    },
+    {
+      "from": "2025-10-27",
+      "to": "2025-10-27",
+      "minutes": [],
+      "total": 0,
+      "known": false,
+      "future": true
+    },
+    {
+      "from": "2025-10-28",
+      "to": "2025-10-28",
+      "minutes": [],
+      "total": 0,
+      "known": false,
+      "future": true
+    },
+    {
+      "from": "2025-10-29",
+      "to": "2025-10-29",
+      "minutes": [],
+      "total": 0,
+      "known": false,
+      "future": true
+    },
+    {
+      "from": "2025-10-30",
+      "to": "2025-10-30",
+      "minutes": [],
+      "total": 0,
+      "known": false,
+      "future": true
+    },
+    {
+      "from": "2025-10-31",
+      "to": "2025-10-31",
+      "minutes": [],
+      "total": 0,
+      "known": false,
+      "future": true
+    }
+  ],
+  "calendar": [
+    {
+      "date": "2025-10-01",
+      "state": "none",
+      "activities": 0,
+      "covered": true
+    },
+    {
+      "date": "2025-10-02",
+      "state": "none",
+      "activities": 0,
+      "covered": true
+    },
+    {
+      "date": "2025-10-03",
+      "state": "none",
+      "activities": 0,
+      "covered": true
+    },
+    {
+      "date": "2025-10-04",
+      "state": "none",
+      "activities": 0,
+      "covered": true
+    },
+    {
+      "date": "2025-10-05",
+      "state": "none",
+      "activities": 0,
+      "covered": true
+    },
+    {
+      "date": "2025-10-06",
+      "state": "none",
+      "activities": 0,
+      "covered": true
+    },
+    {
+      "date": "2025-10-07",
+      "state": "none",
+      "activities": 0,
+      "covered": true
+    },
+    {
+      "date": "2025-10-08",
+      "state": "none",
+      "activities": 0,
+      "covered": true
+    },
+    {
+      "date": "2025-10-09",
+      "state": "none",
+      "activities": 0,
+      "covered": true
+    },
+    {
+      "date": "2025-10-10",
+      "state": "none",
+      "activities": 0,
+      "covered": true
+    },
+    {
+      "date": "2025-10-11",
+      "state": "none",
+      "activities": 0,
+      "covered": true
+    },
+    {
+      "date": "2025-10-12",
+      "state": "none",
+      "activities": 0,
+      "covered": true
+    },
+    {
+      "date": "2025-10-13",
+      "state": "active",
+      "activities": 1,
+      "covered": true
+    },
+    {
+      "date": "2025-10-14",
+      "state": "active",
+      "activities": 1,
+      "covered": true
+    },
+    {
+      "date": "2025-10-15",
+      "state": "active",
+      "activities": 2,
+      "covered": true
+    },
+    {
+      "date": "2025-10-16",
+      "state": "active",
+      "activities": 1,
+      "covered": true
+    },
+    {
+      "date": "2025-10-17",
+      "state": "future",
+      "activities": 0,
+      "covered": false
+    },
+    {
+      "date": "2025-10-18",
+      "state": "future",
+      "activities": 0,
+      "covered": false
+    },
+    {
+      "date": "2025-10-19",
+      "state": "future",
+      "activities": 0,
+      "covered": false
+    },
+    {
+      "date": "2025-10-20",
+      "state": "future",
+      "activities": 0,
+      "covered": false
+    },
+    {
+      "date": "2025-10-21",
+      "state": "future",
+      "activities": 0,
+      "covered": false
+    },
+    {
+      "date": "2025-10-22",
+      "state": "future",
+      "activities": 0,
+      "covered": false
+    },
+    {
+      "date": "2025-10-23",
+      "state": "future",
+      "activities": 0,
+      "covered": false
+    },
+    {
+      "date": "2025-10-24",
+      "state": "future",
+      "activities": 0,
+      "covered": false
+    },
+    {
+      "date": "2025-10-25",
+      "state": "future",
+      "activities": 0,
+      "covered": false
+    },
+    {
+      "date": "2025-10-26",
+      "state": "future",
+      "activities": 0,
+      "covered": false
+    },
+    {
+      "date": "2025-10-27",
+      "state": "future",
+      "activities": 0,
+      "covered": false
+    },
+    {
+      "date": "2025-10-28",
+      "state": "future",
+      "activities": 0,
+      "covered": false
+    },
+    {
+      "date": "2025-10-29",
+      "state": "future",
+      "activities": 0,
+      "covered": false
+    },
+    {
+      "date": "2025-10-30",
+      "state": "future",
+      "activities": 0,
+      "covered": false
+    },
+    {
+      "date": "2025-10-31",
+      "state": "future",
+      "activities": 0,
+      "covered": false
+    }
+  ],
+  "goalWeeks": [
+    {
+      "start": "2025-10-13",
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 3,
+          "planned": 1,
+          "fill": 0.75
+        },
+        {
+          "kind": "zone2",
+          "recorded": 100,
+          "planned": 40,
+          "fill": 0.6666666666666666
+        },
+        {
+          "kind": "intensity",
+          "recorded": 124,
+          "planned": 0,
+          "fill": 0.8266666666666667
+        }
+      ],
+      "counted": true,
+      "met": 0,
+      "goals": 3,
+      "reasons": []
+    }
+  ],
+  "milestones": [
+    {
+      "id": "longest:running",
+      "kind": "longest",
+      "title": "Longest run",
+      "value": "10.2 km",
+      "date": "2025-10-16",
+      "route": "workout/9000000000001",
+      "new": false,
+      "corrected": false
+    }
+  ],
+  "sleep": {
+    "nights": 14,
+    "belowHour": 2
+  }
+}

@@ -31,6 +31,10 @@ import type { LocalAction } from './generated/LocalAction';
 import type { PlanBoard } from './generated/PlanBoard';
 import type { WeekReview } from './generated/WeekReview';
 import type { ReviewRow } from './generated/ReviewRow';
+import type { ProgressView } from './generated/ProgressView';
+import type { Period } from './generated/Period';
+import sampleProgress from './sample/progress.json';
+export const previewOnly = !isTauri();
 
 export type { Settings } from './generated/Settings';
 export type SettingsPatch = Partial<Settings>;
@@ -62,6 +66,7 @@ let previewBoard:PlanBoard = copy(sampleBoard as unknown as PlanBoard);
 export const plan_board = (date?:string):Promise<PlanBoard> => call('plan_board',{date},previewBoard);
 export const week_review = (date:string):Promise<WeekReview> => call('week_review',{date},sampleReview as unknown as WeekReview);
 export const reviews = ():Promise<ReviewRow[]> => call('reviews',undefined,sampleReviews as unknown as ReviewRow[]);
+export const progress = (period:Period='month',date?:string):Promise<ProgressView> => call('progress',{period,date},sampleProgress as unknown as ProgressView);
 // Every local change (goals, sessions, links, rest, pauses, limits) goes through one command.
 export const local_action = (action:LocalAction):Promise<void> => {
  if(!isTauri()){

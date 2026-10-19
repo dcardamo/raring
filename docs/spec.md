@@ -561,7 +561,8 @@ Sent by the phone itself.
   end (Goal ledger). A week counts when its activity list is complete and it
   had at most one paused or ill day; otherwise it is listed with its reasons
   (incomplete list, ill days, paused days; rest days are noted) and ignored.
-  Met means recorded ≥ target; a minute goal is met comfortably at ≥ 110%.
+  An ongoing week is not counted as complete. Old reviews cannot change goals
+  for weeks that have already passed. Met means recorded ≥ target; a minute goal is met comfortably at ≥ 110%.
   For next week, for each goal on (not Sleep Score, not intensity following
   Garmin's goal, not the migrated observation), from up to eight counted weeks
   since goals began: two or more ill days in the week just reviewed ease back;
@@ -582,6 +583,41 @@ Sent by the phone itself.
 - **Events**: local events from today and Garmin's next race (Planned
   training) count down by calendar date; an event date is not proof of
   preparation or completion.
+- **Progress periods**: Week is the plan week, Month the calendar month,
+  3 months the anchor month and the two before, Year the anchor month and the
+  eleven before; a period never extends past today. Dates are the activity's
+  local start date. Totals are known totals: activities, their recorded time,
+  recorded distances only (none is not zero), and Garmin's daily moderate plus
+  twice vigorous minutes over the days that have them. A day is covered when
+  the activity list is complete for it (Evidence coverage); "active on n of m"
+  counts covered days, so a known workout on an uncovered day keeps its
+  calendar mark without counting. Calendar days are active, rest, ill, paused,
+  none, unknown (an uncovered day without workouts, never zero), future or
+  before downloaded history. Bars show minutes by sport per day (week and
+  month), per plan week (3 months) or per month (year). A current period is
+  compared with the same elapsed days from the start of the previous period; a
+  completed one with the whole previous period. No comparison when either
+  window isn't fully covered or the shorter previous period can't hold the
+  days. Changes are signed, never coloured good or bad. Goals over time shows
+  the last twelve plan weeks since goals began, each with its own rings and
+  whether it counted. Sleep against need counts nights with both Garmin's
+  recorded sleep and need, and those an hour or more below it; no running total.
+- **Milestones**: in available history: an exercise's heaviest set for 1, 3,
+  5, 8 or 10 reps (Records and bests eligibility), the longest recorded
+  distance for a known sport family recorded at least three times, and the first
+  completed, counted week with every action goal met. Mixed unknown sports are
+  not combined into a distance record. A week with a revision or pause cannot
+  earn this whole-week award; observations alone never qualify.
+  Records use stable identities and canonical units (grams for lifts), so a
+  display-unit change is not an improvement. A genuinely better value recorded
+  on a later date can be new; backfill is quiet. Lower, earlier, replaced or
+  vanished evidence is corrected without another award; withdrawn records stay
+  visible with no source link. Historical period views are bounded by their end
+  and never write awards. Current views atomically merge evidence with stored
+  acknowledgements; only today's new records are marked new. Explicit
+  acknowledgement clears that mark. No streaks, no awards for app opens, wear
+  or physiological scores. The current record list is not yet a complete
+  archive of superseded dated achievements.
 - **Adapt**: today's circumstances come from the local records. Rest covers
   the local calendar day and, after midnight, the night until the next waking
   day (late night, or while the night hasn't synced). A pause covers its dates

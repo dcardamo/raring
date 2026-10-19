@@ -744,6 +744,45 @@ pub fn is_strength(item: &Value) -> bool {
         || item["activityTypeDTO"]["typeKey"] == ACTIVITY_TYPE
 }
 
+/// One exercise's heaviest set for at least `reps` reps over all stored
+/// sessions, by the Records and bests rule (named, weighted, not flagged).
+pub(crate) struct AllTimeBest {
+    pub key: String,
+    pub name: String,
+    pub reps: u32,
+    pub grams: f64,
+    pub date: String,
+    pub activity: String,
+}
+
+pub(crate) fn all_time_bests(store: &Store, through: &str) -> Vec<AllTimeBest> {
+    let all = analyse(recorded_sessions(store).into_iter().filter(|s| s.date() <= through).collect());
+    let mut best: BTreeMap<(String, u32), (f64, String, String)> = BTreeMap::new();
+    for a in &all {
+        for (i, s) in a.session.sets.iter().enumerate() {
+            if !s.active || !counts_for_records(s, &a.flags[i]) {
+                continue;
+            }
+            let (Some(key), Some(grams), Some(reps)) = (&s.key, s.grams, s.reps) else { continue };
+            for n in [1, 3, 5, 8, 10] {
+                if reps >= n {
+                    let e = best.entry((key.clone(), n)).or_insert((0., String::new(), String::new()));
+                    // Ties keep the earliest set.
+                    if grams > e.0 {
+                        *e = (grams, a.session.date().to_owned(), a.session.id.clone());
+                    }
+                }
+            }
+        }
+    }
+    best.into_iter()
+        .map(|((key, reps), (grams, date, activity))| {
+            AllTimeBest { name: display_name(&key), key, reps, grams, date, activity }
+        })
+        .collect()
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;

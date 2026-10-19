@@ -307,7 +307,7 @@ fn surfaces_respect_rest_illness_pauses_limits_and_not_today_without_private_tex
     assert!(morning.body.ends_with("Rest day · no training call"), "{}", morning.body);
     core.local_action(&LocalAction::CancelRest, now(13)).unwrap();
     let morning = core.notifications(now(9)).into_iter().find(|n| n.kind == "morning").unwrap();
-    assert!(morning.title.contains("readiness 88"), "{}", morning.title);
+    assert_eq!(morning.title, "Readiness 88", "cancelling rest must not undo Not today");
 }
 
 #[test]

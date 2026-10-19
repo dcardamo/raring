@@ -8,7 +8,7 @@ use crate::{
     view::*,
     Error, Result,
 };
-use chrono::{DateTime, Duration, Local, NaiveDate, NaiveTime, Timelike, Weekday};
+use chrono::{DateTime, Datelike, Duration, Local, NaiveDate, NaiveTime, Timelike, Weekday};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -66,6 +66,29 @@ pub struct Events {
     pub events: Vec<LocalEvent>,
 }
 
+/// A milestone as first awarded, with any later correction.
+#[derive(Serialize, Deserialize, Default, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct MilestoneRecord {
+    pub id: String,
+    /// Canonical units: grams for lifts, kilometres for distances.
+    pub value: f64,
+    pub date: String,
+    pub activity: Option<String>,
+    pub seen: bool,
+    pub corrected: bool,
+    pub kind: Option<MilestoneKind>,
+    pub title: String,
+    pub route: Option<String>,
+    pub withdrawn: bool,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Milestones {
+    pub items: Vec<MilestoneRecord>,
+}
+
 trait Record: Serialize + DeserializeOwned + Default {
     const KEY: &'static str;
 }
@@ -87,6 +110,9 @@ impl Record for Reviews {
 impl Record for Events {
     const KEY: &'static str = "local:events";
 }
+impl Record for Milestones {
+    const KEY: &'static str = "local:milestones";
+}
 
 /// Every local record, after migration.
 #[derive(Default, Clone, Debug, PartialEq)]
@@ -97,6 +123,7 @@ pub struct LocalRecords {
     pub circumstances: Circumstances,
     pub reviews: Reviews,
     pub events: Events,
+    pub milestones: Milestones,
     /// Rows written by a newer build or unreadable: shown as far as they
     /// parse, never rewritten.
     pub read_only: Vec<&'static str>,
@@ -132,6 +159,7 @@ fn load_tx(tx: &SettingsTx) -> Result<LocalRecords> {
         circumstances: read(tx, &mut read_only)?,
         reviews: read(tx, &mut read_only)?,
         events: read(tx, &mut read_only)?,
+        milestones: read(tx, &mut read_only)?,
         read_only,
     })
 }
@@ -242,7 +270,7 @@ pub fn goals_in_week(goals: &Goals, start: NaiveDate, date: NaiveDate) -> Option
 /// and the goals it migrated cannot diverge.
 pub(crate) fn mirror_legacy_plan(store: &Store, start: NaiveDate, update: &PlanUpdate) -> Result<()> {
     store.settings_tx(|tx| {
-        if tx.get(MARKER)?.is_none() {
+        if tx.get(MARKER)?.is_none() && tx.get(Goals::KEY)?.is_none() && tx.get(Circumstances::KEY)?.is_none() {
             // The next read migrates the whole row, this save included.
             return Ok(());
         }
@@ -286,6 +314,7 @@ fn date(s: &str) -> Result<NaiveDate> {
     (s.len() == 10)
         .then(|| NaiveDate::parse_from_str(s, "%Y-%m-%d").ok())
         .flatten()
+        .filter(|d| (1990..=9999).contains(&d.year()))
         .ok_or(Error::InvalidLocal("date"))
 }
 
@@ -645,7 +674,11 @@ pub(crate) fn apply(
                 if start > today || plan::week_start(start, first) != start {
                     return Err(Error::InvalidLocal("review week"));
                 }
-                let next = (start + Duration::days(7)).to_string();
+                let next_day = start + Duration::days(7);
+                if !accepted.is_empty() && (start + Duration::days(6) > today || next_day < plan::week_start(today, first)) {
+                    return Err(Error::InvalidLocal("only the latest completed week can change upcoming goals"));
+                }
+                let next = next_day.to_string();
                 let chosen: Vec<&GoalProposal> = proposals
                     .iter()
                     .filter(|p| accepted.contains(&p.kind) && p.proposed != p.current)
@@ -675,6 +708,11 @@ pub(crate) fn apply(
                 r.reviews.decisions.push(ReviewDecision { week: start.to_string(), at: at.clone(), proposals: proposals.to_vec(), accepted: accepted.clone() });
                 &[Goals::KEY, Reviews::KEY]
             }
+            LocalAction::MilestonesSeen => {
+                writable(&r, &[Milestones::KEY])?;
+                r.milestones.items.iter_mut().for_each(|m| m.seen = true);
+                &[Milestones::KEY]
+            }
             LocalAction::RemoveEvent { id } => {
                 writable(&r, &[Events::KEY])?;
                 r.events.events.retain(|e| e.id != *id);
@@ -689,10 +727,13 @@ pub(crate) fn apply(
                 Circumstances::KEY => write(tx, &r.circumstances)?,
                 Reviews::KEY => write(tx, &r.reviews)?,
                 Events::KEY => write(tx, &r.events)?,
+                Milestones::KEY => write(tx, &r.milestones)?,
                 _ => {}
             }
         }
-        tx.set(MARKER, &SCHEMA.to_string())?;
+        if !r.read_only.contains(&Goals::KEY) && !r.read_only.contains(&Circumstances::KEY) {
+            tx.set(MARKER, &SCHEMA.to_string())?;
+        }
         Ok(())
     })
 }
@@ -715,4 +756,40 @@ pub fn sport_of(type_key: &str) -> Sport {
     } else {
         Sport::Other
     }
+}
+
+/// Merge evidence atomically with acknowledgements. Backfill and corrections
+/// are quiet; only a genuinely later recording dated today can be new.
+pub(crate) fn sync_milestones(store: &Store, evidence: &[MilestoneRecord], today: NaiveDate) -> Result<Vec<MilestoneRecord>> {
+    store.settings_tx(|tx| {
+        let mut blocked = vec![];
+        let current: Milestones = read(tx, &mut blocked)?;
+        if !blocked.is_empty() {
+            return Ok(current.items);
+        }
+        let mut next = current.clone();
+        for e in evidence {
+            match next.items.iter_mut().find(|m| m.id == e.id) {
+                None => next.items.push(MilestoneRecord { seen: e.date != today.to_string(), ..e.clone() }),
+                Some(m) if e.value != m.value || e.date != m.date || e.activity != m.activity || m.withdrawn => {
+                    let improved = e.value > m.value && e.date > m.date && !m.withdrawn;
+                    let seen = !improved || e.date != today.to_string();
+                    *m = MilestoneRecord { seen, corrected: !improved, ..e.clone() };
+                }
+                Some(_) => {}
+            }
+        }
+        for m in &mut next.items {
+            if !evidence.iter().any(|e| e.id == m.id) {
+                m.corrected = true;
+                m.withdrawn = true;
+                m.seen = true;
+                m.route = None;
+            }
+        }
+        if next != current {
+            write(tx, &next)?;
+        }
+        Ok(next.items)
+    })
 }

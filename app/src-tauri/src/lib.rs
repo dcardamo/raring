@@ -356,6 +356,14 @@ async fn week_review(app: tauri::AppHandle, date: String) -> Result<raring_core:
     read_view(app, move |core| core.week_review(&date, Local::now()).map_err(|e| e.to_string())).await
 }
 #[tauri::command]
+async fn progress(app: tauri::AppHandle, period: raring_core::view::Period, date: Option<String>) -> Result<raring_core::view::ProgressView, String> {
+    read_view(app, move |core| {
+        let now = Local::now();
+        core.progress(period, &date.unwrap_or_else(|| now.date_naive().to_string()), now).map_err(|e| e.to_string())
+    })
+    .await
+}
+#[tauri::command]
 async fn reviews(app: tauri::AppHandle) -> Result<Vec<raring_core::view::ReviewRow>, String> {
     read_view(app, move |core| Ok(core.reviews(Local::now()))).await
 }
@@ -842,6 +850,7 @@ pub fn run() {
                     plan_board,
                     week_review,
                     reviews,
+                    progress,
                     sync_now,
                     begin_sign_in,
                     sign_out,
@@ -870,6 +879,7 @@ pub fn run() {
                     plan_board,
                     week_review,
                     reviews,
+                    progress,
                     sync_now,
                     begin_sign_in,
                     sign_out,

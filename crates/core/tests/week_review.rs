@@ -201,3 +201,15 @@ fn the_review_list_covers_weeks_since_goals_began() {
     assert_eq!(starts, ["2025-03-10", "2025-03-03", "2025-02-24", "2025-02-17"]);
     assert!(rows.iter().all(|r| r.counted && r.met == 1 && r.goals == 1));
 }
+
+#[test]
+fn an_open_week_is_not_counted_and_old_reviews_cannot_rewrite_goal_history() {
+    let f=fx("review-time-boundary");
+    goals(&f,GoalTargets{zone2_min:100,..Default::default()});
+    for (i,day) in WEEKS.iter().enumerate(){ ride(&f.store,800+i as u64,day,120); }
+    let current=f.core.week_review("2025-03-10",at(3,12,9)).unwrap();
+    assert!(!current.counted);
+    assert!(f.core.local_action(&LocalAction::DecideReview{week:"2025-03-10".into(),accepted:vec![GoalKind::Zone2]},at(3,12,9)).is_err());
+    assert!(f.core.local_action(&LocalAction::DecideReview{week:"2025-03-10".into(),accepted:vec![GoalKind::Zone2]},at(3,31,9)).is_err());
+    assert_eq!(f.core.local_records().goals.versions.len(),1);
+}

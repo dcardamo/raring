@@ -114,6 +114,11 @@ pub fn hold_back(local: &LocalRecords, view: &mut TodayView, today: NaiveDate) -
     }
     let id = format!("suggest:{today}");
     let dismissed = local.circumstances.dismissals.iter().any(|d| d.date == today.to_string() && d.id == id);
+    if dismissed {
+        view.call = None;
+        view.call_note = None;
+        view.focus.effort = false;
+    }
     (state, dismissed)
 }
 

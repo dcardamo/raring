@@ -17,6 +17,7 @@ export const unitFor = (kind: GoalKind, n: number) => n === 1 ? GOALS[kind].one 
 export const amount = (kind: GoalKind, n: number) => `${Math.round(n)} ${unitFor(kind, n)}`;
 
 export const SPORT_NAMES: Record<Sport, string> = {running: 'Run', cycling: 'Ride', walking: 'Walk', hiking: 'Hike', swimming: 'Swim', strength: 'Strength', other: 'Session'};
+export const SPORT_COLORS: Record<Sport, string> = {running: '#3DDC97', cycling: '#5CA8FF', walking: '#9FD36B', hiking: '#C9A35C', swimming: '#36C9C6', strength: '#FF7DB8', other: '#A48BFF'};
 export const SPORT_ICONS: Record<Sport, IconName> = {running: 'run', cycling: 'bike', walking: 'walk', hiking: 'hike', swimming: 'swim', strength: 'strength', other: 'other'};
 
 /** One word per state, the same everywhere. */

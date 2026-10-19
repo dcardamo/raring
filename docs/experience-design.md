@@ -1590,7 +1590,12 @@ All existing routes have explicit aliases, not a fallback assumption:
 
 #### Parity checklist against the shipped details
 
-| Shipped detail | v2 | Notes |
+This table records **stage-1 prototype reuse**, not production completion.
+Production status is tracked separately in the [implementation/parity ledger](#production-implementation-and-parity-ledger)
+below. Reusing an old detail does not establish parity with the approved
+prototype's new overviews, navigation or journeys.
+
+| Shipped detail | v2 prototype | Notes |
 | --- | --- | --- |
 | Workout: training load, aerobic/anaerobic effect, recovery | Shipped component | Plus a "how it counted" row |
 | Workout: stats grid, route map, HR chart, zones, splits | Shipped component; map moved to a larger header | Sport-coloured route outline; independent HR chart and zones; stats shown once |
@@ -1773,12 +1778,44 @@ on-demand gates stay as they are.
   `app/src/lib/` to take view-model props instead of the prototype's `Ctx`.
   The prototype (`app/src/experience/`) stays frozen as the reference and its
   checks keep passing until it is removed at stage 5.
-- **Every checkpoint leaves the branch releasable in principle:** `cargo test
+- **Every checkpoint must build and pass its checks; that is not design
+  completion or release readiness:** `cargo test
   --workspace` (regenerates TS; committed), clippy `-D warnings`, `npm run check
   && npm test && npm run test:ui && npm run build`, the prototype build and
   `test:experience` while it exists, `scripts/check-secrets.sh`. Checkpoints that
   touch native code or the shell also build the debug APK, run it on
   `emulator-5560` and run the Android unit/instrumentation tests.
+
+### Production implementation and parity ledger
+
+The latest coherent subset is **Progress foundation**, following the Plan-loop
+subset in `18fe3b8`/`f60a630`. These are implementation checkpoints, not declarations
+that all requirements of stages 2, 3 or 4.1 are finished. In particular, the
+original 4.1 scope includes rehabilitation and remains open. Everything in the
+last column remains **inside item 26**; none is moved to an unrelated follow-up.
+
+| Approved area | Core implemented | Production UI implemented | Verified evidence | Still missing / cutover requirement |
+| --- | --- | --- | --- | --- |
+| Local goals, intentions and migration | Versioned `local:*` records, legacy plan migration, local actions, coverage-aware ledger and matching | Goal steppers, agenda, item actions, links/unlinks | Synthetic migration/export/account-boundary and rule tests | Full real-data migration evidence; immutable revision/achievement history and corrections across all journeys |
+| Shell and destinations | Existing local view commands plus board/review/progress commands | Five tabs, search, Profile entry, Settings and existing details; legacy `checkin`, `plan-setup`, `explore` aliases | Browser routing/cache tests; earlier emulator Back/fragment/unfold/resume checks | Full prototype canonical-route map, invalid-link explanation, section/date/filter and caller preservation; actual notification/widget intent journeys |
+| Today and circumstances | Lead gates, rest/ill/pause/limits, day dismissals; snapshot suppression | Last night/readiness row, lead, effort display, Adapt sheet | Synthetic lead tests; earlier emulator Rest on/off and persistent notification Push → Rest day → Push | **Your day**, sleep-stage/nap/HR/Body Battery timeline; **Keep / Choose another**; approved reason-line/help behavior; **bounded overviews** and rich map/body-map previews against matching scenarios |
+| Plan loop (4.1 subset) | Intentions, matching, backlog, dated review outcomes/proposals, explicit acceptance, prompt switch | Add/move/let go/missed/link/unlink, Do it today, prompt, reviews list, event countdowns; Send to Garmin disabled | Core rule tests and browser sheet/route/contract assertions | **Rehabilitation checklist** and self-reports; complete wind-down planning flow, all intention edit paths, explicit review/resume journey, proposal-history corrections |
+| Garmin plan/event integration | Cached schedule names/dates and race countdown; no new requests | Read-only entries in day agendas; local event add/remove | Stored schedule was empty; only empty-shape evidence | **Event-session grouping**, full Coach/event detail and goal contribution; populated sport/id/duration/step semantics must be verified before allocation or matching |
+| Progress foundation (current subset) | Period bounds, known totals, coverage/comparisons, active days, sport buckets, weekly rings, bounded sleep-versus-need; canonical-unit bests and atomic correction records | Period report, basic calendar, weekly rings, latest-reading links, records/corrections and reviews | Core period/coverage/boundary/award tests; browser contract and responsive regression checks | Overall/Cardio/Strength/Long-term sub-tabs, period trend tiles, ring calendar, strength progression/muscle views, complete dated milestone archive; preserve filter state and measure long-history performance |
+| Training and workouts | Existing detail data plus summary HR/intensity and stored Body Battery projection | Existing Training/Strength/Workout details retained | Existing detail regressions | **Advanced domain visuals**: week lanes/usual-week bands, lift Max weight/Volume and shared ranges, compact Fitness questions, aligned stored workout streams and sport-specific fields |
+| Health and Profile | Existing Garmin health/gear data | Existing Health details, basic Profile/history/gear/settings; Add weight disabled | Existing health/journal/privacy regressions | **Full Profile facts**, limitations entry, long-term/vitals hierarchy, trend weight/steady threshold/freshness, metric ranges and advanced Health visuals |
+| Sleep | Existing nightly evidence, sleep-plan and phase rules retained | Existing Sleep detail | Existing sleep/phase regressions | **Last night / Tonight sleep-phase tabs**, closer-phase default, canonical section links and tonight planning parity |
+| Native and final validation | Shared status suppression; no extra Garmin requests | Existing widgets/status surfaces | At `db8314f`: 14 JVM tests, 14 instrumentation tests and synthetic emulator behavior | Latest Progress APK built for x86_64 but install rejected: certificate mismatch. No clear/uninstall performed. New checkpoint Android tests, physical phone/TalkBack/Doze, private real-data journeys and unfamiliar participants remain unverified |
+
+**Phone artifact:** the last built and verified phone artifact stays labelled
+`db8314f`: `.data/apk/raring-debug-arm64-db8314f.apk`. The newer x86_64 build is
+not a verified phone artifact; do not relabel the earlier APK.
+
+**Release gate:** compare production and the approved prototype at matching
+scenario/date/coverage/circumstance states, walking the applicable U01–U64
+journeys. Record missing behavior, content budgets, source comprehension and
+pressure as well as screenshots. Passing regressions of the old app or tests
+of the synthetic prototype alone cannot close this ledger or item 26.
 
 ### Local records (stage 2.1)
 

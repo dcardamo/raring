@@ -11,9 +11,10 @@ use chrono::{Duration, NaiveDate, Utc};
 
 const HISTORY_WEEKS: i64 = 8;
 
-struct Week {
-    review: WeekReview,
-    goals: Vec<GoalOutcome>,
+pub(crate) struct Week {
+    pub review: WeekReview,
+    pub goals: Vec<GoalOutcome>,
+    pub rings: Vec<Ring>,
 }
 
 fn days_with(local: &LocalRecords, start: NaiveDate, reason: Option<PauseReason>) -> u32 {
@@ -27,13 +28,14 @@ fn days_with(local: &LocalRecords, start: NaiveDate, reason: Option<PauseReason>
         .count() as u32
 }
 
-fn week(store: &Store, local: &LocalRecords, start: NaiveDate, today: NaiveDate) -> Week {
+pub(crate) fn week(store: &Store, local: &LocalRecords, start: NaiveDate, today: NaiveDate) -> Week {
     let board = ledger::board_with(store, local, start, today, Utc::now());
     let ill = days_with(local, start, Some(PauseReason::Ill));
     let paused = days_with(local, start, None) - ill;
     let rest = board.days.iter().filter(|d| local.circumstances.rest.iter().any(|r| r.date == d.date)).count() as u32;
-    let counted = board.coverage_complete && ill + paused <= 1;
+    let counted = start + Duration::days(6) <= today && board.coverage_complete && ill + paused <= 1;
     let mut reasons = vec![];
+    if start + Duration::days(6) > today { reasons.push("Week still in progress".into()); }
     if !board.coverage_complete {
         reasons.push("Garmin's activity list is incomplete".to_owned());
     }
@@ -84,6 +86,7 @@ fn week(store: &Store, local: &LocalRecords, start: NaiveDate, today: NaiveDate)
             decision: local.reviews.decisions.iter().find(|d| d.week == board.start).cloned(),
         },
         goals,
+        rings: board.week_rings,
     }
 }
 
@@ -100,7 +103,7 @@ fn propose(store: &Store, local: &LocalRecords, start: NaiveDate, today: NaiveDa
     let history: Vec<Week> = (0..HISTORY_WEEKS)
         .map(|i| start - Duration::days(7 * i))
         .filter(|w| (*w + Duration::days(6)).to_string() >= first_goal)
-        .map(|w| if w == start { Week { review: last.review.clone(), goals: last.goals.clone() } } else { week(store, local, w, today) })
+        .map(|w| if w == start { Week { review: last.review.clone(), goals: last.goals.clone(), rings: last.rings.clone() } } else { week(store, local, w, today) })
         .collect();
     let t = &version.targets;
     let kinds: Vec<(GoalKind, f64, bool, f64)> = [

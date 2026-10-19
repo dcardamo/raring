@@ -110,12 +110,32 @@ aliases for every earlier route and native target) with the old plan screens
 retired (`5f3e00c`). Stage 3: Today's lead through hard gates with Adapt (rest,
 illness, pause, limits) and Why this (`6bedbf0`); the same suppression in the
 morning notification, persistent status and widgets, republished offline on each
-local change (verified on the emulator: Push → Rest day → Push) (`db8314f`). 4.1: the
-plan loop (add, move, let go, mark missed, link and unlink, Do it today, events,
-the plan-your-week prompt, the week review with proposals needing acceptance, the
-review list; Send to Garmin disabled) and fixes from a read-only review of stages
-2–3 (this change). Interim gaps until 4.2: Progress shows trends and reviews; goals over time, the
-period report, calendar, bests and milestones arrive in 4.2.
+local change (verified on the emulator: Push → Rest day → Push) (`db8314f`).
+**4.1 Plan-loop subset**, not all of 4.1: `18fe3b8`/`f60a630` add/move/let go,
+mark missed, link/unlink, Do it today, local events, prompt, review/proposals and
+review list; Send to Garmin stays disabled. Rehabilitation from the original
+4.1 plan remains unimplemented. The current change is the **Progress foundation
+subset**, not stage-4 completion:
+
+| Area | Core implemented | Production UI implemented | Verified | Still missing within item 26 |
+| --- | --- | --- | --- | --- |
+| Progress foundation | Period totals/coverage/comparison, calendar states, weekly goal rings, sleep-versus-need, canonical-unit records with correction/dedup | Period report, basic calendar, weekly rings, latest-reading links, records and reviews | Synthetic core tests and browser contract/layout checks; historical award writes, unit-change awards, vanished records and revised-week awards have regressions | Approved domain sub-tabs, period trend tiles, nested ring calendar, full dated milestone history, long-history timings and state retention |
+| Plan-loop subset | Local actions, ledger/matches, review proposals | Sessions/backlog/reviews/events | Core and browser regressions | **Rehab checklist**, wind-down planning, all edits and review/resume journey, **event-session grouping** and verified populated Garmin integration |
+| Today/Sleep/Profile/domain parity | Existing facts and foundational rules retained | New shell and partial Today/Plan/Progress, existing details | Earlier detail regressions and emulator subset only | **Your day**, **sleep-phase tabs**, **Keep/Choose another**, **bounded overviews**, **full Profile facts**, and **advanced Training/Health/Progress visuals**; stage 4.3 lanes/volume/ranges/trend weight/freshness/workout streams |
+
+These are approved requirements, not optional follow-ups. The detailed
+[production implementation/parity ledger](docs/experience-design.md#production-implementation-and-parity-ledger)
+separates implementation from evidence. Before cutover, compare production with
+the approved prototype using matching scenarios and U01–U64, not just old-app
+regressions. Keep item 26 open.
+
+**Android checkpoint:** the new x86_64 debug APK built, but emulator installation
+failed with `INSTALL_FAILED_UPDATE_INCOMPATIBLE` (different debug certificate).
+No uninstall or clear followed that failure. Latest Progress behavior is not
+Android-verified. The phone artifact remains
+`.data/apk/raring-debug-arm64-db8314f.apk`, labelled `db8314f`; a new label requires
+a newly built and verified phone binary.
+
 Verified on the maintainer's stored data (key names only, read-only): activity
 `summaryDTO.averageHR` on all 30 stored activities, per-activity
 `moderate/vigorousIntensityMinutes` on 15 of 30 (absent ones stay unknown), and
@@ -124,9 +144,10 @@ the daily stress payload's `bodyBatteryValuesArray` rows are
 (statuses MEASURED, MODELED, RESET and null-level gaps; three-minute spacing).
 The stored Garmin schedule snapshot has an empty `entries` list, so scheduled
 workout sport, duration, ids and steps remain unverified: Garmin sessions are
-listed by name and date only, not counted or matched. Later
-implemented-app/Android, real-data and full migration/evidence checks also remain
-unverified; no endpoint claims or shipped-feature contracts were changed.
+listed by name and date only, not counted or matched. These stored-data shape
+checks are not real-data production journey or migration evidence. Physical
+phone, complete native journeys, real-data migration and unfamiliar-user
+validation remain open.
 
 **Comparison closed (2026-10-19):** the independent candidate on
 `experiment/raring-26-deepseek` (workspace `wks_ed18d1aad5f3d96a`) is archived;
@@ -148,8 +169,8 @@ indefinitely.
   recovery and longer-term health; only the leading message is focused.
 - Prove the navigation and progressive disclosure through whole user journeys
   before restructuring the app. The current four tabs are not a constraint.
-  The working design is Today, Plan, Progress and Explore; participant tests
-  compare the default fourth tab with the header-entry variant.
+  The approved design is Today, Plan, Training, Health and Progress; production
+  must match its journeys and content hierarchy before cutover.
 - Replace the stats-led Today with timely context, one useful next decision and
   recorded accomplishments. Show direct contributions separately from Garmin's
   estimates and longer-term outcomes; no invented strain or wellbeing score.
