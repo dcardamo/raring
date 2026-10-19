@@ -1987,6 +1987,31 @@ remove the prototype entry, keeping its captures; move TODO 26 to Done with
 the commits. The unfamiliar-participant gate is reported as held or passed for
 Dan's decision, never waived silently.
 
+#### Cutover: removing the prototype (after Dan's phone review)
+
+The prototype stays until Dan has compared the released app with it. The
+removal is one change, written when the coordinator says so:
+
+- Delete `app/src/experience/`, `app/experience.html`,
+  `app/vite.experience.config.ts`, `app/experience-public/` and
+  `app/src/scripts/experience-check.mjs`; drop the `experience`,
+  `build:experience` and `test:experience` scripts from `app/package.json`
+  and `vite.experience.config.ts` from `app/tsconfig.node.json`.
+- Delete `app/src/lib/screens/TrainingDetail.svelte` (only the prototype
+  renders it) and make `StrengthHistory`'s `liftSeries` and `muscles`
+  required, dropping the 12-week chart and heat-map fallbacks the prototype
+  uses.
+- Keep `design/mockup/experience/` captures (`shots/`, fonts) and rewrite its
+  README as the record of the approved design; point the spec's visual
+  reference at the captures only.
+- Stop the 48726 preview (a `python3 -m http.server` serving this checkout's
+  ignored `app/dist-experience`; stop it by its verified PID, never by
+  pattern) and remove the preview links from TODO and this document.
+- Move TODO item 26 to Done with its commits, keeping the open evidence
+  (participants, phone, real data, Coach status values) as follow-ups in
+  priority order.
+- Full gate; `test:experience` is no longer part of it.
+
 #### Production vs prototype, U01–U64 (stage 5)
 
 Compared case by case on 2026-10-19 (reviewer read of production code and tests, then each gap verified and fixed here). *Match* means production supports the journey with the case's content and none of its forbidden content; *Fixed* names the commit that closed a gap; *Differs* is an approved decision. This is code and test evidence, not usability evidence: unfamiliar participants, a physical phone and real data are still required.
