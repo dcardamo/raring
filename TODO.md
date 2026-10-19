@@ -446,6 +446,15 @@ faces, screens, sensors and audio prompts stay in Connect.
       `/userprofile-service/userprofile/user-settings` holds `userSleep`
       (sleep and wake time, seconds after midnight) and `userData` (units,
       training days). PUT the full object with only the changed keys.
+    - More writes on the maintainer's account (2026-10-19), each read back
+      with only the written fields changed; watch pickup unconfirmed.
+      `PUT /biometric-service/heartRateZones` with the whole per-sport array
+      (`maxHeartRateUsed`, `zone1Floor`–`zone5Floor`; `changeState` reads
+      back `UNCHANGED`) returned 204. User settings `firstDayOfWeek`
+      (Monday is `dayId` 3, `sortOrder` 3) and `preferredLongTrainingDays`
+      returned 204. Device `startOfWeek` (full object PUT) returned 200.
+      Garmin rejects `availableTrainingDays` with two rest days in a row
+      (400 "Cannot set consecutive rest days").
 21. **Write rules** (do these before any write ships): every write starts
     from a fresh read, changes only the fields the user touched, reads the
     value back and shows success or failure; nothing writes in the
