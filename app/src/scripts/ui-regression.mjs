@@ -648,6 +648,8 @@ try {
   await progressPage.addInitScript(samples=>{
    window.isTauri=true;
    window.progressCalls=[];
+   window.progressStatus=samples.status;
+   window.progressReplies=0;
    window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
     if(command.startsWith('plugin:event|'))return 1;
     if(command==='app_status')return samples.status;
@@ -655,7 +657,12 @@ try {
      window.progressCalls.push(args);
      const p=structuredClone(samples.progress);
      if(args.period==='year'){p.period='year';p.from='2024-11-01';p.to='2025-10-31';p.calendar=[];}
-     if(args.period==='week'){p.period='week';p.from='2025-10-13';p.to='2025-10-19';}
+     if(args.period==='week'){
+      p.period='week';p.from='2025-10-13';p.to='2025-10-19';
+      if(args.date==='2025-10-12'){p.from='2025-10-06';p.to=p.end='2025-10-12';p.current=false;}
+     }
+     if(window.holdProgress){window.holdProgress=false;await new Promise(resolve=>window.releaseProgress=resolve);}
+     window.progressReplies++;
      return p;
     }
     if(command==='trend')return {range:'days30',bucket:'day',from:'2025-09-17',to:'2025-10-16',series:{metric:'hrv',name:'HRV',unit:'ms',points:[],average:null,days:0},overlay:null,previous:null,change:null,available:[]};
@@ -676,10 +683,28 @@ try {
   await progressPage.getByRole('group',{name:'Period',exact:true}).getByRole('button',{name:'Week',exact:true}).click();
   await progressPage.waitForFunction(()=>window.progressCalls.some(c=>c.period==='week'));
   await progressPage.getByRole('button',{name:'Previous period',exact:true}).click();
-  await progressPage.waitForFunction(()=>window.progressCalls.some(c=>c.period==='week' && c.date==='2025-10-12'));
+  await progressPage.waitForFunction(()=>document.querySelector('.rep-h h2')?.textContent.includes('6 Oct')&&document.querySelector('.report')?.getAttribute('aria-busy')==='false');
+  const historicalLabel=await progressPage.locator('.rep-h h2').textContent();
+  await progressPage.locator('.tiles2 button').filter({hasText:'HRV'}).click();
+  await progressPage.waitForFunction(()=>location.hash==='#metric/hrv');
+  await progressPage.goBack();
+  await progressPage.waitForFunction(label=>location.hash==='#progress'&&document.querySelector('.rep-h h2')?.textContent===label,historicalLabel);
+  const beforeResume=await progressPage.evaluate(()=>window.progressReplies);
+  await progressPage.evaluate(()=>{window.progressStatus.lastSync='2025-10-16T12:34:56Z';window.dispatchEvent(new Event('raring:resume'));});
+  await progressPage.waitForFunction(n=>window.progressReplies>n,beforeResume);
+  assert.equal(await progressPage.locator('.rep-h h2').textContent(),historicalLabel,'refresh keeps historical period');
+  // A held old-period read cannot replace a selection made while it was pending.
+  await progressPage.evaluate(()=>{window.holdProgress=true;window.dispatchEvent(new Event('raring:resume'));});
+  await progressPage.waitForFunction(()=>typeof window.releaseProgress==='function');
+  await progressPage.getByRole('group',{name:'Period',exact:true}).getByRole('button',{name:'Month',exact:true}).click();
+  await progressPage.getByRole('heading',{name:'October 2025',exact:true}).waitFor();
+  const beforeRelease=await progressPage.evaluate(()=>window.progressReplies);
+  await progressPage.evaluate(()=>window.releaseProgress());
+  await progressPage.waitForFunction(n=>window.progressReplies>n,beforeRelease);
+  assert.equal(await progressPage.locator('.rep-h h2').textContent(),'October 2025','old period read cannot overwrite the selected month');
   await progressPage.close();
  }
- console.log('Progress contract: periods, coverage labels, calendar and records passed');
+ console.log('Progress contract: periods, coverage, calendar, records, Back/resume and stale-read selection passed');
  // The sample's phase ended long ago; phase expiry has its own check below.
  samples.today.focus.until=null;
  const statusDenied=await browser.newPage({viewport:{width:390,height:844}});

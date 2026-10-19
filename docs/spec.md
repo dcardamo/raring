@@ -1089,7 +1089,11 @@ Sent by the phone itself.
   and the cache without clearing the visible view. Status is read on start,
   resume and sync, not before every navigation, and is applied independently
   of navigation so a tab switch can't discard a newer sync or sign-out. View
-  commands read SQLite off the WebView thread. Today carries the end of its
+  commands read SQLite off the WebView thread. Progress keeps its selected
+  period and historical anchor with the cached page across detail/Back and
+  resume/sync refreshes. Selection revisions reject older in-flight results;
+  sign-out resets the selection. Its local calendar date remains separate from
+  the selected period's end so forward navigation still works. Today carries the end of its
   time-of-day phase: a cached Today past it is read again instead of shown,
   and the visible Today is read again when it passes.
 - **Bedtime reminder**: the core returns tonight's wind-down time as a local

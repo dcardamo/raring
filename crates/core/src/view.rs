@@ -2547,4 +2547,6 @@ pub struct ProgressView {
     /// Newest first, in available history.
     pub milestones: Vec<Milestone>,
     pub sleep: Option<SleepNeedSummary>,
+    // Local calendar date, independent of the selected historical period.
+    pub today: String,
 }

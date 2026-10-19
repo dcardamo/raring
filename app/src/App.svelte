@@ -60,7 +60,10 @@
  import Gauge from './lib/components/Gauge.svelte';import Sparkline from './lib/components/Sparkline.svelte';import RangeBar from './lib/components/RangeBar.svelte';import ZoneStrip from './lib/components/ZoneStrip.svelte';import Hypnogram from './lib/components/Hypnogram.svelte';import ConsistencyChart from './lib/components/ConsistencyChart.svelte';import WeekBars from './lib/components/WeekBars.svelte';import LoadFocus from './lib/components/LoadFocus.svelte';import RouteMap from './lib/components/RouteMap.svelte';import HrChart from './lib/components/HrChart.svelte';import Card from './lib/components/Card.svelte';import Chip from './lib/components/Chip.svelte';import Header from './lib/components/Header.svelte';import TabBar from './lib/components/TabBar.svelte';import ActivityRow from './lib/components/ActivityRow.svelte';
  import {colors,toneColor,batteryColor,stressColors,stressNames} from './lib/charts';import {duration,elapsed,pace,clock,dateLabel,monthLabel,signed,num} from './lib/format';
  type StrengthPage={strengthPage:StrengthView|null};
- type ProgressPage={progress:import('./lib/generated/ProgressView').ProgressView;health:HealthView};
+ type ProgressView=import('./lib/generated/ProgressView').ProgressView;
+ type ProgressPage={progress:ProgressView;health:HealthView};
+ let progressQuery:{period:import('./lib/generated/Period').Period,date?:string}={period:'month'};
+ let progressRevision=0;
  type PageData=TodayView|SleepView|TrainingView|WorkoutView|HealthView|CheckinView|PlanBoard|StrengthPage|ProgressPage;
  let sheet=$state(false),search=$state(false),addDraft=$state<Draft|null>(null),itemSheet=$state<PlanItem|null>(null),eventSheet=$state(false),reviewData=$state<WeekReview|null>(null),reviewRows=$state<ReviewRow[]|null>(null),lastPhase=$state<string|null>(null),adaptOpen=$state(false),adaptState=$state<AdaptState|null>(null),weekBoard=$state<PlanBoard|null>(null),statusOffer=$state(false),savingStatus=$state(false);
  let checkingStatusOffer=false,settingsRevision=0;
@@ -138,19 +141,20 @@
  async function readView(current:string):Promise<PageData>{
   for(;;){
    checkDay();
-   const generation=cacheGeneration;
+   const generation=cacheGeneration,selection=progressRevision;
+   const currentRead=()=>generation===cacheGeneration && (current!=='progress'||selection===progressRevision);
    let read=pendingViews.get(current);
    if(!read){
-    read=loadView(current).then(next=>{if(generation===cacheGeneration)views.set(current,next);return next})
+    read=loadView(current).then(next=>{if(currentRead())views.set(current,next);return next})
      .finally(()=>{if(pendingViews.get(current)===read)pendingViews.delete(current)});
     pendingViews.set(current,read);
    }
    try{
     const next=await read;
     checkDay();
-    if(generation===cacheGeneration)return next;
+    if(currentRead())return next;
    }catch(e){
-    if(generation===cacheGeneration)throw e;
+    if(currentRead())throw e;
    }
   }
  }
@@ -171,6 +175,17 @@
  function readAdapt(){void readView('today').then(v=>{adaptState=(v as TodayView).adapt??null}).catch(()=>{})}
  let activeTab=$derived([...trail].reverse().find(r=>(tabs as readonly string[]).includes(r))??'today');
  let parentLabel=$derived.by(()=>{const parent=trail.at(-2);if(!parent)return 'Today';if(parent.startsWith('workout/'))return 'Workout';if(parent.startsWith('help/'))return 'Help';return ({today:'Today',sleep:'Sleep',training:'Training',health:'Health',readiness:'Readiness',plan:'Plan',progress:'Progress',profile:'Profile',activities:'Activities','plan/commitments':'Goals',strength:'Strength',help:'Help',settings:'Settings'} as Record<string,string>)[parent]??'Back'});
+ // Keep Progress's selection with its cached page, not a component that is
+ // destroyed on a detail visit. Older reads may not replace a newer selection.
+ function saveProgress(progress:ProgressView){
+  if(route!=='progress' || !data || !('health' in data))return;
+  progressQuery={period:progress.period,date:progress.current?undefined:progress.end};
+  progressRevision++;requestId++;
+  pendingViews.delete('progress');
+  const next:ProgressPage={progress,health:data.health};
+  views.set('progress',next);data=next;pendingSwap=null;loading=false;
+ }
+ function clearSessionViews(){progressQuery={period:'month'};progressRevision++;clearViews()}
  function navigate(to:string){navigation.navigate(to)}
  function back(){return closeSheet() || navigation.back()}
  async function loadView(current:string):Promise<PageData>{
@@ -184,7 +199,7 @@
    // The check-in is keyed by the Monday after its week; a review route names the week's start.
    case 'review':return api.checkin(id==='latest'?undefined:addDays(id,7));
    case 'plan':return api.plan_board();
-   case 'progress':{const [progress,health]=await Promise.all([api.progress(),api.health()]);return {progress,health}}
+   case 'progress':{const [progress,health]=await Promise.all([api.progress(progressQuery.period,progressQuery.date),api.health()]);return {progress,health}}
    case 'profile':case 'gear':case 'activities':return api.training();
    case 'metric':return api[metricSource(id)]();
    default:return api.today();
@@ -207,7 +222,7 @@
      status=nextStatus;
      checkDay();
      if(live){
-      if(!status.signedIn){onboardStep=0;clearViews();data=null;if(route!=='onboarding')navigate('onboarding');return}
+      if(!status.signedIn){onboardStep=0;clearSessionViews();data=null;if(route!=='onboarding')navigate('onboarding');return}
       if(localStorage.getItem('notifications-step-done')!=='1'){onboardStep=1;if(route!=='onboarding')navigate('onboarding');return}
       if(route==='onboarding'){navigate('today');return}
      }
@@ -351,7 +366,7 @@
   {#if error || status?.lastError}<p class="small" role="alert">{error || status?.lastError}</p>{/if}
  </section>
 {:else if route==='settings'}
- <Header title="Settings" eyebrow="RARING" back={back} backLabel={parentLabel}/><div class="dashboard" {@attach masonry}><Card title="Notifications">{#each (['notifyMorningReadiness','notifyWeeklyCheckin','notifyMetricChanges','notifyVitals','notifyTrainingStatus','notifyBedtime'] as const) as key}<label class="setting"><span>{({notifyMorningReadiness:'Morning readiness',notifyWeeklyCheckin:'Weekly check-in',notifyMetricChanges:'VO₂ max or Fitness Age changed',notifyVitals:'Vitals off',notifyTrainingStatus:'Training status changed',notifyBedtime:'Bedtime'} as Record<string,string>)[key]}</span><input type="checkbox" checked={settings[key]} disabled={settingsBusy[key]} onchange={(e)=>void patchSettings({[key]:e.currentTarget.checked})}/></label>{#if key==='notifyBedtime' && settings.notifyBedtime}<label class="setting lead"><span>Wind-down reminder</span><select value={settings.bedtimeLeadMin} disabled={settingsBusy.bedtimeLeadMin} onchange={(e)=>void patchSettings({bedtimeLeadMin:Number(e.currentTarget.value)})}>{#each [15,30,45,60,90] as lead}<option value={lead}>{lead} min before</option>{/each}</select></label>{/if}{/each}{#if api.supportsStatusSurfaces}<label class="setting"><span>Persistent status<small class="setting-note">Silent readings and today's focus, with the watch's upload time. Uses the existing sync; no extra Garmin requests.</small></span><input type="checkbox" checked={settings.notifyStatus} disabled={savingStatus || settingsBusy.notifyStatus || settingsBusy.statusOfferSeen} onchange={(e)=>{const input=e.currentTarget,on=input.checked;input.checked=settings.notifyStatus;void toggleStatus(on)}}/></label><p class="small">Add Raring widgets from your home screen's widget picker. Updates follow sync; Android may delay them.</p>{/if}</Card><Card title="Today"><label class="setting"><span>Follow my day<small class="setting-note">Lead with this morning, the day so far or tonight's sleep. Turn off for shift work or an irregular schedule.</small></span><input type="checkbox" checked={settings.adaptiveToday} disabled={savingTodayLayout} onchange={(e)=>void saveTodayLayout(e.currentTarget.checked)}/></label></Card><Card title="Plan"><label class="setting"><span>Offer to plan the week<small class="setting-note">At the start of a week, after weeks with goals: review last week and place sessions. Never during wind-down.</small></span><input type="checkbox" checked={settings.planPrompt} disabled={settingsBusy.planPrompt} onchange={e=>void patchSettings({planPrompt:e.currentTarget.checked}).then(ok=>{if(ok)clearViews()})}/></label></Card><Card title="Journal privacy"><label class="setting"><span>Allow Garmin journal reads<small class="setting-note">Off by default. Last seven days only; never in notifications. Turning this off stops new reads. Already downloaded logs remain on this device and in future exports until you erase local data.</small></span><input type="checkbox" checked={settings.journalEnabled} disabled={settingsBusy.journalEnabled} onchange={e=>void toggleJournal(e.currentTarget.checked)}/></label></Card><Card title="Permission"><button class="secondary" onclick={async()=>{try{await api.request_notification_permission()}catch(e){error=String(e)}}}>Enable notifications</button></Card><Card title="Garmin history"><div class="big n">{status?.historyFrom?`Since ${monthLabel(status.historyFrom)}`:'—'}</div><p class="small">{status?.historyComplete?'All of your Garmin history is on this phone.':'Downloading older history in the background.'}</p></Card><Card title="Export"><p class="small">Download a ZIP of your saved Garmin responses, daily CSVs and Raring settings. Sign-in tokens are never included. Previously downloaded journal logs are included even if journal reads are now off; erase local data to remove them. The file leaves your phone only when you share it.</p><button class="secondary" disabled={exporting} onclick={exportData}>{exporting?'Preparing your export…':'Export your data'}</button>{#if exportMessage}<p class="small" role="status">{exportMessage}</p>{/if}</Card><Card title="Account"><button class="signout" onclick={async()=>{if(confirm('Sign out and erase all local Garmin history?')){try{await api.sign_out();clearViews();data=null;localStorage.removeItem('notifications-step-done');onboardStep=0;navigate('onboarding')}catch(e){error=String(e)}}}}>Sign out</button></Card><Card title="Help" onclick={()=>navigate('help')}><p class="small">How Raring reads strength sets, the body map and which watches work.</p></Card><Card title="How Raring works"><AboutRaring/></Card></div>
+ <Header title="Settings" eyebrow="RARING" back={back} backLabel={parentLabel}/><div class="dashboard" {@attach masonry}><Card title="Notifications">{#each (['notifyMorningReadiness','notifyWeeklyCheckin','notifyMetricChanges','notifyVitals','notifyTrainingStatus','notifyBedtime'] as const) as key}<label class="setting"><span>{({notifyMorningReadiness:'Morning readiness',notifyWeeklyCheckin:'Weekly check-in',notifyMetricChanges:'VO₂ max or Fitness Age changed',notifyVitals:'Vitals off',notifyTrainingStatus:'Training status changed',notifyBedtime:'Bedtime'} as Record<string,string>)[key]}</span><input type="checkbox" checked={settings[key]} disabled={settingsBusy[key]} onchange={(e)=>void patchSettings({[key]:e.currentTarget.checked})}/></label>{#if key==='notifyBedtime' && settings.notifyBedtime}<label class="setting lead"><span>Wind-down reminder</span><select value={settings.bedtimeLeadMin} disabled={settingsBusy.bedtimeLeadMin} onchange={(e)=>void patchSettings({bedtimeLeadMin:Number(e.currentTarget.value)})}>{#each [15,30,45,60,90] as lead}<option value={lead}>{lead} min before</option>{/each}</select></label>{/if}{/each}{#if api.supportsStatusSurfaces}<label class="setting"><span>Persistent status<small class="setting-note">Silent readings and today's focus, with the watch's upload time. Uses the existing sync; no extra Garmin requests.</small></span><input type="checkbox" checked={settings.notifyStatus} disabled={savingStatus || settingsBusy.notifyStatus || settingsBusy.statusOfferSeen} onchange={(e)=>{const input=e.currentTarget,on=input.checked;input.checked=settings.notifyStatus;void toggleStatus(on)}}/></label><p class="small">Add Raring widgets from your home screen's widget picker. Updates follow sync; Android may delay them.</p>{/if}</Card><Card title="Today"><label class="setting"><span>Follow my day<small class="setting-note">Lead with this morning, the day so far or tonight's sleep. Turn off for shift work or an irregular schedule.</small></span><input type="checkbox" checked={settings.adaptiveToday} disabled={savingTodayLayout} onchange={(e)=>void saveTodayLayout(e.currentTarget.checked)}/></label></Card><Card title="Plan"><label class="setting"><span>Offer to plan the week<small class="setting-note">At the start of a week, after weeks with goals: review last week and place sessions. Never during wind-down.</small></span><input type="checkbox" checked={settings.planPrompt} disabled={settingsBusy.planPrompt} onchange={e=>void patchSettings({planPrompt:e.currentTarget.checked}).then(ok=>{if(ok)clearViews()})}/></label></Card><Card title="Journal privacy"><label class="setting"><span>Allow Garmin journal reads<small class="setting-note">Off by default. Last seven days only; never in notifications. Turning this off stops new reads. Already downloaded logs remain on this device and in future exports until you erase local data.</small></span><input type="checkbox" checked={settings.journalEnabled} disabled={settingsBusy.journalEnabled} onchange={e=>void toggleJournal(e.currentTarget.checked)}/></label></Card><Card title="Permission"><button class="secondary" onclick={async()=>{try{await api.request_notification_permission()}catch(e){error=String(e)}}}>Enable notifications</button></Card><Card title="Garmin history"><div class="big n">{status?.historyFrom?`Since ${monthLabel(status.historyFrom)}`:'—'}</div><p class="small">{status?.historyComplete?'All of your Garmin history is on this phone.':'Downloading older history in the background.'}</p></Card><Card title="Export"><p class="small">Download a ZIP of your saved Garmin responses, daily CSVs and Raring settings. Sign-in tokens are never included. Previously downloaded journal logs are included even if journal reads are now off; erase local data to remove them. The file leaves your phone only when you share it.</p><button class="secondary" disabled={exporting} onclick={exportData}>{exporting?'Preparing your export…':'Export your data'}</button>{#if exportMessage}<p class="small" role="status">{exportMessage}</p>{/if}</Card><Card title="Account"><button class="signout" onclick={async()=>{if(confirm('Sign out and erase all local Garmin history?')){try{await api.sign_out();clearSessionViews();data=null;localStorage.removeItem('notifications-step-done');onboardStep=0;navigate('onboarding')}catch(e){error=String(e)}}}}>Sign out</button></Card><Card title="Help" onclick={()=>navigate('help')}><p class="small">How Raring reads strength sets, the body map and which watches work.</p></Card><Card title="How Raring works"><AboutRaring/></Card></div>
 {:else if route==='help'}
  <Header title="Help" eyebrow="RARING" back={back} backLabel={parentLabel}/><div class="help-list">{#each helpSections as section}<Card title={section.title}>{#each section.pages as page}<button class="help-row" onclick={()=>navigate('help/'+page)}><span class="help-icon"><Icon name={helpContent[page].icon} size={18}/></span><b>{helpContent[page].title}</b><Icon name="chevron" size={16}/></button>{/each}</Card>{/each}<p class="small help-foot">Still stuck? Ask at {GITHUB_QUESTIONS}</p></div>
 {:else if route.startsWith('help/') && route.slice(5) in helpContent}
@@ -399,7 +414,7 @@
 {:else if boardData && route==='plan/commitments'}
  <Header title="Weekly goals" eyebrow="Plan" back={back} backLabel={parentLabel}/><GoalEditor initial={boardData.goals?.targets??null} garminGoal={boardData.garminIntensityGoal} busy={changing} save={targets=>act({action:'setGoals',targets},back)}/>
 {:else if progressData}
- {#snippet progressHeader()}<Header title="Progress" eyebrow="Trends and reviews" {...rootControls}/>{/snippet}<ProgressTab initial={progressData.progress} health={progressData.health} {navigate} header={progressHeader}/>
+ {#snippet progressHeader()}<Header title="Progress" eyebrow="Trends and reviews" {...rootControls}/>{/snippet}<ProgressTab initial={progressData.progress} health={progressData.health} {navigate} header={progressHeader} onChange={saveProgress}/>
 {:else if profileData && route==='profile'}
  {#snippet profileHeader()}<Header title="Profile" eyebrow="RARING" back={back} backLabel={parentLabel}/>{/snippet}<ProfileScreen {status} training={profileData} {navigate} header={profileHeader}/>
 {:else if profileData && route==='gear'}

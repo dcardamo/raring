@@ -114,12 +114,13 @@ local change (verified on the emulator: Push → Rest day → Push) (`db8314f`).
 **4.1 Plan-loop subset**, not all of 4.1: `18fe3b8`/`f60a630` add/move/let go,
 mark missed, link/unlink, Do it today, local events, prompt, review/proposals and
 review list; Send to Garmin stays disabled. Rehabilitation from the original
-4.1 plan remains unimplemented. The current change is the **Progress foundation
-subset**, not stage-4 completion:
+4.1 plan remains unimplemented. `aac5783` is the **Progress foundation
+subset**, not stage-4 completion. The current checkpoint adds non-destructive
+emulator checks and fixes Progress period selection across detail/Back/resume:
 
 | Area | Core implemented | Production UI implemented | Verified | Still missing within item 26 |
 | --- | --- | --- | --- | --- |
-| Progress foundation | Period totals/coverage/comparison, calendar states, weekly goal rings, sleep-versus-need, canonical-unit records with correction/dedup | Period report, basic calendar, weekly rings, latest-reading links, records and reviews | Synthetic core tests and browser contract/layout checks; historical award writes, unit-change awards, vanished records and revised-week awards have regressions | Approved domain sub-tabs, period trend tiles, nested ring calendar, full dated milestone history, long-history timings and state retention |
+| Progress foundation | Period totals/coverage/comparison, calendar states, weekly goal rings, sleep-versus-need, canonical-unit records with correction/dedup | Period report, basic calendar, weekly rings, latest-reading links, records and reviews | Synthetic core/browser checks; emulator period IPC, rendered switching, previous/next, coverage/calendar and historical selection through detail/Back/Home/resume; stale-read selection has a browser regression | Approved domain sub-tabs, period trend tiles, nested ring calendar, full dated milestone history, long-history timings and wider route/filter parity |
 | Plan-loop subset | Local actions, ledger/matches, review proposals | Sessions/backlog/reviews/events | Core and browser regressions | **Rehab checklist**, wind-down planning, all edits and review/resume journey, **event-session grouping** and verified populated Garmin integration |
 | Today/Sleep/Profile/domain parity | Existing facts and foundational rules retained | New shell and partial Today/Plan/Progress, existing details | Earlier detail regressions and emulator subset only | **Your day**, **sleep-phase tabs**, **Keep/Choose another**, **bounded overviews**, **full Profile facts**, and **advanced Training/Health/Progress visuals**; stage 4.3 lanes/volume/ranges/trend weight/freshness/workout streams |
 
@@ -129,18 +130,30 @@ separates implementation from evidence. Before cutover, compare production with
 the approved prototype using matching scenarios and U01–U64, not just old-app
 regressions. Keep item 26 open.
 
-**Android checkpoint:** the new x86_64 debug APK built, but emulator installation
-failed with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`. Coordinator verified the cause:
-`$PWD`-relative Android homes selected different private debug keys when entering
-from root versus `app/`. The dev shell now anchors both Android homes to the
-checkout root (source archives use the enclosing project root). Verified that
-root/app `nix develop` entry paths agree, and the archive fallback creates no
-Android state. Coordinator owns recovery of the existing matching key
-and the in-place emulator update. No builds, installs, key changes, uninstall or
-clear in this lane until that recovery is confirmed. Latest Progress behavior
-is not Android-verified. The phone artifact remains
-`.data/apk/raring-debug-arm64-db8314f.apk`, labelled `db8314f`; a new label requires
-a newly built and verified phone binary.
+**Android checkpoint:** coordinator completed matching debug-key recovery and
+an in-place emulator update without uninstall/clear; audit/backups remain private
+in `/home/dan/git/raring/.data/debug-signing-SXp1r3/`. `3a5f32c` anchors both Android
+homes to the checkout root. With the hold lifted, this lane built the Progress
+selection fix for x86_64, verified its signer against the recovered certificate,
+and installed with `adb -s emulator-5560 install -r`; package UID and
+first-install timestamp stayed unchanged.
+
+`scripts/android-progress-test.mjs` passed against the real core/WebView using
+existing cached synthetic data: four periods, rendered switching, previous/next,
+coverage/calendar, detail/Back historical selection and Home/resume. Local period
+reads were 8–19 ms in that small fixture, **not** a long-history benchmark.
+`scripts/android-navigation-test.mjs --existing` passed Back/fragment destinations,
+Profile/Settings/goals, unfold and root exit/resume without reseeding or changing
+circumstances. Actual notification-intent delivery, current-checkpoint full native
+instrumentation, physical phone and full matching-scenario parity remain open.
+Private logs are in `.data/qa-progress-native/`.
+
+Preserve the recovered matching root `.android-user/debug.keystore` at eventual
+cutover/worktree retirement; its backup is in main `.data`. Main's own
+`.android-user` still has a different older debug key and was not overwritten.
+Always verify signer before installing; never clear/uninstall to fix a mismatch.
+The phone artifact remains `.data/apk/raring-debug-arm64-db8314f.apk`, labelled
+`db8314f`; no newer arm64 binary has been published.
 
 Verified on the maintainer's stored data (key names only, read-only): activity
 `summaryDTO.averageHR` on all 30 stored activities, per-activity

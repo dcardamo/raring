@@ -313,6 +313,7 @@ pub fn progress(store: &Store, period: Period, anchor: NaiveDate, today: NaiveDa
     milestones.sort_by(|a, b| b.date.cmp(&a.date));
     milestones.truncate(12);
     Ok(ProgressView {
+        today: today.to_string(),
         period,
         from: from.to_string(),
         to: to.to_string(),

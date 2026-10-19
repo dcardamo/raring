@@ -164,7 +164,7 @@ const review={start:'2025-10-06',end:'2025-10-12',counted:true,reasons:['1 rest 
 const reviews=[{start:'2025-10-06',counted:true,met:3,goals:3,reasons:['1 rest day']},{start:'2025-09-29',counted:false,met:0,goals:3,reasons:['2 ill days']}];
 
 const progressTotals={activities:5,activeMin:Math.round(boardRecs.reduce((n,a)=>n+a.durationMin,0)),distanceKm:48.6,intensityMin:124,intensityDays:4,activeDays:4,coveredDays:16,days:16};
-const progress={period:'month',from:'2025-10-01',to:'2025-10-31',end:'2025-10-16',current:true,historyStart:'2025-09-01',totals:progressTotals,previous:null,previousFrom:null,previousTo:null,partial:false,
+const progress={today:'2025-10-16',period:'month',from:'2025-10-01',to:'2025-10-31',end:'2025-10-16',current:true,historyStart:'2025-09-01',totals:progressTotals,previous:null,previousFrom:null,previousTo:null,partial:false,
  buckets:Array.from({length:31},(_,i)=>{const date=`2025-10-${String(i+1).padStart(2,'0')}`,acts=boardRecs.filter(r=>r.date===date);return {from:date,to:date,minutes:acts.map(a=>({sport:a.sport,minutes:a.durationMin})),total:acts.reduce((n,a)=>n+a.durationMin,0),known:i<16,future:i>=16}}),
  calendar:Array.from({length:31},(_,i)=>{const date=`2025-10-${String(i+1).padStart(2,'0')}`,n=boardRecs.filter(r=>r.date===date).length;return {date,state:i>=16?'future':n?'active':'none',activities:n,covered:i<16}}),
  goalWeeks:[{start:board.start,rings:board.weekRings,counted:true,met:0,goals:3,reasons:[]}],

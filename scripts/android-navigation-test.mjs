@@ -1,11 +1,13 @@
 // Run inside nix develop with a debug build open. APP_ID may select a separate test install.
-// Seeds synthetic data only; refuses to overwrite a signed-in app.
+// Default mode seeds only a signed-out synthetic test install. --existing uses
+// its cached data without reseeding or changing circumstances.
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {createRequire} from 'node:module';
 import {mkdir} from 'node:fs/promises';
 const {chromium}=createRequire(new URL('../app/package.json',import.meta.url))('playwright');
-const adb=(...args)=>execFileSync('adb',args,{encoding:'utf8'}).trim();
+const adb=(...args)=>execFileSync('adb',['-s',process.env.ANDROID_SERIAL??'emulator-5560',...args],{encoding:'utf8'}).trim();
+const existing=process.argv.includes('--existing');
 const app=process.env.APP_ID??'app.raring.debug';
 const pid=adb('shell','pidof',app);
 const port=adb('forward','tcp:0',`localabstract:webview_devtools_remote_${pid}`);
@@ -33,9 +35,17 @@ try {
  }
  assert.ok(page,'attached app WebView is open');
  const status=await page.evaluate(()=>window.__TAURI_INTERNALS__.invoke('app_status'));
- assert.equal(status.signedIn,false,'use a signed-out test install, never a personal account');
- const demo=await page.evaluate(()=>window.__TAURI_INTERNALS__.invoke('load_demo_data'));
- const workout=demo.split(':')[1];
+ let workout;
+ if(existing){
+  assert.equal(status.signedIn,true,'existing-data checks require an active cached session');
+  const training=await page.evaluate(()=>window.__TAURI_INTERNALS__.invoke('training'));
+  workout=training.workouts[0]?.id;
+  assert.ok(workout,'existing-data workout navigation needs a cached workout');
+ }else{
+  assert.equal(status.signedIn,false,'use a signed-out test install, never a personal account');
+  const demo=await page.evaluate(()=>window.__TAURI_INTERNALS__.invoke('load_demo_data'));
+  workout=demo.split(':')[1];
+ }
  await page.goto('http://tauri.localhost/?fixture=demo#today');
  const waitRoute=async(route)=>{
   await page.waitForFunction(route=>location.hash===`#${route}` && !document.querySelector('.empty') && document.querySelector('h1'),route);
@@ -62,7 +72,8 @@ try {
   await page.goto(`http://tauri.localhost/?fixture=demo#${target}`);
   await waitRoute(route);
  }
- console.log('Android native targets and the check-in alias: passed');
+ console.log('Android fragment destinations and the check-in alias: passed (not native intent delivery)');
+ if(!existing){
  // Adapt goes through the real core: rest replaces the lead, offline and at once, and turns off again.
  await page.goto('http://tauri.localhost/?fixture=demo#today');await waitRoute('today');
  await page.locator('.top .adapt').click();
@@ -74,6 +85,7 @@ try {
  await page.getByRole('dialog',{name:'Adapt today'}).getByRole('button',{name:/^Rest day is on/}).click();
  await page.waitForFunction(()=>document.querySelector('.top .adapt')?.textContent==='Adapt today');
  console.log('Android Adapt: rest on and off through the core: passed');
+ }else console.log('Android existing-data mode: seeding and circumstance mutations skipped');
 
  await page.evaluate(()=>{
   window.__foldSentinel=true;

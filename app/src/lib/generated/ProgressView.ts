@@ -35,4 +35,4 @@ goalWeeks: Array<GoalWeek>,
 /**
  * Newest first, in available history.
  */
-milestones: Array<Milestone>, sleep: SleepNeedSummary | null, };
+milestones: Array<Milestone>, sleep: SleepNeedSummary | null, today: string, };

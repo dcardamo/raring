@@ -1788,8 +1788,9 @@ on-demand gates stay as they are.
 
 ### Production implementation and parity ledger
 
-The latest coherent subset is **Progress foundation**, following the Plan-loop
-subset in `18fe3b8`/`f60a630`. These are implementation checkpoints, not declarations
+The **Progress foundation** (`aac5783`) follows the Plan-loop
+subset in `18fe3b8`/`f60a630`. The next checkpoint fixes Progress selection
+preservation and adds non-destructive emulator verification. These are implementation checkpoints, not declarations
 that all requirements of stages 2, 3 or 4.1 are finished. In particular, the
 original 4.1 scope includes rehabilitation and remains open. Everything in the
 last column remains **inside item 26**; none is moved to an unrelated follow-up.
@@ -1801,15 +1802,19 @@ last column remains **inside item 26**; none is moved to an unrelated follow-up.
 | Today and circumstances | Lead gates, rest/ill/pause/limits, day dismissals; snapshot suppression | Last night/readiness row, lead, effort display, Adapt sheet | Synthetic lead tests; earlier emulator Rest on/off and persistent notification Push → Rest day → Push | **Your day**, sleep-stage/nap/HR/Body Battery timeline; **Keep / Choose another**; approved reason-line/help behavior; **bounded overviews** and rich map/body-map previews against matching scenarios |
 | Plan loop (4.1 subset) | Intentions, matching, backlog, dated review outcomes/proposals, explicit acceptance, prompt switch | Add/move/let go/missed/link/unlink, Do it today, prompt, reviews list, event countdowns; Send to Garmin disabled | Core rule tests and browser sheet/route/contract assertions | **Rehabilitation checklist** and self-reports; complete wind-down planning flow, all intention edit paths, explicit review/resume journey, proposal-history corrections |
 | Garmin plan/event integration | Cached schedule names/dates and race countdown; no new requests | Read-only entries in day agendas; local event add/remove | Stored schedule was empty; only empty-shape evidence | **Event-session grouping**, full Coach/event detail and goal contribution; populated sport/id/duration/step semantics must be verified before allocation or matching |
-| Progress foundation (current subset) | Period bounds, known totals, coverage/comparisons, active days, sport buckets, weekly rings, bounded sleep-versus-need; canonical-unit bests and atomic correction records | Period report, basic calendar, weekly rings, latest-reading links, records/corrections and reviews | Core period/coverage/boundary/award tests; browser contract and responsive regression checks | Overall/Cardio/Strength/Long-term sub-tabs, period trend tiles, ring calendar, strength progression/muscle views, complete dated milestone archive; preserve filter state and measure long-history performance |
+| Progress foundation (current subset) | Period bounds, known totals, coverage/comparisons, active days, sport buckets, weekly rings, bounded sleep-versus-need; canonical-unit bests and atomic correction records | Period report, basic calendar, weekly rings, latest-reading links, records/corrections and reviews | Core period/coverage/boundary/award tests; browser contract/responsive and stale-read selection regressions; emulator periods, coverage/calendar and selection through detail/Back/Home/resume | Overall/Cardio/Strength/Long-term sub-tabs, period trend tiles, ring calendar, strength progression/muscle views, complete dated milestone archive; wider filter/route parity and long-history performance |
 | Training and workouts | Existing detail data plus summary HR/intensity and stored Body Battery projection | Existing Training/Strength/Workout details retained | Existing detail regressions | **Advanced domain visuals**: week lanes/usual-week bands, lift Max weight/Volume and shared ranges, compact Fitness questions, aligned stored workout streams and sport-specific fields |
 | Health and Profile | Existing Garmin health/gear data | Existing Health details, basic Profile/history/gear/settings; Add weight disabled | Existing health/journal/privacy regressions | **Full Profile facts**, limitations entry, long-term/vitals hierarchy, trend weight/steady threshold/freshness, metric ranges and advanced Health visuals |
 | Sleep | Existing nightly evidence, sleep-plan and phase rules retained | Existing Sleep detail | Existing sleep/phase regressions | **Last night / Tonight sleep-phase tabs**, closer-phase default, canonical section links and tonight planning parity |
-| Native and final validation | Shared status suppression; no extra Garmin requests | Existing widgets/status surfaces | At `db8314f`: 14 JVM tests, 14 instrumentation tests and synthetic emulator behavior | Latest Progress APK built for x86_64 but install rejected: certificate mismatch. No clear/uninstall performed. New checkpoint Android tests, physical phone/TalkBack/Doze, private real-data journeys and unfamiliar participants remain unverified |
+| Native and final validation | Shared status suppression; no extra Garmin requests | Existing widgets/status surfaces | At `db8314f`: 14 JVM tests, 14 instrumentation tests and synthetic emulator behavior. After key recovery: signer-verified x86_64 in-place update, unchanged UID/first install time; Progress and existing-data navigation scripts pass | Current-checkpoint full native instrumentation, actual notification intents, physical phone/TalkBack/Doze, private real-data journeys and unfamiliar participants remain unverified |
 
 **Phone artifact:** the last built and verified phone artifact stays labelled
 `db8314f`: `.data/apk/raring-debug-arm64-db8314f.apk`. The newer x86_64 build is
-not a verified phone artifact; do not relabel the earlier APK.
+not a verified phone artifact; do not relabel the earlier APK. The debug-signing
+mismatch was recovered by the coordinator without clearing app data. Preserve
+the matching checkout-root debug key at cutover/retirement; private backups are
+in main `.data/debug-signing-SXp1r3/`, and main's older debug key is different.
+Subsequent installs must verify the signer first.
 
 **Release gate:** compare production and the approved prototype at matching
 scenario/date/coverage/circumstance states, walking the applicable U01–U64

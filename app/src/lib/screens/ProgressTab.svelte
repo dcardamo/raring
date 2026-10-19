@@ -1,5 +1,5 @@
 <script lang="ts">
- import {untrack, type Snippet} from 'svelte';
+ import {onDestroy, untrack, type Snippet} from 'svelte';
  import Icon from '../components/Icon.svelte';
  import NestedRings from '../components/NestedRings.svelte';
  import type {HealthView} from '../generated/HealthView';
@@ -11,16 +11,17 @@
  import * as api from '../api';
  // Progress: a report for a chosen period, the calendar, goals over time, trends
  // and milestones. Follow-through and measured change stay apart; nothing is a grade.
- let {initial, health, navigate, header}: {initial: ProgressView, health: HealthView, navigate: (route: string) => void, header: Snippet} = $props();
+ let {initial, health, navigate, header, onChange}: {initial: ProgressView, health: HealthView, navigate: (route: string) => void, header: Snippet, onChange:(view:ProgressView)=>void} = $props();
  let view = $state<ProgressView>(untrack(() => initial));
  let busy = $state(false), error = $state('');
  let request = 0;
  $effect(() => { view = initial; request++; busy = false; });
+ onDestroy(()=>{request++});
  const PERIODS: [Period, string][] = [['week', 'Week'], ['month', 'Month'], ['quarter', '3 months'], ['year', 'Year']];
  async function show(period: Period, date: string) {
   const id = ++request;
   busy = true; error = '';
-  try { const next = await api.progress(period, date); if(id === request)view = next; }
+  try { const next = await api.progress(period, date); if(id === request){view = next;onChange(next);} }
   catch(e){ if(id === request)error = String(e); }
   finally { if(id === request)busy = false; }
  }
@@ -29,7 +30,7 @@
   if(view.period==='week')d.setUTCDate(d.getUTCDate()+7*n);
   else { d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth()+n*({month:1,quarter:3,year:12}[view.period])); }
   const date = d.toISOString().slice(0,10);
-  void show(view.period,date>initial.end?initial.end:date);
+  void show(view.period,date>view.today?view.today:date);
  };
  let label = $derived(view.period === 'week' ? `${dateLabel(view.from)} – ${dateLabel(view.to)}` : view.period === 'month' ? new Date(view.from + 'T12:00:00Z').toLocaleDateString('en-GB', {month: 'long', year: 'numeric', timeZone: 'UTC'}) : `${new Date(view.from + 'T12:00:00Z').toLocaleDateString('en-GB', {month: 'short', year: 'numeric', timeZone: 'UTC'})} – ${new Date(view.to + 'T12:00:00Z').toLocaleDateString('en-GB', {month: 'short', year: 'numeric', timeZone: 'UTC'})}`);
  let max = $derived(Math.max(1, ...view.buckets.map(b => b.total)));
@@ -46,7 +47,8 @@
   {route: 'metric/stress', name: 'Stress', value: health.stress.average, unit: 'avg'},
  ]);
  async function markSeen(){
-  try { await api.local_action({action:'milestonesSeen'}); view = {...view,milestones:view.milestones.map(m=>({...m,new:false}))}; }
+  const id=++request;
+  try { await api.local_action({action:'milestonesSeen'}); if(id===request){view = {...view,milestones:view.milestones.map(m=>({...m,new:false}))};onChange(view);} }
   catch(e){error=String(e)}
  }
  const STATE: Record<string, string> = {active: 'active', rest: 'rest day', ill: 'ill', paused: 'paused', none: 'no activity', unknown: 'activity list incomplete', future: '', before: 'before your downloaded history'};

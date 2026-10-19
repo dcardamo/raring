@@ -196,6 +196,7 @@ fn historical_progress_is_read_only_and_uses_only_evidence_available_by_its_end(
     sets(&f.store,1,"2025-10-20",90_000.,5);
     sets(&f.store,2,"2025-11-18",110_000.,5);
     let past=view(&f,Period::Month,"2025-10-01",at(11,18));
+    assert_eq!(past.today,"2025-11-18","navigation bounds stay independent of the selected historical period");
     assert!(past.milestones.iter().all(|m|m.date.as_str() <= "2025-10-31" && !m.new));
     assert!(f.store.setting("local:milestones").is_none());
     view(&f,Period::Month,"2025-11-18",at(11,18));
