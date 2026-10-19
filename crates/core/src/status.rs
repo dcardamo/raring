@@ -43,14 +43,23 @@ pub struct StatusSnapshot {
 
 pub fn snapshot(store: &Store, now: DateTime<Local>) -> StatusSnapshot {
     let date = screens::current_date(store, now.naive_local()).to_string();
-    let today = screens::today_at(store, &date, now.fixed_offset());
+    let mut today = screens::today_at(store, &date, now.fixed_offset());
     let phase = today.focus.phase;
     let night = matches!(
         phase,
         DayPhase::Evening | DayPhase::WindDown | DayPhase::LateNight
     );
-    let waiting = !today.focus.effort || today.call.is_none() || today.readiness.is_none();
-    let focus_line = if night || !today.focus.effort {
+    // The same circumstances as Today: no effort word while resting, ill,
+    // paused, limited or after "Not today"; never the limits text itself.
+    let local = crate::local::load(store);
+    let (state, dismissed) = crate::lead::hold_back(&local, &mut today, now.date_naive());
+    let held = (!night)
+        .then(|| crate::lead::circumstance_line(&state).or(dismissed.then_some("No training suggestion today")))
+        .flatten();
+    let waiting = held.is_some() || !today.focus.effort || today.call.is_none() || today.readiness.is_none();
+    let focus_line = if let Some(line) = held {
+        line.into()
+    } else if night || !today.focus.effort {
         today.headline.clone()
     } else if waiting {
         "Waiting for readiness".into()

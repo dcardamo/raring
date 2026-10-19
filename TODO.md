@@ -107,7 +107,10 @@ The stage 2–5 checkpoints are in the design's [implementation plan](docs/exper
 matching, goal ledger, rings, backlog and the `PlanBoard` view (`b395dd8`); 2.3
 the five-tab shell (Today · Plan · Training · Health · Progress, Profile, search,
 aliases for every earlier route and native target) with the old plan screens
-retired. Interim gaps until stage 4: Progress shows trends and the latest review
+retired (`5f3e00c`). Stage 3: Today's lead through hard gates with Adapt (rest,
+illness, pause, limits) and Why this (`6bedbf0`); the same suppression in the
+morning notification, persistent status and widgets, republished offline on each
+local change (verified on the emulator: Push → Rest day → Push). Interim gaps until stage 4: Progress shows trends and the latest review
 only (the 8-week plan history returns as goals over time in 4.2), and the review
 list is not built yet.
 Verified on the maintainer's stored data (key names only, read-only): activity

@@ -266,3 +266,46 @@ fn memory_db_skips_snapshot_and_filesystem_errors_propagate() {
     core.set_setting("status", false).unwrap();
     assert!(!core.setting("status")); // explicit opt-out survives failed cache publication
 }
+
+#[test]
+fn surfaces_respect_rest_illness_pauses_limits_and_not_today_without_private_text() {
+    use raring_core::view::{Limits, LocalAction, PauseReason, Sport};
+    let path = db_path();
+    let store = Store::open(&path).unwrap();
+    seed(&store);
+    store.put("readiness", "2025-03-12", "fetch", &json!({"score": 88, "level": "HIGH", "sleepScoreFactorPercent": 90, "sleepScoreFactorFeedback": "GOOD"})).unwrap();
+    let core = Raring::open(&path).unwrap();
+    core.set_setting("status", true).unwrap();
+    let file = path.with_extension("status.json");
+    let read = || -> Value { serde_json::from_slice(&fs::read(&file).unwrap()).unwrap() };
+    core.refresh_status_snapshot(now(12)).unwrap();
+    assert_eq!(read()["focusLine"], "Push");
+
+    // A local change republishes the snapshot offline, without a sync.
+    core.local_action(&LocalAction::Dismiss { id: "suggest:2025-03-12".into() }, now(12)).unwrap();
+    assert_eq!(read()["focusLine"], "No training suggestion today");
+    core.local_action(&LocalAction::RestToday, now(12)).unwrap();
+    let v = read();
+    assert_eq!((v["focusLine"].as_str(), v["focusTarget"].as_str(), &v["focusReason"]), (Some("Rest day"), Some("today"), &Value::Null));
+    core.local_action(&LocalAction::CancelRest, now(12)).unwrap();
+    core.local_action(&LocalAction::Pause { reason: PauseReason::Ill, review: None }, now(12)).unwrap();
+    assert_eq!(read()["focusLine"], "Ill · goals paused");
+    core.local_action(&LocalAction::Resume, now(13)).unwrap();
+    core.local_action(&LocalAction::SetLimits { limits: Limits { excluded: vec![Sport::Running], note: "left knee, no jumping".into() } }, now(13)).unwrap();
+    let text = fs::read_to_string(&file).unwrap();
+    assert!(text.contains("Training suggestions limited"));
+    assert!(!text.contains("knee") && !text.contains("jumping"), "limits text never reaches a lock-screen surface");
+    // Evening still leads with sleep.
+    core.refresh_status_snapshot(now(22)).unwrap();
+    assert_eq!(read()["focusLine"], "Time to wind down");
+
+    // The morning notification stays a factual update without a training call.
+    core.local_action(&LocalAction::SetLimits { limits: Limits::default() }, now(13)).unwrap();
+    core.local_action(&LocalAction::RestToday, now(13)).unwrap();
+    let morning = core.notifications(now(9)).into_iter().find(|n| n.kind == "morning").unwrap();
+    assert_eq!(morning.title, "Readiness 88");
+    assert!(morning.body.ends_with("Rest day · no training call"), "{}", morning.body);
+    core.local_action(&LocalAction::CancelRest, now(13)).unwrap();
+    let morning = core.notifications(now(9)).into_iter().find(|n| n.kind == "morning").unwrap();
+    assert!(morning.title.contains("readiness 88"), "{}", morning.title);
+}

@@ -99,19 +99,45 @@ fn route(r: &str) -> Option<String> {
     Some(r.to_owned())
 }
 
+/// What every surface must respect today: rest, illness, a pause, limits and
+/// a dismissed training suggestion. Removes the effort call when any of the
+/// first four apply. Returns the state and whether the suggestion was dismissed.
+pub fn hold_back(local: &LocalRecords, view: &mut TodayView, today: NaiveDate) -> (AdaptState, bool) {
+    let phase = view.focus.phase;
+    let sleep_phase = matches!(phase, DayPhase::Evening | DayPhase::WindDown | DayPhase::LateNight);
+    let waiting = view.focus.sleep_missing && view.readiness.is_none() && !sleep_phase;
+    let state = adapt(local, today, phase == DayPhase::LateNight || waiting);
+    if state.blocked || limited(&state) {
+        view.call = None;
+        view.focus.effort = false;
+    }
+    let id = format!("suggest:{today}");
+    let dismissed = local.circumstances.dismissals.iter().any(|d| d.date == today.to_string() && d.id == id);
+    (state, dismissed)
+}
+
+pub fn limited(state: &AdaptState) -> bool {
+    !state.limits.excluded.is_empty() || !state.limits.note.is_empty()
+}
+
+/// A short, private line for lock-screen surfaces. Never the limits text.
+pub fn circumstance_line(state: &AdaptState) -> Option<&'static str> {
+    match &state.pause {
+        Some(p) if p.reason == PauseReason::Ill => Some("Ill · goals paused"),
+        Some(_) => Some("Training paused"),
+        None if state.rest => Some("Rest day"),
+        None if limited(state) => Some("Training suggestions limited"),
+        None => None,
+    }
+}
+
 /// The live Today: choose the lead and keep exercise prompts out while
 /// resting, ill, paused or limited. Historical reads never call this.
 pub fn apply(store: &Store, view: &mut TodayView, today: NaiveDate, now: DateTime<FixedOffset>) {
     let local = local::load(store);
-    let phase = view.focus.phase;
-    let sleep_phase = matches!(phase, DayPhase::Evening | DayPhase::WindDown | DayPhase::LateNight);
+    let sleep_phase = matches!(view.focus.phase, DayPhase::Evening | DayPhase::WindDown | DayPhase::LateNight);
     let waiting = view.focus.sleep_missing && view.readiness.is_none() && !sleep_phase;
-    let state = adapt(&local, today, phase == DayPhase::LateNight || waiting);
-    let limited = !state.limits.excluded.is_empty() || !state.limits.note.is_empty();
-    if state.blocked || limited {
-        view.call = None;
-        view.focus.effort = false;
-    }
+    let (state, _) = hold_back(&local, view, today);
     let board = ledger::board(store, today, today, now.to_utc());
     view.lead = Some(choose(view, &local, &state, &board, today, waiting, sleep_phase));
     view.adapt = Some(state);

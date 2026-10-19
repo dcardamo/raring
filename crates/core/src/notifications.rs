@@ -93,7 +93,11 @@ pub fn notifications(store: &Store, now: DateTime<Local>) -> Vec<Notification> {
             });
         }
     };
-    let view = screens::today(store, &day);
+    let mut view = screens::today(store, &day);
+    // Rest, illness, a pause or limits leave a factual update without a training call.
+    let local = crate::local::load(store);
+    let (state, _) = crate::lead::hold_back(&local, &mut view, now.date_naive());
+    let held = crate::lead::circumstance_line(&state);
     if let (Some(_), Some(readiness)) = (&view.sleep, &view.readiness) {
         add(
             "morning",
@@ -106,7 +110,14 @@ pub fn notifications(store: &Store, now: DateTime<Local>) -> Vec<Notification> {
                 ),
                 None => format!("Readiness {:.0}", readiness.value),
             },
-            morning_body(&view, &screens::sleep_view(store, &day)),
+            {
+                let body = morning_body(&view, &screens::sleep_view(store, &day));
+                match held {
+                    Some(line) if body.is_empty() => format!("{line} · no training call"),
+                    Some(line) => format!("{body}\n{line} · no training call"),
+                    None => body,
+                }
+            },
             day.clone(),
         );
     }

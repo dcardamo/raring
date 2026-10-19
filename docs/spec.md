@@ -468,7 +468,7 @@ Sent by the phone itself.
 
 | Notification                  | When                                         | Default |
 | ----------------------------- | -------------------------------------------- | ------- |
-| Morning readiness             | Last night's sleep and readiness have synced | On      |
+| Morning readiness             | Last night's sleep and readiness have synced; while resting, ill, paused or limited, a factual update with that line and no training call | On      |
 | Weekly check-in               | Monday 08:00                                 | On      |
 | VO2max or Fitness Age changed | Either direction                             | On      |
 | Vitals off                    | Two or more vitals outside normal range      | On      |
@@ -680,7 +680,12 @@ Sent by the phone itself.
   same lowest Garmin-rated factor as Today. Without readiness, wait
   neutrally; the shared unsynced-night wait has no effort or reason.
   Evening, wind-down and late night use Today's headline and the shared
-  sleep plan's reason, with no effort after wind-down. Native surfaces
+  sleep plan's reason, with no effort after wind-down. Outside those phases,
+  today's circumstances (Rules: Adapt) replace the effort word and reason:
+  "Ill · goals paused", "Training paused", "Rest day", "Training suggestions
+  limited", or "No training suggestion today" after Not today, opening Today.
+  The limits text never reaches a surface. A local change republishes the
+  snapshot offline. Native surfaces
   describe the last snapshot, not a live watch reading. Offline widget
   updates, clock changes and sync re-evaluate the phase; Android may defer
   delivery, so transitions are not exact alarms.
