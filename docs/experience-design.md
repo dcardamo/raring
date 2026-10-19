@@ -26,12 +26,12 @@ implement concurrently. Read-only reviews and checks can support that workstream
 An urgent unrelated fix requires an explicit decision to pause this initiative.
 Do not silently expand it to include the rest of the backlog.
 
-Dan explicitly authorised one exception: a second isolated item-26 candidate,
-`experiment/raring-26-deepseek` (workspace `wks_ed18d1aad5f3d96a`, port 48727),
-starting independently from `3b213ff` and the original v2 brief/images. This lane
-retains port 48726 and must not inspect, copy or modify that candidate or preview.
-Only one candidate will merge; this permits neither unrelated work nor a main
-merge/push/release. Time-sensitive
+Dan authorised one exception during stage 1: a second isolated item-26
+candidate, `experiment/raring-26-deepseek` (workspace `wks_ed18d1aad5f3d96a`),
+built independently from `3b213ff`. On 2026-10-19 Dan selected this candidate
+and approved its design; the comparison is closed, the other candidate is
+archived and its branch stays unmerged as a reference. This permits neither
+unrelated work nor a main merge/push/release. Time-sensitive
 verification, such as a real daylight-saving transition, may continue as checks
 and feed this initiative; the freeze is not a reason to miss that evidence.
 
@@ -1111,8 +1111,13 @@ components, with v1's journey and privacy rules ported. Git keeps v1's code.
 Opus 5.5 through checkpoint A, `b965aa4`, then switched to GPT-6 Astra at 13:05Z.
 Use `b965aa4` as the pre-switch Opus checkpoint for comparison. Later work,
 including completion commit `adbb43e`, is mixed-model, not an Opus-only result.
-The isolated second candidate starts from `3b213ff`, not this checkpoint or its
-review feedback.
+The isolated second candidate started from `3b213ff`, not this checkpoint or its
+review feedback. Checkpoints P2–P6 (`94757fc` through `0c58f47`) were built on
+Opus 5.5 pinned.
+
+**Maintainer decision (2026-10-19):** Dan selected this candidate and approved
+its design (prototype at `0c58f47`). The comparison is closed. Weight-direction
+colouring remains undecided and stays neutral.
 
 No production shell, Rust rules/storage, native code or generated types were
 changed. The shipped detail screens were extracted from `App.svelte` into
@@ -1120,12 +1125,15 @@ changed. The shipped detail screens were extracted from `App.svelte` into
 browser captures were byte-identical before and after, and `npm run test:ui`
 passed. `spec.md` still describes the shipped product.
 
-**Decision gate: not validated for cutover.** No unfamiliar participants have
-tested v2. Three are required, including simple-needs and detail-oriented people.
-AI review and scripted clicks below do not satisfy first-value, discovery,
-comprehension or pressure criteria. Do not start stage 2 until Dan explicitly
-chooses to proceed with named limitations or to pause and release exclusivity.
-No merge/push/release is authorised.
+**Decision gate: design approved, not validated for cutover.** Dan's approval
+is the maintainer's design decision. It is not usability evidence: no
+unfamiliar participants have tested the prototype (three are required,
+including simple-needs and detail-oriented people), and there is no Android
+device, real-data, long-history performance or migration evidence. AI review
+and scripted clicks do not satisfy first-value, discovery, comprehension or
+pressure criteria. Stage 2 starts only when the coordinator confirms Dan's
+decision to proceed with these named limitations. No merge/push/release is
+authorised.
 
 #### How the prototype is built
 

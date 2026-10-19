@@ -15,8 +15,10 @@ Prototype-only choices persist in this browser. Export is disclosure-only.
 **Comparison provenance:** coordinator routing records identify `b965aa4` as the
 Opus 5.5 checkpoint A. The session switched to GPT-6 Astra at 13:05Z; completion
 `adbb43e` is therefore mixed-model. Do not label the whole v2 result Opus-only.
-This preview owns port 48726; Dan's independently isolated comparison candidate
-owns 48727 and is not inspected or modified by this lane.
+This preview owns port 48726. On 2026-10-19 Dan selected this candidate and
+approved its design; the comparison is closed and the other candidate's branch
+stays unmerged as a reference. No participant, device, real-data or migration
+evidence exists yet.
 
 ## Run and check
 

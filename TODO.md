@@ -88,24 +88,28 @@ picker; lift Max weight / Volume; richer workout detail from stored fields
 (provenance recorded); weight as a metric card. Remaining: usability, device,
 real-data and migration gates. **P5** (Dan's chat feedback): rings draw only
 recorded work; weight is a trend-weight card (smoothed weigh-ins, 1–90 day
-changes, freshness); metric cards flag old readings. Open decision: whether a
-weight direction the person chooses may colour changes. This does not authorise stage 2 or a release.
+changes, freshness); metric cards flag old readings. Open decision (neutral until
+Dan decides): whether a weight direction the person chooses may colour changes. This does not authorise stage 2 or a release.
 
-**Usability gate remains pending; no stage 2 authorised.** No unfamiliar people have evaluated
+**Design selected and approved (2026-10-19).** Dan selected this candidate
+(`feat/experience-redesign`, prototype at `0c58f47`) and approved its design;
+the comparison is closed. That approval is the maintainer's decision, not
+usability evidence.
+
+**Usability gate remains pending; no stage 2 authorised yet.** No unfamiliar people have evaluated
 first meaning, discovery, comprehension or pressure. Three participants (including
-simple-needs and detail-oriented people) remain required. Ask Dan through the
-coordinator for explicit proceed-with-named-limited-evidence versus pause/release
-exclusivity. The five tabs (Today · Plan · Training · Health · Progress) have no unfamiliar-user validation. Later
+simple-needs and detail-oriented people) remain required by the design's
+evaluation plan. Stage 2 starts only when the coordinator confirms Dan's
+decision to proceed with these named limitations. The five tabs (Today · Plan · Training · Health · Progress) have no unfamiliar-user validation. Later
 implemented-app/Android, real-data and full migration/evidence checks also remain
 unverified; no endpoint claims or shipped-feature contracts were changed.
 
-**Authorised comparison exception:** Dan approved one independent item-26
-candidate on `experiment/raring-26-deepseek`, workspace `wks_ed18d1aad5f3d96a`,
-from the same `3b213ff` baseline and original brief/images. It owns port 48727;
-this lane keeps 48726. No inspecting/copying between candidates; only one merges.
+**Comparison closed (2026-10-19):** the independent candidate on
+`experiment/raring-26-deepseek` (workspace `wks_ed18d1aad5f3d96a`) is archived;
+its branch stays unmerged as a reference. This branch is the one that may merge.
 No unrelated work, main merge, push or release is authorised.
 
-**Exclusive workstream:** apart from that explicit comparison, suspend other feature work
+**Exclusive workstream:** suspend other feature work
 and parallel implementation lanes, including unrelated items below. Work through
 this initiative's stages sequentially on one integration branch; do not release
 an unfinished shell through `main`'s automatic release workflow. Read-only reviews
