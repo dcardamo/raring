@@ -260,9 +260,13 @@ impl Store {
     pub fn listed_activity(&self, id: &str) -> Option<Value> {
         let db = self.db.lock().unwrap();
         db.query_row(
+            // The primary key narrows the scan to list pages, and a text match
+            // (stored JSON is compact) skips pages without the id before any is
+            // parsed; json_each then checks the id exactly.
             "SELECT item.value FROM raw r,
-             json_each(CASE WHEN r.endpoint='activities' AND json_type(r.json)='array' THEN r.json ELSE '[]' END) item
-             WHERE CAST(json_extract(item.value, '$.activityId') AS TEXT)=?1
+             json_each(CASE WHEN json_type(r.json)='array' THEN r.json ELSE '[]' END) item
+             WHERE r.endpoint='activities' AND instr(r.json, '\"activityId\":' || ?1) > 0
+               AND CAST(json_extract(item.value, '$.activityId') AS TEXT)=?1
              ORDER BY r.key DESC LIMIT 1",
             [id],
             |r| r.get::<_, String>(0),

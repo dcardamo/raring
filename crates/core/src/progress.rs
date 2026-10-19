@@ -57,9 +57,8 @@ fn activities(store: &Store, from: NaiveDate, to: NaiveDate) -> Vec<Activity> {
         .into_iter()
         .filter_map(|(id, start)| {
             let date = NaiveDate::parse_from_str(start.get(..10)?, "%Y-%m-%d").ok()?;
-            let card = screens::activity(store, &id)?;
-            let sport = crate::local::sport_of(&screens::activity_kind(store, &id).unwrap_or_default());
-            Some(Activity { id, date, sport, minutes: card.duration_s / 60., km: card.distance_km })
+            let (kind, minutes, km) = screens::activity_brief(store, &id)?;
+            Some(Activity { id, date, sport: crate::local::sport_of(&kind), minutes, km })
         })
         .collect()
 }

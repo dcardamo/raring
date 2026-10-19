@@ -2053,7 +2053,7 @@ Compared case by case on 2026-10-19 (reviewer read of production code and tests,
 | U58 | Notification/old deep link into a detail | Fixed `cb01fbf` | Unknown links explained on Today; legacy aliases unit-tested |
 | U59 | Large type, screen reader, reduced motion | Fixed `bbdfd31` | Browser 130% text, reduced motion; TalkBack needs a phone |
 | U60 | Phone, unfolded and desktop | Match |  |
-| U61 | Long history, many activities, cold start | Evidence only | Needs unfamiliar participants or a phone |
+| U61 | Long history, many activities, cold start | Evidence only | Synthetic 3-year core timings (release, desktop): every tab's read under 60 ms after fixing a 3.2 s Progress read (`tests/long_history.rs`); phone cold start still needs a device |
 | U62 | Watch not worn for a day | Match |  |
 | U63 | Correction invalidates a claimed best | Match |  |
 | U64 | Find Settings and export, then sign out | Match |  |

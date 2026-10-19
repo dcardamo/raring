@@ -143,6 +143,7 @@ emulator checks and fixes Progress period selection across detail/Back/resume:
 | Emulator parity pass 2 (`14cdfc4` + this change) | Demo seed adds activity-list coverage cursors and unit-keyed speed/elevation streams with summary intensity fields; recorded lanes now unknown on uncovered days | — | Signer-verified (0d59d1…) in-place app and androidTest installs, appId and first-install time unchanged; instrumentation via `am instrument` (no uninstall): OK (14 tests) — its account tests forget local data on the emulator only (they refuse when tokens exist), so the synthetic demo was re-seeded afterwards; navigation default + `--existing`, `android-parity-test.mjs` (now also workout streams, Health order, Progress sections) and `android-progress-test.mjs` pass; parity residue none | Physical phone, real data |
 | Emulator parity pass 3 (`230bb0d`) | — | — | Signer-verified in-place install (appId, first-install time unchanged); parity script now also covers lift charts (none on the demo: one session per lift, as the two-session rule requires), the milestone archive and a help sheet closed by Back; Progress script; instrumentation OK (14 tests), demo re-seeded after it; navigation default + `--existing` | Physical phone, real data |
 | Emulator parity pass 4 (`fb957b7`) | Demo seed adds a synthetic adaptive Coach week | — | Signer-verified app and androidTest in-place installs (appId, first-install time unchanged); instrumentation OK (14 tests), demo re-seeded after; navigation default + `--existing`, parity (now with the Coach group and read-only sheet through the core) and Progress scripts pass; no residue | Real Coach plan on a phone; completion values |
+| Long-history timings (U61, synthetic) | `demo::seed_long_history` (3 years of daily Garmin rows, 937 activities with zones, strength sets, list pages and listed rows as sync stores them); activity lookups fixed (see below) | — | `tests/long_history.rs` times the app's core reads with budgets for gross regressions. Release build on neptune (desktop, not a phone): Today 9 ms, Plan 3, Sleep 4, Training 23, Health 2, Progress week/month/quarter/year 42/43/41/57, domains 26, milestone archive 23, Strength 6, trends ≤4 ms. Before the fix Progress took 3.2 s | Phone timings and a real multi-year account |
 | Domain parity | Existing facts and foundational rules retained | New shell and partial Today/Plan/Progress, existing details | Earlier detail regressions and emulator subset only | bounded Plan/Training/Health/Progress overviews, and **advanced Training/Health/Progress visuals**; stage 4.3 lanes/volume/ranges/trend weight/freshness/workout streams |
 
 **Verified stored activity `details` facts (2026-10-19, read-only from the
@@ -167,6 +168,15 @@ notification targets and status-surface suppression now describe the shipped
 redesign; the visual reference points at the approved prototype's captures.
 The prototype entry, its preview and `test:experience` stay until Dan has
 compared the phone APK with them; removing them is the final cutover step.
+
+**Long-history finding (fixed):** with three years of synthetic history a
+Progress read took 3.2 s in release (about 10 s in debug), and the milestone
+archive was as slow: `store.listed_activity` scanned every stored Garmin row
+for each activity. The lookup now filters to list pages through the primary
+key and skips pages without the id; Progress and the archive read type,
+minutes and distance from the stored detail and consult list pages only for
+missing fields. Synthetic timings are in the parity table; phone timings
+remain open.
 
 **Stage 5 comparison (2026-10-19):** every U01–U64 journey was compared with
 the prototype ([table](docs/experience-design.md#production-vs-prototype-u01u64-stage-5)):

@@ -330,3 +330,13 @@ fn the_archive_keeps_every_milestone_dated_and_awards_nothing_twice() {
     let again = f.core.milestone_archive(at(11, 18)).unwrap();
     assert_eq!(all.iter().map(|m| &m.id).collect::<Vec<_>>(), again.iter().map(|m| &m.id).collect::<Vec<_>>(), "reading again awards nothing new");
 }
+
+#[test]
+fn a_detail_without_distance_takes_it_from_the_activity_list() {
+    let f = fx("brief");
+    f.store.put("activity", "77", "now", &json!({"activityId": 77, "activityName": "Run", "activityTypeDTO": {"typeKey": "running"},
+        "summaryDTO": {"startTimeLocal": "2025-11-17 07:00:00", "duration": 1800}})).unwrap();
+    f.store.put("activities", "0", "now", &json!([{"activityId": 77, "distance": 5000.0, "duration": 1800.0, "activityType": {"typeKey": "running"}}])).unwrap();
+    let w = view(&f, Period::Week, "2025-11-18", at(11, 18));
+    assert_eq!((w.totals.activities, w.totals.distance_km), (1, 5.), "the list page fills the missing distance");
+}

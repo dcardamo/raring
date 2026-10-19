@@ -866,6 +866,22 @@ fn activity_payload(store: &Store, id: &str) -> Option<ActivityPayload> {
         .unwrap_or(Value::Null);
     (!detail.is_null() || !listed.is_null()).then_some(ActivityPayload { detail, listed })
 }
+/// Type key, minutes and kilometres. The stored detail answers first, as in
+/// `ActivityPayload::get`; the list pages are read only when it lacks a field.
+pub(crate) fn activity_brief(store: &Store, id: &str) -> Option<(String, f64, Option<f64>)> {
+    if let Some(detail) = store.get("activity", id) {
+        let payload = ActivityPayload { detail, listed: Value::Null };
+        let kind = payload.kind();
+        let has = |key: &str| !payload.get(key).is_null();
+        if !kind.is_empty() && has("duration") && has("distance") {
+            let km = payload.number(&["distance"]).filter(|m| *m > 0.).map(|m| m / 1000.);
+            return Some((kind, payload.number(&["duration"]).unwrap_or(0.) / 60., km));
+        }
+    }
+    let payload = activity_payload(store, id)?;
+    let km = payload.number(&["distance"]).filter(|m| *m > 0.).map(|m| m / 1000.);
+    Some((payload.kind(), payload.number(&["duration"]).unwrap_or(0.) / 60., km))
+}
 pub(crate) fn activity_kind(store: &Store, id: &str) -> Option<String> {
     activity_payload(store, id)
         .map(|p| p.kind())

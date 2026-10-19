@@ -56,6 +56,351 @@ fn stress(date: NaiveDate, days_ago: i64) -> (Value, Value) {
     (stress, summary)
 }
 
+/// One synthetic Garmin day `days_ago` before `day`, in Garmin's shapes.
+fn seed_day(store: &Store, fixture: &Value, day: NaiveDate, days_ago: i64) -> rusqlite::Result<()> {
+    let date = day - Duration::days(days_ago);
+    let key = date.to_string();
+    let mut values = fixture.clone();
+    let shift = if days_ago == 0 {
+        0
+    } else {
+        ((days_ago * 37) % 51) - 25
+    };
+    let bed = date.and_hms_opt(0, 0, 0).unwrap() - Duration::minutes(89 - shift);
+    let wake = date
+        .and_hms_opt(6, if days_ago == 0 { 39 } else { 20 }, 0)
+        .unwrap()
+        + Duration::minutes(shift / 3);
+    let sleep = &mut values["sleep"];
+    sleep["dailySleepDTO"]["sleepStartTimestampLocal"] =
+        json!(bed.format("%Y-%m-%dT%H:%M:%S").to_string());
+    sleep["dailySleepDTO"]["sleepEndTimestampLocal"] =
+        json!(wake.format("%Y-%m-%dT%H:%M:%S").to_string());
+    sleep["dailySleepDTO"]["sleepStartTimestampGMT"] = json!(bed.and_utc().timestamp_millis() + 5 * 3_600_000);
+    sleep["dailySleepDTO"]["sleepEndTimestampGMT"] = json!(wake.and_utc().timestamp_millis() + 5 * 3_600_000);
+    sleep["dailySleepDTO"]["sleepTimeSeconds"] = json!(if days_ago == 0 {
+        28080
+    } else {
+        26400 + ((days_ago * 317) % 4200)
+    });
+    sleep["dailySleepDTO"]["sleepNeed"]["totalSleepNeedInSeconds"] = json!(27000);
+    sleep["dailySleepDTO"]["sleepAlignment"] = json!({
+        "status": if shift > 18 { "BEHIND" } else { "ALIGNED" },
+        "optimalSleepWindowStartMins": -75,
+        "optimalSleepWindowEndMins": 375,
+    });
+    sleep["dailySleepDTO"]["nextSleepNeed"] = json!({
+        "calendarDate": (date + Duration::days(1)).to_string(),
+        "actual": 470,
+        "baseline": 450,
+        "recommendedBedtimeStartMins": 1350,
+        "recommendedBedtimeEndMins": 1386,
+        "trainingFeedback": "DAILY_ACTIVITY_AND_TODAYS_LOAD",
+    });
+    sleep["dailySleepDTO"]["sleepScores"]["overall"]["value"] = json!(if days_ago == 0 {
+        84
+    } else {
+        67 + (days_ago * 11) % 24
+    });
+    for (key, current, usual, spread) in [
+        ("deepSleepSeconds", 5760, 5040, 700),
+        ("lightSleepSeconds", 15120, 15360, 900),
+        ("remSleepSeconds", 7200, 6660, 700),
+        ("awakeSleepSeconds", 1200, 1560, 300),
+    ] {
+        sleep["dailySleepDTO"][key] = json!(if days_ago == 0 {
+            current
+        } else {
+            usual + ((days_ago * 137) % spread) - spread / 2
+        });
+    }
+    sleep["dailySleepDTO"]["averageHeartRate"] = json!(if days_ago == 0 {
+        46.
+    } else {
+        46. + (days_ago as f64 * 0.67).sin() * 1.8
+    });
+    sleep["dailySleepDTO"]["averageRespirationValue"] = json!(if days_ago == 0 {
+        14.1
+    } else {
+        14.1 + (days_ago as f64 * 0.43).sin() * 0.25
+    });
+    sleep["dailySleepDTO"]["avgSpO2"] = json!(if days_ago == 0 {
+        96
+    } else {
+        96 + ((days_ago as f64 * 0.51).sin() * 1.2).round() as i64
+    });
+    sleep["dailySleepDTO"]["skinTempDeviation"] = json!(if days_ago == 0 {
+        0.1
+    } else {
+        (days_ago as f64 * 0.38).sin() * 0.25
+    });
+    sleep["overnightSeries"] = json!({
+        "hrv": [49,54,57,61,60,58,56,59],
+        "heartRate": [52,50,48,47,46,46,47,46,48,47,49,51],
+        "respiration": [14.4,14.2,14.0,13.9,14.1,14.0,14.2,14.1],
+        "spo2": [97,96,95,96,96,95,96,96]
+    });
+    let mut timestamp = bed.and_utc().timestamp();
+    let stages = [
+        (1, 12),
+        (0, 38),
+        (1, 22),
+        (2, 14),
+        (1, 30),
+        (0, 32),
+        (1, 18),
+        (3, 4),
+        (2, 22),
+        (1, 34),
+        (0, 18),
+        (1, 26),
+        (2, 28),
+        (3, 6),
+        (1, 40),
+        (0, 8),
+        (1, 24),
+        (2, 30),
+        (1, 28),
+        (3, 5),
+        (2, 26),
+        (1, 18),
+        (3, 5),
+    ];
+    sleep["sleepLevels"] = json!(stages
+        .iter()
+        .map(|(level, minutes)| {
+            let start = timestamp;
+            timestamp += minutes * 60;
+            json!({"activityLevel":level,"startGMT":start,"endGMT":timestamp})
+        })
+        .collect::<Vec<_>>());
+    values["summary"]["restingHeartRate"] = json!(if days_ago == 0 {
+        46
+    } else {
+        46 + ((days_ago as f64 * 0.54).sin() * 1.5).round() as i64
+    });
+    values["summary"]["bodyBatteryMostRecentValue"] = json!(if days_ago == 0 {
+        78
+    } else {
+        62 + days_ago % 27
+    });
+    values["summary"]["bodyBatteryChargedValue"] = json!(if days_ago == 0 {
+        62
+    } else {
+        45 + days_ago % 22
+    });
+    values["summary"]["moderateIntensityMinutes"] =
+        json!([12, 30, 8, 0, 25, 18, 0][days_ago as usize % 7]);
+    values["summary"]["vigorousIntensityMinutes"] =
+        json!([20, 14, 0, 0, 22, 6, 0][days_ago as usize % 7]);
+    values["summary"]["intensityMinutesGoal"] = json!(150);
+    values["summary"]["bodyBatteryAtWakeTime"] = json!(if days_ago == 0 {
+        87
+    } else {
+        70 + days_ago % 25
+    });
+    if days_ago == 0 {
+        values["summary"]["bodyBatteryActivityEventList"] = json!([
+            {"eventType":"SLEEP","bodyBatteryImpact":62,"timezoneOffset":0,
+             "eventStartTimeGmt":bed.format("%Y-%m-%dT%H:%M:%S").to_string(),
+             "durationInMilliseconds":(wake - bed).num_milliseconds(),"shortFeedback":"NONE"},
+            {"eventType":"ACTIVITY","activityName":"Morning Run","bodyBatteryImpact":-9,"timezoneOffset":0,
+             "eventStartTimeGmt":format!("{date}T06:12:00"),"durationInMilliseconds":3_134_000,
+             "shortFeedback":"IMPROVING_TEMPO"}
+        ]);
+    }
+    values["hrv"]["hrvSummary"]["lastNightAvg"] = json!(if days_ago == 0 {
+        58
+    } else {
+        54 + ((days_ago as f64 * 0.61).sin() * 4.).round() as i64
+    });
+    values["training"]["acuteTrainingLoad"] = json!(if days_ago == 0 {
+        612
+    } else {
+        460 + (days_ago * 47) % 270
+    });
+    values["training"]["acuteChronicWorkloadRatio"] = json!(1.1);
+    values["training"]["dailyTrainingLoad"] =
+        json!([186, 320, 95, 0, 210, 142, 0][days_ago as usize % 7]);
+    let r = &mut values["readiness"][0];
+    r["score"] = json!(if days_ago == 0 {
+        82
+    } else {
+        62 + (days_ago * 13) % 29
+    });
+    r["recoveryTime"] = json!(1080);
+    for (percent, feedback, value, rating) in [
+        (
+            "sleepScoreFactorPercent",
+            "sleepScoreFactorFeedback",
+            86,
+            "GOOD",
+        ),
+        (
+            "recoveryTimeFactorPercent",
+            "recoveryTimeFactorFeedback",
+            92,
+            "EXCELLENT",
+        ),
+        ("hrvFactorPercent", "hrvFactorFeedback", 78, "BALANCED"),
+        ("acwrFactorPercent", "acwrFactorFeedback", 58, "MODERATE"),
+        (
+            "sleepHistoryFactorPercent",
+            "sleepHistoryFactorFeedback",
+            81,
+            "GOOD",
+        ),
+        (
+            "stressHistoryFactorPercent",
+            "stressHistoryFactorFeedback",
+            73,
+            "GOOD",
+        ),
+    ] {
+        r[percent] = json!(if days_ago == 0 {
+            value
+        } else {
+            value - (days_ago * 3) % 17
+        });
+        r[feedback] = json!(rating);
+    }
+    values["fitness_age"]["fitnessAge"] = json!(if days_ago < 12 {
+        39.
+    } else {
+        (40. + (days_ago - 8) as f64 * 0.02).min(46.)
+    });
+    values["fitness_age"]["chronologicalAge"] = json!(46);
+    values["fitness_age"]["fitnessAgeData"] = json!({
+        "vo2max":{"value":52,"target":48},
+        "restingHr":{"value":46,"target":55},
+        "bmi":{"value":23.8,"target":25},
+        "vigorousMinutes":{"value":112,"target":150,"ageIfMet":38}
+    });
+    let (stress, summary) = stress(date, days_ago);
+    store.put("stress", &key, "synthetic", &stress)?;
+    if days_ago < 2 {
+        let start = date
+            .and_hms_opt(5, 0, 0)
+            .unwrap()
+            .and_utc()
+            .timestamp_millis();
+        let samples: Vec<Value> = (0..if days_ago == 0 { 400 } else { 720 })
+            .map(|i| {
+                json!([
+                    start + i * 120_000,
+                    if (210..235).contains(&i) {
+                        Value::Null
+                    } else {
+                        json!(
+                            60 + (i as f64 / 15.).sin().round() as i64 * 8
+                                + if (260..290).contains(&i) { 45 } else { 0 }
+                        )
+                    }
+                ])
+            })
+            .collect();
+        store.put("daily_hr", &key, "synthetic", &json!({
+            "startTimestampGMT":format!("{date}T05:00:00.0"),
+            "startTimestampLocal":format!("{date}T00:00:00.0"),
+            "endTimestampGMT":format!("{}T05:00:00.0",date + Duration::days(1)),
+            "endTimestampLocal":format!("{}T00:00:00.0",date + Duration::days(1)),
+            "restingHeartRate":54,"minHeartRate":49,"maxHeartRate":132,"heartRateValues":samples
+        }))?;
+    }
+    for (field, value) in summary.as_object().unwrap() {
+        values["summary"][field] = value.clone();
+    }
+    for kind in [
+        "summary",
+        "readiness",
+        "sleep",
+        "hrv",
+        "training",
+        "fitness_age",
+    ] {
+        store.put(kind, &key, &format!("{key}T09:00:00Z"), &values[kind])?;
+    }
+    store.put("respiration", &key, "synthetic", &json!({"sleepingRespirationValue":values["sleep"]["dailySleepDTO"]["averageRespirationValue"]}))?;
+    store.put(
+        "spo2",
+        &key,
+        "synthetic",
+        &json!({"averageSpO2":values["sleep"]["dailySleepDTO"]["avgSpO2"]}),
+    )?;
+    store.put("max_metrics", &key, "synthetic", &json!([{"generic":{"vo2MaxValue":if days_ago < 8 { 52. } else if days_ago < 15 { 50.5 } else { (49. + (42 - days_ago) as f64 / 30.).max(44.) }}}]))?;
+    store.put(
+        "load_focus",
+        &key,
+        "synthetic",
+        &json!({
+            "lowAerobic":{"value":450,"optimalMin":300,"optimalMax":600},
+            "highAerobic":{"value":610,"optimalMin":400,"optimalMax":800},
+            "anaerobic":{"value":60,"optimalMin":150,"optimalMax":350}
+        }),
+    )?;
+    Ok(())
+}
+
+/// The demo plus `years` of earlier synthetic history: every day's Garmin rows
+/// and about six activities a week (runs, rides, walks and strength with sets),
+/// for long-history timings. Synthetic only; never used by sign-in or sync.
+pub fn seed_long_history(store: &Store, day: NaiveDate, years: i64) -> rusqlite::Result<u32> {
+    seed(store, day)?;
+    let fixture: Value = serde_json::from_str(include_str!("../tests/fixtures/day.json")).expect("synthetic fixture must be valid JSON");
+    let days = 365 * years;
+    for days_ago in 42..days {
+        seed_day(store, &fixture, day, days_ago)?;
+    }
+    let first = day - Duration::days(days - 1);
+    store.set_cursor("listed:lo", &first.to_string())?;
+    let mut count = 0;
+    let mut pages: Vec<Value> = vec![];
+    for days_ago in 2..days {
+        let date = day - Duration::days(days_ago);
+        // Six of seven days, one kind each by weekday.
+        let slot = (days_ago % 7) as usize;
+        let kind = ["running", "strength_training", "cycling", "", "running", "strength_training", "walking"][slot];
+        if kind.is_empty() {
+            continue;
+        }
+        let id = 900_000_000 + days_ago as u64;
+        let minutes = 30 + (days_ago * 7) % 50;
+        let distance = match kind { "running" => 5000 + (days_ago * 131) % 9000, "cycling" => 20000 + (days_ago * 377) % 40000, "walking" => 3000, _ => 0 };
+        let mut summary = json!({"startTimeLocal": format!("{date} 07:30:00"), "duration": minutes * 60, "averageHR": 120 + days_ago % 40,
+            "activityTrainingLoad": 40 + days_ago % 160, "moderateIntensityMinutes": minutes / 3, "vigorousIntensityMinutes": minutes / 5});
+        if distance > 0 {
+            summary["distance"] = json!(distance);
+        }
+        store.put("activity", &id.to_string(), "synthetic", &json!({"activityId": id, "activityName": format!("History {kind}"),
+            "activityTypeDTO": {"typeKey": kind}, "summaryDTO": summary}))?;
+        // As sync keeps them: every listed activity by id, the newest also in list pages.
+        let listed = json!({"activityId": id, "activityName": format!("History {kind}"), "activityType": {"typeKey": kind},
+            "startTimeLocal": format!("{date} 07:30:00"), "duration": minutes * 60, "distance": distance});
+        store.put("listed", &id.to_string(), "synthetic", &listed)?;
+        if count < 400 {
+            pages.push(listed);
+        }
+        let z = minutes * 60;
+        store.put("zones", &id.to_string(), "synthetic", &json!([{"zoneNumber": 1, "secsInZone": z / 5}, {"zoneNumber": 2, "secsInZone": z / 2},
+            {"zoneNumber": 3, "secsInZone": z / 5}, {"zoneNumber": 4, "secsInZone": z / 10}, {"zoneNumber": 5, "secsInZone": 0}]))?;
+        if kind == "strength_training" {
+            // Weights drift up over the years, so bests and milestones accrue.
+            let progress = (days - days_ago) as f64 / days as f64;
+            let set = |category: &str, name: &str, reps: i64, kg: f64| json!({"setType": "ACTIVE", "repetitionCount": reps,
+                "weight": ((kg * (0.8 + 0.4 * progress)) * 1000.).round(), "duration": 40.0, "exercises": [{"category": category, "name": name, "probability": 95.0}]});
+            store.put("exercise_sets", &id.to_string(), "synthetic", &json!({"activityId": id, "exerciseSets": [
+                set("SQUAT", "GOBLET_SQUAT", 8, 32.), set("SQUAT", "GOBLET_SQUAT", 8, 32.),
+                set("BENCH_PRESS", "BARBELL_BENCH_PRESS", 5, 70.), set("BENCH_PRESS", "BARBELL_BENCH_PRESS", 5, 70.),
+                set("DEADLIFT", "ROMANIAN_DEADLIFT", 8, 80.)]}))?;
+        }
+        count += 1;
+    }
+    for (n, page) in pages.chunks(20).enumerate() {
+        store.put("activities", &(n * 20).to_string(), "synthetic", &json!(page))?;
+    }
+    Ok(count)
+}
+
 pub fn seed(store: &Store, day: NaiveDate) -> rusqlite::Result<()> {
     seed_variant(store, day, true)
 }
@@ -66,286 +411,7 @@ pub fn seed_variant(store: &Store, day: NaiveDate, recorded_today: bool) -> rusq
     let fixture: Value = serde_json::from_str(include_str!("../tests/fixtures/day.json"))
         .expect("synthetic fixture must be valid JSON");
     for days_ago in (0..42).rev() {
-        let date = day - Duration::days(days_ago);
-        let key = date.to_string();
-        let mut values = fixture.clone();
-        let shift = if days_ago == 0 {
-            0
-        } else {
-            ((days_ago * 37) % 51) - 25
-        };
-        let bed = date.and_hms_opt(0, 0, 0).unwrap() - Duration::minutes(89 - shift);
-        let wake = date
-            .and_hms_opt(6, if days_ago == 0 { 39 } else { 20 }, 0)
-            .unwrap()
-            + Duration::minutes(shift / 3);
-        let sleep = &mut values["sleep"];
-        sleep["dailySleepDTO"]["sleepStartTimestampLocal"] =
-            json!(bed.format("%Y-%m-%dT%H:%M:%S").to_string());
-        sleep["dailySleepDTO"]["sleepEndTimestampLocal"] =
-            json!(wake.format("%Y-%m-%dT%H:%M:%S").to_string());
-        sleep["dailySleepDTO"]["sleepStartTimestampGMT"] = json!(bed.and_utc().timestamp_millis() + 5 * 3_600_000);
-        sleep["dailySleepDTO"]["sleepEndTimestampGMT"] = json!(wake.and_utc().timestamp_millis() + 5 * 3_600_000);
-        sleep["dailySleepDTO"]["sleepTimeSeconds"] = json!(if days_ago == 0 {
-            28080
-        } else {
-            26400 + ((days_ago * 317) % 4200)
-        });
-        sleep["dailySleepDTO"]["sleepNeed"]["totalSleepNeedInSeconds"] = json!(27000);
-        sleep["dailySleepDTO"]["sleepAlignment"] = json!({
-            "status": if shift > 18 { "BEHIND" } else { "ALIGNED" },
-            "optimalSleepWindowStartMins": -75,
-            "optimalSleepWindowEndMins": 375,
-        });
-        sleep["dailySleepDTO"]["nextSleepNeed"] = json!({
-            "calendarDate": (date + Duration::days(1)).to_string(),
-            "actual": 470,
-            "baseline": 450,
-            "recommendedBedtimeStartMins": 1350,
-            "recommendedBedtimeEndMins": 1386,
-            "trainingFeedback": "DAILY_ACTIVITY_AND_TODAYS_LOAD",
-        });
-        sleep["dailySleepDTO"]["sleepScores"]["overall"]["value"] = json!(if days_ago == 0 {
-            84
-        } else {
-            67 + (days_ago * 11) % 24
-        });
-        for (key, current, usual, spread) in [
-            ("deepSleepSeconds", 5760, 5040, 700),
-            ("lightSleepSeconds", 15120, 15360, 900),
-            ("remSleepSeconds", 7200, 6660, 700),
-            ("awakeSleepSeconds", 1200, 1560, 300),
-        ] {
-            sleep["dailySleepDTO"][key] = json!(if days_ago == 0 {
-                current
-            } else {
-                usual + ((days_ago * 137) % spread) - spread / 2
-            });
-        }
-        sleep["dailySleepDTO"]["averageHeartRate"] = json!(if days_ago == 0 {
-            46.
-        } else {
-            46. + (days_ago as f64 * 0.67).sin() * 1.8
-        });
-        sleep["dailySleepDTO"]["averageRespirationValue"] = json!(if days_ago == 0 {
-            14.1
-        } else {
-            14.1 + (days_ago as f64 * 0.43).sin() * 0.25
-        });
-        sleep["dailySleepDTO"]["avgSpO2"] = json!(if days_ago == 0 {
-            96
-        } else {
-            96 + ((days_ago as f64 * 0.51).sin() * 1.2).round() as i64
-        });
-        sleep["dailySleepDTO"]["skinTempDeviation"] = json!(if days_ago == 0 {
-            0.1
-        } else {
-            (days_ago as f64 * 0.38).sin() * 0.25
-        });
-        sleep["overnightSeries"] = json!({
-            "hrv": [49,54,57,61,60,58,56,59],
-            "heartRate": [52,50,48,47,46,46,47,46,48,47,49,51],
-            "respiration": [14.4,14.2,14.0,13.9,14.1,14.0,14.2,14.1],
-            "spo2": [97,96,95,96,96,95,96,96]
-        });
-        let mut timestamp = bed.and_utc().timestamp();
-        let stages = [
-            (1, 12),
-            (0, 38),
-            (1, 22),
-            (2, 14),
-            (1, 30),
-            (0, 32),
-            (1, 18),
-            (3, 4),
-            (2, 22),
-            (1, 34),
-            (0, 18),
-            (1, 26),
-            (2, 28),
-            (3, 6),
-            (1, 40),
-            (0, 8),
-            (1, 24),
-            (2, 30),
-            (1, 28),
-            (3, 5),
-            (2, 26),
-            (1, 18),
-            (3, 5),
-        ];
-        sleep["sleepLevels"] = json!(stages
-            .iter()
-            .map(|(level, minutes)| {
-                let start = timestamp;
-                timestamp += minutes * 60;
-                json!({"activityLevel":level,"startGMT":start,"endGMT":timestamp})
-            })
-            .collect::<Vec<_>>());
-        values["summary"]["restingHeartRate"] = json!(if days_ago == 0 {
-            46
-        } else {
-            46 + ((days_ago as f64 * 0.54).sin() * 1.5).round() as i64
-        });
-        values["summary"]["bodyBatteryMostRecentValue"] = json!(if days_ago == 0 {
-            78
-        } else {
-            62 + days_ago % 27
-        });
-        values["summary"]["bodyBatteryChargedValue"] = json!(if days_ago == 0 {
-            62
-        } else {
-            45 + days_ago % 22
-        });
-        values["summary"]["moderateIntensityMinutes"] =
-            json!([12, 30, 8, 0, 25, 18, 0][days_ago as usize % 7]);
-        values["summary"]["vigorousIntensityMinutes"] =
-            json!([20, 14, 0, 0, 22, 6, 0][days_ago as usize % 7]);
-        values["summary"]["intensityMinutesGoal"] = json!(150);
-        values["summary"]["bodyBatteryAtWakeTime"] = json!(if days_ago == 0 {
-            87
-        } else {
-            70 + days_ago % 25
-        });
-        if days_ago == 0 {
-            values["summary"]["bodyBatteryActivityEventList"] = json!([
-                {"eventType":"SLEEP","bodyBatteryImpact":62,"timezoneOffset":0,
-                 "eventStartTimeGmt":bed.format("%Y-%m-%dT%H:%M:%S").to_string(),
-                 "durationInMilliseconds":(wake - bed).num_milliseconds(),"shortFeedback":"NONE"},
-                {"eventType":"ACTIVITY","activityName":"Morning Run","bodyBatteryImpact":-9,"timezoneOffset":0,
-                 "eventStartTimeGmt":format!("{date}T06:12:00"),"durationInMilliseconds":3_134_000,
-                 "shortFeedback":"IMPROVING_TEMPO"}
-            ]);
-        }
-        values["hrv"]["hrvSummary"]["lastNightAvg"] = json!(if days_ago == 0 {
-            58
-        } else {
-            54 + ((days_ago as f64 * 0.61).sin() * 4.).round() as i64
-        });
-        values["training"]["acuteTrainingLoad"] = json!(if days_ago == 0 {
-            612
-        } else {
-            460 + (days_ago * 47) % 270
-        });
-        values["training"]["acuteChronicWorkloadRatio"] = json!(1.1);
-        values["training"]["dailyTrainingLoad"] =
-            json!([186, 320, 95, 0, 210, 142, 0][days_ago as usize % 7]);
-        let r = &mut values["readiness"][0];
-        r["score"] = json!(if days_ago == 0 {
-            82
-        } else {
-            62 + (days_ago * 13) % 29
-        });
-        r["recoveryTime"] = json!(1080);
-        for (percent, feedback, value, rating) in [
-            (
-                "sleepScoreFactorPercent",
-                "sleepScoreFactorFeedback",
-                86,
-                "GOOD",
-            ),
-            (
-                "recoveryTimeFactorPercent",
-                "recoveryTimeFactorFeedback",
-                92,
-                "EXCELLENT",
-            ),
-            ("hrvFactorPercent", "hrvFactorFeedback", 78, "BALANCED"),
-            ("acwrFactorPercent", "acwrFactorFeedback", 58, "MODERATE"),
-            (
-                "sleepHistoryFactorPercent",
-                "sleepHistoryFactorFeedback",
-                81,
-                "GOOD",
-            ),
-            (
-                "stressHistoryFactorPercent",
-                "stressHistoryFactorFeedback",
-                73,
-                "GOOD",
-            ),
-        ] {
-            r[percent] = json!(if days_ago == 0 {
-                value
-            } else {
-                value - (days_ago * 3) % 17
-            });
-            r[feedback] = json!(rating);
-        }
-        values["fitness_age"]["fitnessAge"] = json!(if days_ago < 12 {
-            39.
-        } else {
-            40. + (days_ago - 8) as f64 * 0.02
-        });
-        values["fitness_age"]["chronologicalAge"] = json!(46);
-        values["fitness_age"]["fitnessAgeData"] = json!({
-            "vo2max":{"value":52,"target":48},
-            "restingHr":{"value":46,"target":55},
-            "bmi":{"value":23.8,"target":25},
-            "vigorousMinutes":{"value":112,"target":150,"ageIfMet":38}
-        });
-        let (stress, summary) = stress(date, days_ago);
-        store.put("stress", &key, "synthetic", &stress)?;
-        if days_ago < 2 {
-            let start = date
-                .and_hms_opt(5, 0, 0)
-                .unwrap()
-                .and_utc()
-                .timestamp_millis();
-            let samples: Vec<Value> = (0..if days_ago == 0 { 400 } else { 720 })
-                .map(|i| {
-                    json!([
-                        start + i * 120_000,
-                        if (210..235).contains(&i) {
-                            Value::Null
-                        } else {
-                            json!(
-                                60 + (i as f64 / 15.).sin().round() as i64 * 8
-                                    + if (260..290).contains(&i) { 45 } else { 0 }
-                            )
-                        }
-                    ])
-                })
-                .collect();
-            store.put("daily_hr", &key, "synthetic", &json!({
-                "startTimestampGMT":format!("{date}T05:00:00.0"),
-                "startTimestampLocal":format!("{date}T00:00:00.0"),
-                "endTimestampGMT":format!("{}T05:00:00.0",date + Duration::days(1)),
-                "endTimestampLocal":format!("{}T00:00:00.0",date + Duration::days(1)),
-                "restingHeartRate":54,"minHeartRate":49,"maxHeartRate":132,"heartRateValues":samples
-            }))?;
-        }
-        for (field, value) in summary.as_object().unwrap() {
-            values["summary"][field] = value.clone();
-        }
-        for kind in [
-            "summary",
-            "readiness",
-            "sleep",
-            "hrv",
-            "training",
-            "fitness_age",
-        ] {
-            store.put(kind, &key, &format!("{key}T09:00:00Z"), &values[kind])?;
-        }
-        store.put("respiration", &key, "synthetic", &json!({"sleepingRespirationValue":values["sleep"]["dailySleepDTO"]["averageRespirationValue"]}))?;
-        store.put(
-            "spo2",
-            &key,
-            "synthetic",
-            &json!({"averageSpO2":values["sleep"]["dailySleepDTO"]["avgSpO2"]}),
-        )?;
-        store.put("max_metrics", &key, "synthetic", &json!([{"generic":{"vo2MaxValue":if days_ago < 8 { 52. } else if days_ago < 15 { 50.5 } else { 49. + (42 - days_ago) as f64 / 30. }}}]))?;
-        store.put(
-            "load_focus",
-            &key,
-            "synthetic",
-            &json!({
-                "lowAerobic":{"value":450,"optimalMin":300,"optimalMax":600},
-                "highAerobic":{"value":610,"optimalMin":400,"optimalMax":800},
-                "anaerobic":{"value":60,"optimalMin":150,"optimalMax":350}
-            }),
-        )?;
+        seed_day(store, &fixture, day, days_ago)?;
     }
     // The age trend samples one historical record per month.
     for months_ago in 1..12 {
