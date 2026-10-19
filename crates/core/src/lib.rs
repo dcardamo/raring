@@ -4,6 +4,7 @@ pub mod demo;
 mod export;
 pub mod garmin;
 mod gear;
+pub mod ledger;
 pub mod local;
 pub mod notifications;
 mod naps_journal;
@@ -193,6 +194,11 @@ impl Raring {
         plan::set(&self.store, today, update)?;
         let start = plan::week_start(today, plan::week_starts_on(&self.store));
         local::mirror_legacy_plan(&self.store, start, update)
+    }
+    /// The plan week containing `date`, measured on the phone's calendar day.
+    pub fn plan_board(&self, date: &str, now: DateTime<Local>) -> Result<view::PlanBoard> {
+        let anchor = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d").map_err(|_| Error::InvalidLocal("date"))?;
+        Ok(ledger::board(&self.store, anchor, now.date_naive(), now.with_timezone(&Utc)))
     }
     /// Goals, sessions, links, circumstances, prompts and events, migrated.
     pub fn local_records(&self) -> local::LocalRecords {

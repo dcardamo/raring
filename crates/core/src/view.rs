@@ -157,6 +157,10 @@ pub struct BodyBatteryCard {
     pub now: Option<f64>,
     pub charged: Option<f64>,
     pub drained: Option<f64>,
+    /// Garmin's levels in three-minute slots from the day's start, as the
+    /// stress timeline; gaps are not zero.
+    #[serde(default)]
+    pub timeline: Vec<Option<f64>>,
 }
 
 /// Garmin's stress categories: rest 0–25, low 26–50, medium 51–75, high 76–100.
@@ -313,6 +317,12 @@ pub struct ActivityCard {
     pub anaerobic_label: Option<String>,
     /// Garmin's primary benefit: Base, Tempo, Threshold, VO2 Max…
     pub benefit: Option<String>,
+    /// Average heart rate, bpm.
+    #[serde(default)]
+    pub avg_hr: Option<f64>,
+    /// Garmin's moderate plus twice vigorous minutes for this activity.
+    #[serde(default)]
+    pub intensity_min: Option<f64>,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Default)]
@@ -1940,4 +1950,220 @@ pub enum LocalAction {
     SetPromptWeek { week: String, choice: PromptChoice },
     AddEvent { name: String, date: String, sport: Option<Sport> },
     RemoveEvent { id: String },
+    /// Plan has explained the migrated sleep-timing observation.
+    ObservationExplained,
+}
+
+// ---------------------------------------------------------------------------
+// The plan board: goals, the week's plan items and recordings, the goal
+// ledger, rings and backlog (docs/spec.md, Rules: Plan matching, Goal
+// ledger, Rings, Backlog).
+
+/// A recorded activity as the plan rules count it.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct Recording {
+    pub id: String,
+    /// Local start date, YYYY-MM-DD.
+    pub date: String,
+    pub start_local: String,
+    pub name: String,
+    pub icon: Icon,
+    pub sport: Sport,
+    /// Garmin's activity type key.
+    pub type_key: String,
+    pub duration_min: f64,
+    /// Whole minutes in Garmin's zone 2; None when Garmin sent no zones.
+    pub zone2_min: Option<f64>,
+    /// Whole minutes in Garmin's zones 4 and 5; None when unknown.
+    pub high_intensity_min: Option<f64>,
+    /// Garmin's moderate plus twice vigorous minutes for this activity.
+    pub intensity_min: Option<f64>,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum ItemState {
+    /// Matched to a recording (or a reported wind-down).
+    Done,
+    /// Raring can't tell which recording, if any, it was.
+    Review,
+    /// Today or later, not yet recorded.
+    Planned,
+    /// Passed without a matching recording. Never "missed".
+    NotRecorded,
+    /// Passed, but the activity list for that day is incomplete.
+    Awaiting,
+    LetGo,
+    Missed,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum MatchKind {
+    /// The person linked it.
+    Linked,
+    /// Same day and sport, each the other's only candidate.
+    Automatic,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PlanItem {
+    pub intention: Intention,
+    pub state: ItemState,
+    /// The recording that completed it.
+    pub recording: Option<String>,
+    pub matched_by: Option<MatchKind>,
+    /// Recordings it might be, when it needs review.
+    pub candidates: Vec<String>,
+}
+
+/// A Garmin scheduled workout: read-only, by name and date. Its sport,
+/// duration and targets are unverified, so it is not counted or matched.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct GarminSession {
+    pub date: String,
+    pub name: String,
+}
+
+/// One goal's week: what was recorded, what is placed, what is left.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct GoalLedger {
+    pub kind: GoalKind,
+    /// Sessions, minutes or nights in effect now (the week's end, for a past week).
+    pub target: f64,
+    /// The week's starting target, when it was changed during the week.
+    pub original: Option<f64>,
+    pub revised_on: Option<String>,
+    /// None while the evidence is incomplete; never shown as zero.
+    pub recorded: Option<f64>,
+    /// Placed on today or later and not yet recorded.
+    pub planned: f64,
+    /// Target minus recorded and planned; None when unknown or paused.
+    pub remaining: Option<f64>,
+    pub reached: bool,
+    /// Plan items for this goal that need review.
+    pub review: u32,
+    /// Why `recorded` is unknown.
+    pub unavailable: Option<String>,
+    /// The migrated sleep-timing observation: nights are shown, without a verdict.
+    pub observation: bool,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum DayMark {
+    Rest,
+    Ill,
+    Paused,
+    /// The activity list for this passed day is incomplete.
+    Unknown,
+}
+
+/// A ring draws only recorded work: `fill` of the ring, 0 draws nothing.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct Ring {
+    pub kind: GoalKind,
+    pub recorded: f64,
+    pub planned: f64,
+    pub fill: f64,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct DayCell {
+    pub date: String,
+    pub today: bool,
+    pub future: bool,
+    pub mark: Option<DayMark>,
+    /// One per active ring goal, in ring order.
+    pub rings: Vec<Ring>,
+    /// Everything planned that day is done.
+    pub done: bool,
+    pub not_recorded: bool,
+    pub recordings: Vec<String>,
+    pub items: Vec<String>,
+    pub garmin: u32,
+    /// Garmin's Sleep Score for the night ending this morning.
+    pub sleep_score: Option<f64>,
+}
+
+/// Average Garmin Sleep Score this week against the target: a reading.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SleepScoreGoal {
+    pub target: f64,
+    pub average: Option<f64>,
+    pub nights: u32,
+}
+
+/// What is left of a goal once recordings and placed sessions count.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct BacklogItem {
+    pub kind: GoalKind,
+    /// One session, or minutes or nights.
+    pub amount: f64,
+    /// The cardio sport recorded most in the last eight weeks, as a default.
+    pub sport: Option<Sport>,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WeekPause {
+    pub since: String,
+    pub until: Option<String>,
+    pub reason: PauseReason,
+    /// The pause covers every day of the week.
+    pub whole_week: bool,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PlanBoard {
+    /// The phone's local calendar date.
+    pub today: String,
+    /// The plan week shown, first and last day.
+    pub start: String,
+    pub end: String,
+    /// Targets in effect today (the week's end, for a past week).
+    pub goals: Option<GoalVersion>,
+    /// Every goal version, oldest first.
+    pub versions: Vec<GoalVersion>,
+    pub garmin_intensity_goal: Option<f64>,
+    pub ledger: Vec<GoalLedger>,
+    pub week_rings: Vec<Ring>,
+    pub sleep_score: Option<SleepScoreGoal>,
+    pub days: Vec<DayCell>,
+    pub items: Vec<PlanItem>,
+    pub recordings: Vec<Recording>,
+    pub garmin: Vec<GarminSession>,
+    pub garmin_state: PlannedState,
+    pub backlog: Vec<BacklogItem>,
+    /// Paused or ill today: nothing is left to catch up.
+    pub backlog_paused: bool,
+    pub pause: Option<WeekPause>,
+    /// The activity list covers the week through today.
+    pub coverage_complete: bool,
+    /// The migrated sleep-timing observation hasn't been explained yet.
+    pub explain_observation: bool,
+    /// Rows written by a newer Raring are shown but can't be changed here.
+    pub read_only: bool,
 }

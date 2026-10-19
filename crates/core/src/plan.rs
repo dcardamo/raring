@@ -149,7 +149,7 @@ pub fn intensity(store: &Store, start: NaiveDate, today: NaiveDate) -> Option<In
 }
 
 /// Garmin's latest weekly intensity goal on or before `day`.
-fn garmin_goal(store: &Store, day: NaiveDate) -> Option<f64> {
+pub(crate) fn garmin_goal(store: &Store, day: NaiveDate) -> Option<f64> {
     store
         .history("summary", &day.to_string(), 14)
         .iter()
@@ -205,7 +205,7 @@ pub fn capture_sleep_plan(store: &Store, now: DateTime<Local>) -> rusqlite::Resu
 
 /// Missing prospective evidence is excluded, never a miss. The capture must
 /// precede the actual sleep start too (a later upload can reveal early sleep).
-fn asleep_on_time(store: &Store, morning: NaiveDate) -> Option<bool> {
+pub(crate) fn asleep_on_time(store: &Store, morning: NaiveDate) -> Option<bool> {
     let raw = store.get("sleep", &morning.to_string())?;
     let parse = |t: &str| NaiveDateTime::parse_from_str(t, "%Y-%m-%dT%H:%M:%S%.f").ok();
     let asleep = local_time(sleep(&raw), &["sleepStartTimestampLocal"]).and_then(|t| parse(&t))?;

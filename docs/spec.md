@@ -508,6 +508,54 @@ Sent by the phone itself.
   be kept or turned off, not restarted. Paused weeks become whole-week pauses.
   The old row and saved sleep plans stay, so earlier weeks keep their original
   results. An empty database writes nothing, so a first sign-in can bind.
+- **Plan matching**: plan items are your sessions. Garmin's scheduled workouts
+  are listed read-only by name and date; their sport, duration and targets are
+  unverified, so they are neither counted nor matched. A link the person made
+  always holds. Otherwise a session and a recording match when they share the
+  local date and sport family (Garmin's type key: run, cycle/bike/ride, swim,
+  walk, hike, strength; anything else only by the same type key, so HIIT is
+  never strength) and each is the other's only candidate; an unlinked pair
+  stays apart. Raring asks ("Needs review") only for a passed or current day
+  with a same-sport recording it couldn't pair, or, on a passed day, when the
+  only open session and the only unpaired recording are different endurance
+  sports (run, cycle, swim, hike) and the recording lasted half to twice the
+  planned duration. A session let go or marked missed keeps that state. An open
+  session on a passed day without a match is Not recorded, or Awaiting data when
+  that day's activity list is incomplete; never Missed unless the person says
+  so. A wind-down session is done when a wind-down was reported for its date.
+- **Goal ledger**: for each goal on in the week (targets in effect today, or
+  at the week's end for a past week): recorded, planned and remaining. Goals
+  count recordings, never plans; each recording counts once per goal however it
+  was matched. Strength counts Garmin strength activities, Zone 2 sums each
+  activity's zone-2 seconds and Zone 4–5 its zone-4 and zone-5 seconds (whole
+  minutes, rounded down after summing), under the Evidence coverage rule;
+  intensity is Garmin's weekly total (Plan progress) against the chosen
+  minutes or Garmin's weekly goal; sleep timing counts nights asleep by the
+  chosen time (Garmin's recorded sleep start up to 15 minutes after it; a time
+  before noon is after midnight), nights with a reported wind-down, or for the
+  migrated observation nights asleep on time against their saved plan.
+  Planned is the allocation of sessions still Planned (today or later), never
+  a duration converted to zone minutes; a session needing review is neither
+  planned nor a second count. Remaining is target − recorded − planned, at
+  least zero, and unknown while evidence is incomplete or the week has a pause
+  through today. Reached means recorded ≥ target (never for the observation).
+  A change during the week shows the week's starting target beside the new one.
+  A future week records nothing yet. Average Sleep Score is Garmin's nightly
+  score averaged over the week's recorded mornings through today, shown against
+  its target as a reading.
+- **Rings**: one per goal on, in the order strength, Zone 2, Zone 4–5,
+  intensity, sleep timing (the observation and Sleep Score have none). A day's
+  ring draws only what was recorded that day: recorded ÷ the larger of what was
+  planned that day and what was recorded, so recorded work with nothing planned
+  fills it and planned work alone draws nothing. Days still to come, and passed
+  days whose activity list is incomplete (marked unknown), draw nothing. A
+  day's intensity is Garmin's daily moderate plus twice vigorous minutes. Rest,
+  illness and pause mark their days. A week ring is recorded ÷ the weekly
+  target, at most full.
+- **Backlog**: only for the current week, and empty while today is paused or
+  ill: each goal's remaining amount, as one strength session per item, or one
+  item of the remaining minutes or nights. A cardio item suggests the endurance
+  sport recorded most in the last eight weeks. Nothing carries over between weeks.
 
 - **Gear snapshots**: `/gear-service/gear/v2/list` is a complete array;
   `distanceUsedMeters` and `maxUsageDistanceMeters` are metres. Check at most

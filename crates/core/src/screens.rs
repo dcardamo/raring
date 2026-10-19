@@ -615,7 +615,7 @@ fn overnight_samples(raw: &Value, kind: OvernightKind) -> Vec<Option<f64>> {
             .unwrap_or_default()
     }
 }
-fn sscore(v: &Value) -> Option<f64> {
+pub(crate) fn sscore(v: &Value) -> Option<f64> {
     let s = sleep(v);
     num(
         s,
@@ -933,6 +933,12 @@ pub(crate) fn activity(store: &Store, id: &str) -> Option<ActivityCard> {
         benefit: v
             .text(&["trainingEffectLabel", "primaryBenefit"])
             .map(|s| label(Some(s))),
+        avg_hr: v.number(&["averageHR", "avgHR"]).filter(|n| *n > 0.),
+        intensity_min: v
+            .number(&["moderateIntensityMinutes"])
+            .zip(v.number(&["vigorousIntensityMinutes"]))
+            .filter(|(m, g)| *m >= 0. && *g >= 0.)
+            .map(|(m, g)| m + 2. * g),
     })
 }
 fn activities(store: &Store, since: &str) -> Vec<ActivityCard> {
@@ -1200,6 +1206,44 @@ fn stress_timeline(v: &Value) -> (Vec<Option<f64>>, Vec<[f64; 2]>) {
         }
     }
     (slots, active)
+}
+/// Garmin's intraday Body Battery from the daily stress payload, in the same
+/// three-minute slots from the day's start as stress. Samples without a level
+/// are gaps; the column order comes from Garmin's descriptors.
+pub(crate) fn battery_timeline(v: &Value) -> Vec<Option<f64>> {
+    let start = string(v, &[&["startTimestampGMT"]])
+        .and_then(|s| NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%.f").ok())
+        .map(|d| d.and_utc().timestamp_millis());
+    let column = |key: &str, fallback: usize| {
+        v["bodyBatteryValueDescriptorsDTOList"]
+            .as_array()
+            .and_then(|list| list.iter().find(|d| d["bodyBatteryValueDescriptorKey"] == key))
+            .and_then(|d| d["bodyBatteryValueDescriptorIndex"].as_u64())
+            .map_or(fallback, |i| i as usize)
+    };
+    let (time_at, level_at) = (column("timestamp", 0), column("bodyBatteryLevel", 2));
+    let (Some(start), Some(samples)) = (start, v["bodyBatteryValuesArray"].as_array()) else {
+        return vec![];
+    };
+    let mut slots: Vec<Option<f64>> = vec![];
+    for sample in samples {
+        let (Some(time), Some(level)) = (
+            sample.get(time_at).and_then(Value::as_i64),
+            sample.get(level_at).and_then(Value::as_f64),
+        ) else {
+            continue;
+        };
+        let minute = (time - start) as f64 / 60_000.;
+        if !(0. ..1500.).contains(&minute) || !(0. ..=100.).contains(&level) {
+            continue;
+        }
+        let slot = (minute / 3.) as usize;
+        if slots.len() <= slot {
+            slots.resize(slot + 1, None);
+        }
+        slots[slot] = Some(level);
+    }
+    slots
 }
 fn utc_millis(value: &Value) -> Option<i64> {
     if let Some(n) = value.as_i64() {
@@ -1731,6 +1775,7 @@ pub fn today_at_calendar(store: &Store, date: &str, now: DateTime<FixedOffset>, 
             .or_else(|| num(&summary, &[&["bodyBatteryChargedValue"]])),
         drained: num(b, &[&["drained"], &["drainedValue"]])
             .or_else(|| num(&summary, &[&["bodyBatteryDrainedValue"]])),
+        timeline: store.get("stress", date).map(|v| battery_timeline(&v)).unwrap_or_default(),
     };
     let stress = stress(store, date);
     let activities = activities(store, date);

@@ -21,4 +21,12 @@ aerobicLabel: string | null, anaerobicTe: number | null, anaerobicLabel: string 
 /**
  * Garmin's primary benefit: Base, Tempo, Threshold, VO2 Max…
  */
-benefit: string | null, };
+benefit: string | null, 
+/**
+ * Average heart rate, bpm.
+ */
+avgHr: number | null, 
+/**
+ * Garmin's moderate plus twice vigorous minutes for this activity.
+ */
+intensityMin: number | null, };

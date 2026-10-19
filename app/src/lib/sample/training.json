@@ -225,7 +225,9 @@
       "aerobicLabel": "Improving",
       "anaerobicTe": 1.2,
       "anaerobicLabel": "Minor",
-      "benefit": "Tempo"
+      "benefit": "Tempo",
+      "avgHr": 152,
+      "intensityMin": 62
     },
     {
       "id": "9000000000002",
@@ -246,7 +248,9 @@
       "aerobicLabel": null,
       "anaerobicTe": null,
       "anaerobicLabel": null,
-      "benefit": null
+      "benefit": null,
+      "avgHr": 118,
+      "intensityMin": 24
     },
     {
       "id": "9000000000003",
@@ -267,7 +271,9 @@
       "aerobicLabel": "Improving",
       "anaerobicTe": 1.2,
       "anaerobicLabel": "Minor",
-      "benefit": "Base"
+      "benefit": "Base",
+      "avgHr": 138,
+      "intensityMin": 96
     }
   ],
   "planned": {

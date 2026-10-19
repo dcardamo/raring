@@ -37,7 +37,7 @@ export function activityCard(a: Activity): ActivityCard {
   return {
     id: a.id, icon: SPORTS[a.sport].icon, name: a.name, startLocal: `${a.date}T${a.start}:00`, durationS: a.min * 60, distanceKm: a.km ?? null,
     load: a.load, zoneSeconds: a.zones, aerobicTe: a.aerobic, aerobicLabel: aerobicLabel(a.aerobic), anaerobicTe: a.anaerobic, anaerobicLabel: aerobicLabel(a.anaerobic),
-    benefit: a.benefit,
+    benefit: a.benefit, avgHr: null, intensityMin: a.im ?? null,
   };
 }
 
@@ -238,7 +238,7 @@ export function todayView(ctx: Ctx): TodayView {
     headline: ctx.stale || ctx.phase === 'waiting' ? 'Waiting for your watch' : ctx.paused ? 'Training is paused' : ctx.restActive ? 'Rest day' : ctx.hasLimits ? 'Your limits apply' : r ? (r.value >= 75 ? 'Ready when you are' : r.value >= 50 ? 'A steady day' : 'Take it easier') : 'Your day is taking shape',
     factors, call: ctx.paused || ctx.restActive || ctx.hasLimits || ctx.stale || ctx.phase === 'waiting' ? null : effortFor(r) as Effort | null, callNote: null, chips: [],
     readinessWhy: r ? {title: `Why readiness is ${r.level}`, summary: `${r.limit} holds readiness back most.`, feedback: null, source: 'Garmin readiness factors', inputs: factors.map(f => ({key:f.key,name:f.name,value:f.key === 'sleep' ? String(n?.score ?? '—') : f.key === 'hrv' ? `${hrvFor(ctx.displayedDay)} ms` : f.key === 'acuteLoad' ? String(acute) : f.key === 'recovery' ? `${Math.round(acute / 30)} h` : null,rating:f.percent == null ? null : f.tone === 'good' ? 'Good' : f.tone === 'fair' ? 'Fair' : 'Poor',tone:f.tone,detail:f.detail}))} : null,
-    bodyBattery: {now: ctx.bodyBattery, charged: n ? bodyBatteryDay(ctx, ctx.displayedDay).charged : null, drained: 22},
+    bodyBattery: {now: ctx.bodyBattery, charged: n ? bodyBatteryDay(ctx, ctx.displayedDay).charged : null, drained: 22, timeline: []},
     bodyBatteryWhy: ctx.bodyBattery != null ? {title: `Why Body Battery is ${ctx.bodyBattery}`, summary: n ? `Sleep charged it by ${bodyBatteryDay(ctx, ctx.displayedDay).charged}.` : 'No recorded night.', feedback:null,source:'Garmin Body Battery events and feedback',inputs:[{key:'overnight',name:'Overnight',value:n ? `+${bodyBatteryDay(ctx, ctx.displayedDay).charged}` : null,rating:null,tone:'neutral',detail:n ? `${n.bed}–${n.wake}` : 'No recorded night'},{key:'stress',name:'Stress',value:String(stressCard(ctx).average ?? '—'),rating:stressCard(ctx).qualifier,tone:stressCard(ctx).tone,detail:'Average through the day at the last upload'}]} : null,
     stress: stressCard(ctx), heartRateDay: heartRateDay(ctx), hrv: {lastNight: n ? hrvFor(ctx.displayedDay) : null, status: 'Balanced', tone: 'good', baseline: [38, 56], week: range(addDays(ctx.displayedDay, -6), ctx.displayedDay).map(d => nightFor(d) ? hrvFor(d) : null)},
     vitals: vitalsFor(ctx), activities: ctx.actsToday.map(activityCard), fitnessAge: fitnessAgeCard(ctx), checkinReady: false,

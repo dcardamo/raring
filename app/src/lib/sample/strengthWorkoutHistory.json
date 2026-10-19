@@ -19,7 +19,9 @@
       "aerobicLabel": null,
       "anaerobicTe": null,
       "anaerobicLabel": null,
-      "benefit": null
+      "benefit": null,
+      "avgHr": null,
+      "intensityMin": null
     },
     "recoveryHours": null,
     "stats": [
@@ -146,7 +148,9 @@
       "aerobicLabel": null,
       "anaerobicTe": null,
       "anaerobicLabel": null,
-      "benefit": null
+      "benefit": null,
+      "avgHr": null,
+      "intensityMin": null
     },
     "recoveryHours": null,
     "stats": [
@@ -239,7 +243,9 @@
       "aerobicLabel": null,
       "anaerobicTe": null,
       "anaerobicLabel": null,
-      "benefit": null
+      "benefit": null,
+      "avgHr": null,
+      "intensityMin": null
     },
     "recoveryHours": null,
     "stats": [
@@ -566,7 +572,9 @@
       "aerobicLabel": null,
       "anaerobicTe": null,
       "anaerobicLabel": null,
-      "benefit": null
+      "benefit": null,
+      "avgHr": null,
+      "intensityMin": null
     },
     "recoveryHours": null,
     "stats": [
@@ -893,7 +901,9 @@
       "aerobicLabel": null,
       "anaerobicTe": null,
       "anaerobicLabel": null,
-      "benefit": null
+      "benefit": null,
+      "avgHr": null,
+      "intensityMin": null
     },
     "recoveryHours": null,
     "stats": [
@@ -1220,7 +1230,9 @@
       "aerobicLabel": null,
       "anaerobicTe": null,
       "anaerobicLabel": null,
-      "benefit": null
+      "benefit": null,
+      "avgHr": null,
+      "intensityMin": null
     },
     "recoveryHours": null,
     "stats": [
@@ -1547,7 +1559,9 @@
       "aerobicLabel": null,
       "anaerobicTe": null,
       "anaerobicLabel": null,
-      "benefit": null
+      "benefit": null,
+      "avgHr": null,
+      "intensityMin": null
     },
     "recoveryHours": null,
     "stats": [
@@ -1874,7 +1888,9 @@
       "aerobicLabel": null,
       "anaerobicTe": null,
       "anaerobicLabel": null,
-      "benefit": null
+      "benefit": null,
+      "avgHr": null,
+      "intensityMin": null
     },
     "recoveryHours": null,
     "stats": [
@@ -2201,7 +2217,9 @@
       "aerobicLabel": null,
       "anaerobicTe": null,
       "anaerobicLabel": null,
-      "benefit": null
+      "benefit": null,
+      "avgHr": null,
+      "intensityMin": null
     },
     "recoveryHours": null,
     "stats": [
@@ -2528,7 +2546,9 @@
       "aerobicLabel": null,
       "anaerobicTe": null,
       "anaerobicLabel": null,
-      "benefit": null
+      "benefit": null,
+      "avgHr": null,
+      "intensityMin": null
     },
     "recoveryHours": null,
     "stats": [
@@ -2849,7 +2869,9 @@
       "aerobicLabel": null,
       "anaerobicTe": null,
       "anaerobicLabel": null,
-      "benefit": null
+      "benefit": null,
+      "avgHr": null,
+      "intensityMin": null
     },
     "recoveryHours": null,
     "stats": [
@@ -3185,7 +3207,9 @@
       "aerobicLabel": null,
       "anaerobicTe": null,
       "anaerobicLabel": null,
-      "benefit": null
+      "benefit": null,
+      "avgHr": null,
+      "intensityMin": null
     },
     "recoveryHours": null,
     "stats": [
@@ -3506,7 +3530,9 @@
       "aerobicLabel": null,
       "anaerobicTe": null,
       "anaerobicLabel": null,
-      "benefit": null
+      "benefit": null,
+      "avgHr": null,
+      "intensityMin": null
     },
     "recoveryHours": null,
     "stats": [
@@ -3827,7 +3853,9 @@
       "aerobicLabel": null,
       "anaerobicTe": null,
       "anaerobicLabel": null,
-      "benefit": null
+      "benefit": null,
+      "avgHr": null,
+      "intensityMin": null
     },
     "recoveryHours": null,
     "stats": [

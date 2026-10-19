@@ -347,6 +347,15 @@ async fn plan(app: tauri::AppHandle, date: Option<String>) -> Result<PlanView, S
     })
     .await
 }
+/// The plan week containing `date` (this week when absent), on the calendar day.
+#[tauri::command]
+async fn plan_board(app: tauri::AppHandle, date: Option<String>) -> Result<raring_core::view::PlanBoard, String> {
+    read_view(app, move |core| {
+        let now = Local::now();
+        core.plan_board(&date.unwrap_or_else(|| now.date_naive().to_string()), now).map_err(|e| e.to_string())
+    })
+    .await
+}
 /// Saves to the week the plan screen shows.
 #[tauri::command]
 async fn set_plan(app: tauri::AppHandle, update: PlanUpdate) -> Result<(), String> {
@@ -838,6 +847,7 @@ pub fn run() {
                     plan,
                     set_plan,
                     local_action,
+                    plan_board,
                     sync_now,
                     begin_sign_in,
                     sign_out,
@@ -865,6 +875,7 @@ pub fn run() {
                     plan,
                     set_plan,
                     local_action,
+                    plan_board,
                     sync_now,
                     begin_sign_in,
                     sign_out,

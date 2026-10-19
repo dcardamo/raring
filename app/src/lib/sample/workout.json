@@ -18,7 +18,9 @@
     "aerobicLabel": "Improving",
     "anaerobicTe": 1.2,
     "anaerobicLabel": "Minor",
-    "benefit": "Tempo"
+    "benefit": "Tempo",
+    "avgHr": 152,
+    "intensityMin": 62
   },
   "recoveryHours": 18,
   "stats": [

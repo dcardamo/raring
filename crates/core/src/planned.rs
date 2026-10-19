@@ -1,7 +1,7 @@
 //! Read-only, date-based projections of Garmin's cached calendar snapshots.
 use crate::{
     store::Store,
-    view::{PlannedSession, PlannedState, PlannedTraining, UpcomingRace},
+    view::{GarminSession, PlannedSession, PlannedState, PlannedTraining, UpcomingRace},
 };
 use chrono::{DateTime, NaiveDate, Utc};
 use serde_json::Value;
@@ -104,6 +104,40 @@ pub fn session(store: &Store, date: &str, now: DateTime<Utc>) -> PlannedTraining
         coverage_start,
         coverage_end,
     }
+}
+/// Every cached scheduled workout from `from` to `to`, by date and name only.
+/// Unknown or unfamiliar entries make the whole list unknown, as for the next session.
+pub fn sessions(store: &Store, from: &str, to: &str, now: DateTime<Utc>) -> (PlannedState, Vec<GarminSession>) {
+    let (state, snapshot) = current(store, "scheduled_workouts", now);
+    if state != PlannedState::Available {
+        return (state, vec![]);
+    }
+    let Some(rows) = snapshot["entries"].as_array() else {
+        return (PlannedState::Unknown, vec![]);
+    };
+    let named = |v: &Value| title(v, &["workoutName"]).or_else(|| title(&v["workout"], &["workoutName"]));
+    if rows.iter().any(|v| unverified_state(v) || field_date(v, &["calendarDate"]).is_none() || named(v).is_none()) {
+        return (PlannedState::Unknown, vec![]);
+    }
+    let (Some(from), Some(to)) = (day(from), day(to)) else {
+        return (PlannedState::Unknown, vec![]);
+    };
+    let covered = field_date(&snapshot, &["startDate"]).zip(field_date(&snapshot, &["endDate"]));
+    // Days outside the cached window are not known to be empty.
+    let state = match covered {
+        Some((lo, hi)) if lo <= from && hi >= to => PlannedState::Available,
+        Some((lo, hi)) if lo <= to && hi >= from => PlannedState::Partial,
+        _ => PlannedState::Stale,
+    };
+    let mut list: Vec<GarminSession> = rows
+        .iter()
+        .filter_map(|v| {
+            let d = field_date(v, &["calendarDate"])?;
+            (from..=to).contains(&d).then(|| GarminSession { date: d.to_string(), name: named(v).unwrap_or_default() })
+        })
+        .collect();
+    list.sort_by(|a, b| a.date.cmp(&b.date));
+    (state, list)
 }
 pub fn race(store: &Store, date: &str, now: DateTime<Utc>) -> (PlannedState, Option<UpcomingRace>) {
     let (state, raw) = current(store, "upcoming_events", now);

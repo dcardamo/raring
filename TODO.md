@@ -101,7 +101,19 @@ stage 2 on his design approval plus browser checks. The usability gate stays ope
 no unfamiliar people have evaluated first meaning, discovery, comprehension or
 pressure, and three participants (including simple-needs and detail-oriented
 people) remain required before cutover is called validated. The five tabs (Today · Plan · Training · Health · Progress) have no unfamiliar-user validation.
-The stage 2–5 checkpoints are in the design's [implementation plan](docs/experience-design.md#17-implementation-plan-stages-25). Later
+The stage 2–5 checkpoints are in the design's [implementation plan](docs/experience-design.md#17-implementation-plan-stages-25).
+
+**Stage 2 progress.** 2.1 local records and plan migration (`7e90c78`); 2.2
+matching, goal ledger, rings, backlog and the `PlanBoard` view (this change).
+Verified on the maintainer's stored data (key names only, read-only): activity
+`summaryDTO.averageHR` on all 30 stored activities, per-activity
+`moderate/vigorousIntensityMinutes` on 15 of 30 (absent ones stay unknown), and
+the daily stress payload's `bodyBatteryValuesArray` rows are
+`[timestamp, status, level, version]` per `bodyBatteryValueDescriptorsDTOList`
+(statuses MEASURED, MODELED, RESET and null-level gaps; three-minute spacing).
+The stored Garmin schedule snapshot has an empty `entries` list, so scheduled
+workout sport, duration, ids and steps remain unverified: Garmin sessions are
+listed by name and date only, not counted or matched. Later
 implemented-app/Android, real-data and full migration/evidence checks also remain
 unverified; no endpoint claims or shipped-feature contracts were changed.
 

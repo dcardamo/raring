@@ -613,6 +613,11 @@ pub(crate) fn apply(
                 r.events.events.sort_by(|a, b| a.date.cmp(&b.date));
                 &[Events::KEY]
             }
+            LocalAction::ObservationExplained => {
+                writable(&r, &[Goals::KEY])?;
+                r.goals.observation_explained = true;
+                &[Goals::KEY]
+            }
             LocalAction::RemoveEvent { id } => {
                 writable(&r, &[Events::KEY])?;
                 r.events.events.retain(|e| e.id != *id);
