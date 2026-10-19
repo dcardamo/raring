@@ -412,6 +412,7 @@ await journey('Training: three questions, activities show what they worked', 'U1
 // ---------- P4 ----------
 await journey('Today: effort bar, reason line, no Why, week and backlog side by side', 'U13', async (page) => {
  if (await page.locator('.hero').getByRole('button', {name: 'Why?'}).count()) throw new Error('Why? still on Today');
+ if (await page.locator('.hero .session').getByRole('button', {name: 'Rest'}).count()) throw new Error('session card duplicates Adapt today’s Rest');
  if (await page.locator('.effort button').count() || await page.locator('.effort .sw.on').count() !== 1) throw new Error('effort bar is a control or lacks one marked level');
  await expectText(page, 'Short sleep', 'reason line from Garmin inputs');
  const [l, r] = await page.evaluate(() => [document.querySelector('.wk2-l').getBoundingClientRect(), document.querySelector('.wk2-r').getBoundingClientRect()].map(b => ({top: Math.round(b.top), left: Math.round(b.left)})));
@@ -434,7 +435,8 @@ await journey('Event in the week groups the sessions that serve it', 'U13', asyn
 });
 await journey('Workout detail shows only what the activity recorded', 'U15', async (page) => {
  await ext(page, 'workout/a-1203');
- for (const t of ['Along the way', 'What it did', 'Intensity minutes', 'Recorded by your watch', 'Cadence']) await expectText(page, t, 'run detail');
+ for (const t of ['Along the way', 'What it did', 'Intensity minutes', 'Recorded by your watch', 'Cadence', 'min/km']) await expectText(page, t, 'run detail');
+ if ((await text(page)).includes('km/h · pace')) throw new Error('pace chart labelled km/h');
  if (await page.locator('main .ax').count() < 3) throw new Error('aligned charts missing');
  await ext(page, 'workout/a-1110');
  await expectNoText(page, 'Along the way', 'no GPS streams for HIIT'); await expectNoText(page, 'Cadence', 'no cadence for HIIT');
@@ -442,6 +444,10 @@ await journey('Workout detail shows only what the activity recorded', 'U15', asy
 await journey('Weight is a metric like the others', 'U13', async (page) => {
  await ext(page, 'health');
  await expectNoText(page, 'Private to Health', 'label removed');
+ for (const name of ['Body Battery high', 'Average stress']) {
+  const ticks = await page.locator('.mc').filter({hasText: name}).locator('text.yt').allTextContents();
+  if (Math.max(...ticks.map(Number)) > 100) throw new Error(`${name} axis exceeds 100: ${ticks}`);
+ }
  const card = page.locator('.wc');
  if (await card.getByRole('group', {name: 'Weight range'}).locator('button').count() !== 6) throw new Error('weight lacks the range picker');
  if (!await card.getByRole('button', {name: /Add a weight/}).isDisabled()) throw new Error('weight write enabled');

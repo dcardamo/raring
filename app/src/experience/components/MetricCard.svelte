@@ -6,7 +6,7 @@
  import {addDays, dayMonth} from '../lib/dates';
  // One Garmin daily metric with an in-place range picker, its usual range and
  // a link to the canonical detail for comparisons and all history.
- let {id, name, unit, read, band = null, color = '#FF8A8A', fmt = (v: number) => String(Math.round(v)), route, sparse = false, staleAfter = 2, children}: {id: string, name: string, unit: string, read: (d: string) => number | null, band?: [number, number] | null, color?: string, fmt?: (v: number) => string, route?: string, sparse?: boolean, staleAfter?: number, children?: import('svelte').Snippet} = $props();
+ let {id, name, unit, read, band = null, color = '#FF8A8A', fmt = (v: number) => String(Math.round(v)), route, sparse = false, staleAfter = 2, cap, children}: {id: string, name: string, unit: string, read: (d: string) => number | null, band?: [number, number] | null, color?: string, fmt?: (v: number) => string, route?: string, sparse?: boolean, staleAfter?: number, cap?: number, children?: import('svelte').Snippet} = $props();
  let span = $state<number>(30);
  let ctx = $derived(store.ctx);
  let end = $derived(ctx.stale ? ctx.upload.date : ctx.displayedDay);
@@ -26,7 +26,7 @@
 <section class="card mc">
  <div class="mc-h"><div><small>{name} · Garmin</small><b class="n">{latest != null ? fmt(latest) : '—'}<span>{unit}</span></b>{#if age != null && age > staleAfter}<em class="stale">Last reading {dayMonth(lastDate!)} · {age} days ago</em>{/if}{#if avg != null}<em>{sparse ? `last ${lastDate ? dayMonth(lastDate) : '—'}` : `avg ${fmt(avg)} over ${span === 0 ? 'all history' : span === 365 ? 'a year' : `${span} days`}`}</em>{/if}</div></div>
  <RangePicker bind:value={span} label={`${name} range`}/>
- <AxisChart points={pts} kind={span === 7 || sparse ? 'dots' : 'line'} {unit} {band} {color} {fmt} height={130} label={`${name}, ${span ? `last ${span} days` : 'all history'}: latest ${latest ?? 'none'} ${unit}${band ? `, usual ${band[0]}–${band[1]}` : ''}`}/>
+ <AxisChart points={pts} kind={span === 7 || sparse ? 'dots' : 'line'} {unit} {band} {color} {fmt} {cap} height={130} label={`${name}, ${span ? `last ${span} days` : 'all history'}: latest ${latest ?? 'none'} ${unit}${band ? `, usual ${band[0]}–${band[1]}` : ''}`}/>
  {#if children}{@render children()}{/if}
  <button class="link more" onclick={() => store.navigate(route ?? `metric/${id}`)}>Comparisons and all history<Icon name="chevron" size={13}/></button>
 </section>

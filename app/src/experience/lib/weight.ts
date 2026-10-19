@@ -28,6 +28,10 @@ export function trendSeries(ctx: Ctx, to: string): Map<string, number> {
   }
   return out;
 }
+/** Smallest trend move read as real over a window: 0.2 kg (about what a
+ *  0.1-weighted trend moves on ordinary ±0.7 kg scale swings), or 0.05 kg a
+ *  week sustained over the window, whichever is larger. */
+export const steadyWithin = (days: number) => Math.max(.2, .05 * days / 7);
 export type Change = {days: number, kg: number | null, perWeek: number | null, word: 'Losing' | 'Gaining' | 'Steady' | null};
 /** Trend change over N days ending at the last weigh-in; never extrapolated past it. */
 export function changes(ctx: Ctx, spans = [1, 3, 7, 14, 30, 90]): {last: string | null, trend: number | null, rows: Change[]} {
@@ -37,8 +41,8 @@ export function changes(ctx: Ctx, spans = [1, 3, 7, 14, 30, 90]): {last: string 
   return {last, trend: end, rows: spans.map(days => {
     const start = series.get(addDays(last, -days));
     if (start == null) return {days, kg: null, perWeek: null, word: null};
-    const kg = Math.round((end - start) * 10) / 10;
-    return {days, kg, perWeek: Math.round(kg / days * 7 * 100) / 100, word: Math.abs(kg) < .1 ? 'Steady' : kg < 0 ? 'Losing' : 'Gaining'};
+    const raw = end - start, kg = Math.round(raw * 10) / 10;
+    return {days, kg, perWeek: Math.round(raw / days * 7 * 100) / 100, word: Math.abs(raw) < steadyWithin(days) ? 'Steady' : raw < 0 ? 'Losing' : 'Gaining'};
   })};
 }
 export const ageDays = (from: string | null, to: string) => from == null ? null : Math.round((Date.parse(to) - Date.parse(from)) / 864e5);

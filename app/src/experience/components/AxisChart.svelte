@@ -6,15 +6,16 @@
  // optional goal line, usual range band and hatched spans (ill, paused,
  // awaiting data). Gaps stay gaps; nothing is drawn between missing points.
 
- let {points, kind = 'bars', unit = '', goal = null, goalLabel = 'goal', band = null, bandLabel = 'usual', height = 150, color = '#5CA8FF', fmt = (v: number) => String(Math.round(v)), values = kind === 'bars', yMin, yMax, label, every = 0, line = null, lineColor = '#E4E8F0'}: {
+ let {points, kind = 'bars', unit = '', goal = null, goalLabel = 'goal', band = null, bandLabel = 'usual', height = 150, color = '#5CA8FF', fmt = (v: number) => String(Math.round(v)), values = kind === 'bars', yMin, yMax, label, every = 0, line = null, lineColor = '#E4E8F0', cap}: {
   points: Point[], kind?: 'bars' | 'line' | 'dots', unit?: string, goal?: number | null, goalLabel?: string, band?: [number, number] | null, bandLabel?: string,
-  height?: number, color?: string, fmt?: (v: number) => string, values?: boolean, yMin?: number, yMax?: number, label: string, every?: number, line?: (number | null)[] | null, lineColor?: string,
+  height?: number, color?: string, fmt?: (v: number) => string, values?: boolean, yMin?: number, yMax?: number, label: string, every?: number, line?: (number | null)[] | null, lineColor?: string, cap?: number,
  } = $props();
  let w = $state(320);
  const L = 34, R = 8, T = 22, B = 20;
  let vals = $derived([...points.map(p => p.v), ...(line ?? [])].filter((v): v is number => v != null));
  let lo = $derived(yMin ?? (kind === 'bars' ? 0 : Math.floor(Math.min(...vals, ...(band ?? []), ...(goal != null ? [goal] : [])) * .97)));
- let hi = $derived(yMax ?? Math.max(1, Math.ceil(Math.max(...vals, ...(band ?? []), ...(goal != null ? [goal] : [])) * 1.08)));
+ // Bounded scales (Body Battery, stress, scores, SpO₂) never run past their maximum.
+ let hi = $derived(Math.min(cap ?? Infinity, yMax ?? Math.max(1, Math.ceil(Math.max(...vals, ...(band ?? []), ...(goal != null ? [goal] : [])) * 1.08))));
  let step = $derived((w - L - R) / Math.max(1, points.length));
  const y = (v: number) => T + (1 - (v - lo) / Math.max(1e-6, hi - lo)) * (height - T - B);
  const x = (i: number) => L + step * i + step / 2;

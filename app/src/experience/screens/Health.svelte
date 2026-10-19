@@ -51,8 +51,8 @@
 <div class="sec-h"><h2>Over time</h2><HelpButton topic="metric-range"/></div>
 <MetricCard id="restingHr" name="Resting heart rate" unit="bpm" read={withNight(restingHrFor)} band={usual('restingHr')} color="#FF8A8A"/>
 <MetricCard id="hrv" name="Overnight HRV" unit="ms" read={withNight(hrvFor)} band={usual('hrv')} color="#A48BFF"/>
-<MetricCard id="stress" name="Average stress" unit="" read={stressAvgFor} color="#FFB547"/>
-<MetricCard id="bodyBattery" name="Body Battery high" unit="" read={bodyBatteryHigh} color="#3DDC97"/>
+<MetricCard id="stress" name="Average stress" unit="" read={stressAvgFor} color="#FFB547" cap={100}/>
+<MetricCard id="bodyBattery" name="Body Battery high" unit="" read={bodyBatteryHigh} color="#3DDC97" cap={100}/>
 <WeightCard/>
 
 <section class="card private">

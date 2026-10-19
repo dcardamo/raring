@@ -10,7 +10,7 @@
  let s = $derived(summaryFor(a));
  let st = $derived(streamsFor(a));
  let ride = $derived(a.sport === 'cycling');
- const pace = (kmh: number) => { const sec = 3600 / kmh; return `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, '0')}`; };
+ const mmss = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, '0')}`;
  let pts = $derived(st ? st.filter((_, i) => i % Math.max(1, Math.ceil(st!.length / 36)) === 0) : []);
  const x = (t: number) => `${Math.round(t)}′`;
  let aer = $derived(effectLine('aerobic', a.aerobic)), ana = $derived(effectLine('anaerobic', a.anaerobic));
@@ -33,7 +33,8 @@
 {#if st}
  <section class="card"><div class="wm-h"><h3>Along the way</h3><span class="small">same time axis</span></div>
   <AxisChart points={pts.map(p => ({x: x(p.t), v: p.bpm}))} kind="line" unit="bpm" color="#FF6B8A" height={100} label={`Heart rate over ${a.min} min`}/>
-  <AxisChart points={pts.map(p => ({x: x(p.t), v: p.speed}))} kind="line" unit={ride ? 'km/h' : 'km/h · pace'} color="#36C9C6" height={100} fmt={v => ride ? String(Math.round(v)) : pace(v)} label={`${ride ? 'Speed' : 'Pace'} over ${a.min} min`}/>
+  {#if ride}<AxisChart points={pts.map(p => ({x: x(p.t), v: p.speed}))} kind="line" unit="km/h" color="#36C9C6" height={100} fmt={v => String(Math.round(v))} label={`Speed over ${a.min} min`}/>
+  {:else}<AxisChart points={pts.map(p => ({x: x(p.t), v: 3600 / p.speed}))} kind="line" unit="min/km · lower is faster" color="#36C9C6" height={100} fmt={mmss} label={`Pace over ${a.min} min, in minutes per km`}/>{/if}
   <AxisChart points={pts.map(p => ({x: x(p.t), v: p.elev}))} kind="line" unit="m" color="#D9C089" height={90} label={`Elevation over ${a.min} min`}/>
  </section>
 {/if}

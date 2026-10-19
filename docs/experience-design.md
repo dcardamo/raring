@@ -1318,8 +1318,11 @@ goal or verdict (a direction the person wants is a decision for Dan).
    trend. This is the long-public exponentially smoothed average, not a
    Garmin figure.
 2. **Changes.** Over N days = trend at the last weigh-in minus trend N days
-   before it; "—" when the trend didn't exist then. Steady when under 0.1 kg;
-   weekly rate shown from 7 days. Nothing is projected past the last weigh-in.
+   before it; "—" when the trend didn't exist then. **Steady** when the move
+   is under max(0.2 kg, 0.05 kg/week × N/7): 0.2 kg for windows up to 4 weeks
+   (about what the trend moves on ordinary ±0.7 kg scale swings), widening to
+   0.64 kg over 90 days. Weekly rate shown from 7 days. Nothing is projected
+   past the last weigh-in.
 3. **Freshness.** The last weigh-in's date and age are always shown, flagged
    after 7 days; daily metrics are flagged after 2 days. No reminders to weigh in.
 
