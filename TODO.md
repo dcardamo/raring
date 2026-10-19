@@ -453,8 +453,8 @@ faces, screens, sensors and audio prompts stay in Connect.
       back `UNCHANGED`) returned 204. User settings `firstDayOfWeek`
       (Monday is `dayId` 3, `sortOrder` 3) and `preferredLongTrainingDays`
       returned 204. Device `startOfWeek` (full object PUT) returned 200.
-      Garmin rejects `availableTrainingDays` with two rest days in a row
-      (400 "Cannot set consecutive rest days").
+      `availableTrainingDays` with one rest day returned 204; two rest days
+      in a row are rejected (400 "Cannot set consecutive rest days").
 21. **Write rules** (do these before any write ships): every write starts
     from a fresh read, changes only the fields the user touched, reads the
     value back and shows success or failure; nothing writes in the
