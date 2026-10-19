@@ -42,7 +42,7 @@ export type State = {
   signedOut: boolean, dst: boolean, returning: boolean, noRunning: boolean, savedSleepTarget: boolean, winddownIntention: boolean,
   navVariant: 'tabs' | 'header', reviewDraft: string | null,
   goalVersions?: GoalVersion[], todayChoice?: {day: string, id: string}, keptGarmin?: Record<string, boolean>,
-  planWeeks?: Record<string, 'done' | 'dismissed'>, planReminder?: boolean,
+  planWeeks?: Record<string, 'done' | 'dismissed'>, planReminder?: boolean, unlinked?: Record<string, boolean>, glinks?: Record<string, string>,
 };
 
 export function profileWorld(state: State) {

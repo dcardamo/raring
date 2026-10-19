@@ -2,6 +2,8 @@
 import {between, addDays, dayLabel} from './dates';
 import {versionFor, type Ctx, type GoalTargets, type Intention, type Allocation} from './rules';
 import type {Activity} from './world';
+import {itemMatch, localItem, planItems, type PlanItem} from './match';
+import {weekId as weekIdFor} from './dates';
 export type GoalKey = 'strength' | 'zone2' | 'hi' | 'im' | 'sleep';
 export const GOAL_INFO = {strength:{name:'Strength',unit:'sessions',color:'#FF7DB8'},zone2:{name:'Zone 2',unit:'min',color:'#5CA8FF'},hi:{name:'Zone 4–5',unit:'min',color:'#FF8A5C'},im:{name:'Intensity',unit:'min',color:'#36C9C6'},sleep:{name:'Sleep timing',unit:'nights',color:'#A9C8FF'}} as const;
 export const emptyGoals = (): GoalTargets => ({strength:0,zone2:0,hi:0,im:0,sleep:0,sleepTime:'22:15',sleepKind:'winddown',sleepScore:0});
@@ -18,17 +20,12 @@ export function candidates(ctx:Ctx, intention:Intention):Activity[] {
  return ctx.world.activities.filter(a=>a.date===intention.date && a.sport===intention.sport);
 }
 export type IntentionState='recorded'|'released'|'missed'|'planned'|'review'|'not-recorded'|'awaiting'|'sleep-observation';
-// A same-day, same-sport recording the person hasn't linked is a possible
-// match: it needs their review, and is neither planned work nor a second count.
+// Done when linked or unambiguously matched (see match.ts); a genuinely
+// ambiguous match needs review and is neither planned work nor a second count.
 export function intentionState(ctx:Ctx,i:Intention):IntentionState {
- if(i.status==='released'||i.status==='missed')return i.status;
- if(i.kind==='sleep' && i.date<ctx.calendarDate)return 'sleep-observation';
- if(i.link && candidates(ctx,i).some(a=>a.id===i.link))return 'recorded';
- if(!i.link && i.date<=ctx.calendarDate && candidates(ctx,i).some(a=>!ctx.state.intentions.some(o=>o.id!==i.id&&o.link===a.id)))return 'review';
- if(i.date>=ctx.calendarDate)return 'planned';
- return ctx.world.coverageIncompleteFrom && i.date>=ctx.world.coverageIncompleteFrom || ctx.world.coverageGaps.includes(weekIdFor(i.date)) ? 'awaiting' : 'not-recorded';
+ const m=itemMatch(ctx,localItem(i)).state;
+ return m==='done'?'recorded':m;
 }
-import {weekId as weekIdFor} from './dates';
 // One factual contribution per recording. Matching an intention never adds a
 // second workout, and planned duration is never substituted for zone evidence.
 export function recordedFor(activities:Activity[],key:GoalKey):number {
@@ -43,13 +40,13 @@ export function allocations(ctx:Ctx) {
  const goals=goalsFor(ctx), inWeek=ctx.world.activities.filter(a=>between(a.date,ctx.weekFrom,ctx.calendarDate));
  const dayList=Array.from({length:Math.max(1,Math.min(7,Math.round((Date.parse(ctx.calendarDate)-Date.parse(ctx.weekFrom))/86400000)+1))},(_,i)=>addDays(ctx.weekFrom,i));
  const complete=!dayList.some(d=>ctx.world.coverageGaps.includes(weekIdFor(d)) || !!ctx.world.coverageIncompleteFrom && d>=ctx.world.coverageIncompleteFrom);
- const open=ctx.state.intentions.filter(i=>isOpen(i)&&!i.link&&between(i.date,ctx.weekFrom,ctx.weekTo));
- const review=open.filter(i=>intentionState(ctx,i)==='review');
- const pending=open.filter(i=>i.date>=ctx.calendarDate&&!review.includes(i));
+ const items=planItems(ctx,ctx.weekFrom,ctx.weekTo).map(p=>({p,state:itemMatch(ctx,p).state}));
+ const review=items.filter(x=>x.state==='review').map(x=>x.p);
+ const pending=items.filter(x=>x.state==='planned'&&x.p.date>=ctx.calendarDate).map(x=>x.p);
  return (Object.keys(GOAL_INFO) as GoalKey[]).filter(key=>goals[key]>0).map(key=>{
-  const has=(i:Intention)=>(allocationFor(i)[key]??0)>0;
+  const has=(i:PlanItem)=>(i.allocation[key]??0)>0;
   const ambiguous=key!=='sleep' && review.some(has);
-  const planned=pending.filter(has).reduce((n,i)=>n+(allocationFor(i)[key]??0),0);
+  const planned=pending.filter(has).reduce((n,i)=>n+(i.allocation[key]??0),0);
   const recorded=key==='sleep'?null:recordedFor(inWeek,key);
   const paused=!!ctx.paused||!!ctx.plan?.midPause||!!ctx.plan?.wholePause;
   // Resolving a possible match never changes the remainder: the recording
@@ -85,3 +82,4 @@ export function dayEvidence(ctx:Ctx,date:string) {
   rest:ctx.state.rest?.day===date,
   paused:[...ctx.state.pauses,...(ctx.state.pause?[ctx.state.pause]:[])].some(p=>date>=p.since&&(!p.until||date<=p.until))};
 }
+export const itemRoute = (p: PlanItem) => p.source === 'garmin' ? `scheduled/${p.id}` : `intention/${p.id}`;

@@ -13,6 +13,9 @@
  import {latestReviewWeek, versionFor} from '../lib/rules';
  import {PLAN_WEEKS, SCHEDULE, COACH, activityById} from '../lib/world';
  import {allocationFor, intentionState, isOpen} from '../lib/allocation';
+ import MatchPanel from '../components/MatchPanel.svelte';
+ import ItemRow from '../components/ItemRow.svelte';
+ import {garminItem, itemMatch, localItem, STATE_WORD} from '../lib/match';
  import {commitmentWeeks, totals} from '../lib/progress';
  import {weekOutcome, weekRings, activeKeys} from '../lib/week';
  import {trainingView} from '../lib/views';
@@ -56,23 +59,17 @@
   {@render header(`${SPORTS[i.sport].name} · ${dayLabel(i.date)}`, `Your plan${i.time ? ` · ${i.time}` : ' · any time'}`)}
   {@const st = intentionState(ctx, i)}{@const alloc = allocationFor(i)}
   <section class="card ihero" style:--c={SPORTS[i.sport].color}>
-   <Glyph sport={i.sport} mark={i.link ? 'recorded' : 'plan'} size={52}/>
+   <Glyph sport={i.sport} mark={st === 'recorded' ? 'recorded' : 'plan'} size={52}/>
    <div><b>{i.name ?? SPORTS[i.sport].name}{i.time ? ` at ${i.time}` : ''}</b><small>Your plan{i.garminId ? ' · counts a Garmin session' : ''}</small>
-    <span class="status s-{st}">{({recorded:'Recorded · linked by you', released:'Let go', missed:'Marked missed by you', planned:'Planned', review:'Needs review', 'not-recorded':'Not recorded', awaiting:'Awaiting data', 'sleep-observation':'Timing observed in Sleep'} as Record<string,string>)[st]}</span></div>
+    <span class="status s-{st}">{st === 'recorded' ? '✓ Done' : STATE_WORD[st]}</span></div>
   </section>
-  {#if Object.values(alloc).some(Boolean)}<p class="alloc">Counts toward: {Object.entries(alloc).filter(([, n]) => n).map(([k, n]) => `${n} ${({strength: 'strength session', zone2: 'Zone 2 min', im: 'intensity min', sleep: 'sleep-timing night'} as Record<string,string>)[k]}`).join(' · ')}</p>{/if}
+  {#if Object.values(alloc).some(Boolean)}<p class="alloc">Counts toward: {Object.entries(alloc).filter(([, n]) => n).map(([k, n]) => `${n} ${({strength: 'strength session', zone2: 'Zone 2 min', hi: 'Zone 4–5 min', im: 'intensity min', sleep: 'sleep-timing night'} as Record<string,string>)[k]}`).join(' · ')}</p>{/if}
   {#if st === 'review' || st === 'not-recorded' || st === 'awaiting'}<div class="btns"><button class="secondary" onclick={() => store.openSheet('reschedule', i!.id)}>Reschedule</button><button class="secondary" onclick={() => A.finishIntention(i!.id, 'released')}>Let it go</button>{#if st !== 'review'}<button class="secondary" onclick={() => A.finishIntention(i!.id, 'missed')}>Mark as missed</button>{/if}</div>{/if}
   {#if store.state.limits.exclude.includes(i.sport)}<div class="notice-strip"><Icon name="alert" size={16}/><p>You excluded {SPORTS[i.sport].name.toLowerCase()} in your limits</p></div>{/if}
   {#if store.state.limits.note}<div class="notice-strip"><Icon name="alert" size={16}/><p>Review needed · your movement note applies (“{store.state.limits.note}”)</p></div>{/if}
   <div class="btns"><button class="secondary" onclick={() => store.openSheet('add', i!.id)}>Edit</button><button class="secondary" onclick={() => A.removeIntention(i!.id)}>Remove</button></div>
   {#if !i.garminId}<button class="send" disabled aria-describedby="send-n"><span aria-hidden="true">◇</span>Send to Garmin</button><p class="small" id="send-n">Not available yet: Raring can’t write to your Garmin calendar or watch.</p>{/if}
-  <div class="sec-h"><h2>Recorded that day</h2></div>
-  {#if linked}
-   <ActivityTile a={linked} {ctx} navigate={go}/>
-   <p class="selfrep"><Icon name="check" size={15}/>Linked by you</p><button class="link" onclick={() => A.unlink(i!.id)}>Unlink</button>
-  {:else if candidates.length}
-   {#each candidates as a}<ActivityTile {a} {ctx} navigate={go}/><div class="cand"><span class="small">Already counts</span><button class="secondary" onclick={() => A.link(i!.id, a.id)}>This was my session</button></div>{/each}
-  {:else}<p class="small">{i.date < ctx.calendarDate ? 'No matching recording.' : 'Nothing recorded yet. Matching recordings appear here.'}</p>{/if}
+  {#if i.kind !== 'sleep'}<MatchPanel p={localItem(i)}/>{/if}
   <div class="sec-h"><h2>History</h2></div>
   <section class="card"><ol class="hist">{#each i.history as [d, t]}<li><b>{d}</b><span>{t}</span></li>{/each}</ol></section>
  {/if}
@@ -80,11 +77,10 @@
 {:else if key === 'scheduled' && s}
  {@const conflict = store.state.limits.exclude.includes(s.sport)}{@const review = !!store.state.limits.note}
  {@render header(s.name, `${dayLabel(s.date)} · Garmin schedule`)}
- {@const overlay = store.state.intentions.find(x => x.garminId === s.id && isOpen(x))}
- <section class="card ihero garmin" style:--c={SPORTS[s.sport].color}><Glyph sport={s.sport} mark="garmin" size={52}/><div><b>{s.name}</b><small>Garmin schedule · read-only · {s.min} min · {SPORTS[s.sport].name}</small><span class="status">Completion unknown</span></div></section>
- <section class="card"><dl class="kv"><dt>Managed in</dt><dd>Garmin Connect</dd><dt>Active Garmin Coach plan</dt><dd>{COACH.name}</dd><dt>Schedule checked</dt><dd>18 Nov 07:12</dd></dl></section>
- {#if overlay}<button class="rowlink" onclick={() => go(`intention/${overlay.id}`)}><Glyph sport={overlay.sport} mark="plan" size={30}/><span><b>Counts toward your goals</b><small>Your plan</small></span><Icon name="chevron" size={16}/></button>
- {:else}<button class="secondary" onclick={() => store.openSheet('allocate', 'garmin:' + s.id)}>Count toward my goals</button>{/if}
+ {@const gi = garminItem(s)}{@const gm = itemMatch(ctx, gi)}
+ <section class="card ihero garmin" style:--c={SPORTS[s.sport].color}><Glyph sport={s.sport} mark={gm.state === 'done' ? 'recorded' : 'garmin'} size={52}/><div><b>{s.name}</b><small>Garmin schedule · read-only · {s.min} min · {SPORTS[s.sport].name}</small><span class="status s-{gm.state === 'done' ? 'recorded' : gm.state}">{gm.state === 'done' ? '✓ Done' : STATE_WORD[gm.state]}</span></div></section>
+ <section class="card"><dl class="kv"><dt>Steps</dt><dd>{s.steps}</dd><dt>Plans toward</dt><dd>{Object.entries(s.plan).filter(([, n]) => n).map(([k, n]) => `${n} ${({strength: 'strength session', zone2: 'Zone 2 min', hi: 'Zone 4–5 min', im: 'intensity min'} as Record<string, string>)[k]}`).join(' · ') || '—'}</dd><dt>Managed in</dt><dd>Garmin Connect</dd><dt>Garmin’s completion flag</dt><dd>Not read · unverified</dd><dt>Active Garmin Coach plan</dt><dd>{COACH.name}</dd><dt>Schedule checked</dt><dd>18 Nov 07:12</dd></dl></section>
+ <MatchPanel p={gi}/>
  {#if conflict}<div class="notice-strip"><Icon name="alert" size={16}/><p>Conflicts with your excluded activity · stays on your Garmin calendar</p></div>{/if}
  {#if review}<div class="notice-strip"><Icon name="alert" size={16}/><p>Review needed · Raring can’t see this workout’s exercises{store.state.limits.routines[s.id] === 'chosen' ? ' · you chose to keep using it' : ''}</p></div>{/if}
  {#if ctx.paused}<p class="small">Training is paused for you.</p>{/if}
@@ -101,13 +97,7 @@
  <section class="card"><dl class="kv"><dt>Managed in</dt><dd>Garmin Connect</dd><dt>Schedule checked</dt><dd>{store.state.calendar === 'stale' ? 'Mon 16 Nov' : '18 Nov 07:12'}</dd><dt>Covers</dt><dd>{store.state.calendar === 'partial' ? '18 Nov onward · one page' : '18 Nov–1 Dec'}</dd></dl>
   {#if store.state.calendar === 'partial'}<p class="small">Garmin returned a full page; later sessions may be missing.</p>{:else if store.state.calendar === 'stale'}<p class="small">May be out of date until the next sync.</p>{/if}</section>
  <div class="sec-h"><h2>Sessions</h2></div>
- {#each ctx.world.schedule as g}
-  {@const counted = store.state.intentions.find(x => x.garminId === g.id && isOpen(x))}{@const same = ctx.world.activities.filter(a => a.date === g.date && a.sport === g.sport)}
-  <section class="card gsess">
-   <button class="rowlink" onclick={() => go(`scheduled/${g.id}`)}><Glyph sport={g.sport} mark="garmin" size={30}/><span><b>{g.name}</b><small>{dayLabel(g.date)} · {g.min} min{same.length ? ` · ${SPORTS[g.sport].name.toLowerCase()} recorded that day` : ''}</small></span><Icon name="chevron" size={16}/></button>
-   {#if counted}<button class="link" onclick={() => go(`intention/${counted.id}`)}>Counts toward your goals</button>{:else}<button class="link" onclick={() => store.openSheet('allocate', 'garmin:' + g.id)}>Count toward my goals</button>{/if}
-  </section>
- {/each}
+ {#each ctx.world.schedule as g}<ItemRow p={garminItem(g)} showDay actions={false}/>{/each}
 
 {:else if race}
  {@render header(race.name, `${race.date ? dayLabel(race.date) : 'No date'} · ${race.source}`)}
@@ -187,14 +177,12 @@
 <style>
  .ihero{display:flex;align-items:center;gap:14px;background:linear-gradient(120deg,color-mix(in srgb,var(--c) 14%,transparent),var(--card))}
  .ihero b{display:block;font:600 19px Outfit}.ihero small{display:block;color:var(--text2);font-size:12px;margin-top:2px}
- .status{display:inline-block;margin-top:8px;padding:3px 9px;border-radius:999px;font:600 11px Inter;background:rgba(255,255,255,.07);color:var(--text2)}.s-recorded{color:#3DDC97}.s-review{color:#FFB547}.s-not-recorded,.s-awaiting{border:1px dashed rgba(228,232,240,.3);background:none}.alloc{margin:8px 4px;font-size:13px;color:var(--text2)}.ihero.garmin{border-color:rgba(164,139,255,.3)}
- .coach-d{font-size:44px;color:#BDAAFF;line-height:1}.gsess{padding:10px 14px}.gsess .link{margin-left:42px;font-size:12px}
+ .status{display:inline-block;margin-top:8px;padding:3px 9px;border-radius:999px;font:600 11px Inter;background:rgba(255,255,255,.07);color:var(--text2)}.s-recorded{color:#3DDC97}.s-review{color:#FFB547}.s-recorded,.s-done{color:#3DDC97}.s-not-recorded,.s-awaiting{border:1px dashed rgba(228,232,240,.3);background:none}.alloc{margin:8px 4px;font-size:13px;color:var(--text2)}.ihero.garmin{border-color:rgba(164,139,255,.3)}
+ .coach-d{font-size:44px;color:#BDAAFF;line-height:1}.gsess{padding:10px 14px}
  .race-hero{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;background:linear-gradient(120deg,rgba(255,181,71,.12),var(--card))}.cdown b{display:block;font-size:48px;font-weight:600;line-height:1;color:#FFB547}.cdown small,.pred small{font-size:12px;color:var(--text2)}.pred{text-align:right}.pred b{display:block;font-size:28px;font-weight:600}
  .pchart{width:100%;height:auto}.pchart text{font:500 10px Inter;fill:var(--text3)}
  .rweeks{width:100%;border-collapse:collapse;font-size:12.5px}.rweeks th,.rweeks td{padding:7px 4px;border-bottom:1px solid var(--line);text-align:right}.rweeks thead th{font:600 10.5px Inter}.rweeks tbody th{text-align:left;font-weight:500;color:var(--text2)}.rweeks .nc{font-size:10.5px;color:var(--text3)}
  .send{display:flex;gap:8px;align-items:center;justify-content:center;width:100%;margin-top:10px;min-height:42px;border-radius:13px;border:1px dashed rgba(164,139,255,.4);background:none;color:var(--text3);font:600 13px Inter}.send:disabled{cursor:not-allowed}
- .cand{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
- .cand .secondary{width:auto;margin:0;padding:10px 14px}
  .hist{list-style:none;padding:0;margin:0;display:grid;gap:8px}
  .hist li{display:grid;grid-template-columns:118px 1fr;gap:10px;font-size:13px}
  .hist span{color:var(--text2)}

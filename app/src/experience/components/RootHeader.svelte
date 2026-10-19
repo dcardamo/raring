@@ -12,9 +12,9 @@
  let history = $derived(!ctx.world.historyComplete && title === 'Today' ? `History since ${monthYear(ctx.world.historyStart).replace(/^(\w{3})\w*/, '$1')} · older history downloading` : null);
 </script>
 <header class="rhead">
- <p class="eyebrow"><span>{dayLabel(ctx.calendarDate)}</span><span aria-hidden="true">·</span><span class="fresh" class:stale={ctx.stale}>Watch upload {ctx.upload.label}</span></p>
+ <div class="ey-row"><p class="eyebrow"><span>{dayLabel(ctx.calendarDate)}</span><span aria-hidden="true">·</span><span class="fresh" class:stale={ctx.stale}>Watch upload {ctx.upload.label}</span></p>{#if help}<HelpButton topic={help}/>{/if}</div>
  <div class="rhead-row">
-  <h1 tabindex="-1">{title}{#if help}<span class="h1-help"><HelpButton topic={help}/></span>{/if}</h1>
+  <h1 tabindex="-1">{title}</h1>
   <div class="hctl">
    {#if adapt}<button class="adapt" class:on={ctx.adaptLabel !== 'Adapt today'} aria-haspopup="dialog" aria-label={ctx.adaptLabel} onclick={() => store.openSheet('adapt')}>{#if ctx.paused}<Icon name="pause" size={15}/>{:else if ctx.restActive}<Icon name="moon" size={15}/>{:else}<XIcon name="adapt" size={15}/>{/if}{title !== 'Today' && ctx.adaptLabel === 'Adapt today' ? 'Adapt' : ctx.adaptLabel}</button>{/if}
    
@@ -28,7 +28,7 @@
 </header>
 <PlanPrompt/>
 <style>
- .h1-help{display:inline-block;vertical-align:middle;margin-left:8px}
+ .ey-row{display:flex;justify-content:space-between;align-items:center;gap:8px}.ey-row .eyebrow{margin:0}
  .hctl{flex-wrap:wrap;justify-content:flex-end;align-items:center}
  .avatar{background:linear-gradient(135deg,#2B3350,#1A2036)}
  .hnote{display:flex;flex-wrap:wrap;gap:4px 12px;margin:4px 2px 0;font-size:12px;color:var(--text3)}

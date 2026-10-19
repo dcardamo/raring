@@ -411,10 +411,12 @@ export function splitsFor(a: Activity) {
 
 // ---------- plan context ----------
 export const SCHEDULE = [
-  {id: 'g-int', date: '2026-11-18', name: 'Intervals 6 × 3 min', sport: 'running' as Sport, source: 'garmin', routine: false, min: 45},
-  {id: 'g-tempo', date: '2026-11-19', name: 'Tempo run 40 min', sport: 'running' as Sport, source: 'garmin', routine: false, min: 40},
-  {id: 'g-legs', date: '2026-11-21', name: 'Leg day A', sport: 'strength' as Sport, source: 'garmin', routine: true, min: 45},
+  {id: 'g-int', date: '2026-11-18', name: 'Intervals 6 × 3 min', sport: 'running' as Sport, source: 'garmin', routine: false, min: 45, plan: {hi: 18, im: 45} as Allocation, steps: 'Warm-up 10 min · 6 × 3 min hard, 2 min easy · cool-down 5 min'},
+  {id: 'g-tempo', date: '2026-11-19', name: 'Tempo run 40 min', sport: 'running' as Sport, source: 'garmin', routine: false, min: 40, plan: {im: 40} as Allocation, steps: 'Warm-up 10 min · 20 min steady-hard · cool-down 10 min'},
+  {id: 'g-legs', date: '2026-11-21', name: 'Leg day A', sport: 'strength' as Sport, source: 'garmin', routine: true, min: 45, plan: {strength: 1} as Allocation, steps: 'Exercises not visible to Raring'},
 ];
+/** What a Garmin workout plans toward goal kinds, read from its steps' durations and zone targets (synthetic; step targets unverified). */
+export type Allocation = {strength?: number, zone2?: number, hi?: number, im?: number, sleep?: number};
 export type Schedule = typeof SCHEDULE[number];
 /** An active Garmin Coach plan is context only: Garmin doesn't say which schedule items belong to it. */
 export const COACH = {name: '10K plan', since: '2026-11-02'};

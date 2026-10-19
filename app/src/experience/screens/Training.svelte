@@ -5,10 +5,13 @@
  import ActivityTile from '../components/ActivityTile.svelte';
  import Glyph from '../components/Glyph.svelte';
  import AxisChart from '../components/AxisChart.svelte';
+ import LaneChart from '../components/LaneChart.svelte';
+ import RangePicker, {rangeDays} from '../components/RangePicker.svelte';
+ import {weekLanes, topLifts} from '../lib/lanes';
  import HelpButton from '../components/HelpButton.svelte';
  import NestedRings from '../components/NestedRings.svelte';
  import {store} from '../lib/store.svelte';
- import {trainingView, strengthView} from '../lib/views';
+ import {trainingView, strengthView, musclesBetween} from '../lib/views';
  import {recordedFor, goalsFor, GOAL_INFO} from '../lib/allocation';
  import {weekRings} from '../lib/week';
  import {SPORTS, type Sport} from '../lib/sports';
@@ -28,6 +31,8 @@
  let bySport = $derived.by(() => { const m = new Map<Sport, number>(); for (const a of week) m.set(a.sport, (m.get(a.sport) ?? 0) + a.min); return [...m.entries()].sort((a, b) => b[1] - a[1]); });
  let bars = $derived(days.map(d => { const acts = week.filter(a => a.date === d); return {x: narrowDay(d), v: d > ctx.calendarDate ? null : acts.reduce((t, a) => t + a.min, 0), parts: acts.map(a => ({v: a.min, color: SPORTS[a.sport].color}))}; }));
  let wr = $derived(weekRings(ctx));
+ let lanes = $derived(weekLanes(ctx));
+ let today = $derived(days.indexOf(ctx.calendarDate));
  // Fitness
  let acute = $derived(tv.acute);
  let vo2 = $derived(tv.vo2maxTrend.map((v, i) => ({x: dayMonth(addDays(ctx.calendarDate, -7 * (tv.vo2maxTrend.length - 1 - i))), v})));
@@ -37,8 +42,12 @@
  let sv = $derived(strengthView(ctx));
  let g = $derived(goalsFor(ctx));
  let strengthRing = $derived(wr.rings.filter(r => r.key === 'strength'));
- let gaps = $derived(sv ? MUSCLES.map(m => ({m, sets: sv!.last4w.find(x => x.muscle === m)?.sets ?? 0})).sort((a, b) => a.sets - b.sets) : []);
- let lifts = $derived(sv ? sv.exercises.filter(e => e.sessions.length >= 3).sort((a, b) => b.sessions.length - a.sessions.length).slice(0, 3) : []);
+ let muscleSpan = $state(30), liftSpan = $state(90), liftMode = $state<'max' | 'volume'>('max');
+ let muscleDays = $derived(rangeDays(muscleSpan, ctx.calendarDate, ctx.world.historyStart));
+ let muscleSets = $derived(musclesBetween(ctx, addDays(ctx.calendarDate, 1 - muscleDays), ctx.calendarDate));
+ let gapAt = $derived(Math.max(0, Math.round(muscleDays / 14)));
+ let gaps = $derived(MUSCLES.map(m => ({m, sets: muscleSets.find(x => x.muscle === m)?.sets ?? 0})).sort((a, b) => a.sets - b.sets));
+ let lifts = $derived(topLifts(ctx, addDays(ctx.calendarDate, 1 - rangeDays(liftSpan, ctx.calendarDate, ctx.world.historyStart))));
  // Activities
  let all = $derived(ctx.world.activities.slice().reverse());
  let filter = $derived((store.ui.filter as string) ?? 'all');
@@ -48,9 +57,8 @@
 <RootHeader title="Training" help="training-week"/>
 
 <section class="tw" aria-label="This week's training">
- <div class="tw-h"><div><small>This week · {weekRange(ctx.weekFrom)}</small><b class="n">{dur(total)}</b><span class="vs">usual by {dayLabel(ctx.calendarDate).slice(0, 3)}: {dur(usualDay * elapsedDays)}</span></div>
-  {#if wr.rings.length}<button class="goals" onclick={() => go('plan')} aria-label="Weekly goals in Plan">{#each wr.rings.filter(r => r.key !== 'sleep') as r}<span style:--c={r.color}><i></i>{r.name} <b class="n">{r.recorded}/{g[r.key]}</b></span>{/each}</button>{/if}</div>
- <AxisChart points={bars} unit="min" goal={usualDay} goalLabel="usual day" height={150} label={`Minutes per day this week: ${bars.map(b => `${b.x} ${b.v ?? 'future'}`).join(', ')}; usual day ${usualDay} min`}/>
+ <div class="tw-h"><div><small>This week · {weekRange(ctx.weekFrom)}</small><b class="n">On track?</b></div><span class="small">{lanes[0]?.weeks ? `usual = your last ${lanes[0].weeks} complete weeks` : 'not enough complete weeks for a usual band'}</span></div>
+ {#each lanes as lane (lane.key)}<LaneChart {lane} {today}/>{/each}
  {#if bySport.length}<div class="tw-mix">{#each bySport as [s, m]}<span><Glyph sport={s} size={18}/>{SPORTS[s].name}<b class="n">{m} min</b></span>{/each}</div>{/if}
 </section>
 
@@ -95,15 +103,20 @@
   {:else}<div><small>Strength this week</small><b class="n">{recordedFor(week, 'strength')} sessions</b><span>No strength goal · <button class="link inline" onclick={() => store.openSheet('goals')}>Add one</button></span></div>{/if}
  </section>
  {#if sv}
-  <section class="card q"><div class="q-h"><h2>Muscles, last 4 weeks</h2><HelpButton topic="strength-gaps"/></div>
-   <div class="mus"><BodyMap figure="female" muscles={sv.last4w} width={120} max={16} legend={false}/>
-    <ul>{#each gaps as x, i}<li class:gap={x.sets <= 2}><span>{x.m}</span><b class="n">{x.sets}</b><small>sets</small></li>{#if i === 4}<li class="more"><button class="link" onclick={() => go('strength/muscles')}>All groups over time</button></li>{/if}{/each}</ul></div>
-   {#if gaps.some(x => x.sets <= 2)}<p class="small">Few or no sets: {gaps.filter(x => x.sets <= 2).map(x => x.m).join(', ')}</p>{/if}
+  <section class="card q"><div class="q-h"><h2>Muscles</h2><HelpButton topic="strength-gaps"/></div>
+   <RangePicker bind:value={muscleSpan} label="Muscle range"/>
+   <div class="mus"><BodyMap figure="female" muscles={muscleSets} width={120} max={Math.max(8, Math.round(muscleDays / 2))} legend={false}/>
+    <ul>{#each gaps as x}<li class:gap={x.sets <= gapAt}><span>{x.m}</span><b class="n">{x.sets}</b><small>sets</small></li>{/each}</ul></div>
+   {#if gaps.some(x => x.sets <= gapAt)}<p class="small">Few or no sets in this range: {gaps.filter(x => x.sets <= gapAt).map(x => x.m).join(', ')}</p>{/if}
   </section>
-  {#if lifts.length}<section class="card q"><div class="q-h"><h2>Lifts</h2><button class="link" onclick={() => go('strength')}>All exercises</button></div>
-   {#each lifts as e}{@const pts = e.sessions.map(s => ({x: dayMonth(s.date), v: s.top?.weight ?? null}))}<div class="lift"><button class="lift-h" onclick={() => go(`strength/${e.name.toLowerCase().replace(/[^a-z]+/g, '-')}`)}><b>{e.name}</b><small>heaviest set each session</small><Icon name="chevron" size={14}/></button>
-    <AxisChart points={pts} kind="line" unit="kg" color="#FF7DB8" height={110} fmt={v => String(Math.round(v * 2) / 2)} label={`${e.name}: heaviest set per session, latest ${pts.findLast(p => p.v != null)?.v ?? 'none'} kg`}/></div>{/each}
-  </section>{/if}
+  <section class="card q"><div class="q-h"><h2>Lifts</h2><button class="link" onclick={() => go('strength')}>All exercises</button></div>
+   <div class="lt-ctl"><div class="seg2" role="group" aria-label="Lift measure"><button aria-pressed={liftMode === 'max'} onclick={() => liftMode = 'max'}>Max weight</button><button aria-pressed={liftMode === 'volume'} onclick={() => liftMode = 'volume'}>Volume</button></div><RangePicker bind:value={liftSpan} label="Lift range"/></div>
+   {#each lifts as e (e.id)}{@const pts = e.points.map(p => ({x: dayMonth(p.date), v: liftMode === 'max' ? p.max : p.volume}))}{@const ex = e.points.reduce((t, p) => t + p.excluded, 0)}
+    <div class="lift"><button class="lift-h" onclick={() => go(`strength/${e.id}`)}><b>{e.name}</b><small>{liftMode === 'max' ? 'heaviest set each session' : 'Σ weight × reps each session'}</small><Icon name="chevron" size={14}/></button>
+     <AxisChart points={pts} kind="line" unit="kg" color="#FF7DB8" height={110} fmt={v => liftMode === 'max' ? String(Math.round(v * 2) / 2) : String(Math.round(v))} label={`${e.name}: ${liftMode === 'max' ? 'heaviest set' : 'volume'} per session, latest ${pts.findLast(p => p.v != null)?.v ?? 'none'} kg`}/>
+     {#if ex}<p class="small">{ex} bodyweight or unweighted set{ex === 1 ? '' : 's'} not included</p>{/if}</div>
+   {:else}<p class="small">Fewer than two weighted sessions for any lift in this range.</p>{/each}
+  </section>
  {:else}<section class="card"><p>No strength sessions in the last 12 weeks.</p><button class="link" onclick={() => go('help/strength-start')}>Lift with your watch</button></section>{/if}
 
 {:else}
@@ -115,8 +128,8 @@
 
 <style>
  .tw{margin-top:12px;padding:14px;border-radius:22px;background:linear-gradient(160deg,rgba(54,201,198,.08),var(--card) 60%);border:1px solid var(--line)}
- .tw-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:6px}.tw-h small{font-size:11px;color:var(--text3)}.tw-h b{display:block;font-size:28px;font-weight:600}.vs{font-size:12px;color:var(--text2)}
- .goals{display:grid;gap:4px;background:none;border:0;color:var(--text2);font-size:12px;text-align:right;padding:0}.goals span{display:flex;gap:5px;align-items:center;justify-content:flex-end}.goals i{width:8px;height:8px;border-radius:50%;background:var(--c)}.goals b{color:var(--text);font-size:13px;display:inline}
+ .tw-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:6px}.tw-h small{font-size:11px;color:var(--text3)}.tw-h b{display:block;font-size:28px;font-weight:600}
+ 
  .tw-mix{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:12px;color:var(--text2)}.tw-mix span{display:inline-flex;gap:6px;align-items:center}.tw-mix b{color:var(--text);font-weight:600}
  .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;border-radius:14px;background:rgba(255,255,255,.05);margin:14px 0 4px;position:sticky;top:0;z-index:3;backdrop-filter:blur(8px)}.seg button{height:38px;border-radius:10px;border:0;background:none;color:var(--text2);font:600 13px Inter}.seg button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
  .q-h{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}.q-h h2{font:600 18px Outfit}.q-sub{display:flex;justify-content:space-between;align-items:center;margin:14px 0 6px}.q-sub h3{margin:0}
@@ -130,7 +143,8 @@
  .races{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.races span{display:grid;text-align:center;padding:8px 2px;border-radius:12px;background:rgba(255,181,71,.08)}.races small{font-size:10.5px;color:var(--text3)}.races b{font-size:15px;font-weight:600}
  .th{margin-top:10px}.th small{color:var(--text3);font:500 10.5px Inter}
  .st-goal{display:flex;gap:14px;align-items:center}.st-goal small{display:block;font-size:11px;color:var(--text3)}.st-goal b{display:block;font-size:26px;font-weight:600}.st-goal span{font-size:12px;color:var(--text2)}
- .mus{display:grid;grid-template-columns:120px 1fr;gap:14px;align-items:center}.mus ul{list-style:none;margin:0;padding:0;display:grid;gap:3px}.mus li{display:grid;grid-template-columns:1fr auto auto;gap:5px;align-items:baseline;font-size:12.5px;text-transform:capitalize;color:var(--text2)}.mus li b{color:var(--text)}.mus li small{font-size:10px;color:var(--text3)}.mus li.gap span,.mus li.gap b{color:#FFB547}.mus li.more{display:block}.mus li:nth-child(n+7){display:none}
+ .mus{display:grid;grid-template-columns:120px 1fr;gap:14px;align-items:center}.mus ul{list-style:none;margin:0;padding:0;display:grid;gap:3px}.mus li{display:grid;grid-template-columns:1fr auto auto;gap:5px;align-items:baseline;font-size:12.5px;text-transform:capitalize;color:var(--text2)}.mus li b{color:var(--text)}.mus li small{font-size:10px;color:var(--text3)}.mus li.gap span,.mus li.gap b{color:#FFB547}
+ .lt-ctl{display:grid;gap:6px;margin-bottom:6px}.seg2{display:grid;grid-template-columns:1fr 1fr;gap:4px}.seg2 button{min-height:34px;border-radius:10px;border:1px solid var(--line);background:none;color:var(--text2);font:600 12px Inter}.seg2 button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
  .lift{border-top:1px solid var(--line);padding:8px 0 4px}.lift:first-of-type{border-top:0}.lift-h{display:flex;align-items:baseline;gap:6px;width:100%;background:none;border:0;padding:4px 0;color:var(--text);text-align:left;min-height:32px}.lift-h b{font:600 14px Inter}.lift-h small{flex:1;font-size:11px;color:var(--text3)}
  .act-h{margin:12px 2px 0}.filt{margin-top:8px}
  @container(max-width:300px){.races{grid-template-columns:repeat(2,1fr)}.mus{grid-template-columns:1fr}}

@@ -3,6 +3,7 @@
 import {store, setCaseHook, fresh, LEGACY} from './store.svelte';
 import {derive, type State, type GoalTargets, type Intention} from './rules';
 import {candidates, movedIntention} from './allocation';
+import {dayMatches, itemById} from './match';
 import {CASES} from './cases';
 import {dayLabel, weekId} from './dates';
 import {SPORTS, type Sport} from './sports';
@@ -62,8 +63,20 @@ export const A = {
   store.closeSheet();
  },
  removeIntention(id: string) { store.set(st => ({intentions: st.intentions.filter(i => i.id !== id)}), 'Removed from your plan'); },
- link(id: string, aid: string) { const i=S().intentions.find(i=>i.id===id); if(!i || !candidates(ctx(),i).some(a=>a.id===aid)){store.toast('Choose a recording from the same day and sport');return;} if(S().intentions.some(i=>i.id!==id&&i.link===aid)){store.toast('That recording is already linked to a session');return;} store.set(st => ({intentions: st.intentions.map(i => i.id === id ? {...i, link: aid, history: [...i.history, [now(), 'You linked a recorded activity'] as [string, string]]} : i)}), 'Linked by you'); },
- unlink(id: string) { store.set(st => ({intentions: st.intentions.map(i => i.id === id ? {...i, link: null, history: [...i.history, [now(), 'Link removed'] as [string, string]]} : i)}), 'Link removed'); },
+ // Explicit links win over automatic matching; unlinking an automatic match
+ // keeps it unlinked so Raring asks instead of matching it again.
+ link(id: string, aid: string) {
+  const c=ctx(), p=itemById(c,id), a=c.world.activities.find(x=>x.id===aid);
+  if(!p || !a || a.date!==p.date){store.toast('Choose a recording from the same day');return;}
+  const taken=[...dayMatches(c,p.date).entries()].some(([k,m])=>k!==id&&m.state==='done'&&m.activity?.id===aid);
+  if(taken){store.toast('That recording already counts for another session');return;}
+  store.set(st=>({unlinked:{...(st.unlinked??{}),[id]:false},
+   ...(p.source==='garmin'?{glinks:{...(st.glinks??{}),[id]:aid}}:{intentions:st.intentions.map(i=>i.id===id?{...i,link:aid,history:[...i.history,[now(),'You linked a recorded activity'] as [string,string]]}:i)})}),'Linked by you');
+ },
+ unlink(id: string) {
+  store.set(st=>({unlinked:{...(st.unlinked??{}),[id]:true},glinks:Object.fromEntries(Object.entries(st.glinks??{}).filter(([k])=>k!==id)),
+   intentions:st.intentions.map(i=>i.id===id?{...i,link:null,history:[...i.history,[now(),'Unlinked by you'] as [string,string]]}:i)}),'Unlinked · Raring will ask');
+ },
  winddown() { const k = ctx().tonight.nightOf; store.set(st => ({winddown: {...st.winddown, [k]: !st.winddown[k]}}), 'Wind-down self-report saved'); },
  bedtime() {
   const st = S();

@@ -1,8 +1,10 @@
 import {describe, expect, it} from 'vitest';
 import {derive, type Intention, type State} from './rules';
 import {allocations, dayEvidence, intentionState, movedIntention, recordedFor} from './allocation';
-// Browser state defaults without importing the Svelte runtime singleton.
-const base = (): State => ({profile:'mixed',day:'2026-11-18',clock:'day',offline:false,follow:true,irregular:false,rest:null,pause:null,pauses:[],limits:{exclude:[],note:'',routines:{}},rehab:{items:[],done:{}},intentions:[],dismissed:{},journal:{consent:false,open:false,downloaded:false},winddown:{},revisions:[],ownCommitments:null,ambitionsAdded:[],celebrated:{},seen:{},quiet:false,vitalsException:false,extraStrength:false,napCase:'same',calendar:'complete',notifyBedtime:false,permission:'not-asked',channels:{morning:true,weekly:true,metrics:true,vitals:true,training:false,status:false},signedOut:false,dst:false,returning:false,noRunning:false,savedSleepTarget:false,winddownIntention:false,navVariant:'tabs',reviewDraft:null});
+import {itemMatch, localItem, planItems} from './match';
+// Browser state defaults without importing the Svelte runtime singleton. No
+// running, so Garmin's scheduled runs don't add planned minutes unless a test asks.
+const base = (): State => ({profile:'mixed',day:'2026-11-18',clock:'day',offline:false,follow:true,irregular:false,rest:null,pause:null,pauses:[],limits:{exclude:[],note:'',routines:{}},rehab:{items:[],done:{}},intentions:[],dismissed:{},journal:{consent:false,open:false,downloaded:false},winddown:{},revisions:[],ownCommitments:null,ambitionsAdded:[],celebrated:{},seen:{},quiet:false,vitalsException:false,extraStrength:false,napCase:'same',calendar:'complete',notifyBedtime:false,permission:'not-asked',channels:{morning:true,weekly:true,metrics:true,vitals:true,training:false,status:false},signedOut:false,dst:false,returning:false,noRunning:true,savedSleepTarget:false,winddownIntention:false,navVariant:'tabs',reviewDraft:null});
 const goals = (t: Partial<{strength: number, zone2: number, hi: number, im: number, sleep: number, sleepScore: number}>) => [{from: '2026-11-16', targets: {strength: 0, zone2: 0, hi: 0, im: 0, sleep: 0, sleepScore: 0, sleepTime: '22:15', sleepKind: 'winddown' as const, ...t}}];
 const plan = (o: Partial<Intention>): Intention => ({id: 'x', sport: 'cycling', date: '2026-11-19', time: null, link: null, history: [], ...o});
 const row = (s: State, key: string) => allocations(derive(s)).find(r => r.key === key)!;
@@ -15,25 +17,44 @@ describe('weekly goal counting', () => {
   expect(r.planned).toBe(0);
   expect(r.remaining).toBe(150 - r.recorded!);
  });
- it('never counts a possible match as planned or as a second recording', () => {
-  const c = derive(base()), a = c.world.activities.find(x => x.date === c.calendarDate)!;
-  const r = row({...base(), goalVersions: goals({im: 150}), intentions: [plan({sport: a.sport, date: a.date, allocation: {im: 30}})]}, 'im');
-  expect(r.ambiguous).toBe(true);
-  expect(r.review).toHaveLength(1);
-  expect(r.planned).toBe(0);
-  expect(r.remaining).toBe(Math.max(0, 150 - r.recorded!));
- });
- it('flags a past intention with a same-day same-sport recording for review', () => {
-  const c = derive(base()), a = c.world.activities.find(x => x.date < c.calendarDate && x.date >= c.weekFrom)!;
-  const past = plan({sport: a.sport, date: a.date, allocation: {im: 30}});
-  const s = {...base(), goalVersions: goals({im: 150}), intentions: [past]};
-  expect(intentionState(derive(s), past)).toBe('review');
-  const r = row(s, 'im');
+ it('auto-links an unambiguous same-day, same-sport match and counts it once', () => {
+  const c = derive(base()), a = c.world.activities.find(x => x.date < c.calendarDate && x.date >= c.weekFrom && x.sport !== 'running')!;
+  const p = plan({sport: a.sport, date: a.date, allocation: {im: 30}});
+  const s = {...base(), goalVersions: goals({im: 150}), intentions: [p]};
+  expect(intentionState(derive(s), p)).toBe('recorded');
+  expect(itemMatch(derive(s), localItem(p))).toMatchObject({auto: true, activity: {id: a.id}});
   const recorded = recordedFor(c.world.activities.filter(x => x.date >= c.weekFrom && x.date <= c.calendarDate), 'im');
-  expect(r).toMatchObject({ambiguous: true, planned: 0, recorded, remaining: Math.max(0, 150 - recorded)});
-  const linked = {...past, link: a.id};
-  expect(intentionState(derive({...s, intentions: [linked]}), linked)).toBe('recorded');
-  expect(row({...s, intentions: [linked]}, 'im')).toMatchObject({ambiguous: false, planned: 0});
+  expect(row(s, 'im')).toMatchObject({ambiguous: false, planned: 0, recorded});
+ });
+ it('asks only when ambiguous, and after an unlink', () => {
+  const c = derive(base()), a = c.world.activities.find(x => x.date < c.calendarDate && x.date >= c.weekFrom && x.sport !== 'running')!;
+  const two = [plan({id: 'p1', sport: a.sport, date: a.date, allocation: {im: 30}}), plan({id: 'p2', sport: a.sport, date: a.date, allocation: {im: 20}})];
+  const s = {...base(), goalVersions: goals({im: 150}), intentions: two};
+  expect(two.map(p => intentionState(derive(s), p))).toEqual(['review', 'review']);
+  const recorded = recordedFor(c.world.activities.filter(x => x.date >= c.weekFrom && x.date <= c.calendarDate), 'im');
+  expect(row(s, 'im')).toMatchObject({ambiguous: true, planned: 0, recorded, remaining: Math.max(0, 150 - recorded)});
+  const one = plan({sport: a.sport, date: a.date});
+  expect(intentionState(derive({...base(), intentions: [one], unlinked: {x: true}}), one)).toBe('review');
+  const linked = {...one, link: a.id};
+  expect(intentionState(derive({...base(), intentions: [linked]}), linked)).toBe('recorded');
+ });
+ it('asks about a different sport only for one similar endurance recording on a passed day', () => {
+  const st = {...base(), noRunning: false, day: '2026-11-19'};
+  const c = derive(st), run = c.world.activities.find(x => x.date === '2026-11-17')!;
+  expect(c.world.activities.filter(x => x.date === '2026-11-17').map(x => x.sport)).toEqual(['running']);
+  const ride = plan({sport: 'cycling', date: '2026-11-17', durationMin: run.min});
+  expect(intentionState(derive({...st, intentions: [ride]}), ride)).toBe('review');
+  // An everyday walk is never taken for a planned strength session or run.
+  const walkDay = c.world.activities.find(x => x.date === '2026-11-18' && x.sport === 'walking')!;
+  const lift = plan({sport: 'strength', date: walkDay.date});
+  expect(intentionState(derive({...st, intentions: [lift]}), lift)).toBe('not-recorded');
+ });
+ it('treats a Garmin scheduled session as planned work, then done by the same rule', () => {
+  const s = {...base(), noRunning: false, goalVersions: goals({hi: 30, im: 150})};
+  const c = derive({...s, day: '2026-11-17'});
+  expect(row({...s, day: '2026-11-17'}, 'hi').planned).toBe(18);
+  const g = planItems(c, '2026-11-18', '2026-11-18').find(p => p.source === 'garmin')!;
+  expect(itemMatch(c, g).state).toBe('planned');
  });
  it('never infers Zone 2 from duration', () => {
   const s = {...base(), goalVersions: goals({zone2: 120}), intentions: [plan({durationMin: 90})]};

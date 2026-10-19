@@ -12,7 +12,7 @@
  const MARK: Record<string, string> = {rest: 'rest day', ill: 'ill', paused: 'paused', unknown: 'awaiting data'};
  const describe = (d: ReturnType<typeof dayRings>) => [dayLabel(d.date), d.future ? 'future' : '', d.mark ? MARK[d.mark] : '',
   ...d.rings.filter(r => r.outline).map(r => `${r.name} ${d.future ? '' : `${r.recorded} `}${r.planned ? `${d.future ? '' : 'of '}${r.planned} planned` : 'recorded, unplanned'}`),
-  d.garmin ? `${d.garmin} Garmin session${d.garmin === 1 ? '' : 's'}` : ''].filter(Boolean).join(', ');
+  d.garmin ? `${d.garmin} Garmin session${d.garmin === 1 ? '' : 's'}` : '', d.done ? 'all done' : d.missed ? 'a session not recorded' : ''].filter(Boolean).join(', ');
 </script>
 <div class="day-cells" style:--cell={size + 'px'}>
  {#if lead}{#each Array(lead) as _}<span></span>{/each}{/if}
@@ -20,7 +20,7 @@
   {@const outside = d.date < store.ctx.world.historyStart}
   <button class="dc" class:current={d.date === store.ctx.calendarDate} class:selected={selected === d.date} class:future={d.future} disabled={outside} onclick={() => click(d.date)} aria-label={describe(d)}>
    <span class="top"><span class="dow">{narrowDay(d.date)}</span><b class="n">{Number(d.date.slice(8))}</b>{#if d.garmin}<i class="gm" aria-hidden="true">◇</i>{/if}</span>
-   {#if !outside}<NestedRings rings={d.rings} {size} mark={d.mark} future={d.future}/>{/if}
+   {#if !outside}<NestedRings rings={d.rings} {size} mark={d.mark} future={d.future} done={d.done} passed={d.date < store.ctx.calendarDate}/>{/if}
   </button>
  {/each}
 </div>

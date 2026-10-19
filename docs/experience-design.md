@@ -478,14 +478,20 @@ The first view answers "what have I decided?", not "what should I configure?".
   optional. Editing or removing it does not write to Garmin.
 - Existing Garmin Coach/scheduled content remains read-only and explicitly
   attributed. Unknown completion/cancellation fields stay unknown.
-- Never mark a Garmin scheduled workout complete by matching an activity's name
-  or time. For a local intention, offer same-day, same-type recorded activities
-  alongside it and a one-tap "This was my session" association. This is an
-  explicit user-confirmed link, not proof of Garmin schedule completion.
+- **Changed in P4 (maintainer decision):** a plan item (your session or a
+  Garmin scheduled workout) and a recording are matched automatically when the
+  match is unambiguous: same day, same sport, and each is the other's only
+  candidate. The item shows as done, and its detail says "Matched by Raring"
+  with Unlink. Raring asks ("Needs review") only when it is genuinely
+  ambiguous: several candidates either way, an unlinked automatic match, or on
+  a passed day a single endurance recording of a different sport and similar
+  length. This is Raring's date-and-sport match, not Garmin's completion flag,
+  which stays unread and unverified. See "Proposed rules: matching plans and
+  recordings".
 - Recorded activities always earn their factual contribution without that link;
   clearing local intentions is optional, not a workout-logging chore. Unresolved
-  intentions become "not linked" in history, never assumed missed workouts.
-  Local self-reports, user-confirmed links and Garmin completion are distinct.
+  intentions become "Not recorded", never assumed missed workouts. Local
+  self-reports, Raring's matches, your links and Garmin completion are distinct.
 - Only user-accepted commitments receive a completion state. Do not populate
   silent default strength, Zone 2 or sleep targets.
 - Keep the existing plan-week alignment with Garmin's intensity-week data. Label
@@ -997,7 +1003,7 @@ for prototype reviews, UI checks and core-rule tests.
 | U19 | Cardio plus strength plus an event | Separate contributions coexist; no exclusive-goal question or combined score |
 | U20 | Named event but no verified Garmin plan | Countdown/local event is honest context; no generated race-readiness verdict |
 | U21 | Full/partial/stale Garmin calendar | Coverage and dates visible in detail; no false "no upcoming events" |
-| U22 | Local intention and similar Garmin activity | Recorded work counts without manual logging; optional one-tap user-confirmed link, no auto-match or missed-workout verdict |
+| U22 | Local intention and similar Garmin activity | Recorded work counts without manual logging; an unambiguous same-day, same-sport match completes the plan automatically (Unlink available); no missed-workout verdict |
 | U23 | Two recorded activities and a late upload | Correct recorded dates and bounded previews; no repeated or historic celebration flood |
 | U24 | Weekly target completed early | Completion remains satisfying; no automatic higher target or more-is-better prompt |
 | U25 | Incomplete activity-list coverage | Progress awaiting evidence, not zero or behind; known workouts still visible |
@@ -1195,11 +1201,9 @@ retired and `#explore` opens Training.
   A local intention that passes unrecorded shows **Not recorded** with
   Reschedule and Let it go (Mark as missed only in its detail, by the person).
   Rescheduling moves only the local intention, keeps the original date in its
-  history and adds no catch-up. A same-day, same-sport recording that isn't
-  linked makes the intention **Needs review**: it is not planned, and linking
-  never changes the recorded count. Garmin Coach and schedule have their own
-  read-only detail (`plan/garmin`, `scheduled/:id`) with coverage and
-  "Completion unknown"; "Count toward my goals" creates a local allocation.
+  history and adds no catch-up. (P2 asked about every same-day, same-sport
+  recording; P4 replaced that with automatic matching, below.) Garmin Coach and
+  schedule have their own read-only detail (`plan/garmin`, `scheduled/:id`).
 - **Training:** this week's sessions by sport, then Fitness (shipped Training
   detail), Strength (body map and shipped history) and Activities (filters).
 - **Health:** Fitness Age and drivers first, 90-day trends, sleep and
@@ -1228,9 +1232,10 @@ screens link to it. This table drives P3; anything marked *cut* is removed.
 | Header · avatar → Profile | Know what Garmin knows; manage gear and limitations | New (P3b); gear moves here from Training |
 | Any screen · Plan your week prompt | Decide: plan this week (or review last week) now, later or never | New; dismissable, setting in the prompt and Settings, never during wind-down/late |
 | Today · last night + readiness | Know how recovered you are before choosing | Keep |
-| Today · Raring effort | Know the suggested effort level from Garmin readiness | Change: a non-interactive chevron scale, not buttons |
+| Today · Raring effort | Know the suggested effort level from Garmin readiness | Change (P4): one continuous chevron bar, suggested level raised and marked |
+| Today · Why? | — | Cut (P4): one reason line from Garmin's inputs; the gauge opens Readiness |
 | Today · session (Keep / Choose another / Rest) | Decide what to do today | Keep |
-| Today · planned today + left this week | Decide: take a backlog item today in one tap | New |
+| Today · planned today + left this week | Decide: take a backlog item today in one tap | Change (P4): beside This week in one card |
 | Today · Your day (sleep, Body Battery, stress, HR, events) | Know how the day has gone on one axis | Change: add HR row and nap Body Battery change; shown only on Today |
 | Today · recorded today | Know what counted, including naps | Change: nap rows show their Body Battery change |
 | Today · This week cells | Know progress per day toward the plan | Change: nested goal rings plus a week ring |
@@ -1243,16 +1248,20 @@ screens link to it. This table drives P3; anything marked *cut* is removed.
 | Plan · unfinished plans | Decide: link, reschedule or let go | Keep |
 | Plan · race / event goal | Motivated: see the countdown and how weeks feed it | New |
 | Plan · From Garmin box | — | Cut: Garmin items move inline |
+| Plan · Count it on Garmin sessions | — | Cut (P4): Garmin workouts are planned work and match recordings automatically |
+| Plan · event in the week | Motivated: see how this week serves the race | New (P4): sessions grouped under the event only when some serve it |
 | Plan · Send to Garmin | Know it is planned but not available yet | New, disabled and labelled |
 | Week review → next goals | Know what was met and why; decide next week's goals | New; proposals need acceptance |
-| Training · this week chart | Know minutes per day by sport against the usual week and goals | Change (P3b): labelled values, usual-week line |
+| Training · this week chart | Know if I'm on track this week per kind of training | Change (P4): lanes per goal kind against goal and usual-week band |
 | Training · Fitness | Know: enough or too much? improving? ready for what? | Change (P3b): compact load, three questions |
 | Training · bottom explainers | — | Cut (P3b): "?" help sheets instead |
-| Training · Strength | Know goal progress and undertrained muscle groups | Change (P3b): goal-led, cut the busy weekly-sets chart |
+| Training · Strength | Know goal progress and undertrained muscle groups | Change (P3b): goal-led; P4 range picker on muscles and lifts, Max weight / Volume |
+| Workout detail | Know what this session did and recorded | Change (P4): aligned HR/pace/elevation, plain-language effect, sport-specific fields |
 | Training · Activities | Know what each activity contributed (Garmin labels) | Keep, add contribution (P3b) |
 | Training · Gear | — | Move to Profile (P3b) |
 | Health · long-term, then vitals | Know long-term direction, then today's readings | Change (P3b): vitals directly below |
 | Health · 90-day sparklines | — | Cut (P3b): charts with axes, ranges and a range picker |
+| Health · weight | Know weight over time, with no verdicts | Change (P4): metric card with range picker; Add weight disabled |
 | Health · Your day duplicate | — | Cut (P3b) |
 | Sleep · Last night / Tonight tabs | Know last night; decide tonight's bedtime | Change (P3b): two tabs, Tonight is a plan |
 | Progress · Overall + Cardio/Strength/Long-term | Know progress toward goals and races, and why | Change (P3b) |
@@ -1274,6 +1283,58 @@ Cardio, Strength and Long-term (training per month above resting HR, HRV,
 VO₂ max and Fitness Age). Profile is behind the header avatar; Settings is
 inside it. Monthly training hours and the 12-week goal strip are proposed
 period summaries under the Progress rules above.
+
+**P4 as built.** Today: one continuous effort bar (Rest → Easy → Steady →
+Push, the suggested level raised and marked, not a control); "Why?" is gone,
+replaced by one reason line from Garmin's readiness inputs, and the gauge opens
+Readiness; This week (rings and goal lines) sits beside Left this week. Rings
+draw a solid arc for recorded work and a dashed arc for planned work, and
+nothing for an unplanned remainder. Done, Planned and Not recorded look the
+same everywhere (filled with a check and recorded numbers; outlined with the
+plan; muted with Reschedule and Let it go). Garmin scheduled workouts are
+planned work toward the goals their steps target, in their sport colour; "Count
+it" is gone. A dated event appears in the week with the sessions that serve it
+grouped under it, otherwise as a countdown line. Training's week chart is now
+lanes per goal kind against the goal and the usual week. One range picker
+(7D · 14D · 30D · 90D · 1Y · Max) serves health metrics, weight, lifts and
+muscles. Lifts toggle Max weight / Volume. Workout detail adds time-aligned
+heart rate, pace or speed and elevation, training effect in plain words, and
+only the fields that sport and watch recorded. Weight is a metric card like the
+others, with no goals or alerts.
+
+#### Proposed rules: matching plans and recordings
+
+1. **Plan items** are your sessions and Garmin's scheduled workouts. A Garmin
+   workout plans toward the goals its steps target (for example intervals →
+   Zone 4–5 and intensity minutes; a strength workout → one session).
+2. **Explicit first.** A link you made always holds.
+3. **Automatic.** Otherwise a plan item and a recording match when they share
+   the day and sport and each is the other's only candidate. Unlinking keeps
+   that pair unmatched until you link it.
+4. **Ask** only when several recordings could be one plan, several plans could
+   be one recording, an automatic match was unlinked, or, on a passed day, the
+   only open plan and the only unmatched recording are endurance sports of
+   different kinds and similar length (half to twice the planned duration).
+5. **Count once.** Goals count recordings, never plans. A recording counts once
+   toward each goal it serves, and once toward an event it serves; a matched
+   plan stops being planned. Intensity minutes are Garmin's own moderate +
+   2 × vigorous figures for the activity.
+
+#### Proposed rules: week lanes and lift volume
+
+1. **Lanes.** One lane per active cardio goal kind (Zone 2, Zone 4–5,
+   intensity minutes), or recorded cardio minutes when none is set, plus
+   strength sessions. Each lane is cumulative Monday → today.
+2. **Usual week.** Up to the last 8 complete weeks (counted: full coverage, at
+   most one ill or paused day). With 3 or more, the band is the 25th–75th
+   percentile of each weekday's cumulative value and the dotted line the median.
+   Fewer than 3: no band.
+3. **Volume.** Per session and exercise: Σ weight × reps over sets with both
+   recorded. Bodyweight or unweighted sets are excluded from max weight and
+   volume, and the number excluded is shown. No estimated one-rep max.
+4. **Ranges.** 7D, 14D, 30D, 90D, 1Y and Max (all downloaded history). Ranges
+   over 90 days aggregate weekly, over 400 days fortnightly; sparse readings
+   (weigh-ins) take the latest in each step.
 
 #### Day and week rings
 
@@ -1346,6 +1407,13 @@ or unverified endpoint or history. Prefer the first two.
 | Day and week rings, backlog, week review | Stored activities (`zone_seconds` for Zone 2 and Zone 4–5), local goals and intentions, pauses, coverage | stored + new local state |
 | Suggested bedtime in goals | `SleepPlan.need_min` and usual wake; no sleep-debt feed | view |
 | Race prediction history on the race page | Only the latest `TrainingView.races` is exposed; a stored series is unverified | new (synthetic in the prototype) |
+| Workout aligned charts: pace/speed, elevation with HR | `details` streams `directSpeed`, `directElevation` (with HR/timestamps); runs, rides, walks, hikes with GPS | stored: view change (core reads only HR/time/lat/lon today) |
+| Running form: cadence, stride, ground contact, vertical oscillation | `directRunCadence`/`directDoubleCadence`, stride length, ground contact time, vertical oscillation; summary `strideLength`; running watches with those sensors | stored: view change |
+| Cycling power: average, normalized, intensity factor, best 20 min, FTP | `directPower`; summary `averagePower`, `normalizedPower`, `intensityFactor`, `maxPowerTwentyMinutes`, `functionalThresholdPower`; power meter only | stored: view change |
+| Intensity minutes earned, Body Battery used, stamina, recovery HR, temperature, breathing rate, performance condition | summary `moderate/vigorousIntensityMinutes`, `differenceBodyBattery`, begin/end potential stamina, `recoveryHeartRate`, temperature, `avgRespirationRate`; `directPerformanceCondition`; per watch | stored: view change |
+| Training effect in plain words | summary aerobic/anaerobic training effect, `trainingEffectLabel` and messages; Garmin's 0–5 bands | stored: view change |
+| VO₂ max link from a workout | No per-activity VO₂ max field; linked only when Garmin's dated estimate changed that day | view (dated estimate) |
+| Garmin workout planned toward goals | Stored `scheduled_workouts` snapshot; step durations and zone targets unverified | stored: view change, step targets unverified |
 
 #### Proposed rules for Progress
 
@@ -1415,7 +1483,7 @@ unfamiliar-user performance. Typing is excluded from counts.
 | Rest | Adapt today → Rest today | 2 |
 | Pause | Adapt today → Pause training → Pause from today | 3 |
 | Resume | Paused → Pause training → Resume training → Resume as they are | 4 |
-| Link activity | Plan → Monday → local strength intention → This was my session | 3 |
+| Link activity | Automatic when unambiguous; otherwise Plan → Needs review → This was my session | 0, or 1–2 when Raring asks |
 | Core areas | Any root → Health → Sleep/Readiness; Training → Strength/Activities; Training or Health tab | 1–2 each |
 | Rare metric | Search → Hill score, or Training → Hill score | 2 from a root, plus typing for search |
 | Journal | Health → Allow local journal reads → consent → Open journal | 3 after Health |
@@ -1456,7 +1524,7 @@ changes none of them.
 | Weekly targets, revisions, history | `plan`, `plan/commitments`, `progress` | Original/revised strength and intensity tracks exercised; full Zone 2 editing/migration and week-boundary arithmetic need the implemented Plan projection |
 | Sleep target migration | Plan one-time explanation → `sleep/timing`; optional separate wind-down sheet | No automatic habit or completion; pre-migration history preserved |
 | Garmin schedule, Coach, race | Plan dated list → `scheduled/:id`; coexisting ambitions | Read-only; full-page/stale bounds and unverified populated semantics remain limits |
-| Local intentions, circumstances, supplied routines | `intention/:id`, `adapt/pause`, `adapt/limits`, `adapt/routines` | New unshipped concepts; explicit links/resume, unknown movements require review, self-reports never Garmin activities |
+| Local intentions, circumstances, supplied routines | `intention/:id`, `adapt/pause`, `adapt/limits`, `adapt/routines` | New unshipped concepts; automatic unambiguous matches with Unlink, explicit links and resume, unknown movements require review, self-reports never Garmin activities |
 | Fitness Age/drivers, weight/body composition | `metric/fitnessAge`, Health → `health/weight` → `metric/weight` | Flat/sparse estimate separate from participation; no weight promotion/notifications |
 | Vitals, all-day HR, resting vs Sleep HR | `health`, `metric/heartRate`, `metric/restingHr`, `metric/sleepHr`, `metric/hrv`, `metric/respiration`, `metric/spo2`, `metric/skinTemp` | Independent measures/ranges, neutral calibration; HR day controls present; DST elapsed-axis/source-zone evidence still device-gated |
 | Consented journal | Health → `health/journal`; Settings → journal privacy | Consent then explicit open; route exit, real visibility event and reload hide rows; actual local-day window, downloaded retention/export disclosure |

@@ -6,6 +6,7 @@ import {PLAN_WEEKS} from './world';
 import {SPORTS, type Sport} from './sports';
 import {allocationFor, candidates, GOAL_INFO, goalsFor, intentionState, isOpen, recordedFor, type GoalKey} from './allocation';
 import type {Ctx, GoalTargets, Intention, Pause} from './rules';
+import {itemMatch, planItems, type PlanItem} from './match';
 
 export const RING_ORDER: GoalKey[] = ['strength', 'zone2', 'hi', 'im', 'sleep'];
 export const activeKeys = (g: GoalTargets) => RING_ORDER.filter(k => g[k] > 0);
@@ -36,10 +37,12 @@ export function sleepMet(ctx: Ctx, date: string, g = goalsFor(ctx, date)): boole
   const at = (t: string) => { const m = toMin(t); return m < 720 ? m + 1440 : m; };
   return at(n.bed) <= at(g.sleepTime) + 15;
 }
-const counted = (i: Intention) => isOpen(i) || !!i.link;
-const plannedOn = (ctx: Ctx, date: string, key: GoalKey) => ctx.state.intentions.filter(i => i.date === date && counted(i)).reduce((n, i) => n + (allocationFor(i)[key] ?? 0), 0);
+const live = (ctx: Ctx, p: PlanItem) => !['released', 'missed'].includes(itemMatch(ctx, p).state);
+const plannedOn = (ctx: Ctx, date: string, key: GoalKey) => planItems(ctx, date, date).filter(p => live(ctx, p)).reduce((n, p) => n + (p.allocation[key] ?? 0), 0);
+/** Planned work still to do from today to `to`: not done, not under review, not passed. */
+const stillPlanned = (ctx: Ctx, to: string, key: GoalKey) => planItems(ctx, ctx.calendarDate, to).filter(p => itemMatch(ctx, p).state === 'planned').reduce((n, p) => n + (p.allocation[key] ?? 0), 0);
 
-export function dayRings(ctx: Ctx, date: string): {date: string, rings: Ring[], mark: DayMark, future: boolean, garmin: number} {
+export function dayRings(ctx: Ctx, date: string): {date: string, rings: Ring[], mark: DayMark, future: boolean, garmin: number, done: boolean, missed: boolean} {
   const g = goalsFor(ctx, date), future = date > ctx.calendarDate, mark = dayMark(ctx, date);
   const acts = ctx.world.activities.filter(a => a.date === date);
   const rings = activeKeys(g).map(key => {
@@ -48,7 +51,10 @@ export function dayRings(ctx: Ctx, date: string): {date: string, rings: Ring[], 
     const target = Math.max(planned, recorded);
     return {key, ...GOAL_INFO[key], recorded, planned, filled: target ? recorded / target : 0, outline: target ? 1 : 0};
   });
-  return {date, rings, mark, future, garmin: ctx.world.schedule.filter(s => s.date === date && !ctx.state.intentions.some(i => i.garminId === s.id && counted(i))).length};
+  const items = planItems(ctx, date, date).filter(p => p.kind === 'workout' && live(ctx, p));
+  const states = items.map(p => itemMatch(ctx, p).state);
+  return {date, rings, mark, future, garmin: items.filter(p => p.source === 'garmin').length,
+   done: items.length > 0 && states.every(s => s === 'done'), missed: states.some(s => s === 'not-recorded')};
 }
 
 export function weekRings(ctx: Ctx, from = ctx.weekFrom) {
@@ -57,7 +63,7 @@ export function weekRings(ctx: Ctx, from = ctx.weekFrom) {
   const rings: Ring[] = activeKeys(g).map(key => {
     const target = g[key];
     const recorded = key === 'sleep' ? days(from).filter(d => d < ctx.calendarDate && plannedOn(ctx, d, 'sleep') && sleepMet(ctx, d, g)).length : recordedFor(acts, key);
-    const planned = ctx.state.intentions.filter(i => isOpen(i) && !i.link && between(i.date, ctx.calendarDate, to) && intentionState(ctx, i) === 'planned').reduce((n, i) => n + (allocationFor(i)[key] ?? 0), 0);
+    const planned = stillPlanned(ctx, to, key);
     const filled = Math.min(1, recorded / target);
     return {key, ...GOAL_INFO[key], recorded, planned, filled, outline: Math.min(1, filled + planned / target)};
   });
@@ -82,7 +88,7 @@ export function backlog(ctx: Ctx): {items: BacklogItem[], paused: boolean, await
   const awaiting = days(ctx.weekFrom).some(d => d <= ctx.calendarDate && unknownDay(ctx, d) && d <= ctx.upload.date) || !!ctx.world.coverageIncompleteFrom && ctx.calendarDate >= ctx.world.coverageIncompleteFrom;
   const items: BacklogItem[] = [];
   for (const key of activeKeys(g)) {
-    const placed = ctx.state.intentions.filter(i => isOpen(i) && !i.link && between(i.date, ctx.calendarDate, ctx.weekTo) && intentionState(ctx, i) === 'planned').reduce((n, i) => n + (allocationFor(i)[key] ?? 0), 0);
+    const placed = stillPlanned(ctx, ctx.weekTo, key);
     if (key === 'sleep') {
       const nights = ctx.state.intentions.filter(i => isOpen(i) && i.kind === 'sleep' && between(i.date, ctx.weekFrom, ctx.weekTo)).length;
       const left = Math.max(0, g.sleep - nights);
@@ -115,7 +121,7 @@ export function weekOutcome(ctx: Ctx, from: string): WeekOutcome {
   const counted = !gap && ill + paused <= 1;
   const reasons = [gap && 'Garmin activity list incomplete', ill && `${ill} ill day${ill === 1 ? '' : 's'}`, paused && `paused ${paused} day${paused === 1 ? '' : 's'}`, rest && `${rest} rest day${rest === 1 ? '' : 's'}`].filter(Boolean) as string[];
   const acts = ctx.world.activities.filter(a => between(a.date, from, to));
-  const notRecorded = ctx.state.intentions.filter(i => between(i.date, from, to) && intentionState(ctx, i) === 'not-recorded').length;
+  const notRecorded = planItems(ctx, from, to).filter(p => itemMatch(ctx, p).state === 'not-recorded').length;
   const goals = activeKeys(g).map(key => {
     const recorded = key === 'sleep' ? days(from).filter(d => plannedOn(ctx, d, 'sleep') && sleepMet(ctx, d, g)).length : recordedFor(acts, key);
     const state: Outcome['state'] = !counted ? 'not-counted' : recorded >= g[key] ? 'met' : recorded > 0 ? 'partly' : 'none';
@@ -150,7 +156,7 @@ export function proposeGoals(ctx: Ctx, nextFrom: string): Proposal[] {
 
 // ---------- the Plan your week prompt ----------
 export function weekHasPlan(ctx: Ctx) {
-  return activeKeys(goalsFor(ctx)).length > 0 && ctx.state.intentions.some(i => between(i.date, ctx.weekFrom, ctx.weekTo) && counted(i));
+  return activeKeys(goalsFor(ctx)).length > 0 && planItems(ctx, ctx.weekFrom, ctx.weekTo).some(p => live(ctx, p));
 }
 export function planPrompt(ctx: Ctx): null | {review: string | null} {
   const wk = weekId(ctx.calendarDate);
@@ -162,3 +168,16 @@ export function planPrompt(ctx: Ctx): null | {review: string | null} {
   return {review: hadGoals && startOfWeek ? lastFrom : null};
 }
 export {candidates};
+
+// ---------- an event in the week ----------
+/** A dated event (Garmin race or local) and the sessions this week that serve it: Garmin's
+ *  scheduled sessions and your sessions of the event's sport. Each still counts once per goal. */
+export function eventWeek(ctx: Ctx) {
+  const ev = [...ctx.world.ambitions, ...ctx.state.ambitionsAdded].filter(a => a.date && a.date >= ctx.calendarDate).sort((a, b) => a.date!.localeCompare(b.date!))[0];
+  if (!ev) return null;
+  const sport = ((ev as {sport?: Sport | null}).sport ?? 'running') as Sport;
+  const items = planItems(ctx, ctx.weekFrom, ctx.weekTo).filter(p => p.kind === 'workout' && p.sport === sport && itemMatch(ctx, p).state !== 'released');
+  const recordedMin = ctx.world.activities.filter(a => between(a.date, ctx.weekFrom, ctx.calendarDate) && a.sport === sport).reduce((t, a) => t + a.min, 0);
+  const scheduledMin = items.filter(p => p.source === 'garmin').reduce((t, p) => t + (p.min ?? 0), 0);
+  return {ev, sport, items, recordedMin, scheduledMin, days: Math.round((Date.parse(ev.date!) - Date.parse(ctx.calendarDate)) / 864e5)};
+}

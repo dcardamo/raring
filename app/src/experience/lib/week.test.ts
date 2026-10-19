@@ -39,7 +39,8 @@ describe('backlog', () => {
  it('lists what is left after recordings and placed sessions, and takes one for today', () => {
   const c = at({goalVersions: goals({strength: 3}), intentions: []});
   const b = backlog(c);
-  expect(b.items.filter(i => i.key === 'strength')).toHaveLength(2);
+  // 3 − 1 recorded (Mon) − 1 planned by Garmin's Leg day A on Saturday.
+  expect(b.items.filter(i => i.key === 'strength')).toHaveLength(1);
   expect(takeItem(c, b.items[0], c.calendarDate)).toMatchObject({sport: 'strength', date: '2026-11-18', allocation: {strength: 1}});
  });
  it('pauses while ill and adds no catch-up afterwards', () => {

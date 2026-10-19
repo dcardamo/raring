@@ -157,16 +157,19 @@ await journey('U30 Exclude an activity and add a movement note', 'U19', async (p
  await set(page, {permission: 'granted'}); await ext(page, 'surfaces');
  if ((await text(page)).includes('knee')) throw new Error('U30: movement note leaked into a status surface');
 });
-await journey('U22 Link a recorded activity to an intention', 'U15', async (page, j) => {
+await journey('U22 An unambiguous recording completes the plan; unlink and relink', 'U15', async (page, j) => {
  await ext(page, 'plan');
  await page.locator('.day-cells .dc').first().click(); j.path.push('Mon'); await settle(page);
- await j.tap(/^Your plan.*Strength.*07:00/); await j.tap('This was my session');
- await expectText(page, 'Linked by you', 'U22');
- j.done('intention/i0', 3, 'from Plan, choosing Monday first');
+ await j.tap(/^Done: Strength/);
+ await expectText(page, 'Matched by Raring', 'auto-matched'); j.done('intention/i0', 2, 'nothing to confirm');
+ await page.getByRole('button', {name: 'Unlink'}).click(); await settle(page);
+ await expectText(page, 'Needs review', 'unlinked: Raring asks');
+ await page.getByRole('button', {name: 'This was my session'}).click(); await settle(page);
+ await expectText(page, 'Linked by you', 'relinked');
 });
-await journey('U22b Intention left unlinked is not missed', 'U15', async (page) => {
+await journey('U22b An auto-matched session is done, never missed', 'U15', async (page) => {
  await set(page, {day: '2026-11-17'}); await ext(page, 'intention/i0');
- await expectText(page, 'Already counts', 'U22b'); await expectNoText(page, 'missed', 'U22b');
+ await expectText(page, '✓ Done', 'U22b'); await expectNoText(page, 'missed', 'U22b');
 });
 // Five focused tabs replace Explore: every area is one tab, or a tab and one tap.
 const tabTo = (page, j, name) => page.locator('.tabs').getByRole('button', {name, exact: true}).click().then(() => { j.path.push(`${name} tab`); return settle(page); });
@@ -223,6 +226,7 @@ await journey('Back keeps filter and scroll', 'U19', async (page, j) => {
  await tabTo(page, j, 'Training'); await page.getByRole('tab', {name: 'Activities', exact: true}).click(); j.path.push('Activities'); await settle(page);
  await page.locator('.filt').getByRole('button', {name: 'Strength'}).click(); j.path.push('Strength'); await settle(page);
  await page.locator('.scroll').evaluate(el => { el.scrollTop = 500; }); await settle(page);
+ await page.locator('.atile').nth(1).scrollIntoViewIfNeeded(); await settle(page);
  const before = await page.locator('.scroll').evaluate(el => el.scrollTop);
  await page.locator('.atile').nth(1).click(); await settle(page);
  await page.goBack(); await page.waitForTimeout(400);
@@ -240,30 +244,31 @@ await journey('Not recorded → Reschedule moves only the local intention', 'U41
  const moved = st.intentions.find(i => i.date === '2026-11-21' && i.sport === 'strength');
  if (!moved || moved.status && moved.status !== 'open' || !moved.history.at(-1)[1].includes('Wed 18 Nov')) throw new Error(`reschedule lost its original date: ${JSON.stringify(moved)}`);
  if (st.intentions.some(i => i.status === 'missed')) throw new Error('reschedule marked something missed');
- await expectNoText(page, 'issed', 'no missed verdict'); await expectNoText(page, 'Not recorded', 'nothing left unfinished');
+ await expectNoText(page, 'issed', 'no missed verdict'); if (await page.locator('.unfinished').count()) throw new Error('an unfinished plan remains');
  j.done('plan', 2, 'plus choosing the date');
  await ext(page, `intention/${moved.id}`); await expectText(page, 'Moved from Wed 18 Nov', 'history keeps the original date');
 });
-await journey('Possible match needs review, then counts once', 'U41', async (page, j) => {
- const amounts = () => page.locator('.goal').first().locator('.amounts b').allInnerTexts();
- const before = await amounts();
+await journey('Two plans for one recording: Raring asks, then counts once', 'U41', async (page, j) => {
+ await set(page, {intentions: [{id: 'a1', sport: 'strength', date: '2026-11-16', time: '07:00', link: null, history: []}, {id: 'a2', sport: 'strength', date: '2026-11-16', time: '18:00', link: null, history: []}]}); await ext(page, 'plan');
+ const line = () => page.locator('.ws li').first().innerText();
+ const before = await line();
  await expectText(page, 'Needs review', 'review flagged');
- await page.locator('.unfinished.uf-review').getByRole('button', {name: 'This was my session'}).click(); j.path.push('This was my session'); await settle(page);
- const after = await amounts();
- if (before[0] !== after[0] || before[1] !== after[1]) throw new Error(`linking changed recorded/planned: ${before} → ${after}`);
+ await page.locator('.unfinished.uf-review').first().getByRole('button', {name: 'This was my session'}).click(); j.path.push('This was my session'); await settle(page);
+ const after = await line();
+ if (before.split('·')[0] !== after.split('·')[0]) throw new Error(`linking changed the recorded count: ${before} → ${after}`);
  await expectNoText(page, 'Needs review', 'review resolved');
- j.done('plan', 1, `strength recorded ${after[0]}, planned ${after[1]} before and after`);
+ j.done('plan', 1, `${after.split('·')[0].trim()} before and after`);
 });
-await journey('Garmin Coach is read-only and can count toward a local goal', 'U41', async (page, j) => {
+await journey('Garmin sessions are planned work, matched by date and sport', 'U41', async (page, j) => {
  await j.tap(/^Garmin Coach/); await expectRoute(page, 'plan/garmin', 'Coach detail');
- await expectText(page, 'Completion unknown', 'Coach completion'); await expectText(page, 'Garmin Connect', 'managed elsewhere');
- const before = await page.evaluate(() => window.RaringApp.state.intentions.length);
- await page.getByRole('button', {name: 'Count toward my goals'}).first().click(); j.path.push('Count toward my goals'); await settle(page);
- await j.tap('Place in my week');
- const st = await page.evaluate(() => window.RaringApp.state.intentions);
- if (st.length !== before + 1 || !st.at(-1).garminId) throw new Error('Garmin session not counted as a local allocation');
- await expectText(page, 'Counts toward your goals', 'local overlay shown');
- j.done('plan/garmin', 3);
+ await expectText(page, 'Garmin Connect', 'managed elsewhere');
+ if (await page.getByRole('button', {name: /Count/}).count()) throw new Error('Count it still offered');
+ await expectText(page, 'Planned', 'Tempo planned'); await expectText(page, 'Not recorded', 'Intervals passed');
+ await set(page, {day: '2026-11-17', clock: 'day'}); await ext(page, 'plan');
+ const hi = await page.evaluate(() => window.RaringApp.state.intentions.length);
+ await expectText(page, 'intensity min', 'Garmin sessions plan toward goals');
+ if (hi !== await page.evaluate(() => window.RaringApp.state.intentions.length)) throw new Error('planning created local copies');
+ j.done('plan/garmin', 1);
 });
 // ---------- P3a: the weekly loop, rings and Today ----------
 await journey('Plan your week: review last week, choose goals, place, done', 'U15', async (page, j) => {
@@ -298,6 +303,7 @@ await journey('Plan prompt: not now, stop reminders, never at wind-down', 'U15',
  await ext(page, 'settings'); await expectText(page, 'Weekly planning reminder', 'setting in Settings');
 });
 await journey('Backlog: do it today from Today', 'U13', async (page, j) => {
+ await set(page, {goalVersions: [{from: '2026-11-16', targets: {strength: 2, zone2: 0, hi: 0, im: 300, sleep: 0, sleepScore: 0, sleepTime: '22:15', sleepKind: 'winddown'}}]}); await ext(page, 'today');
  await j.tap('Do it today');
  const st = await page.evaluate(() => window.RaringApp.state.intentions.filter(i => i.date === '2026-11-18' && i.allocation?.im));
  if (st.length !== 1 || st[0].allocation.im > 30) throw new Error(`backlog item not taken for today: ${JSON.stringify(st)}`);
@@ -394,11 +400,51 @@ await journey('Training: three questions, activities show what they worked', 'U1
  await ext(page, 'training');
  for (const q of ['Enough, or too much?', 'Is my fitness improving?', 'What am I ready for?']) await expectText(page, q, 'Fitness');
  await expectNoText(page, 'What acute load is', 'explainer cards cut');
- const wk = await page.locator('.tw svg[role=img]').getAttribute('aria-label');
- if (!wk.includes('usual day')) throw new Error('week chart lacks usual day');
- await page.getByRole('tab', {name: 'Strength', exact: true}).click(); await settle(page); await expectText(page, 'Muscles, last 4 weeks', 'strength gaps');
+ const wk = await page.locator('.tw svg[role=img]').first().getAttribute('aria-label');
+ if (!wk.includes('usual week by now') || !wk.includes('goal')) throw new Error(`week lane lacks goal or usual week: ${wk}`);
+ await page.getByRole('tab', {name: 'Strength', exact: true}).click(); await settle(page); await expectText(page, 'Muscles', 'strength gaps');
+ if (await page.getByRole('group', {name: 'Muscle range'}).locator('button').count() !== 6) throw new Error('muscles lack the standard range picker');
+ await page.getByRole('button', {name: 'Volume'}).click(); await settle(page);
+ if (!(await page.locator('.lift svg[role=img]').first().getAttribute('aria-label')).includes('volume')) throw new Error('volume toggle did not apply');
  await page.getByRole('tab', {name: 'Activities', exact: true}).click(); await settle(page);
  if (!await page.locator('.atile .worked').count()) throw new Error('activities lack contribution');
+});
+// ---------- P4 ----------
+await journey('Today: effort bar, reason line, no Why, week and backlog side by side', 'U13', async (page) => {
+ if (await page.locator('.hero').getByRole('button', {name: 'Why?'}).count()) throw new Error('Why? still on Today');
+ if (await page.locator('.effort button').count() || await page.locator('.effort .sw.on').count() !== 1) throw new Error('effort bar is a control or lacks one marked level');
+ await expectText(page, 'Short sleep', 'reason line from Garmin inputs');
+ const [l, r] = await page.evaluate(() => [document.querySelector('.wk2-l').getBoundingClientRect(), document.querySelector('.wk2-r').getBoundingClientRect()].map(b => ({top: Math.round(b.top), left: Math.round(b.left)})));
+ if (Math.abs(l.top - r.top) > 2 || r.left <= l.left) throw new Error(`week and backlog not side by side: ${JSON.stringify([l, r])}`);
+ await page.getByRole('button', {name: /^Readiness/}).first().click(); await settle(page); await expectRoute(page, 'readiness', 'gauge opens readiness');
+});
+await journey('Rings draw nothing for an unplanned remainder', 'U13', async (page) => {
+ await ext(page, 'plan');
+ const stray = await page.evaluate(() => [...document.querySelectorAll('.nr svg circle')].filter(c => !c.classList.contains('solid') && !c.classList.contains('planned') && c.getAttribute('fill') === 'none' && c.getAttribute('stroke-dasharray') == null).length);
+ if (stray) throw new Error(`${stray} ring tracks drawn`);
+ const mon = await page.locator('.day-cells .dc').first().getAttribute('aria-label');
+ if (!mon.includes('all done')) throw new Error(`Mon not shown as done: ${mon}`);
+});
+await journey('Event in the week groups the sessions that serve it', 'U13', async (page) => {
+ await ext(page, 'plan');
+ if (!await page.locator('.evb .ir').count()) throw new Error('no sessions under Winter 10K');
+ await expectText(page, 'Garmin Coach scheduled', 'event progress');
+ await set(page, {noRunning: true}); await ext(page, 'plan');
+ if (await page.locator('.evb').count()) throw new Error('event block without serving sessions');
+});
+await journey('Workout detail shows only what the activity recorded', 'U15', async (page) => {
+ await ext(page, 'workout/a-1203');
+ for (const t of ['Along the way', 'What it did', 'Intensity minutes', 'Recorded by your watch', 'Cadence']) await expectText(page, t, 'run detail');
+ if (await page.locator('main .ax').count() < 3) throw new Error('aligned charts missing');
+ await ext(page, 'workout/a-1110');
+ await expectNoText(page, 'Along the way', 'no GPS streams for HIIT'); await expectNoText(page, 'Cadence', 'no cadence for HIIT');
+});
+await journey('Weight is a metric like the others', 'U13', async (page) => {
+ await ext(page, 'health');
+ await expectNoText(page, 'Private to Health', 'label removed');
+ const card = page.locator('.mc').filter({hasText: 'Weight'});
+ if (await card.getByRole('group', {name: 'Weight range'}).locator('button').count() !== 6) throw new Error('weight lacks the range picker');
+ if (!await card.getByRole('button', {name: /Add a weight/}).isDisabled()) throw new Error('weight write enabled');
 });
 await journey('U53 Journal consent, open, leave, background, opt out', 'U52', async (page, j) => {
  await j.tap('Allow local journal reads'); await j.tap('Allow journal reads'); await j.tap('Open journal');
@@ -564,7 +610,7 @@ await journey('Time-only edit retains activity and original day', 'U19', async (
  if (i.sport !== 'strength' || i.date !== '2026-11-16' || i.time !== '08:30') throw new Error(`time edit corrupted draft: ${JSON.stringify(i)}`);
 });
 await journey('Changing date/type clears a confirmed link', 'U22', async (page, j) => {
- await j.tap('This was my session'); await j.tap('Edit'); await j.tap('Run'); await j.tap('Tue 17'); await j.tap('Save changes');
+ await j.tap('Unlink'); await j.tap('This was my session'); await j.tap('Edit'); await j.tap('Run'); await j.tap('Tue 17'); await j.tap('Save changes');
  const i = await page.evaluate(() => window.RaringApp.state.intentions.find(x => x.id === 'i0'));
  if (i.link) throw new Error('incompatible activity link survived');
  await expectText(page, 'old link cleared', 'association history retained');

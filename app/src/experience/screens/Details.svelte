@@ -16,6 +16,7 @@
  import SleepScreen from './SleepScreen.svelte';
  import Adapt from './Adapt.svelte';
  import PlanDetail from './PlanDetail.svelte';
+ import MetricCard from '../components/MetricCard.svelte';
  import Profile from './Profile.svelte';
  import Settings from './Settings.svelte';
  import Misc from './Misc.svelte';
@@ -126,15 +127,15 @@
 
 {:else if key === 'health' && sub === 'weight'}
  {@render header('Weight', 'Garmin weigh-ins · kg')}
- <Card title="Last weigh-in"><div class="big n">74.2<span class="unit">kg</span></div><p class="small">Sat 14 Nov · body fat 19.8%</p><div class="wspark"><TrendSpark values={weekly} w={320} h={80} sparse decimals={1}/></div><p class="small">12 weeks · weeks without a weigh-in stay blank</p></Card>
- <Card onclick={() => go('metric/weight')}><p class="small">Trend and comparisons</p></Card>
+ <MetricCard id="weight" name="Weight" unit="kg" read={weightFor} color="#E4E8F0" sparse fmt={v => v.toFixed(1)} route="metric/weight"><p class="small">Garmin weigh-ins with body fat where the scale records it. No goals or alerts.</p><button class="na" disabled>Add a weight · not available yet</button></MetricCard>
+
 
 {:else if key === 'health'}
  <Header title={sub === 'vitals' ? 'Health readings' : 'Health'} eyebrow={`${dayLabel(ctx.displayedDay)} · Garmin`} back={() => store.back()} backLabel={store.parentLabel}/>
  {#if store.state.vitalsException}<div class="notice-strip"><Icon name="alert" size={18}/><p>Two overnight readings are outside your usual ranges</p></div>{/if}
  <HealthDetail healthData={healthView(ctx)} navigate={go} toggleJournal={on => on ? store.openSheet('consent') : (store.set(s => ({journal: {...s.journal, consent: false, open: false}}), 'Journal reads off'))} bind:journalOpen={() => store.state.journal.open, v => store.set(st => ({journal: {...st.journal, open: v}}))} bind:journalDayOpen/>
  {#if !store.state.journal.consent && store.state.journal.downloaded}<p class="small">Downloaded journal days stay on this phone and in exports you create until you erase local data.</p>{/if}
- <section class="card"><button class="rowlink" onclick={() => go('metric/bodyBattery')}><Icon name="bolt" size={18}/><span><b>Body Battery {ctx.bodyBattery ?? '—'}</b><small>At watch upload · {ctx.upload.detail}</small></span><Icon name="chevron" size={16}/></button><button class="rowlink" onclick={() => go('health/weight')}><Icon name="scale" size={18}/><span><b>Weight</b><small>Private to Health</small></span><Icon name="chevron" size={16}/></button><button class="rowlink" onclick={() => go('settings/journal')}><Icon name="info" size={18}/><span><b>Journal privacy</b><small>Settings</small></span><Icon name="chevron" size={16}/></button></section>
+ <section class="card"><button class="rowlink" onclick={() => go('metric/bodyBattery')}><Icon name="bolt" size={18}/><span><b>Body Battery {ctx.bodyBattery ?? '—'}</b><small>At watch upload · {ctx.upload.detail}</small></span><Icon name="chevron" size={16}/></button><button class="rowlink" onclick={() => go('health/weight')}><Icon name="scale" size={18}/><span><b>Weight</b><small>Garmin weigh-ins</small></span><Icon name="chevron" size={16}/></button><button class="rowlink" onclick={() => go('settings/journal')}><Icon name="info" size={18}/><span><b>Journal privacy</b><small>Settings</small></span><Icon name="chevron" size={16}/></button></section>
 
 {:else if key === 'metric'}
  {@const m = METRICS[sub]}
@@ -172,6 +173,7 @@
  .best-note{margin:12px 4px}
  .filt{margin-top:10px}
  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
- .wspark{margin-top:12px}
+ 
  .tr-i{width:56px}
+ .na{width:100%;margin-top:8px;min-height:40px;border-radius:12px;border:1px dashed var(--line);background:none;color:var(--text3);font:600 13px Inter}
 </style>

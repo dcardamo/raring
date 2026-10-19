@@ -7,6 +7,9 @@
  import RouteHero from '../components/RouteHero.svelte';
  import Ring from '../components/Ring.svelte';
  import Glyph from '../components/Glyph.svelte';
+ import WorkoutMore from '../components/WorkoutMore.svelte';
+ import {planItems, itemMatch} from '../lib/match';
+ import {itemRoute} from '../lib/allocation';
  import {store} from '../lib/store.svelte';
  import {contribution, derive} from '../lib/rules';
  import {activityById} from '../lib/world';
@@ -23,7 +26,8 @@
  // Contribution is judged with the plan as it stood on the activity's own day.
  let then = $derived(derive({...store.state, day: a.date, clock: 'evening'}));
  let c = $derived(contribution(then, a));
- let linked = $derived(store.state.intentions.find(i => i.link === id));
+ // The plan item this recording completed, matched automatically or by you.
+ let matched = $derived(planItems(ctx, a.date, a.date).map(p => ({p, m: itemMatch(ctx, p)})).find(x => x.m.activity?.id === id));
 </script>
 
 <button class="back" onclick={() => store.back()}><Icon name="back" size={20}/> <span>{store.parentLabel}</span></button>
@@ -46,12 +50,13 @@
   {:else}<div class="hc"><Glyph sport={a.sport} size={36}/><span><small>Recorded</small><b>{a.timerOnly ? 'Strength session · no sets' : `${SPORTS[a.sport].name} session`}</b></span></div>{/if}
   {#if !a.timerOnly}<div class="hc"><Ring value={a.aerobic} target={5} size={40} stroke={4.5} color={colors.ink} label={`Garmin aerobic effect ${a.aerobic.toFixed(1)} of 5`}><b class="n te">{a.aerobic.toFixed(1)}</b></Ring><span><small>Garmin</small><b>{a.benefit} benefit</b></span></div>{/if}
   {#if a.record}<div class="hc best"><span class="star"><Icon name="star" size={18}/></span><span><small>Best in available history</small><b>{a.record}</b></span></div>{/if}
-  {#if linked}<button class="hc" onclick={() => store.navigate(`intention/${linked.id}`)}><Glyph sport={linked.sport} mark="plan" size={36}/><span><small>Linked by you</small><b>Your plan · {dayLabel(linked.date)}</b></span></button>{/if}
+  {#if matched}<button class="hc" onclick={() => store.navigate(itemRoute(matched.p))}><Glyph sport={matched.p.sport} mark={matched.p.source === 'garmin' ? 'garmin' : 'plan'} size={36}/><span><small>✓ Done · {matched.m.auto ? 'matched by Raring' : 'linked by you'}</small><b>{matched.p.name ?? (matched.p.source === 'garmin' ? 'Garmin session' : 'Your plan')}</b></span></button>{/if}
  </div>
  {#if a.lateUpload}<p class="small late">Uploaded {dayLabel(a.lateUpload)} · counts on {dayLabel(a.date)}</p>{/if}
 </section>
 
 <WorkoutDetail workoutData={view} navigate={(r) => store.navigate(r)} help={() => help = true} showMap={false}/>
+<WorkoutMore {a}/>
 {#if help && view.strength}<HelpSheet close={() => help = false} more={() => { help = false; store.navigate('help/strength-sets'); }}/>{/if}
 
 <style>

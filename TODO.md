@@ -77,7 +77,16 @@ activities showing what they worked; Health with vitals under long-term and
 range-picker charts with usual ranges; Sleep tabs (Last night / Tonight as a
 plan); Progress as Overall / Cardio / Strength / Long-term; "?" help sheets;
 and a Profile (Garmin facts, limitations, gear, settings; weight write
-disabled). Remaining: usability, device, real-data and migration gates. This does not authorise stage 2 or a release.
+disabled). **P4** (`.data/lanes/experience-p4-feedback.md`): unambiguous
+same-day, same-sport plan/recording pairs now match automatically with Unlink
+(replacing the explicit-link-only rule; Raring asks only when ambiguous);
+Garmin scheduled workouts are planned work toward goals ("Count it" removed);
+done / planned / not recorded look the same everywhere; rings draw no track;
+the event groups its sessions; Today has a continuous effort bar, a reason line
+instead of Why, and week + backlog side by side; Training week lanes; one range
+picker; lift Max weight / Volume; richer workout detail from stored fields
+(provenance recorded); weight as a metric card. Remaining: usability, device,
+real-data and migration gates. This does not authorise stage 2 or a release.
 
 **Usability gate remains pending; no stage 2 authorised.** No unfamiliar people have evaluated
 first meaning, discovery, comprehension or pressure. Three participants (including

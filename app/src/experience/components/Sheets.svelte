@@ -9,6 +9,8 @@
  import {dayEvidence} from '../lib/allocation';
  import {dayRings} from '../lib/week';
  import NestedRings from './NestedRings.svelte';
+ import ItemRow from './ItemRow.svelte';
+ import {planItems, itemMatch} from '../lib/match';
  import {search} from '../lib/searchIndex';
  import Glyph, {MARK_NAMES, type Mark} from './Glyph.svelte';
  import XIcon from './XIcon.svelte';
@@ -68,13 +70,12 @@
    <button class="primary" disabled={!rescheduleDate || rescheduleDate<ctx.calendarDate} onclick={()=>A.reschedule(sheet!.arg!,rescheduleDate)}>Move my session</button>
   {:else if sheet.name === 'day'}
    {@const day=sheet.arg??ctx.calendarDate}{@const d=dayRings(ctx,day)}{@const ev=dayEvidence(ctx,day)}
-   <div class="day-head"><NestedRings rings={d.rings} size={64} stroke={5} gap={2} mark={d.mark} future={d.future}/><div><b>{dayLabel(day)}</b><small>{d.mark==='rest'?'Rest day':d.mark==='ill'?'Ill · goals paused':d.mark==='paused'?'Paused':d.mark==='unknown'?'Awaiting Garmin data':d.future?'Ahead':day===ctx.calendarDate?'Today':''}{ev.night?` · Sleep Score ${ev.night.score} (Garmin)`:''}</small></div></div>
+   <div class="day-head"><NestedRings rings={d.rings} size={64} stroke={5} gap={2} mark={d.mark} future={d.future} done={d.done} passed={day<ctx.calendarDate}/><div><b>{dayLabel(day)}</b><small>{d.mark==='rest'?'Rest day':d.mark==='ill'?'Ill · goals paused':d.mark==='paused'?'Paused':d.mark==='unknown'?'Awaiting Garmin data':d.future?'Ahead':day===ctx.calendarDate?'Today':''}{ev.night?` · Sleep Score ${ev.night.score} (Garmin)`:''}</small></div></div>
    {#if d.rings.some(r=>r.outline)}<table class="dgoals"><thead><tr><th></th><th>Planned</th><th>Recorded</th><th>Left</th></tr></thead><tbody>
     {#each d.rings.filter(r=>r.outline) as r}<tr style:--c={r.color}><th><i></i>{r.name}</th><td>{r.planned||'—'}</td><td>{d.future?'—':d.mark==='unknown'?'?':r.recorded}</td><td>{d.future||d.mark==='unknown'?'—':Math.max(0,r.planned-r.recorded)||'—'}</td></tr>{/each}
    </tbody></table>{:else}<p class="small">Nothing planned{d.future?'':' or recorded toward your goals'}.</p>{/if}
-   {#each ev.plans as i}<button class="rowlink" onclick={()=>store.navigate(`intention/${i.id}`)}><Glyph sport={i.kind==='sleep'?'other':i.sport} mark="plan" size={26}/><span><b>{i.name??SPORTS[i.sport].name}</b><small>Your plan{i.time?' · '+i.time:''}</small></span><Icon name="chevron" size={16}/></button>{/each}
-   {#each ctx.world.schedule.filter(g=>g.date===day) as g}<button class="rowlink" onclick={()=>store.navigate(`scheduled/${g.id}`)}><Glyph sport={g.sport} mark="garmin" size={26}/><span><b>{g.name}</b><small>Garmin schedule · {g.min} min</small></span><Icon name="chevron" size={16}/></button>{/each}
-   {#each ev.acts as a}<button class="rowlink" onclick={()=>store.navigate(`workout/${a.id}`)}><Glyph sport={a.sport} size={26}/><span><b>{a.name}</b><small>Recorded · {a.start} · {a.min} min</small></span><Icon name="chevron" size={16}/></button>{/each}
+   {#each planItems(ctx,day,day) as p (p.id)}<ItemRow {p} actions={false}/>{/each}
+   {#each ev.acts.filter(a=>!planItems(ctx,day,day).some(p=>itemMatch(ctx,p).activity?.id===a.id)) as a}<button class="rowlink" onclick={()=>store.navigate(`workout/${a.id}`)}><Glyph sport={a.sport} size={26}/><span><b>{a.name}</b><small>✓ Recorded · not in your plan · {a.start} · {a.min} min</small></span><Icon name="chevron" size={16}/></button>{/each}
   {:else if sheet.name === 'adapt'}
    {#if ctx.restActive}<div class="state-row"><Glyph mark="rest" size={34}/><span><b>Rest day is on</b><small>Through tonight</small></span></div><button class="secondary" onclick={A.unrest}>Undo rest</button>
    {:else}<button class="primary big" data-autofocus onclick={A.rest}><Icon name="moon" size={18}/>Rest today</button><p class="small">No exercise prompts today or tonight.</p>{/if}

@@ -12,7 +12,7 @@
  import {store} from '../lib/store.svelte';
  import {healthView, todayView} from '../lib/views';
  import {dayMonth, dur} from '../lib/dates';
- import {stagesFor, fitnessAgeFor, restingHrFor, hrvFor, stressAvgFor, bodyBatteryHigh, nightFor, CHRONOLOGICAL_AGE} from '../lib/world';
+ import {stagesFor, fitnessAgeFor, restingHrFor, hrvFor, stressAvgFor, bodyBatteryHigh, nightFor, weightFor, CHRONOLOGICAL_AGE} from '../lib/world';
  import {addDays} from '../lib/dates';
  // Health: the long view first, then this morning's readings, then each daily
  // metric with its own range picker. Your day lives on Today only.
@@ -52,9 +52,11 @@
 <MetricCard id="hrv" name="Overnight HRV" unit="ms" read={withNight(hrvFor)} band={usual('hrv')} color="#A48BFF"/>
 <MetricCard id="stress" name="Average stress" unit="" read={stressAvgFor} color="#FFB547"/>
 <MetricCard id="bodyBattery" name="Body Battery high" unit="" read={bodyBatteryHigh} color="#3DDC97"/>
+<MetricCard id="weight" name="Weight" unit="kg" read={weightFor} color="#E4E8F0" sparse fmt={v => v.toFixed(1)} route="health/weight">
+ <button class="na" disabled aria-describedby="w-na"><Icon name="scale" size={15}/>Add a weight</button><p class="small" id="w-na">Not available yet: adding a weight is a Garmin write.</p>
+</MetricCard>
 
 <section class="card private">
- <button class="rowlink" onclick={() => go('health/weight')}><Icon name="scale" size={18}/><span><b>Weight</b><small>Private to Health · no targets</small></span><Icon name="chevron" size={16}/></button>
  <button class="rowlink" onclick={() => go('health/journal')}><XIcon name="lock" size={18}/><span><b>Garmin journal</b><small>{ctx.state.journal.consent ? 'Allowed · opens on request' : 'Off · reads only with your consent'}</small></span><Icon name="chevron" size={16}/></button>
 </section>
 
@@ -65,5 +67,6 @@
  .hh{display:flex;gap:8px;align-items:center}
  .sr{display:grid;grid-template-columns:1.2fr 1fr;gap:10px;margin-top:12px}.sr button{border:1px solid var(--line);border-radius:20px;background:var(--card);color:var(--text);text-align:left;padding:14px;min-width:0}.sr small{display:flex;gap:6px;align-items:center;font:600 11px Inter;color:#A9C8FF}.sr-sleep b{display:block;font-size:26px;font-weight:600;margin:4px 0 8px}.stage{display:flex;height:8px;border-radius:4px;overflow:hidden}.stage i{display:block}.sr em{display:block;font-style:normal;font-size:11px;color:var(--text2);margin-top:6px}.sr-ready{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.sr-ready span{min-width:0}.sr-ready b{display:block;font:600 13px Inter}.sr-ready span small{color:var(--text2);font-weight:500;margin-top:3px}
  .private{margin-top:14px}
+ .na{display:flex;gap:8px;align-items:center;justify-content:center;width:100%;margin-top:10px;min-height:40px;border-radius:12px;border:1px dashed var(--line);background:none;color:var(--text3);font:600 13px Inter}
  @container(max-width:300px){.drivers,.sr{grid-template-columns:1fr}}
 </style>
