@@ -70,7 +70,7 @@
    <button class="primary" disabled={!rescheduleDate || rescheduleDate<ctx.calendarDate} onclick={()=>A.reschedule(sheet!.arg!,rescheduleDate)}>Move my session</button>
   {:else if sheet.name === 'day'}
    {@const day=sheet.arg??ctx.calendarDate}{@const d=dayRings(ctx,day)}{@const ev=dayEvidence(ctx,day)}
-   <div class="day-head"><NestedRings rings={d.rings} size={64} stroke={5} gap={2} mark={d.mark} future={d.future} done={d.done} passed={day<ctx.calendarDate}/><div><b>{dayLabel(day)}</b><small>{d.mark==='rest'?'Rest day':d.mark==='ill'?'Ill · goals paused':d.mark==='paused'?'Paused':d.mark==='unknown'?'Awaiting Garmin data':d.future?'Ahead':day===ctx.calendarDate?'Today':''}{ev.night?` · Sleep Score ${ev.night.score} (Garmin)`:''}</small></div></div>
+   <div class="day-head"><NestedRings rings={d.rings} size={64} stroke={5} gap={2} mark={d.mark} future={d.future} done={d.done}/><div><b>{dayLabel(day)}</b><small>{d.mark==='rest'?'Rest day':d.mark==='ill'?'Ill · goals paused':d.mark==='paused'?'Paused':d.mark==='unknown'?'Awaiting Garmin data':d.future?'Ahead':day===ctx.calendarDate?'Today':''}{ev.night?` · Sleep Score ${ev.night.score} (Garmin)`:''}</small></div></div>
    {#if d.rings.some(r=>r.outline)}<table class="dgoals"><thead><tr><th></th><th>Planned</th><th>Recorded</th><th>Left</th></tr></thead><tbody>
     {#each d.rings.filter(r=>r.outline) as r}<tr style:--c={r.color}><th><i></i>{r.name}</th><td>{r.planned||'—'}</td><td>{d.future?'—':d.mark==='unknown'?'?':r.recorded}</td><td>{d.future||d.mark==='unknown'?'—':Math.max(0,r.planned-r.recorded)||'—'}</td></tr>{/each}
    </tbody></table>{:else}<p class="small">Nothing planned{d.future?'':' or recorded toward your goals'}.</p>{/if}
@@ -141,9 +141,9 @@
    {@const R=(f:number,o:number,k:'strength'|'zone2'='strength')=>[{key:k,name:'',unit:'',color:k==='strength'?'#FF7DB8':'#5CA8FF',recorded:0,planned:0,filled:f,outline:o}]}
    <h3 class="lg-h">Day rings · one per goal, same order everywhere</h3>
    <ul class="legend">
-    <li><NestedRings rings={R(1,1)} size={30}/><span><b>Filled</b><small>Recorded toward that day’s planned share</small></span></li>
-    <li><NestedRings rings={R(.4,1)} size={30}/><span><b>Thin line</b><small>Planned, not recorded (yet)</small></span></li>
-    <li><NestedRings rings={[]} size={30}/><span><b>No ring</b><small>Nothing planned or recorded for that goal</small></span></li>
+    <li><NestedRings rings={R(1,1)} size={30}/><span><b>Full ring</b><small>Recorded what that day planned, or more</small></span></li>
+    <li><NestedRings rings={R(.4,1)} size={30}/><span><b>Part ring</b><small>Recorded part of that day’s plan</small></span></li>
+    <li><NestedRings rings={[]} size={30}/><span><b>Nothing drawn</b><small>Nothing recorded for that goal yet; plans are listed under the day</small></span></li>
     <li><NestedRings rings={[]} size={30} mark="rest"/><span><b>Moon</b><small>Rest day you chose</small></span></li>
     <li><NestedRings rings={[]} size={30} mark="ill"/><span><b>Hatched</b><small>Ill or paused · no catch-up</small></span></li>
     <li><NestedRings rings={[]} size={30} mark="unknown"/><span><b>Dotted</b><small>Awaiting Garmin data · not zero</small></span></li>

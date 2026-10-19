@@ -86,7 +86,10 @@ the event groups its sessions; Today has a continuous effort bar, a reason line
 instead of Why, and week + backlog side by side; Training week lanes; one range
 picker; lift Max weight / Volume; richer workout detail from stored fields
 (provenance recorded); weight as a metric card. Remaining: usability, device,
-real-data and migration gates. This does not authorise stage 2 or a release.
+real-data and migration gates. **P5** (Dan's chat feedback): rings draw only
+recorded work; weight is a trend-weight card (smoothed weigh-ins, 1–90 day
+changes, freshness); metric cards flag old readings. Open decision: whether a
+weight direction the person chooses may colour changes. This does not authorise stage 2 or a release.
 
 **Usability gate remains pending; no stage 2 authorised.** No unfamiliar people have evaluated
 first meaning, discovery, comprehension or pressure. Three participants (including

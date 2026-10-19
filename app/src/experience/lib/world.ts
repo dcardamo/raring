@@ -327,9 +327,11 @@ export function hillFor(date: string): number | null {
   if (date < HISTORY_START || rand(date + 'hill') > .07) return null;
   return date >= '2026-08-01' ? 61 : 58;
 }
+/** Scale weigh-ins: most mornings, with day-to-day water swings and a slow loss lately. */
 export function weightFor(date: string): number | null {
-  if (date < HISTORY_START || weekday(date) !== 6 || rand(date + 'wt') > .7) return null;
-  return round1(75.4 - daysBetween(HISTORY_START, date) / 400 + (rand(date + 'w') - .5) * .8);
+  if (date < HISTORY_START || date > '2026-11-22' || rand(date + 'wt') > .62) return null;
+  const days = daysBetween(HISTORY_START, date), recent = Math.max(0, daysBetween('2026-09-01', date));
+  return round1(75.6 - days / 900 - recent * .018 + (rand(date + 'w') - .5) * 1.4 + (weekday(date) === 1 ? .35 : 0));
 }
 
 // ---------- intraday timelines (existing view fields) ----------

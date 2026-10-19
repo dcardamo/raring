@@ -418,9 +418,9 @@ await journey('Today: effort bar, reason line, no Why, week and backlog side by 
  if (Math.abs(l.top - r.top) > 2 || r.left <= l.left) throw new Error(`week and backlog not side by side: ${JSON.stringify([l, r])}`);
  await page.getByRole('button', {name: /^Readiness/}).first().click(); await settle(page); await expectRoute(page, 'readiness', 'gauge opens readiness');
 });
-await journey('Rings draw nothing for an unplanned remainder', 'U13', async (page) => {
+await journey('Rings draw only what was recorded', 'U13', async (page) => {
  await ext(page, 'plan');
- const stray = await page.evaluate(() => [...document.querySelectorAll('.nr svg circle')].filter(c => !c.classList.contains('solid') && !c.classList.contains('planned') && c.getAttribute('fill') === 'none' && c.getAttribute('stroke-dasharray') == null).length);
+ const stray = await page.evaluate(() => [...document.querySelectorAll('.nr svg circle')].filter(c => c.getAttribute('fill') === 'none' && !c.classList.contains('solid') && !c.getAttribute('stroke-dasharray')?.startsWith('1.5')).length);
  if (stray) throw new Error(`${stray} ring tracks drawn`);
  const mon = await page.locator('.day-cells .dc').first().getAttribute('aria-label');
  if (!mon.includes('all done')) throw new Error(`Mon not shown as done: ${mon}`);
@@ -442,9 +442,13 @@ await journey('Workout detail shows only what the activity recorded', 'U15', asy
 await journey('Weight is a metric like the others', 'U13', async (page) => {
  await ext(page, 'health');
  await expectNoText(page, 'Private to Health', 'label removed');
- const card = page.locator('.mc').filter({hasText: 'Weight'});
+ const card = page.locator('.wc');
  if (await card.getByRole('group', {name: 'Weight range'}).locator('button').count() !== 6) throw new Error('weight lacks the range picker');
  if (!await card.getByRole('button', {name: /Add a weight/}).isDisabled()) throw new Error('weight write enabled');
+ if (!await card.locator('svg path').count()) throw new Error('weight has no trend line');
+ for (const t of ['Trend weight', 'Scale', 'Last weigh-in', '7 days', '30 days']) if (!(await card.innerText()).includes(t)) throw new Error(`weight card lacks ${t}`);
+ await set(page, {profile: 'sparse'}); await ext(page, 'health');
+ if (!await page.locator('.wc .fresh.stale').count()) throw new Error('stale weigh-in not flagged');
 });
 await journey('U53 Journal consent, open, leave, background, opt out', 'U52', async (page, j) => {
  await j.tap('Allow local journal reads'); await j.tap('Allow journal reads'); await j.tap('Open journal');

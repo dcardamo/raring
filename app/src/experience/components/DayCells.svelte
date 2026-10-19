@@ -20,7 +20,7 @@
   {@const outside = d.date < store.ctx.world.historyStart}
   <button class="dc" class:current={d.date === store.ctx.calendarDate} class:selected={selected === d.date} class:future={d.future} disabled={outside} onclick={() => click(d.date)} aria-label={describe(d)}>
    <span class="top"><span class="dow">{narrowDay(d.date)}</span><b class="n">{Number(d.date.slice(8))}</b>{#if d.garmin}<i class="gm" aria-hidden="true">◇</i>{/if}</span>
-   {#if !outside}<NestedRings rings={d.rings} {size} mark={d.mark} future={d.future} done={d.done} passed={d.date < store.ctx.calendarDate}/>{/if}
+   {#if !outside}<NestedRings rings={d.rings} {size} mark={d.mark} future={d.future} done={d.done}/>{/if}
   </button>
  {/each}
 </div>

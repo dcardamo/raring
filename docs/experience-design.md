@@ -1261,7 +1261,8 @@ screens link to it. This table drives P3; anything marked *cut* is removed.
 | Training · Gear | — | Move to Profile (P3b) |
 | Health · long-term, then vitals | Know long-term direction, then today's readings | Change (P3b): vitals directly below |
 | Health · 90-day sparklines | — | Cut (P3b): charts with axes, ranges and a range picker |
-| Health · weight | Know weight over time, with no verdicts | Change (P4): metric card with range picker; Add weight disabled |
+| Health · weight | Know if I'm gaining or losing, and how fresh it is | Change (P5): trend weight over weigh-ins, 1–90 day changes, last weigh-in age; no goals or verdicts |
+| Any metric card · freshness | Know when a reading is old | New (P5): flagged after 2 days (weight 7) |
 | Health · Your day duplicate | — | Cut (P3b) |
 | Sleep · Last night / Tonight tabs | Know last night; decide tonight's bedtime | Change (P3b): two tabs, Tonight is a plan |
 | Progress · Overall + Cardio/Strength/Long-term | Know progress toward goals and races, and why | Change (P3b) |
@@ -1288,8 +1289,7 @@ period summaries under the Progress rules above.
 Push, the suggested level raised and marked, not a control); "Why?" is gone,
 replaced by one reason line from Garmin's readiness inputs, and the gauge opens
 Readiness; This week (rings and goal lines) sits beside Left this week. Rings
-draw a solid arc for recorded work and a dashed arc for planned work, and
-nothing for an unplanned remainder. Done, Planned and Not recorded look the
+(P5) draw only recorded work. Done, Planned and Not recorded look the
 same everywhere (filled with a check and recorded numbers; outlined with the
 plan; muted with Reschedule and Let it go). Garmin scheduled workouts are
 planned work toward the goals their steps target, in their sport colour; "Count
@@ -1301,6 +1301,27 @@ muscles. Lifts toggle Max weight / Volume. Workout detail adds time-aligned
 heart rate, pace or speed and elevation, training effect in plain words, and
 only the fields that sport and watch recorded. Weight is a metric card like the
 others, with no goals or alerts.
+
+**P5 as built.** Rings show only what was recorded. Weight is a trend-weight
+card: scale weigh-ins as points with the trend line through them, the trend's
+change over 1, 3, 7, 14, 30 and 90 days (losing, gaining or steady, with a
+weekly rate from 7 days), the last weigh-in's age, flagged when older than 7
+days. Every metric card now flags a newest reading older than 2 days instead of
+silently showing old data. Changes are neutral in colour: Raring has no weight
+goal or verdict (a direction the person wants is a decision for Dan).
+
+#### Proposed rules: trend weight
+
+1. **Trend.** Starts at the first weigh-in. Each later weigh-in w moves the
+   trend t by α(w − t), with α = 1 − 0.9^g where g is the days since the
+   previous weigh-in (0.1 for daily weigh-ins). Days without a weigh-in keep the
+   trend. This is the long-public exponentially smoothed average, not a
+   Garmin figure.
+2. **Changes.** Over N days = trend at the last weigh-in minus trend N days
+   before it; "—" when the trend didn't exist then. Steady when under 0.1 kg;
+   weekly rate shown from 7 days. Nothing is projected past the last weigh-in.
+3. **Freshness.** The last weigh-in's date and age are always shown, flagged
+   after 7 days; daily metrics are flagged after 2 days. No reminders to weigh in.
 
 #### Proposed rules: matching plans and recordings
 
@@ -1340,15 +1361,15 @@ others, with no goals or alerts.
 
 Each date cell shows its day number inside **nested rings, one per active
 goal**, always in this order from the outside: strength, Zone 2, Zone 4–5,
-intensity minutes, sleep timing. A day's ring is measured against that day's
-planned share: the filled arc is recorded progress, the outlined remainder is
-planned but not recorded, and there is no ring where nothing was planned and
-nothing recorded. Recorded work on a day with nothing planned fills that ring,
-because it still counts toward the week. Rest shows a moon in the centre;
-illness and pause are hatched; days awaiting data are dotted; a future day is
-an outline only where something is planned, otherwise blank. The week summary
-uses the same rings against the weekly targets, plus the average Sleep Score
-against its target when that goal is on (a Garmin reading, not a reward).
+intensity minutes, sleep timing. **A ring shows only what was recorded** (P5
+decision, after P3's thin track and P4's dashed planned arc were both rejected):
+a solid arc measured against that day's planned share, a full ring when
+recorded work had nothing planned, and nothing drawn until something is
+recorded. Planned work is listed in the day agenda and goal lines, not drawn.
+Rest shows a moon in the centre; illness and pause are hatched; days awaiting
+data are dotted; a day with everything planned done gets a check. The week
+summary uses the same rings against the weekly targets, plus the average Sleep
+Score against its target when that goal is on (a Garmin reading, not a reward).
 
 #### Proposed rules: next week's goals
 
@@ -1413,6 +1434,7 @@ or unverified endpoint or history. Prefer the first two.
 | Intensity minutes earned, Body Battery used, stamina, recovery HR, temperature, breathing rate, performance condition | summary `moderate/vigorousIntensityMinutes`, `differenceBodyBattery`, begin/end potential stamina, `recoveryHeartRate`, temperature, `avgRespirationRate`; `directPerformanceCondition`; per watch | stored: view change |
 | Training effect in plain words | summary aerobic/anaerobic training effect, `trainingEffectLabel` and messages; Garmin's 0–5 bands | stored: view change |
 | VO₂ max link from a workout | No per-activity VO₂ max field; linked only when Garmin's dated estimate changed that day | view (dated estimate) |
+| Trend weight, weight changes, freshness | Stored Garmin weigh-ins (dates and values); trend is Raring math (proposed rule) | stored: view change |
 | Garmin workout planned toward goals | Stored `scheduled_workouts` snapshot; step durations and zone targets unverified | stored: view change, step targets unverified |
 
 #### Proposed rules for Progress

@@ -16,7 +16,7 @@
  import SleepScreen from './SleepScreen.svelte';
  import Adapt from './Adapt.svelte';
  import PlanDetail from './PlanDetail.svelte';
- import MetricCard from '../components/MetricCard.svelte';
+ import WeightCard from '../components/WeightCard.svelte';
  import Profile from './Profile.svelte';
  import Settings from './Settings.svelte';
  import Misc from './Misc.svelte';
@@ -127,7 +127,7 @@
 
 {:else if key === 'health' && sub === 'weight'}
  {@render header('Weight', 'Garmin weigh-ins · kg')}
- <MetricCard id="weight" name="Weight" unit="kg" read={weightFor} color="#E4E8F0" sparse fmt={v => v.toFixed(1)} route="metric/weight"><p class="small">Garmin weigh-ins with body fat where the scale records it. No goals or alerts.</p><button class="na" disabled>Add a weight · not available yet</button></MetricCard>
+ <WeightCard detail/>
 
 
 {:else if key === 'health'}
@@ -175,5 +175,4 @@
  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
  
  .tr-i{width:56px}
- .na{width:100%;margin-top:8px;min-height:40px;border-radius:12px;border:1px dashed var(--line);background:none;color:var(--text3);font:600 13px Inter}
 </style>
