@@ -8,6 +8,8 @@
  import RouteMap from '../components/RouteMap.svelte';
  import HrChart from '../components/HrChart.svelte';
  import WorkoutSplits from '../components/WorkoutSplits.svelte';
+ import WorkoutMore from '../components/WorkoutMore.svelte';
+ import HowItCounted from '../components/HowItCounted.svelte';
  import {colors} from '../charts';
  import {elapsed,pace,num} from '../format';
  let {workoutData,navigate,help,showMap=true}:{workoutData:WorkoutView,navigate:(route:string)=>void,help:()=>void,showMap?:boolean}=$props();
@@ -18,4 +20,4 @@
  {#if showMap && workoutData.route.length}<Card extra="map-card"><RouteMap route={workoutData.route}/></Card>{/if}{#if workoutData.heartRate.length}<Card title="Heart rate"><HrChart samples={workoutData.heartRate} floors={workoutData.zoneFloors} durationS={workoutData.summary.durationS}/></Card>{/if}
  {#if workoutData.summary.zoneSeconds.length}<Card title="Time in zones">{@const maxZone=Math.max(...workoutData.summary.zoneSeconds,1)}{@const total=workoutData.summary.zoneSeconds.reduce((a,b)=>a+b,0)}{#each [...workoutData.summary.zoneSeconds].reverse() as seconds,i}<div class="zone-row"><b>Z{5-i}</b><div class="bar"><i style:width={seconds/maxZone*100+'%'} style:background={colors.z[4-i]}></i></div><span class="n">{elapsed(seconds)}</span><small>{Math.round(seconds/Math.max(total,1)*100)}%</small></div>{/each}</Card>{/if}
  {#if workoutData.splits.length && !lifted}<WorkoutSplits splits={workoutData.splits}/>{/if}
-</div>
+</div>{#if workoutData.counted}<HowItCounted counted={workoutData.counted}/>{/if}{#if !lifted}<WorkoutMore workout={workoutData} {navigate}/>{/if}

@@ -1,0 +1,47 @@
+{
+  "age": 46,
+  "units": "metric",
+  "weight": 72.4,
+  "weightUnit": "kg",
+  "weightFreshness": {
+    "recordedOn": "2025-10-14",
+    "ageDays": 2,
+    "stale": false,
+    "thresholdDays": 7
+  },
+  "watchLastUpload": "2025-10-16T12:30:00.000Z",
+  "gear": {
+    "unit": "km",
+    "fetchedAt": "2025-10-16T10:30:00Z",
+    "items": [
+      {
+        "id": "sample-shoes",
+        "name": "Road shoes",
+        "kind": "Shoes",
+        "status": "Active",
+        "distance": 420,
+        "threshold": 650
+      },
+      {
+        "id": "sample-bike",
+        "name": "City bike",
+        "kind": "Bike",
+        "status": "Retired",
+        "distance": 1240,
+        "threshold": null
+      },
+      {
+        "id": "sample-spare",
+        "name": "Spare shoes",
+        "kind": "Shoes",
+        "status": "Active",
+        "distance": 0,
+        "threshold": null
+      }
+    ]
+  },
+  "limits": {
+    "excluded": [],
+    "note": ""
+  }
+}

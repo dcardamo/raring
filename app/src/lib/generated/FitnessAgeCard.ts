@@ -8,4 +8,8 @@ trend: Array<number | null>,
 /**
  * Change over the last 12 months (negative is younger).
  */
-change12m: number | null, };
+change12m: number | null, 
+/**
+ * The day of Garmin's estimate shown.
+ */
+recordedOn: string | null, };

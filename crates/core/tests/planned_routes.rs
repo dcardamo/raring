@@ -28,6 +28,9 @@ async fn read_routes_use_bounded_reference_arguments_and_404_is_absent() {
     client.endpoint("upcoming_events", "all", None).await.unwrap();
     assert!(matches!(client.endpoint("coach_tasks", "42", None).await, Err(garmin::Error::NotFound)));
     assert!(matches!(client.endpoint("coach_tasks", "../42", None).await, Err(garmin::Error::Decode)));
+    for bad in ["../42", "0", "042", "-1", "42/tasks"] {
+        assert!(matches!(client.endpoint("coach_adaptive", bad, None).await, Err(garmin::Error::Decode)), "{bad}");
+    }
     assert!(matches!(client.endpoint("scheduled_workouts", "2026-10-20:2026-12-03", None).await, Err(garmin::Error::Decode)));
     thread.join().unwrap();
     let requests = seen.lock().unwrap();

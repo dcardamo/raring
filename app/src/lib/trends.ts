@@ -6,8 +6,8 @@ import {addDays, historyPoints} from './history';
 import {duration, num} from './format';
 
 export const ranges: {range: TrendRange; label: string; days?: number}[] = [
-  {range: 'days7', label: '7D', days: 7}, {range: 'days30', label: '30D', days: 30},
-  {range: 'days90', label: '90D', days: 90}, {range: 'year', label: '1Y'}, {range: 'all', label: 'All'}, {range:'custom',label:'Dates'},
+  {range: 'days7', label: '7D', days: 7}, {range: 'days14', label: '14D', days: 14}, {range: 'days30', label: '30D', days: 30},
+  {range: 'days90', label: '90D', days: 90}, {range: 'year', label: '1Y'}, {range: 'all', label: 'Max'}, {range:'custom',label:'Dates'},
 ];
 
 export const trendNames: Record<TrendMetric, string> = {

@@ -2,16 +2,37 @@
  import {onDestroy, untrack, type Snippet} from 'svelte';
  import Icon from '../components/Icon.svelte';
  import NestedRings from '../components/NestedRings.svelte';
+ import DayCells from '../components/DayCells.svelte';
+ import AxisChart from '../components/AxisChart.svelte';
+ import HelpButton from '../components/HelpButton.svelte';
+ import type {ProgressDomains} from '../generated/ProgressDomains';
+ import type {DomainWeek} from '../generated/DomainWeek';
+ import type {DomainMonth} from '../generated/DomainMonth';
+ import type {LiftSeries} from '../generated/LiftSeries';
  import type {HealthView} from '../generated/HealthView';
  import type {ProgressView} from '../generated/ProgressView';
  import type {Period} from '../generated/Period';
  import type {PeriodTotals} from '../generated/PeriodTotals';
- import {SPORT_COLORS, SPORT_NAMES} from '../goals';
+ import {GOALS, SPORT_COLORS, SPORT_NAMES} from '../goals';
  import {dateLabel, duration, num, signed} from '../format';
  import * as api from '../api';
  // Progress: a report for a chosen period, the calendar, goals over time, trends
  // and milestones. Follow-through and measured change stay apart; nothing is a grade.
- let {initial, health, navigate, header, onChange}: {initial: ProgressView, health: HealthView, navigate: (route: string) => void, header: Snippet, onChange:(view:ProgressView)=>void} = $props();
+ let {initial, health, navigate, header, onChange, section = $bindable('overall')}: {initial: ProgressView, health: HealthView, navigate: (route: string) => void, header: Snippet, onChange:(view:ProgressView)=>void, section?: 'overall' | 'cardio' | 'strength' | 'long'} = $props();
+ const SECTIONS = [['overall', 'Overall'], ['cardio', 'Cardio'], ['strength', 'Strength'], ['long', 'Long-term']] as const;
+ // Cardio, Strength and Long-term read one local view, once per visit.
+ let domains = $state<ProgressDomains | null>(null), domainsError = $state('');
+ $effect(() => { if (section === 'overall' || domains) return; void api.progress_domains().then(d => domains = d).catch(e => domainsError = String(e)); });
+ // Lift progression for the two exercises with the heaviest bests, over a year.
+ let lifts = $state<LiftSeries[]>([]);
+ $effect(() => { if (section !== 'strength' || !domains) return; const keys = domains.bests.slice(0, 2).map(b => b.key); void Promise.all(keys.map(k => api.lift_series(k, 'year'))).then(all => lifts = all.filter((x): x is LiftSeries => !!x && x.points.filter(p => p.max != null).length >= 2)).catch(() => lifts = []); });
+ const wkLabel = (d: string) => `${Number(d.slice(8))}/${Number(d.slice(5, 7))}`;
+ const monthLabel1 = (d: string) => new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', {month: 'short', timeZone: 'UTC'});
+ const weekPoints = (pick: (w: DomainWeek) => number | null) => (domains?.weeks ?? []).map(w => ({x: wkLabel(w.start), v: pick(w), mark: w.mark === 'rest' || w.mark == null ? undefined : w.mark}));
+ const monthPoints = (pick: (m: DomainMonth) => number | null) => (domains?.months ?? []).map(m => ({x: monthLabel1(m.start), v: pick(m)}));
+ let cardioKinds = $derived.by(() => { const g = domains?.goals; const out: ['zone2' | 'highIntensity' | 'intensity', string, (w: DomainWeek) => number | null, number][] = [['zone2', 'Zone 2 minutes per week', w => w.zone2Min, g?.zone2Min ?? 0]];
+  if (g?.highIntensityMin) out.push(['highIntensity', 'Zone 4–5 minutes per week', w => w.highIntensityMin, g.highIntensityMin]);
+  out.push(['intensity', 'Intensity minutes per week', w => w.intensityMin, g && !g.intensityGarminGoal ? g.intensityMin : 0]); return out; });
  let view = $state<ProgressView>(untrack(() => initial));
  let busy = $state(false), error = $state('');
  let request = 0;
@@ -55,6 +76,8 @@
  let lead = $derived(view.calendar.length ? (new Date(view.calendar[0].date + 'T12:00:00Z').getUTCDay() + 6) % 7 : 0);
 </script>
 {@render header()}
+<div class="prog-tabs" role="tablist" aria-label="Progress section">{#each SECTIONS as [k, l]}<button role="tab" aria-selected={section === k} onclick={() => section = k}>{l}</button>{/each}</div>
+{#if section === 'overall'}
 <div class="periods" role="group" aria-label="Period">{#each PERIODS as [p, name]}<button aria-pressed={view.period === p} disabled={busy || api.previewOnly} onclick={() => show(p, view.end)}>{name}</button>{/each}</div>
 {#if api.previewOnly}<p class="small">Browser preview · fixed synthetic period. Period controls work in the app.</p>{/if}
 {#if error}<p class="warning" role="alert">{error}</p>{/if}
@@ -70,30 +93,75 @@
  <p class="axis"><span>{dateLabel(view.from)}</span><span>{dateLabel(view.to)}</span></p>
  {#if view.buckets.some(b => b.total)}<p class="legend">{#each [...new Set(view.buckets.flatMap(b => b.minutes.map(m => m.sport)))] as s}<span><i style:background={SPORT_COLORS[s]}></i>{SPORT_NAMES[s]}</span>{/each}</p>{/if}
 </section>
-{#if view.calendar.length}
+{#if view.ringDays.length}
+ <section class="card ring-cal"><h3><span>Calendar</span><HelpButton topic="rings"/></h3>
+  <DayCells days={view.ringDays.filter((_, i, all) => all.slice(Math.floor(i / 7) * 7, Math.floor(i / 7) * 7 + 7).some(d => d.date >= view.from && d.date <= view.to))} select={() => navigate('plan')} size={28} within={[view.from, view.to]}/>
+  <p class="small">Rings show what was recorded toward each goal that day; moon: rest, hatched: ill or paused, dotted: awaiting data. Days outside {view.period === 'week' ? 'the week' : 'the month'} are faint.</p>
+ </section>
+{:else if view.calendar.length}
  <section class="card"><h3>Calendar</h3>
   <div class="cal">{#each Array(lead) as _}<span></span>{/each}{#each view.calendar as d}<span class="day {d.state}" class:uncovered={!d.covered && d.state === 'active'} aria-label={`${dateLabel(d.date)}${STATE[d.state] ? ', ' + STATE[d.state] : ''}${d.activities > 1 ? `, ${d.activities} activities` : ''}`}>{Number(d.date.slice(8))}</span>{/each}</div>
   <p class="legend"><span><i class="k active"></i>Active</span><span><i class="k rest"></i>Rest</span><span><i class="k paused"></i>Ill or paused</span><span><i class="k unknown"></i>List incomplete</span></p>
  </section>
 {/if}
 {#if view.goalWeeks.length}
- <section class="card"><h3>Weekly goals over time</h3>
+ <section class="card"><h3><span>Weekly goals over time</span><HelpButton topic="progress-overall"/></h3>
   <div class="gw">{#each view.goalWeeks as w}<button class:uncounted={!w.counted} onclick={() => navigate('review/' + w.start)} aria-label={`Week of ${dateLabel(w.start)}: ${w.counted ? `${w.met} of ${w.goals} goals met` : 'not counted' + (w.reasons.length ? ', ' + w.reasons.join(', ') : '')}`}><NestedRings rings={w.rings} size={34} stroke={3} mark={w.counted ? null : 'unknown'}/><small>{Number(w.start.slice(8))}/{Number(w.start.slice(5, 7))}</small></button>{/each}</div>
  </section>
 {/if}
 <button class="card link-row" onclick={() => navigate('review/latest')}><span><b>Last week</b><small>What was met, what changed and next week’s goals</small></span><Icon name="chevron" size={16}/></button>
 <button class="card link-row" onclick={() => navigate('reviews')}><span><b>Earlier weeks</b><small>Each week against its own goals</small></span><Icon name="chevron" size={16}/></button>
-<div class="sec-h"><h2>Latest readings</h2></div>
-<p class="small">{dateLabel(health.date)} · open a reading for its chart and dates.</p>
-<div class="tiles2">{#each tiles as t}<button class="card tile2" onclick={() => navigate(t.route)}><span>{t.name}</span>{#if t.value != null}<b class="n">{num(t.value)}<small>{t.unit}</small></b>{:else}<em>Open chart</em>{/if}</button>{/each}</div>
-{#if view.sleep}<p class="small foot">Sleep: {view.sleep.belowHour} of {view.sleep.nights} recorded nights an hour or more below Garmin’s need.</p>{/if}
 <div class="sec-h"><h2>Records and milestones</h2></div>
 {#if view.milestones.length}
  {#if view.milestones.some(m=>m.new)}<button class="secondary" onclick={markSeen}>Mark records seen</button>{/if}
  <section class="card">{#each view.milestones as m}<button class="ms" disabled={!m.route} onclick={() => m.route && navigate(m.route)}><span><b>{m.title}</b><small>{m.value} · {dateLabel(m.date)}{m.corrected ? ' · corrected after a Garmin edit' : ''}</small></span>{#if m.new}<em class="new">New</em>{/if}</button>{/each}
-  {#if view.historyStart}<p class="small">In available history, since {dateLabel(view.historyStart)}.</p>{/if}</section>
+  {#if view.historyStart}<p class="small">In available history, since {dateLabel(view.historyStart)}.</p>{/if}<button class="link-row archive" onclick={() => navigate('progress/milestones')}><span><b>All records and milestones</b><small>{view.milestonesTotal > view.milestones.length ? `${view.milestonesTotal} in all, by month` : 'By month, with dates'}</small></span><Icon name="chevron" size={16}/></button></section>
 {:else}<p class="small foot">Bests and other milestones appear here as Garmin records them.</p>{/if}
+{:else if !domains}<p class="small">{domainsError || 'Reading your history…'}</p>
+{:else if section === 'cardio'}
+ {#each cardioKinds as [kind, title, pick, goal] (kind)}
+  <section class="card dom" aria-label={title}><h3><span>{title}</span>{#if goal}<small>goal {goal}</small>{/if}</h3>
+   <AxisChart points={weekPoints(pick)} unit="min" goal={goal || null} color={GOALS[kind].color} height={140} every={3} label={`${title}, last ${domains.weeks.length} weeks: ${weekPoints(pick).map(p => `${p.x} ${p.v ?? 'unknown'}`).join(', ')}`}/>
+   <p class="small">{kind === 'intensity' ? 'Garmin’s intensity minutes.' : 'Recorded heart-rate zone time only; a week with an activity without zones is unknown.'} Hatched: ill or paused · dotted: awaiting data. This week is still in progress.</p>
+  </section>
+ {/each}
+ <section class="card dom" aria-label="VO₂ max, same weeks"><h3>VO₂ max, same weeks</h3>
+  <AxisChart points={weekPoints(w => w.vo2max)} kind="dots" unit="ml/kg/min" color="#E4E8F0" height={120} every={3} label={`Garmin's VO₂ max estimates by week: ${weekPoints(w => w.vo2max).map(p => `${p.x} ${p.v ?? 'none'}`).join(', ')}`}/>
+  <p class="small">Garmin’s estimates; weeks without one stay empty. Read it against the weeks above: fitness follows consistent weeks, with a lag.</p>
+ </section>
+{:else if section === 'strength'}
+ <section class="card dom" aria-label="Strength sessions per week"><h3><span>Strength sessions per week</span>{#if domains.goals?.strengthSessions}<small>goal {domains.goals.strengthSessions}</small>{/if}</h3>
+  <AxisChart points={weekPoints(w => w.strength)} unit="sessions" goal={domains.goals?.strengthSessions || null} color={GOALS.strength.color} height={130} every={3} label={`Strength sessions per week: ${weekPoints(w => w.strength).map(p => `${p.x} ${p.v ?? 'unknown'}`).join(', ')}`}/>
+ </section>
+ <section class="card dom" aria-label="Bests in available history"><h3><span>Bests in available history</span><button class="link" onclick={() => navigate('strength')}>All lifts</button></h3>
+  {#each domains.bests.slice(0, 6) as b (b.key)}<button class="ms" onclick={() => navigate('workout/' + b.activity)}><span><b>{b.name}</b><small>{dateLabel(b.date)}</small></span><b class="n">{b.weight != null ? `${num(b.weight, 1)} ${b.unit}` : '—'} × {b.reps}</b></button>
+  {:else}<p class="small">Bests appear once a strength session has weighted sets.</p>{/each}
+ </section>
+ {#each lifts as l (l.key)}<section class="card dom" aria-label={`${l.name} over the year`}><h3><span>{l.name}</span><small>heaviest set each session · {l.unit}</small></h3>
+  <AxisChart points={l.points.map(p => ({x: dateLabel(p.date).split(' ').slice(1).join(' '), v: p.max}))} kind="line" unit={l.unit} color={GOALS.strength.color} height={110} fmt={v => num(v, 1)} label={`${l.name}: heaviest set per session over the last year, ${l.points.filter(p => p.max != null).map(p => `${dateLabel(p.date)} ${p.max}`).join(', ')}`}/>
+  <p class="small">Garmin’s recorded sets; bodyweight and flagged sets left out. No estimated one-rep max.</p></section>{/each}
+{:else}
+ <section class="card dom" aria-label="Training per month"><h3>Training per month</h3>
+  <AxisChart points={monthPoints(m => m.minutes == null ? null : m.minutes / 60)} unit="h" color="#36C9C6" height={120} fmt={v => num(v, 1)} label={`Hours recorded per month: ${monthPoints(m => m.minutes).map(p => `${p.x} ${p.v == null ? 'unknown' : num(p.v / 60, 1)}`).join(', ')}`}/>
+  <p class="small">What happened. The readings below are how your body responded, month by month.</p>
+ </section>
+ <section class="card dom" aria-label="Resting heart rate by month"><h3><span>Resting heart rate</span><small>monthly average · Garmin</small></h3><AxisChart points={monthPoints(m => m.restingHr)} kind="line" unit="bpm" color="#FF8A8A" height={120} label={`Resting heart rate monthly averages: ${monthPoints(m => m.restingHr).map(p => `${p.x} ${p.v == null ? 'none' : num(p.v, 1)}`).join(', ')}`}/></section>
+ <section class="card dom" aria-label="Overnight HRV by month"><h3><span>Overnight HRV</span><small>monthly average · Garmin</small></h3><AxisChart points={monthPoints(m => m.hrv)} kind="line" unit="ms" color="#A48BFF" height={120} label={`HRV monthly averages: ${monthPoints(m => m.hrv).map(p => `${p.x} ${p.v == null ? 'none' : num(p.v, 1)}`).join(', ')}`}/></section>
+ <section class="card dom" aria-label="VO₂ max and Fitness Age by month"><h3>VO₂ max and Fitness Age</h3>
+  <AxisChart points={monthPoints(m => m.vo2max)} kind="dots" unit="VO₂ max" color="#E4E8F0" height={110} label={`VO₂ max by month: ${monthPoints(m => m.vo2max).map(p => `${p.x} ${p.v ?? 'none'}`).join(', ')}`}/>
+  <AxisChart points={monthPoints(m => m.fitnessAge)} kind="dots" unit="years" color="#3DDC97" height={110} label={`Fitness Age by month: ${monthPoints(m => m.fitnessAge).map(p => `${p.x} ${p.v ?? 'none'}`).join(', ')}`}/>
+  <p class="small">Garmin’s estimates; months without one stay empty.</p>
+ </section>
+ <div class="sec-h"><h2>Latest readings</h2></div>
+<p class="small">{dateLabel(health.date)} · open a reading for its chart and dates.</p>
+<div class="tiles2">{#each tiles as t}<button class="card tile2" onclick={() => navigate(t.route)}><span>{t.name}</span>{#if t.value != null}<b class="n">{num(t.value)}<small>{t.unit}</small></b>{:else}<em>Open chart</em>{/if}</button>{/each}</div>
+{#if view.sleep}<p class="small foot">Sleep: {view.sleep.belowHour} of {view.sleep.nights} recorded nights an hour or more below Garmin’s need.</p>{/if}
+{/if}
 <style>
+ .prog-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;margin:8px 0 10px;border:1px solid var(--line);border-radius:14px;background:var(--card);max-width:560px}
+ .prog-tabs button{min-height:40px;border-radius:10px;border:0;background:none;color:var(--text2);font:600 12.5px Inter}.prog-tabs button[aria-selected=true]{background:rgba(255,255,255,.1);color:var(--text)}
+ .dom h3{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.dom h3 small{font:500 12px Inter;color:var(--text2);text-transform:none;letter-spacing:0}
+ .link{background:none;border:0;color:var(--ink);font:600 13px Inter;min-height:40px}
  .periods{display:flex;gap:6px;margin:6px 0 0}.periods button{flex:1;min-height:40px;border-radius:12px;border:1px solid var(--line);background:none;color:var(--text2);font:600 13px Inter}.periods button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
  .rep-h{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;text-align:center}.rep-h h2{font:600 18px Outfit}.nav{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:none;color:var(--text);display:grid;place-items:center}.nav:disabled{color:var(--text3);border-color:transparent}
  .totals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}.totals span{font:500 12px Inter;color:var(--text2)}.totals b{display:block;font-size:24px;font-weight:600}.totals small{font:500 12px Inter;color:var(--text2);margin-left:3px}.totals em{display:block;font-style:normal;font-size:11.5px;color:var(--text2)}

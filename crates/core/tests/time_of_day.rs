@@ -18,6 +18,7 @@ fn at(s: &str) -> NaiveDateTime {
 /// Garmin's window 22:30–23:10 tonight, wind-down 22:00.
 fn plan() -> SleepPlan {
     SleepPlan {
+        need_read_at: None,
         night: "2025-03-13".into(),
         bedtime: "23:10".into(),
         bedtime_start: Some("22:30".into()),
@@ -176,6 +177,7 @@ fn day_sleeper_schedule_is_anchored_to_their_wake() {
     // Wakes at 15:00 and sleeps 07:00–15:00: Raring's estimate from wake history.
     let wakes = [15.0; 8];
     let plan = SleepPlan {
+        need_read_at: None,
         night: "2025-03-13".into(),
         bedtime: "07:10".into(),
         bedtime_start: None,

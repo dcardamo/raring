@@ -1443,7 +1443,8 @@ or unverified endpoint or history. Prefer the first two.
 | Day and week rings, backlog, week review | Stored activities (`zone_seconds` for Zone 2 and Zone 4–5), local goals and intentions, pauses, coverage | stored + new local state |
 | Suggested bedtime in goals | `SleepPlan.need_min` and usual wake; no sleep-debt feed | view |
 | Race prediction history on the race page | Only the latest `TrainingView.races` is exposed; a stored series is unverified | new (synthetic in the prototype) |
-| Workout aligned charts: pace/speed, elevation with HR | `details` streams `directSpeed`, `directElevation` (with HR/timestamps); runs, rides, walks, hikes with GPS | stored: view change (core reads only HR/time/lat/lon today) |
+| Workout aligned charts: pace/speed, elevation with HR | `details` streams `directSpeed` (unit key mps), `directElevation` (meter), with HR/timestamps; runs, rides, walks, hikes with GPS. Verified: values are in the base unit and the descriptor factor is not applied | stored: view change; used only with the expected unit key |
+| Watch temperature | `directAirTemperature` (unit key "celcius") and summary average/min/max temperature, on some activities only. The watch's own sensor, warm on the wrist, never a weather claim | stored: view change |
 | Running form: cadence, stride, ground contact, vertical oscillation | `directRunCadence`/`directDoubleCadence`, stride length, ground contact time, vertical oscillation; summary `strideLength`; running watches with those sensors | stored: view change |
 | Cycling power: average, normalized, intensity factor, best 20 min, FTP | `directPower`; summary `averagePower`, `normalizedPower`, `intensityFactor`, `maxPowerTwentyMinutes`, `functionalThresholdPower`; power meter only | stored: view change |
 | Intensity minutes earned, Body Battery used, stamina, recovery HR, temperature, breathing rate, performance condition | summary `moderate/vigorousIntensityMinutes`, `differenceBodyBattery`, begin/end potential stamina, `recoveryHeartRate`, temperature, `avgRespirationRate`; `directPerformanceCondition`; per watch | stored: view change |
@@ -1451,6 +1452,7 @@ or unverified endpoint or history. Prefer the first two.
 | VO₂ max link from a workout | No per-activity VO₂ max field; linked only when Garmin's dated estimate changed that day | view (dated estimate) |
 | Trend weight, weight changes, freshness | Stored Garmin weigh-ins (dates and values); trend is Raring math (proposed rule) | stored: view change |
 | Garmin workout planned toward goals | Stored `scheduled_workouts` snapshot; step durations and zone targets unverified | stored: view change, step targets unverified |
+| Garmin Coach sessions planned toward goals | `fbt-adaptive/{trainingPlanId}` `taskList` (current week; sport key `other`/`strength_training`, estimated duration, effect label, rest day, Garmin status); `workoutId` null, so no steps or zone targets | new request inside the planned-training sync (verified shape) |
 
 #### Proposed rules for Progress
 
@@ -1792,26 +1794,26 @@ budgets, token serialization and on-demand gates stay as they are.
 The **Progress foundation** (`aac5783`) follows the Plan-loop
 subset in `18fe3b8`/`f60a630`. The next checkpoint fixes Progress selection
 preservation and adds non-destructive emulator verification. These are implementation checkpoints, not declarations
-that all requirements of stages 2, 3 or 4.1 are finished. In particular, the
-original 4.1 scope includes rehabilitation and remains open. Everything in the
+that all requirements of stages 2, 3 or 4.1 are finished. The rehabilitation checklist from the original 4.1 scope is now implemented. Everything in the
 last column remains **inside item 26**; none is moved to an unrelated follow-up.
 
 | Approved area | Core implemented | Production UI implemented | Verified evidence | Still missing / cutover requirement |
 | --- | --- | --- | --- | --- |
 | Local goals, intentions and migration | Versioned `local:*` records, legacy plan migration, local actions, coverage-aware ledger and matching | Goal steppers, agenda, item actions, links/unlinks | Synthetic migration/export/account-boundary and rule tests | Full real-data migration evidence; immutable revision/achievement history and corrections across all journeys |
 | Shell and destinations | Existing local view commands plus board/review/progress commands | Five tabs, search, Profile entry, Settings and existing details; legacy `checkin`, `plan-setup`, `explore` aliases | Browser routing/cache tests; earlier emulator Back/fragment/unfold/resume checks | Full prototype canonical-route map, invalid-link explanation, section/date/filter and caller preservation; actual notification/widget intent journeys |
-| Today and circumstances | Lead gates, rest/ill/pause/limits, day dismissals; snapshot suppression | Last night/readiness row, lead, effort display, Adapt sheet | Synthetic lead tests; earlier emulator Rest on/off and persistent notification Push → Rest day → Push | **Your day**, sleep-stage/nap/HR/Body Battery timeline; **Keep / Choose another**; approved reason-line/help behavior; **bounded overviews** and rich map/body-map previews against matching scenarios |
-| Plan loop (4.1 subset) | Intentions, matching, backlog, dated review outcomes/proposals, explicit acceptance, prompt switch | Add/move/let go/missed/link/unlink, Do it today, prompt, reviews list, event countdowns; Send to Garmin disabled | Core rule tests and browser sheet/route/contract assertions | **Rehabilitation checklist** and self-reports; complete wind-down planning flow, all intention edit paths, explicit review/resume journey, proposal-history corrections |
-| Garmin plan/event integration | Cached schedule names/dates and race countdown; no new requests | Read-only entries in day agendas; local event add/remove | Stored schedule was empty; only empty-shape evidence | **Event-session grouping**, full Coach/event detail and goal contribution; populated sport/id/duration/step semantics must be verified before allocation or matching |
-| Progress foundation (current subset) | Period bounds, known totals, coverage/comparisons, active days, sport buckets, weekly rings, bounded sleep-versus-need; canonical-unit bests and atomic correction records | Period report, basic calendar, weekly rings, latest-reading links, records/corrections and reviews | Core period/coverage/boundary/award tests; browser contract/responsive and stale-read selection regressions; emulator periods, coverage/calendar and selection through detail/Back/Home/resume | Overall/Cardio/Strength/Long-term sub-tabs, period trend tiles, ring calendar, strength progression/muscle views, complete dated milestone archive; wider filter/route parity and long-history performance |
-| Training and workouts | Existing detail data plus summary HR/intensity and stored Body Battery projection | Existing Training/Strength/Workout details retained | Existing detail regressions | **Advanced domain visuals**: week lanes/usual-week bands, lift Max weight/Volume and shared ranges, compact Fitness questions, aligned stored workout streams and sport-specific fields |
-| Health and Profile | Existing Garmin health/gear data | Existing Health details, basic Profile/history/gear/settings; Add weight disabled | Existing health/journal/privacy regressions | **Full Profile facts**, limitations entry, long-term/vitals hierarchy, trend weight/steady threshold/freshness, metric ranges and advanced Health visuals |
-| Sleep | Existing nightly evidence, sleep-plan and phase rules retained | Existing Sleep detail | Existing sleep/phase regressions | **Last night / Tonight sleep-phase tabs**, closer-phase default, canonical section links and tonight planning parity |
+| Today and circumstances | Lead gates, rest/ill/pause/limits, day dismissals; snapshot suppression | Last night/readiness row, lead, effort display, Adapt sheet | Synthetic lead tests; earlier emulator Rest on/off and persistent notification Push → Rest day → Push | Your day timeline and Keep / Choose another are implemented (core table and browser checks; Your day and Keep / Choose another on the emulator with the synthetic demo); Today's bounded order and reason line in place of Why this are implemented (2.20 viewports at 390×844, browser only); help "?" sheets implemented; rich map/body-map previews against matching scenarios |
+| Plan loop (4.1 subset) | Intentions, matching, backlog, dated review outcomes/proposals, explicit acceptance, prompt switch | Add/move/let go/missed/link/unlink, Do it today, prompt, reviews list, event countdowns; Send to Garmin disabled | Core rule tests and browser sheet/route/contract assertions | Rehabilitation checklist with self-reports implemented (My routines in Adapt; core and browser checks); wind-down placement and intention edits implemented; remaining: explicit review/resume journey, proposal-history corrections |
+| Garmin plan/event integration | Cached schedule names/dates and race countdown; no new requests | Read-only entries in day agendas; local event add/remove | Stored schedule was empty; only empty-shape evidence | Grouping of your sessions under a local event with a sport is implemented (`EventWeek`); Garmin's race and Coach sessions stay ungrouped until their sport is verified; full Coach/event detail and goal contribution; populated sport/id/duration/step semantics must be verified before allocation or matching; adaptive Garmin Coach sessions implemented from the verified `fbt-adaptive` shape (planned strength sessions, cardio with no inferred zones, kind-based matching, Garmin status never completion); scheduled-workout entries stay read-only by name and date until a populated schedule is verified |
+| Progress foundation (current subset) | Period bounds, known totals, coverage/comparisons, active days, sport buckets, weekly rings, bounded sleep-versus-need; canonical-unit bests and atomic correction records | Period report, basic calendar, weekly rings, latest-reading links, records/corrections and reviews | Core period/coverage/boundary/award tests; browser contract/responsive and stale-read selection regressions; emulator periods, coverage/calendar and selection through detail/Back/Home/resume | Overall/Cardio/Strength/Long-term sections and the ring calendar implemented (core and browser checks); strength progression charts and the dated milestone archive (`progress/milestones`) implemented; remaining: wider filter/route parity and long-history performance |
+| Training and workouts | Existing detail data plus summary HR/intensity and stored Body Battery projection; shared 14D trend range | Existing Training/Strength/Workout details retained; shared 7D–Max range control on trend charts | Existing detail regressions; 14-day range core test | Week lanes with the usual-week band implemented (`TrainingWeek`); lift Max weight / Volume with the range picker implemented; Training's Fitness / Strength / Activities sections, muscle range with gaps and activity contributions implemented; aligned stored workout streams, sport-specific fields and plain-language training effect implemented (stream units not yet checked against a real payload) |
+| Health and Profile | Existing Garmin health/gear data; **4.3 weight subset**: trend weight, steady threshold, 1–90-day changes, 7D–Max weight ranges, reading-date freshness (`WeightView`, local only) | Existing Health details with the two-line weight card, canonical `health/weight` (`metric/weight` alias), basic Profile/history/gear/settings; Add weight disabled | 8 core weight tests incl. unit-independent steady, latest-merge, gaps, long-range averages; browser kg/lb, stale, gap markers, range persistence | Profile facts and limitations entry implemented (watch model name pending a verified field); long-term/vitals hierarchy, 2-day freshness flags and in-card range charts implemented; remaining advanced Health visuals: weight not yet emulator-checked |
+| Sleep | Existing nightly evidence, sleep-plan and phase rules retained | Existing Sleep detail | Existing sleep/phase regressions | Last night / Tonight tabs, closer-phase default, `sleep/last`/`sleep/tonight` links and Tonight as a plan are implemented (browser and core checks); `sleep/tonight` intent delivery checked on the emulator; remaining: an actual notification tap and the prototype's patterns/timing-observation sections |
 | Native and final validation | Shared status suppression; no extra Garmin requests | Existing widgets/status surfaces | At `db8314f`: 14 JVM tests, 14 instrumentation tests and synthetic emulator behavior. After key recovery: signer-verified x86_64 in-place update, unchanged UID/first install time; Progress and existing-data navigation scripts pass | Current-checkpoint full native instrumentation, actual notification intents, physical phone/TalkBack/Doze, private real-data journeys and unfamiliar participants remain unverified |
 
-**Phone artifact:** the last built and verified phone artifact stays labelled
-`db8314f`: `.data/apk/raring-debug-arm64-db8314f.apk`. The newer x86_64 build is
-not a verified phone artifact; do not relabel the earlier APK. The debug-signing
+**Phone artifact:** `.data/apk/raring-debug-arm64-fbd6212.apk`, built from the
+full-gated head `fbd6212`: package `app.raring.debug`, `arm64-v8a` only,
+signer SHA-256 `0d59d1…7a63` (the recovered debug key). Built and inspected, not
+yet installed on a phone. Earlier artifacts keep their own labels (`db8314f`). The debug-signing
 mismatch was recovered by the coordinator without clearing app data. Preserve
 the matching checkout-root debug key at cutover/retirement; private backups are
 in main `.data/debug-signing-SXp1r3/`, and main's older debug key is different.
@@ -1984,6 +1986,79 @@ to the shipped behaviour and point its visual reference at the new mockup;
 remove the prototype entry, keeping its captures; move TODO 26 to Done with
 the commits. The unfamiliar-participant gate is reported as held or passed for
 Dan's decision, never waived silently.
+
+#### Production vs prototype, U01–U64 (stage 5)
+
+Compared case by case on 2026-10-19 (reviewer read of production code and tests, then each gap verified and fixed here). *Match* means production supports the journey with the case's content and none of its forbidden content; *Fixed* names the commit that closed a gap; *Differs* is an approved decision. This is code and test evidence, not usability evidence: unfamiliar participants, a physical phone and real data are still required.
+
+| Case | Title | Result | Note |
+| --- | --- | --- | --- |
+| U01 | New user, no goals | Match |  |
+| U02 | Partial initial sync | Fixed `cb01fbf` |  |
+| U03 | Sleep-only: last night | Match |  |
+| U04 | Sleep-only: tonight | Match |  |
+| U05 | Casual activity, no commitments | Fixed `65806e1` |  |
+| U06 | Returning after weeks away | Match |  |
+| U07 | Readiness unsupported on this watch | Fixed `65806e1` |  |
+| U08 | Stale watch upload | Match |  |
+| U09 | Offline with cached data | Match |  |
+| U10 | Morning before last night syncs | Match |  |
+| U11 | High readiness, nothing planned | Match |  |
+| U12 | High readiness on a rest day | Match |  |
+| U13 | Low readiness, hard Garmin session | Match |  |
+| U14 | High readiness, no declared availability | Match |  |
+| U15 | Completed workout: how did it count? | Fixed `a8099a7` |  |
+| U16 | Timer-only strength session | Match |  |
+| U17 | Detailed strength: am I progressing? | Fixed `cb01fbf` | Exercise reached from Strength (one step longer than `strength/:id`) |
+| U18 | HIIT and cycling, no running | Match |  |
+| U19 | Cardio, strength and event together | Match |  |
+| U20 | Named event, no verified Garmin plan | Match |  |
+| U21 | Full-page or stale Garmin calendar | Match |  |
+| U22 | Local intention + similar activity | Differs (approved) | Session detail is a sheet, not `intention/:id`; same taps |
+| U23 | Two activities and a late upload | Match |  |
+| U24 | Weekly target completed early | Match |  |
+| U25 | Incomplete activity-list coverage | Match |  |
+| U26 | Current-week target lowered | Match |  |
+| U27 | Targets changed across weeks | Match |  |
+| U28 | One day of rest, offline and after resume | Fixed `bbdfd31` | Browser + emulator offline reload |
+| U29 | Illness pause with high readiness | Match |  |
+| U30 | Injury excludes sport and movements | Match |  |
+| U31 | Strength routine with unknown movements | Fixed `7ae1e04` |  |
+| U32 | Conflicting Garmin session during a restriction | Fixed `7ae1e04` |  |
+| U33 | Self-reported rehabilitation checklist | Match |  |
+| U34 | Busy week or travel | Fixed `1a66616` |  |
+| U35 | Evening after an inactive day | Match |  |
+| U36 | Evening workout explicitly planned | Fixed `1fd4899` |  |
+| U37 | After bedtime, after midnight | Match |  |
+| U38 | Shift work or uncertain timing | Match |  |
+| U39 | Daylight-saving change or travel | Fixed `65806e1` |  |
+| U40 | Several short recorded nights | Differs (approved) | No `sleep/patterns` route: nights below need are on Sleep · Tonight and Progress (P3 Sleep tabs) |
+| U41 | Existing asleep-on-time target migrates | Fixed `cb01fbf` |  |
+| U42 | Self-reported wind-down, poor sleep | Match |  |
+| U43 | Recorded nap on the same day | Match |  |
+| U44 | Nap across midnight or missing end | Differs (approved) | No `sleep/naps` route: dated naps are a card on Sleep |
+| U45 | Naps unavailable (empty/stale) | Match |  |
+| U46 | Garmin updates tonight's need after a nap | Fixed `cb01fbf` |  |
+| U47 | Fitness Age without an ambition | Match |  |
+| U48 | Fitness Age flat despite activity | Fixed `65806e1` |  |
+| U49 | What is acute load? | Differs (approved) | Help is a short "?" sheet, not `help/acute-load` (P3) |
+| U50 | Health/vitals, rare metric, gear or comparison | Differs (approved) | Explore retired; search and Training cover it (P2); gear is on Profile (P3) |
+| U51 | Past-day chart without detailed history | Match |  |
+| U52 | Journal off: where are my logs? | Match |  |
+| U53 | Journal on: open, background, opt out, export | Match | Journal hides on route exit; background/cold reload needs a device |
+| U54 | Learning enabled then reset | Fixed `65806e1` |  |
+| U55 | Repeated metric use, then interests change | Fixed `cb01fbf` |  |
+| U56 | Choose, then sync and resume | Match |  |
+| U57 | Notification permission declined | Fixed `1fd4899` |  |
+| U58 | Notification/old deep link into a detail | Fixed `cb01fbf` | Unknown links explained on Today; legacy aliases unit-tested |
+| U59 | Large type, screen reader, reduced motion | Fixed `bbdfd31` | Browser 130% text, reduced motion; TalkBack needs a phone |
+| U60 | Phone, unfolded and desktop | Match |  |
+| U61 | Long history, many activities, cold start | Evidence only | Needs unfamiliar participants or a phone |
+| U62 | Watch not worn for a day | Match |  |
+| U63 | Correction invalidates a claimed best | Match |  |
+| U64 | Find Settings and export, then sign out | Match |  |
+
+Totals: Match 39, Fixed 19, Differs (approved) 5, Evidence only 1. Open within item 26: participants, phone (TalkBack, Doze, notification taps), real-data journeys and long-history timings.
 
 ## Garmin references
 

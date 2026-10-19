@@ -237,7 +237,10 @@ async fn sleep(app: tauri::AppHandle, date: Option<String>) -> Result<SleepView,
             core.capture_sleep_plan(Local::now())
                 .map_err(|e| e.to_string())?;
         }
-        Ok(core.sleep(&date.unwrap_or_else(|| core.current_date(Local::now()))))
+        Ok(match date {
+            Some(date) => core.sleep(&date),
+            None => core.sleep_live(Local::now()),
+        })
     })
     .await
 }
@@ -255,7 +258,7 @@ async fn training(app: tauri::AppHandle, date: Option<String>) -> Result<Trainin
 #[tauri::command]
 async fn workout(app: tauri::AppHandle, id: String) -> Result<WorkoutView, String> {
     read_view(app, move |core| {
-        core.workout(&id).ok_or_else(|| "not_found".into())
+        core.workout_live(&id, Local::now()).ok_or_else(|| "not_found".into())
     })
     .await
 }
@@ -362,6 +365,33 @@ async fn progress(app: tauri::AppHandle, period: raring_core::view::Period, date
         core.progress(period, &date.unwrap_or_else(|| now.date_naive().to_string()), now).map_err(|e| e.to_string())
     })
     .await
+}
+#[tauri::command]
+async fn weight_trend(app: tauri::AppHandle, range: TrendRange, date: Option<String>) -> Result<WeightView, String> {
+    read_view(app, move |core| {
+        let now = Local::now();
+        core.weight_trend(range, &date.unwrap_or_else(|| now.date_naive().to_string()), now).map_err(|e| e.to_string())
+    }).await
+}
+#[tauri::command]
+async fn muscles(app: tauri::AppHandle, range: TrendRange) -> Result<Option<raring_core::view::MuscleRange>, String> {
+    read_view(app, move |core| Ok(core.muscles(range, Local::now()))).await
+}
+#[tauri::command]
+async fn lift_series(app: tauri::AppHandle, key: String, range: TrendRange) -> Result<Option<raring_core::view::LiftSeries>, String> {
+    read_view(app, move |core| Ok(core.lift_series(&key, range, Local::now()))).await
+}
+#[tauri::command]
+async fn progress_domains(app: tauri::AppHandle) -> Result<raring_core::view::ProgressDomains, String> {
+    read_view(app, move |core| Ok(core.progress_domains(Local::now()))).await
+}
+#[tauri::command]
+async fn milestone_archive(app: tauri::AppHandle) -> Result<Vec<raring_core::view::Milestone>, String> {
+    read_view(app, move |core| core.milestone_archive(Local::now()).map_err(|e| e.to_string())).await
+}
+#[tauri::command]
+async fn profile(app: tauri::AppHandle) -> Result<raring_core::view::ProfileView, String> {
+    read_view(app, move |core| Ok(core.profile(Local::now()))).await
 }
 #[tauri::command]
 async fn reviews(app: tauri::AppHandle) -> Result<Vec<raring_core::view::ReviewRow>, String> {
@@ -760,12 +790,20 @@ async fn local_action(app: tauri::AppHandle, action: raring_core::view::LocalAct
     Ok(())
 }
 
+/// Debug only: the cached account is the synthetic demo, so the emulator
+/// checks may re-seed it.
 #[cfg(debug_assertions)]
 #[tauri::command]
-fn load_demo_data(app: tauri::AppHandle) -> Result<String, String> {
+fn demo_session(app: tauri::AppHandle) -> Result<bool, String> {
+    Ok(core(&app)?.is_demo_session())
+}
+
+#[cfg(debug_assertions)]
+#[tauri::command]
+fn load_demo_data(app: tauri::AppHandle, planned: Option<bool>) -> Result<String, String> {
     let date = Local::now().date_naive().to_string();
     let store = raring_core::store::Store::open(database_path(&app)?).map_err(|e| e.to_string())?;
-    raring_core::demo::seed(&store, Local::now().date_naive()).map_err(|e| e.to_string())?;
+    raring_core::demo::seed_variant(&store, Local::now().date_naive(), !planned.unwrap_or(false)).map_err(|e| e.to_string())?;
     // Explicit debug-only synthetic binding; never used by sign-in or production sync.
     let profile = serde_json::json!({"profileId":900000000001_u64,"displayName":"sample-demo"});
     store.put("profile", "me", &Local::now().to_rfc3339(), &profile).map_err(|e| e.to_string())?;
@@ -860,7 +898,14 @@ pub fn run() {
                     patch_settings,
                     heart_rate_day,
                     export_archive,
-                    load_demo_data
+                    weight_trend,
+                    profile,
+                    progress_domains,
+                    milestone_archive,
+                    lift_series,
+                    muscles,
+                    load_demo_data,
+                    demo_session
                 ]
             }
             #[cfg(not(debug_assertions))]
@@ -888,7 +933,13 @@ pub fn run() {
                     get_settings,
                     patch_settings,
                     heart_rate_day,
-                    export_archive
+                    export_archive,
+                    weight_trend,
+                    profile,
+                    progress_domains,
+                    milestone_archive,
+                    lift_series,
+                    muscles
                 ]
             }
         })
@@ -1023,5 +1074,27 @@ mod export_tests {
         assert!(!source.exists());
         assert_eq!(std::fs::read(destination).unwrap(), b"new");
         std::fs::remove_dir_all(directory).unwrap();
+    }
+}
+
+#[cfg(test)]
+mod handler_lists {
+    /// Debug builds add only the demo commands; every other command must be
+    /// registered in the release list too, or release screens fail to load.
+    #[test]
+    fn release_registers_every_non_demo_command() {
+        let src = include_str!("lib.rs");
+        let list = |marker: &str| -> Vec<String> {
+            let at = src.find(marker).expect("handler list");
+            let body = &src[at..];
+            let open = body.find("generate_handler![").unwrap() + "generate_handler![".len();
+            let close = body[open..].find(']').unwrap();
+            body[open..open + close].split(',').map(|s| s.trim().to_owned()).filter(|s| !s.is_empty()).collect()
+        };
+        let debug = list("#[cfg(debug_assertions)]\n            {");
+        let release = list("#[cfg(not(debug_assertions))]\n            {");
+        assert!(debug.len() > 20 && release.len() > 20, "both lists were found");
+        let missing: Vec<_> = debug.iter().filter(|c| !release.contains(c) && !["load_demo_data", "demo_session"].contains(&c.as_str())).collect();
+        assert!(missing.is_empty(), "missing from the release list: {missing:?}");
     }
 }

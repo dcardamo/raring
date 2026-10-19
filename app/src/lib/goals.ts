@@ -3,6 +3,8 @@ import type {GoalKind} from './generated/GoalKind';
 import type {GoalTargets} from './generated/GoalTargets';
 import type {Sport} from './generated/Sport';
 import type {ItemState} from './generated/ItemState';
+import type {Allocation} from './generated/Allocation';
+import type {BacklogItem} from './generated/BacklogItem';
 import type {IconName} from './components/Icon.svelte';
 
 export const GOALS: Record<GoalKind, {name: string, unit: string, one: string, color: string, icon: IconName}> = {
@@ -24,3 +26,11 @@ export const SPORT_ICONS: Record<Sport, IconName> = {running: 'run', cycling: 'b
 export const STATE_WORD: Record<ItemState, string> = {done: 'Done', review: 'Needs review', planned: 'Planned', notRecorded: 'Not recorded', awaiting: 'Awaiting data', letGo: 'Let go', missed: 'Marked missed'};
 
 export const noGoals = (): GoalTargets => ({strengthSessions: 0, zone2Min: 0, highIntensityMin: 0, intensityMin: 0, intensityGarminGoal: false, sleepNights: 0, sleepTime: null, sleepKind: 'asleepBy', sleepScore: 0, restDays: []});
+
+const CHUNK: Record<string, [keyof Allocation, number]> = {zone2: ['zone2Min', 45], highIntensity: ['highIntensityMin', 20], intensity: ['intensityMin', 30]};
+// A backlog item taken for a day: one session, or a share of the minutes left.
+export function backlogDraft(b: BacklogItem, date: string): {date: string, sport: Sport, allocation: Partial<Allocation>} {
+  if (b.kind === 'strength') return {date, sport: 'strength', allocation: {strengthSessions: 1}};
+  const [field, chunk] = CHUNK[b.kind] ?? ['zone2Min', 30];
+  return {date, sport: b.sport ?? 'running', allocation: {[field]: Math.min(b.amount, chunk)}};
+}

@@ -270,3 +270,63 @@ fn milestone_rows_export_and_follow_the_account_boundary() {
     f.core.forget_account().unwrap();
     assert!(f.core.local_records().milestones.items.is_empty());
 }
+
+#[test]
+fn ring_days_cover_whole_plan_weeks_of_week_and_month_periods() {
+    let f = fx("ringdays");
+    let m = view(&f, Period::Month, "2025-11-18", at(11, 18));
+    assert_eq!(m.ring_days.len() % 7, 0, "whole weeks");
+    assert!(m.ring_days.first().unwrap().date.as_str() <= "2025-11-01" && m.ring_days.last().unwrap().date.as_str() >= "2025-11-30");
+    assert!(m.ring_days.iter().any(|d| d.today && d.date == "2025-11-18"));
+    assert_eq!(view(&f, Period::Week, "2025-11-18", at(11, 18)).ring_days.len(), 7);
+    assert!(view(&f, Period::Quarter, "2025-11-18", at(11, 18)).ring_days.is_empty());
+}
+
+#[test]
+fn domains_report_weeks_bests_and_months_without_inventing_zeroes() {
+    let f = fx("domains");
+    sets(&f.store, 1, "2025-11-03", 90_000., 5);
+    sets(&f.store, 2, "2025-11-10", 100_000., 3);
+    act(&f.store, 3, "2025-11-11", "running", 30., Some(5000.));
+    f.store.put("zones", "3", "now", &json!([{"zoneNumber": 2, "secsInZone": 1200}, {"zoneNumber": 4, "secsInZone": 300}])).unwrap();
+    f.store.put("max_metrics", "2025-11-12", "now", &json!([{"generic": {"vo2MaxValue": 48}}])).unwrap();
+    let d = f.core.progress_domains(at(11, 18));
+    let starts: Vec<&str> = d.weeks.iter().map(|w| w.start.as_str()).collect();
+    assert_eq!(starts.first(), Some(&"2025-09-01"), "weeks start with covered history");
+    assert_eq!(starts.last(), Some(&"2025-11-17"));
+    assert!(d.weeks.last().unwrap().current);
+    let wk = d.weeks.iter().find(|w| w.start == "2025-11-10").unwrap();
+    // The strength activities have no zones, so zone minutes are unknown that week.
+    assert_eq!((wk.strength, wk.zone2_min, wk.vo2max, wk.mark), (Some(1.), None, Some(48.), None));
+    let earlier = d.weeks.iter().find(|w| w.start == "2025-10-06").unwrap();
+    assert_eq!((earlier.strength, earlier.zone2_min), (Some(0.), Some(0.)), "a covered empty week is zero");
+    let best = &d.bests[0];
+    assert_eq!((best.name.as_str(), best.weight, best.reps, best.date.as_str()), ("Barbell Back Squat", Some(100.), 3, "2025-11-10"), "the heaviest set");
+    assert_eq!(d.months.len(), 12);
+    let nov = d.months.last().unwrap();
+    assert_eq!((nov.start.as_str(), nov.minutes, nov.vo2max), ("2025-11-01", Some(110.), Some(48.)));
+    assert_eq!(d.months[0].minutes, None, "before history");
+}
+
+#[test]
+fn the_archive_keeps_every_milestone_dated_and_awards_nothing_twice() {
+    let f = fx("archive-all");
+    // Fourteen exercises, each done twice and heavier the second time: more
+    // milestones than Progress lists.
+    for i in 0..14u64 {
+        for (n, date, kg) in [(0u64, "2025-09-10", 50_000.), (1, "2025-10-10", 55_000.)] {
+            let id = 200 + i * 2 + n;
+            act(&f.store, id, date, "strength_training", 40., None);
+            f.store.put("exercise_sets", &id.to_string(), "now", &json!({"exerciseSets": [
+                {"setType": "ACTIVE", "repetitionCount": 5, "weight": kg + 1000. * i as f64, "exercises": [{"category": "SQUAT", "name": format!("VARIANT_{i}"), "probability": 0.9}]}]})).unwrap();
+        }
+    }
+    let m = view(&f, Period::Month, "2025-11-18", at(11, 18));
+    assert_eq!(m.milestones.len(), 12.min(m.milestones_total as usize));
+    assert!(m.milestones_total > 12, "{} milestones", m.milestones_total);
+    let all = f.core.milestone_archive(at(11, 18)).unwrap();
+    assert_eq!(all.len() as u32, m.milestones_total, "the archive has every milestone Progress counted");
+    assert!(all.windows(2).all(|w| w[0].date >= w[1].date), "newest first");
+    let again = f.core.milestone_archive(at(11, 18)).unwrap();
+    assert_eq!(all.iter().map(|m| &m.id).collect::<Vec<_>>(), again.iter().map(|m| &m.id).collect::<Vec<_>>(), "reading again awards nothing new");
+}

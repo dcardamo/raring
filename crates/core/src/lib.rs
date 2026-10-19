@@ -1,5 +1,7 @@
 //! Shared, offline-first Garmin core. Callers own and persist credentials.
 pub mod account;
+pub mod day;
+pub mod lanes;
 pub mod demo;
 mod export;
 pub mod garmin;
@@ -23,8 +25,9 @@ pub mod strength;
 pub mod sync;
 pub mod trends;
 pub mod view;
+pub mod weight;
 
-use chrono::{DateTime, Local, NaiveDateTime, Utc};
+use chrono::{DateTime, Local, NaiveDateTime, Timelike, Utc};
 pub use garmin::Tokens;
 pub use notifications::Notification;
 use std::{
@@ -140,19 +143,75 @@ impl Raring {
     pub fn today_live_at(&self, display_date: &str, now: DateTime<Local>) -> view::TodayView {
         let mut view = screens::today_at_calendar(&self.store, display_date, now.fixed_offset(), now.date_naive());
         lead::apply(&self.store, &mut view, now.date_naive(), now.fixed_offset());
+        view.day = Some(day::timeline(&self.store, &view, now.date_naive(), now.fixed_offset(), day::day_minutes(now.date_naive())));
         view
     }
     pub fn sleep(&self, date: &str) -> view::SleepView {
         screens::sleep_view(&self.store, date)
     }
+    /// The current Sleep: Tonight first from the evening (Today's phase
+    /// rules), and whether tonight's wind-down was reported.
+    pub fn sleep_live(&self, now: DateTime<Local>) -> view::SleepView {
+        let date = self.current_date(now);
+        let mut view = self.sleep(&date);
+        let phase = self.today_at(&date, now).focus.phase;
+        view.tonight_first = matches!(phase, view::DayPhase::Evening | view::DayPhase::WindDown | view::DayPhase::LateNight);
+        // A report before noon belongs to the evening before.
+        let evening = if now.hour() < 12 { now.date_naive() - chrono::Duration::days(1) } else { now.date_naive() };
+        view.wound_down = local::load(&self.store).circumstances.wind_downs.iter().any(|w| w.date == evening.to_string());
+        view
+    }
     pub fn training(&self, date: &str) -> view::TrainingView {
         screens::training(&self.store, date)
     }
     pub fn training_live_at(&self, display_date: &str, now: DateTime<Local>) -> view::TrainingView {
-        screens::training_at_calendar(&self.store, display_date, now.date_naive(), now.with_timezone(&Utc))
+        let mut view = screens::training_at_calendar(&self.store, display_date, now.date_naive(), now.with_timezone(&Utc));
+        view.lanes = Some(lanes::week(&self.store, &local::load(&self.store), now.date_naive(), now.with_timezone(&Utc)));
+        view
     }
     pub fn workout(&self, id: &str) -> Option<view::WorkoutView> {
         screens::workout(&self.store, id)
+    }
+    /// A workout with how it counted toward its plan week's goals.
+    pub fn workout_live(&self, id: &str, now: DateTime<Local>) -> Option<view::WorkoutView> {
+        let mut view = screens::workout(&self.store, id)?;
+        let date = chrono::NaiveDate::parse_from_str(view.summary.start_local.get(..10)?, "%Y-%m-%d").ok()?;
+        let local = local::load(&self.store);
+        let board = ledger::board_with(&self.store, &local, date, now.date_naive(), now.with_timezone(&Utc));
+        let rec = board.recordings.iter().find(|r| r.id == id);
+        let lines = board
+            .ledger
+            .iter()
+            .filter(|l| !l.observation)
+            .filter_map(|l| {
+                let rec = rec?;
+                let (amount, position) = match l.kind {
+                    view::GoalKind::Strength => (rec.sport == view::Sport::Strength).then(|| {
+                        let n = board.recordings.iter().filter(|r| r.sport == view::Sport::Strength && r.start_local <= rec.start_local).count();
+                        (1., Some(n as u32))
+                    })?,
+                    view::GoalKind::Zone2 => (rec.zone2_min.filter(|m| *m > 0.)?, None),
+                    view::GoalKind::HighIntensity => (rec.high_intensity_min.filter(|m| *m > 0.)?, None),
+                    _ => return None,
+                };
+                Some(view::CountLine { kind: l.kind, amount, position, recorded: l.recorded, target: l.target })
+            })
+            .collect();
+        view.counted = Some(view::WorkoutCount {
+            week: board.start.clone(),
+            lines,
+            plan_item: board.items.iter().find(|p| p.recording.as_deref() == Some(id)).map(|p| p.intention.name.clone().unwrap_or_else(|| lead::sport_name(p.intention.sport).to_owned())),
+            bests: local.milestones.items.iter().filter(|m| m.activity.as_deref() == Some(id) && !m.withdrawn).map(|m| m.title.clone()).collect(),
+        });
+        Some(view)
+    }
+    /// Sets per muscle group over a range, from local sets only.
+    pub fn muscles(&self, range: view::TrendRange, now: DateTime<Local>) -> Option<view::MuscleRange> {
+        strength::muscles(&self.store, range, now.date_naive())
+    }
+    /// One exercise's sessions in a range, from local sets only.
+    pub fn lift_series(&self, key: &str, range: view::TrendRange, now: DateTime<Local>) -> Option<view::LiftSeries> {
+        strength::lift_series(&self.store, key, range, now.date_naive())
     }
     pub fn strength(&self, date: &str) -> Option<view::StrengthView> {
         screens::strength(&self.store, date)
@@ -204,12 +263,41 @@ impl Raring {
         let anchor = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d").map_err(|_| Error::InvalidLocal("date"))?;
         Ok(ledger::board(&self.store, anchor, now.date_naive(), now.with_timezone(&Utc)))
     }
+    /// Garmin facts, gear and your limits, from local data only.
+    pub fn profile(&self, now: DateTime<Local>) -> view::ProfileView {
+        let today = now.date_naive();
+        let weight = weight::view(&self.store, view::TrendRange::All, today, today).ok();
+        let (_, uploaded) = screens::watch_info(&self.store);
+        view::ProfileView {
+            age: screens::age(&self.store, &today.to_string()).chronological_age,
+            units: self.store.get("profile_settings", "me").and_then(|s| s["measurementSystem"].as_str().map(str::to_owned)),
+            weight: weight.as_ref().and_then(|w| w.scale),
+            weight_unit: weight.as_ref().and_then(|w| w.unit),
+            weight_freshness: weight.map(|w| w.freshness).unwrap_or(view::ReadingFreshness { recorded_on: None, age_days: None, stale: false, threshold_days: 7 }),
+            watch_last_upload: uploaded.map(|t| t.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)),
+            gear: gear::view(&self.store),
+            limits: local::load(&self.store).circumstances.limits,
+        }
+    }
+    /// Scale and trend weight from local history only; never a Garmin request.
+    pub fn weight_trend(&self, range: view::TrendRange, date: &str, now: DateTime<Local>) -> Result<view::WeightView> {
+        let end = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d").map_err(|_| Error::InvalidLocal("weight date"))?;
+        weight::view(&self.store, range, end, now.date_naive())
+    }
     /// The review of the plan week containing `date`, with next week's proposals.
     pub fn week_review(&self, date: &str, now: DateTime<Local>) -> Result<view::WeekReview> {
         let anchor = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d").map_err(|_| Error::InvalidLocal("date"))?;
         Ok(review::week_review(&self.store, anchor, now.date_naive()))
     }
     /// Progress for the period containing `date`.
+    /// Every milestone in available history, newest first.
+    pub fn milestone_archive(&self, now: DateTime<Local>) -> Result<Vec<view::Milestone>> {
+        progress::milestone_archive(&self.store, now.date_naive())
+    }
+    /// Progress's Cardio, Strength and Long-term views, from local data only.
+    pub fn progress_domains(&self, now: DateTime<Local>) -> view::ProgressDomains {
+        progress::domains(&self.store, now.date_naive())
+    }
     pub fn progress(&self, period: view::Period, date: &str, now: DateTime<Local>) -> Result<view::ProgressView> {
         let anchor = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d").map_err(|_| Error::InvalidLocal("date"))?;
         progress::progress(&self.store, period, anchor, now.date_naive())

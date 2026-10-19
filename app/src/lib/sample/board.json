@@ -374,7 +374,8 @@
       "state": "done",
       "recording": "9000000000005",
       "matchedBy": "automatic",
-      "candidates": []
+      "candidates": [],
+      "coach": null
     },
     {
       "intention": {
@@ -407,7 +408,8 @@
       "state": "planned",
       "recording": null,
       "matchedBy": null,
-      "candidates": []
+      "candidates": [],
+      "coach": null
     },
     {
       "intention": {
@@ -440,7 +442,8 @@
       "state": "planned",
       "recording": null,
       "matchedBy": null,
-      "candidates": []
+      "candidates": [],
+      "coach": null
     }
   ],
   "recordings": [
@@ -545,5 +548,7 @@
       "source": "local",
       "partial": false
     }
-  ]
+  ],
+  "eventWeek": null,
+  "coach": null
 }

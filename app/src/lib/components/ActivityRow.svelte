@@ -10,7 +10,7 @@
  <span class="act-main">
   <b>{activity.name}</b>
   <small class="activity-date">{dateLabel(activity.startLocal.slice(0,10))} · {clock(activity.startLocal)}</small>
-  <small>{activity.distanceKm!=null?num(activity.distanceKm,2)+' km · ':''}{elapsed(activity.durationS)}</small>
+  <small>{activity.distanceKm!=null?num(activity.distanceKm,2)+' km · ':''}{elapsed(activity.durationS)}{activity.avgHr!=null?` · avg HR ${num(activity.avgHr)}`:''}</small>
  </span>
  {#if activity.load!=null}<span class="act-load"><b class="n">{Math.round(activity.load)}</b><small>Load</small></span>{/if}
 </button>

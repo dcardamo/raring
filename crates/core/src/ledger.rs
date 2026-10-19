@@ -88,7 +88,32 @@ fn recordings(store: &Store, from: NaiveDate, to: NaiveDate) -> Vec<Counted> {
     list
 }
 
+/// Marks a Garmin Coach cardio session, which has no sport until it's done.
+const COACH_CARDIO: &str = "garmin_coach_cardio";
+const CARDIO: [Sport; 5] = [Sport::Running, Sport::Cycling, Sport::Swimming, Sport::Walking, Sport::Hiking];
+
+fn coach_intention(c: &CoachSession) -> Intention {
+    let strength = c.kind == Some(CoachKind::Strength);
+    Intention {
+        id: c.id.clone(),
+        date: c.date.clone(),
+        time: None,
+        sport: if strength { Sport::Strength } else { Sport::Other },
+        type_key: (c.kind == Some(CoachKind::Cardio)).then(|| COACH_CARDIO.to_owned()),
+        name: Some(c.name.clone()),
+        duration_min: c.duration_min,
+        allocation: Allocation { strength_sessions: u32::from(strength), ..Allocation::default() },
+        kind: IntentionKind::Workout,
+        garmin_id: Some(c.id.clone()),
+        status: IntentionStatus::Open,
+        history: vec![],
+    }
+}
+
 fn same_sport(i: &Intention, r: &Recording) -> bool {
+    if i.type_key.as_deref() == Some(COACH_CARDIO) {
+        return CARDIO.contains(&r.sport);
+    }
     i.sport == r.sport && (i.sport != Sport::Other || i.type_key.as_deref() == Some(r.type_key.as_str()))
 }
 
@@ -258,7 +283,7 @@ pub(crate) fn night_met(store: &Store, local: &LocalRecords, t: &GoalTargets, da
     }
 }
 
-fn daily_intensity(store: &Store, date: NaiveDate) -> Option<f64> {
+pub(crate) fn daily_intensity(store: &Store, date: NaiveDate) -> Option<f64> {
     let day = store.get("summary", &date.to_string())?;
     Some(number(&day, "moderateIntensityMinutes")? + 2. * number(&day, "vigorousIntensityMinutes")?)
 }
@@ -345,6 +370,12 @@ pub fn board_with(store: &Store, local: &LocalRecords, anchor: NaiveDate, today:
         .filter(|i| i.date >= start_s && i.date <= end.to_string())
         .cloned()
         .collect();
+    // Garmin Coach sessions join your sessions as read-only planned work:
+    // strength plans one strength session; cardio plans no zone or intensity
+    // minutes, since Garmin gives no steps to infer them from.
+    let coach = planned::coach_week(store, &start_s, &end.to_string(), now);
+    let coach_sessions: Vec<CoachSession> = coach.iter().flat_map(|c| c.sessions.iter().filter(|s| s.kind.is_some()).cloned()).collect();
+    intentions.extend(coach_sessions.iter().map(coach_intention));
     intentions.sort_by(|a, b| (a.date.as_str(), a.time.as_deref().unwrap_or("99")).cmp(&(b.date.as_str(), b.time.as_deref().unwrap_or("99"))));
     let matched = match_items(
         &intentions,
@@ -358,7 +389,10 @@ pub fn board_with(store: &Store, local: &LocalRecords, anchor: NaiveDate, today:
     let items: Vec<PlanItem> = intentions
         .into_iter()
         .zip(matched)
-        .map(|(intention, m)| PlanItem { intention, state: m.state, recording: m.recording, matched_by: m.by, candidates: m.candidates })
+        .map(|(intention, m)| {
+            let coach = coach_sessions.iter().find(|c| c.id == intention.id).cloned();
+            PlanItem { intention, state: m.state, recording: m.recording, matched_by: m.by, candidates: m.candidates, coach }
+        })
         .collect();
 
     let intensity_card = plan::intensity(store, start, today);
@@ -483,7 +517,7 @@ pub fn board_with(store: &Store, local: &LocalRecords, anchor: NaiveDate, today:
                 not_recorded: day_items.iter().any(|p| p.state == ItemState::NotRecorded),
                 recordings: day_recs.iter().map(|c| c.rec.id.clone()).collect(),
                 items: day_items.iter().map(|p| p.intention.id.clone()).collect(),
-                garmin: garmin.iter().filter(|g| g.date == ds).count() as u32,
+                garmin: (garmin.iter().filter(|g| g.date == ds).count() + coach_sessions.iter().filter(|c| c.date == ds).count()) as u32,
                 sleep_score: (!future).then(|| store.get("sleep", &ds)).flatten().and_then(|raw| screens::sscore(&raw)),
             }
         })
@@ -542,6 +576,21 @@ pub fn board_with(store: &Store, local: &LocalRecords, anchor: NaiveDate, today:
         });
     let plan_prompt = if current { prompt(store, local, start, today, &items) } else { None };
     let event_lines = if current { events(store, local, today, now) } else { vec![] };
+    // Garmin's race has no verified sport, so only a local event with one groups sessions.
+    let event_week = event_lines.iter().find_map(|e| {
+        let sport = e.sport?;
+        let ids: Vec<String> = items
+            .iter()
+            .filter(|p| p.intention.kind == IntentionKind::Workout && p.intention.sport == sport && p.state != ItemState::LetGo)
+            .map(|p| p.intention.id.clone())
+            .collect();
+        (!ids.is_empty()).then(|| EventWeek {
+            event: e.clone(),
+            sport,
+            items: ids,
+            recorded_min: recs.iter().filter(|r| r.sport == sport && r.date <= today_s).map(|r| r.duration_min).sum(),
+        })
+    });
     PlanBoard {
         today: today_s,
         start: start_s,
@@ -566,5 +615,7 @@ pub fn board_with(store: &Store, local: &LocalRecords, anchor: NaiveDate, today:
         read_only: !local.read_only.is_empty(),
         prompt: plan_prompt,
         events: event_lines,
+        event_week,
+        coach,
     }
 }

@@ -5,7 +5,7 @@
 use crate::{
     store::Store,
     view::{
-        ActivityCard, ExerciseHistory, ExerciseSession, Figure, Lift, Muscle, MuscleSets,
+        ActivityCard, ExerciseHistory, LiftPoint, LiftSeries, MuscleRange, TrendRange, ExerciseSession, Figure, Lift, Muscle, MuscleSets,
         RepBest, SetFlag, StrengthActivity, StrengthExercise, StrengthSession, StrengthSet,
         StrengthView, StrengthWeek, WeekMuscles, WeightUnit,
     },
@@ -739,6 +739,90 @@ pub fn history(store: &Store, date: &str, workouts: Vec<ActivityCard>) -> Option
 }
 
 /// Strength activity ids, for activity list items Garmin types as strength.
+/// Sets per muscle group in a range ending today, and the groups with few
+/// or none: at most one set per fortnight of the range.
+pub fn muscles(store: &Store, range: TrendRange, today: NaiveDate) -> Option<MuscleRange> {
+    let all = analyse(recorded_sessions(store));
+    let first = all.iter().filter_map(|a| NaiveDate::parse_from_str(a.session.date(), "%Y-%m-%d").ok()).min()?;
+    let days: i64 = match range {
+        TrendRange::Days7 => 7,
+        TrendRange::Days14 => 14,
+        TrendRange::Days30 => 30,
+        TrendRange::Days90 => 90,
+        TrendRange::Year => 365,
+        TrendRange::All => (today - first).num_days().max(0) + 1,
+        TrendRange::Custom => return None,
+    };
+    let from = today - Duration::days(days - 1);
+    let catalog = Catalog::load(store);
+    let mut counts = BTreeMap::new();
+    for a in all.iter().filter(|a| in_range(a, from, today + Duration::days(1))) {
+        add_muscles(&mut counts, &a.session, &catalog);
+    }
+    let muscles = muscle_list(&counts);
+    let gap_at = (days as f64 / 14.).round();
+    let mut gaps: Vec<&MuscleSets> = muscles.iter().filter(|m| m.sets <= gap_at).collect();
+    gaps.sort_by(|a, b| a.sets.total_cmp(&b.sets));
+    Some(MuscleRange {
+        range,
+        from: from.to_string(),
+        to: today.to_string(),
+        days: days as u32,
+        figure: prefs(store).figure,
+        gaps: gaps.iter().map(|m| m.muscle).collect(),
+        muscles,
+        gap_at,
+    })
+}
+
+/// One exercise's sessions in a range: heaviest counted set and volume.
+pub fn lift_series(store: &Store, key: &str, range: TrendRange, today: NaiveDate) -> Option<LiftSeries> {
+    let days = match range {
+        TrendRange::Days7 => Some(7),
+        TrendRange::Days14 => Some(14),
+        TrendRange::Days30 => Some(30),
+        TrendRange::Days90 => Some(90),
+        TrendRange::Year => Some(365),
+        TrendRange::All => None,
+        TrendRange::Custom => return None,
+    };
+    let from = days.map(|d| (today - Duration::days(d - 1)).to_string());
+    let unit = prefs(store).unit;
+    let today_s = today.to_string();
+    let all = analyse(recorded_sessions(store));
+    if !all.iter().any(|a| a.session.sets.iter().any(|s| s.key.as_deref() == Some(key))) {
+        return None;
+    }
+    let points: Vec<LiftPoint> = all
+        .iter()
+        .filter(|a| a.session.date() <= today_s.as_str() && from.as_deref().is_none_or(|f| a.session.date() >= f))
+        .filter_map(|a| {
+            let mine: Vec<usize> = (0..a.session.sets.len())
+                .filter(|i| a.session.sets[*i].active && a.session.sets[*i].key.as_deref() == Some(key))
+                .collect();
+            if mine.is_empty() {
+                return None;
+            }
+            let counted: Vec<&Set> = mine
+                .iter()
+                .filter(|i| counts_for_records(&a.session.sets[**i], &a.flags[**i]))
+                .map(|i| &a.session.sets[*i])
+                .collect();
+            let grams = |s: &Set| s.grams.unwrap_or(0.);
+            Some(LiftPoint {
+                date: a.session.date().to_owned(),
+                activity_id: a.session.id.clone(),
+                max: counted.iter().map(|s| grams(s)).max_by(f64::total_cmp).and_then(|g| weight(Some(g), unit)),
+                volume: (!counted.is_empty())
+                    .then(|| counted.iter().map(|s| grams(s) * s.reps.unwrap_or(0) as f64).sum::<f64>())
+                    .and_then(|g| weight(Some(g), unit)),
+                excluded: (mine.len() - counted.len()) as u32,
+            })
+        })
+        .collect();
+    Some(LiftSeries { key: key.to_owned(), name: display_name(key), unit, range, points })
+}
+
 pub fn is_strength(item: &Value) -> bool {
     item["activityType"]["typeKey"] == ACTIVITY_TYPE
         || item["activityTypeDTO"]["typeKey"] == ACTIVITY_TYPE

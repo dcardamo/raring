@@ -1,7 +1,7 @@
 //! Read-only, date-based projections of Garmin's cached calendar snapshots.
 use crate::{
     store::Store,
-    view::{GarminSession, PlannedSession, PlannedState, PlannedTraining, UpcomingRace},
+    view::{CoachKind, CoachSession, CoachWeek, GarminSession, PlannedSession, PlannedState, PlannedTraining, UpcomingRace},
 };
 use chrono::{DateTime, NaiveDate, Utc};
 use serde_json::Value;
@@ -45,7 +45,22 @@ fn unverified_state(v: &Value) -> bool {
     ["status", "scheduleStatus", "workoutStatus", "eventStatus", "cancelled", "canceled"]
         .iter().any(|key| !v[*key].is_null())
 }
+/// Garmin's next scheduled workout or adaptive Coach session, whichever is sooner.
 pub fn session(store: &Store, date: &str, now: DateTime<Utc>) -> PlannedTraining {
+    let mut planned = scheduled_session(store, date, now);
+    let Some(today) = day(date) else { return planned };
+    let next = coach_week(store, date, &(today + chrono::Duration::days(14)).to_string(), now)
+        .filter(|c| c.state == PlannedState::Available)
+        .and_then(|c| c.sessions.into_iter().find(|s| !s.rest_day));
+    if let Some(c) = next {
+        if planned.session.as_ref().is_none_or(|s| s.date > c.date) {
+            planned.session = Some(PlannedSession { name: c.name, date: c.date });
+            planned.state = PlannedState::Available;
+        }
+    }
+    planned
+}
+fn scheduled_session(store: &Store, date: &str, now: DateTime<Utc>) -> PlannedTraining {
     let (state, snapshot) = current(store, "scheduled_workouts", now);
     let coverage_start = field_date(&snapshot, &["startDate"]).map(|d| d.to_string());
     let coverage_end = field_date(&snapshot, &["endDate"]).map(|d| d.to_string());
@@ -104,6 +119,73 @@ pub fn session(store: &Store, date: &str, now: DateTime<Utc>) -> PlannedTraining
         coverage_start,
         coverage_end,
     }
+}
+fn plan_id(p: &Value) -> Option<String> {
+    let id = p["trainingPlanId"].as_u64().or_else(|| p["trainingPlanId"].as_str().and_then(|s| s.parse().ok()))?;
+    (id > 0).then(|| id.to_string())
+}
+/// The id of the plan list's adaptive Garmin Coach plan, when it is scheduled or active.
+pub fn adaptive_plan_id(plans: &Value) -> Option<String> {
+    plans["trainingPlanList"].as_array()?.iter().find_map(|p| {
+        let status = p["trainingStatus"]["statusKey"].as_str().unwrap_or_default().to_ascii_lowercase();
+        (p["trainingPlanCategory"] == "FBT_ADAPTIVE" && ["scheduled", "active"].contains(&status.as_str())).then(|| plan_id(p)).flatten()
+    })
+}
+/// A stored adaptive plan must be the requested one, with a non-empty task
+/// list of dated tasks.
+pub fn adaptive_snapshot_valid(v: &Value, id: &str) -> bool {
+    plan_id(v).as_deref() == Some(id)
+        && v["trainingPlanCategory"] == "FBT_ADAPTIVE"
+        && v["taskList"].as_array().is_some_and(|tasks| {
+            !tasks.is_empty() && tasks.iter().all(|t| field_date(t, &["calendarDate"]).is_some() && t["taskWorkout"].is_object())
+        })
+}
+const COACH_EFFECTS: [(&str, &str); 3] = [("AEROBIC_BASE", "Aerobic base"), ("LACTATE_THRESHOLD", "Lactate threshold"), ("RECOVERY", "Recovery")];
+/// This plan week's adaptive Garmin Coach sessions, only while the plan list
+/// still names the stored plan. Garmin lists the current week only.
+pub fn coach_week(store: &Store, from: &str, to: &str, now: DateTime<Utc>) -> Option<CoachWeek> {
+    let (plans_state, plans) = current(store, "coach_plans", now);
+    let id = adaptive_plan_id(&plans)?;
+    let (state, v) = current(store, "coach_adaptive", now);
+    if !adaptive_snapshot_valid(&v, &id) {
+        return None;
+    }
+    let state = if plans_state == PlannedState::Stale { PlannedState::Stale } else { state };
+    let (from, to) = (day(from)?, day(to)?);
+    let mut order: std::collections::HashMap<NaiveDate, u32> = Default::default();
+    let mut sessions: Vec<CoachSession> = v["taskList"]
+        .as_array()?
+        .iter()
+        .filter_map(|t| {
+            let d = field_date(t, &["calendarDate"])?;
+            let n = order.entry(d).or_insert(0);
+            *n += 1;
+            let w = &t["taskWorkout"];
+            let rest_day = w["restDay"] == true;
+            let kind = (!rest_day).then(|| match w["sportType"]["sportTypeKey"].as_str() {
+                Some("strength_training") => CoachKind::Strength,
+                Some("other") => CoachKind::Cardio,
+                _ => CoachKind::Unknown,
+            });
+            let effect = w["trainingEffectLabel"].as_str().and_then(|l| COACH_EFFECTS.iter().find(|(k, _)| *k == l)).map(|(_, v)| (*v).to_owned());
+            (from..=to).contains(&d).then(|| CoachSession {
+                id: format!("coach:{d}:{}", t["workoutOrder"].as_u64().map_or(*n, |o| o as u32)),
+                date: d.to_string(),
+                name: title(w, &["workoutName"]).unwrap_or_else(|| (if rest_day { "Rest day" } else { "Garmin Coach session" }).into()),
+                kind,
+                duration_min: w["estimatedDurationInSecs"].as_f64().filter(|s| *s > 0. && *s < 86_400.).map(|s| (s / 60.).round() as u32),
+                effect,
+                rest_day,
+                garmin_status: (w["adaptiveCoachingWorkoutStatus"] == "NOT_COMPLETE").then(|| "Not complete".into()),
+            })
+        })
+        .collect();
+    sessions.sort_by(|a, b| a.date.cmp(&b.date).then(a.id.cmp(&b.id)));
+    // Like the schedule, an old snapshot is named but never presented as current.
+    if state != PlannedState::Available {
+        sessions.clear();
+    }
+    Some(CoachWeek { name: title(&v, &["trainingPlanName", "planName", "name"]).unwrap_or_else(|| "Garmin Coach".into()), state, sessions })
 }
 /// Every cached scheduled workout from `from` to `to`, by date and name only.
 /// Unknown or unfamiliar entries make the whole list unknown, as for the next session.

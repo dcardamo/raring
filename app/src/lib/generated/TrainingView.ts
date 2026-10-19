@@ -11,6 +11,7 @@ import type { RacePrediction } from "./RacePrediction";
 import type { RecordedTrainingMetric } from "./RecordedTrainingMetric";
 import type { StrengthWeek } from "./StrengthWeek";
 import type { Tone } from "./Tone";
+import type { TrainingWeek } from "./TrainingWeek";
 import type { UpcomingRace } from "./UpcomingRace";
 import type { Why } from "./Why";
 
@@ -39,4 +40,8 @@ thresholds: Array<RecordedTrainingMetric>, workouts: Array<ActivityCard>, gear: 
  * This week's strength sets, when any strength session has sets in
  * the last 12 weeks.
  */
-strength: StrengthWeek | null, };
+strength: StrengthWeek | null, 
+/**
+ * This plan week's lanes against goals and the usual week; live only.
+ */
+lanes: TrainingWeek | null, };

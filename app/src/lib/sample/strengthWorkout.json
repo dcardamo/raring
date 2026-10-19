@@ -1,4 +1,22 @@
 {
+  "counted": {
+    "week": "2025-10-13",
+    "lines": [
+      {
+        "kind": "strength",
+        "amount": 1,
+        "position": 2,
+        "recorded": 3,
+        "target": 4
+      }
+    ],
+    "planItem": "Strength",
+    "bests": []
+  },
+  "along": null,
+  "more": [],
+  "effects": [],
+  "vo2maxNew": null,
   "summary": {
     "id": "9000000000002",
     "icon": "strength",

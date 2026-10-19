@@ -17,7 +17,7 @@ pub(crate) struct Week {
     pub rings: Vec<Ring>,
 }
 
-fn days_with(local: &LocalRecords, start: NaiveDate, reason: Option<PauseReason>) -> u32 {
+pub(crate) fn days_with(local: &LocalRecords, start: NaiveDate, reason: Option<PauseReason>) -> u32 {
     (0..7)
         .filter(|i| {
             let d = (start + Duration::days(*i)).to_string();

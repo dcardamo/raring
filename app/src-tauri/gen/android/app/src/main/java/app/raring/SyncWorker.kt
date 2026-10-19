@@ -126,6 +126,9 @@ class SyncWorker(context: Context, params: WorkerParameters): CoroutineWorker(co
     private suspend fun syncLocked(): Result {
         return try {
             SyncGate.mutex.withLock {
+                // The debug emulator's synthetic session has no tokens by design; it is
+                // offline data, not a lost sign-in, so there is nothing to sync or suspend.
+                if (AccountSession.syncSkipsDemo(applicationContext)) return@withLock Result.success()
                 var tokens = AccountSession.loadLocked(applicationContext)
                 if (tokens == null) {
                     AccountSession.suspendLocked(applicationContext)

@@ -366,6 +366,7 @@ pub(crate) fn sleep_plan(store: &Store, date: &str) -> Option<SleepPlan> {
     };
     let alignment = sleep(&current)["sleepAlignment"]["status"].as_str();
     Some(SleepPlan {
+        need_read_at: tonight.then(|| store.fetched_at("sleep", date)).flatten().filter(|t| DateTime::parse_from_rfc3339(t).is_ok()),
         night: night.to_string(),
         bedtime: bedtime_at.format("%H:%M").to_string(),
         bedtime_start: start_at.map(|t| t.format("%H:%M").to_string()),
@@ -948,11 +949,12 @@ fn activities(store: &Store, since: &str) -> Vec<ActivityCard> {
         .filter_map(|id| activity(store, id))
         .collect()
 }
-fn age(store: &Store, date: &str) -> FitnessAgeCard {
-    let v = store
+pub(crate) fn age(store: &Store, date: &str) -> FitnessAgeCard {
+    let (recorded_on, v) = store
         .get("fitness_age", date)
-        .or_else(|| store.history("fitness_age", date, 1).pop().map(|(_, v)| v))
-        .unwrap_or(Value::Null);
+        .map(|v| (Some(date.to_owned()), v))
+        .or_else(|| store.history("fitness_age", date, 1).pop().map(|(d, v)| (Some(d), v)))
+        .unwrap_or((None, Value::Null));
     let fitness_age = num(&v, &[&["fitnessAge"], &["fitnessAgeData", "fitnessAge"]]);
     let trend: Vec<Option<f64>> = (0..12)
         .rev()
@@ -972,6 +974,7 @@ fn age(store: &Store, date: &str) -> FitnessAgeCard {
         chronological_age: num(&v, &[&["chronologicalAge"]]),
         trend,
         change_12m,
+        recorded_on: recorded_on.filter(|_| fitness_age.is_some()),
     }
 }
 fn vital_value(store: &Store, kind: VitalKind, date: &str) -> Option<f64> {
@@ -1211,6 +1214,11 @@ fn stress_timeline(v: &Value) -> (Vec<Option<f64>>, Vec<[f64; 2]>) {
 /// three-minute slots from the day's start as stress. Samples without a level
 /// are gaps; the column order comes from Garmin's descriptors.
 pub(crate) fn battery_timeline(v: &Value) -> Vec<Option<f64>> {
+    battery_slots(v, false)
+}
+/// Garmin's levels in three-minute slots; `measured_only` drops samples whose
+/// status says Garmin modelled them (a sample without a status counts).
+pub(crate) fn battery_slots(v: &Value, measured_only: bool) -> Vec<Option<f64>> {
     let start = string(v, &[&["startTimestampGMT"]])
         .and_then(|s| NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%.f").ok())
         .map(|d| d.and_utc().timestamp_millis());
@@ -1221,7 +1229,7 @@ pub(crate) fn battery_timeline(v: &Value) -> Vec<Option<f64>> {
             .and_then(|d| d["bodyBatteryValueDescriptorIndex"].as_u64())
             .map_or(fallback, |i| i as usize)
     };
-    let (time_at, level_at) = (column("timestamp", 0), column("bodyBatteryLevel", 2));
+    let (time_at, status_at, level_at) = (column("timestamp", 0), column("bodyBatteryStatus", 1), column("bodyBatteryLevel", 2));
     let (Some(start), Some(samples)) = (start, v["bodyBatteryValuesArray"].as_array()) else {
         return vec![];
     };
@@ -1233,6 +1241,9 @@ pub(crate) fn battery_timeline(v: &Value) -> Vec<Option<f64>> {
         ) else {
             continue;
         };
+        if measured_only && sample.get(status_at).and_then(Value::as_str).is_some_and(|s| s != "MEASURED") {
+            continue;
+        }
         let minute = (time - start) as f64 / 60_000.;
         if !(0. ..1500.).contains(&minute) || !(0. ..=100.).contains(&level) {
             continue;
@@ -1463,7 +1474,7 @@ fn recorded_wake(store: &Store, date: &str) -> Option<NaiveDateTime> {
     let raw = sleep_record(store, date).filter(recorded_sleep)?;
     local_time(sleep(&raw), &["sleepEndTimestampLocal"]).and_then(|t| parse_local(&t))
 }
-fn watch_info(store: &Store) -> (Value, Option<DateTime<Utc>>) {
+pub(crate) fn watch_info(store: &Store) -> (Value, Option<DateTime<Utc>>) {
     let list = store.get("devices", "me").unwrap_or(Value::Null);
     let watch = selected_watch(&list).cloned().unwrap_or(Value::Null);
     let detail = store
@@ -1915,6 +1926,7 @@ pub fn today_at_calendar(store: &Store, date: &str, now: DateTime<FixedOffset>, 
         plan: plan::this_week(store, date),
         lead: None,
         adapt: None,
+        day: None,
     };
     view.readiness_why = explain::readiness_why(&r, &view.factors, rl.as_deref());
     view.body_battery_why =
@@ -2103,6 +2115,20 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
         garmin_averages: garmin_averages(store, date),
         alignment: alignment(store, date),
         sleep_plan: sleep_plan(store, date),
+        recent: (0..7)
+            .rev()
+            .map(|i| {
+                let day = date_sub(date, i);
+                let raw = store.get("sleep", &day);
+                NightNeed {
+                    asleep_min: raw.as_ref().and_then(|r| num(sleep(r), &[&["sleepTimeSeconds"]])).map(|s| s / 60.),
+                    need_min: raw.as_ref().and_then(sleep_need),
+                    date: day,
+                }
+            })
+            .collect(),
+        tonight_first: false,
+        wound_down: false,
     }
 }
 fn hour(s: &str) -> Option<f64> {
@@ -2300,6 +2326,7 @@ pub fn training_at_calendar(store: &Store, date: &str, calendar: NaiveDate, now:
         race,
         race_state,
         strength,
+        lanes: None,
     };
     view.status_why = explain::training_why(explain::TrainingInputs {
         training: &v,
@@ -2333,6 +2360,27 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
                 })
         })
     };
+    // Cadence: both feet for runs and walks, rpm for rides; never single-leg.
+    let stream_keys: [(StreamKind, &str, &[&str]); 8] = [
+        (StreamKind::Speed, "km/h", &["directSpeed"]),
+        (StreamKind::Elevation, "m", &["directElevation"]),
+        (StreamKind::Cadence, if summary.icon == Icon::Bike { "rpm" } else { "spm" }, &["directDoubleCadence", "directBikeCadence"]),
+        (StreamKind::Power, "W", &["directPower"]),
+        (StreamKind::Respiration, "brpm", &["directRespirationRate"]),
+        (StreamKind::Stamina, "%", &["directAvailableStamina"]),
+        (StreamKind::PerformanceCondition, "points", &["directPerformanceCondition"]),
+        (StreamKind::Temperature, "°C", &["directAirTemperature"]),
+    ];
+    // A stream is used only when its descriptor names the unit Raring expects.
+    let unit_of = |key: &str| {
+        metrics.and_then(|m| m.iter().find(|x| x["key"] == key)).and_then(|d| d["unit"]["key"].as_str())
+    };
+    let stream_index: Vec<(StreamKind, &str, Option<usize>)> = stream_keys
+        .iter()
+        .map(|(k, u, keys)| (*k, *u, keys.iter().filter(|key| stream_unit_ok(key, unit_of(key))).find_map(|key| index(key))))
+        .collect();
+    let mut along_t: Vec<f64> = vec![];
+    let mut along_v: Vec<Vec<Option<f64>>> = vec![vec![]; stream_index.len()];
     let hr = index("directHeartRate");
     let ts = index("directTimestamp");
     let lat = index("directLatitude");
@@ -2374,6 +2422,16 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
                     t_s: elapsed,
                     bpm: h,
                 });
+            }
+        }
+        if let (Some(t), Some(origin)) = (ts.and_then(|i| a[i].as_f64()), start_ts) {
+            let elapsed = (t - origin) / timestamp_scale;
+            if elapsed.is_finite() && elapsed >= 0. && along_t.last().is_none_or(|prev| elapsed >= *prev) {
+                along_t.push(elapsed);
+                for (n, (kind, _, i)) in stream_index.iter().enumerate() {
+                    let raw = i.and_then(|i| a[i].as_f64()).filter(|v| v.is_finite());
+                    along_v[n].push(raw.map(|v| if *kind == StreamKind::Speed { v * 3.6 } else { v }));
+                }
             }
         }
         if let (Some(y), Some(x)) = (
@@ -2432,7 +2490,59 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
             );
         }
     }
+    let series: Vec<StreamSeries> = stream_index
+        .iter()
+        .zip(along_v)
+        .filter(|(_, values)| values.iter().any(Option::is_some))
+        .map(|((kind, unit, _), values)| StreamSeries { kind: *kind, unit: (*unit).into(), values })
+        .collect();
+    let along = (!series.is_empty()).then_some(AlongTheWay { t_s: along_t, series });
+    let more: Vec<Stat> = [
+        ("movingDuration", "Moving time", "s"),
+        ("moderateIntensityMinutes", "Moderate intensity", "min"),
+        ("vigorousIntensityMinutes", "Vigorous intensity", "min"),
+        ("differenceBodyBattery", "Body Battery", "points"),
+        ("beginPotentialStamina", "Stamina at start", "%"),
+        ("endPotentialStamina", "Stamina at end", "%"),
+        ("elevationLoss", "Descent", "m"),
+        ("normalizedPower", "Normalized power", "W"),
+        ("intensityFactor", "Intensity factor", ""),
+        ("maxPowerTwentyMinutes", "Best 20 min power", "W"),
+        ("functionalThresholdPower", "FTP", "W"),
+        ("strideLength", "Stride length", "cm"),
+        ("avgRespirationRate", "Breathing rate", "brpm"),
+        ("recoveryHeartRate", "Recovery heart rate", "bpm"),
+        ("averageTemperature", "Watch temperature, average", "°C"),
+        ("minTemperature", "Watch temperature, lowest", "°C"),
+        ("maxTemperature", "Watch temperature, highest", "°C"),
+    ]
+    .iter()
+    .filter_map(|(key, label, unit)| {
+        v.number(&[*key]).filter(|n| n.is_finite()).map(|value| Stat { key: (*key).into(), label: (*label).into(), value, unit: (*unit).into() })
+    })
+    .collect();
+    let effects: Vec<EffectLine> = [
+        (EffectKind::Aerobic, summary.aerobic_te, summary.aerobic_label.clone()),
+        (EffectKind::Anaerobic, summary.anaerobic_te, summary.anaerobic_label.clone()),
+    ]
+    .into_iter()
+    .filter_map(|(kind, value, garmin_label)| {
+        let value = value.filter(|v| (0. ..=5.).contains(v))?;
+        let (band, line) = effect_band(kind, value);
+        Some(EffectLine { kind, value, band: band.into(), line: line.into(), garmin_label })
+    })
+    .collect();
+    let day = summary.start_local.get(..10).unwrap_or_default().to_owned();
+    let vo2max_new = store
+        .get("max_metrics", &day)
+        .and_then(|m| vo2(&m))
+        .filter(|today| historical_vo2(store, &date_sub(&day, 1)) != Some(*today));
     Some(WorkoutView {
+        counted: None,
+        along,
+        more,
+        effects,
+        vo2max_new,
         summary,
         recovery_hours: v.number(&["recoveryTime"]).map(|s| s / 3600.),
         stats,
@@ -2477,6 +2587,51 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
             .unwrap_or_default(),
         strength: crate::strength::session(store, id),
     })
+}
+/// The unit key each stored stream must carry. Values are already in that
+/// base unit: the descriptor's `factor` is not applied (checked against the
+/// summary's distance, duration and elevation).
+pub fn stream_unit_ok(key: &str, unit: Option<&str>) -> bool {
+    let expected: &[&str] = match key {
+        "directSpeed" => &["mps"],
+        "directElevation" => &["meter"],
+        "directDoubleCadence" => &["stepsPerMinute"],
+        "directBikeCadence" => &["rpm"],
+        "directPower" => &["watt"],
+        "directRespirationRate" => &["breathsPerMinute"],
+        "directAvailableStamina" | "directPerformanceCondition" => &["dimensionless"],
+        // Garmin spells it "celcius".
+        "directAirTemperature" => &["celcius", "celsius"],
+        _ => &[],
+    };
+    unit.is_some_and(|u| expected.contains(&u))
+}
+/// Garmin's training-effect bands (0–0.9, 1–1.9, 2–2.9, 3–3.9, 4–4.9, 5)
+/// and one plain line for each, by kind.
+pub fn effect_band(kind: EffectKind, v: f64) -> (&'static str, &'static str) {
+    let band = if v >= 5. {
+        "Overreaching"
+    } else if v >= 4. {
+        "Highly improving"
+    } else if v >= 3. {
+        "Improving"
+    } else if v >= 2. {
+        "Maintaining"
+    } else if v >= 1. {
+        "Minor benefit"
+    } else {
+        "No benefit"
+    };
+    let line = match (kind, v) {
+        (_, v) if v >= 5. => "more than your body can absorb right away; recovery comes first",
+        (EffectKind::Aerobic, v) if v >= 3. => "builds your aerobic base",
+        (EffectKind::Aerobic, v) if v >= 2. => "keeps your aerobic base",
+        (EffectKind::Aerobic, _) => "little aerobic stimulus",
+        (EffectKind::Anaerobic, v) if v >= 3. => "builds capacity for hard, fast efforts",
+        (EffectKind::Anaerobic, v) if v >= 2. => "keeps some capacity for hard efforts",
+        (EffectKind::Anaerobic, _) => "little sprint or hard work",
+    };
+    (band, line)
 }
 /// Strength history; none without any strength activity with sets.
 pub fn strength(store: &Store, date: &str) -> Option<StrengthView> {

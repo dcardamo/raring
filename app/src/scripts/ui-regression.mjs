@@ -126,9 +126,11 @@ try {
  for(const width of [390,700,1100]){
   const planned=await browser.newPage({viewport:{width,height:844}});
   await planned.goto(`${url}/?fixture=planned#today`);
-  await planned.getByText('Easy Run',{exact:true}).waitFor();
+  await planned.getByRole('region',{name:'Your day on one timeline'}).waitFor();
+  assert.equal(await planned.getByText('Easy Run',{exact:true}).count(),0,"Garmin's next session lives in Plan and Training, not Today");
   await planned.screenshot({path:resolve(output,`planned-today-${width}.png`),fullPage:true});
   await planned.getByRole('navigation').getByRole('button',{name:'Training'}).click();
+  await planned.getByText('Easy Run',{exact:true}).waitFor();
   await planned.getByText('City 10K',{exact:true}).waitFor();
   await planned.screenshot({path:resolve(output,`planned-training-${width}.png`),fullPage:true});
   await planned.close();
@@ -139,9 +141,8 @@ try {
  emptyToday.planned={state:'empty',session:null,coach:null,coverageStart:'2025-10-16',coverageEnd:'2025-10-30'};
  emptyTraining.planned=emptyToday.planned;emptyTraining.race=null;emptyTraining.raceState='empty';
  await emptyPlanned.route(u=>['/src/lib/sample/today.json','/src/lib/sample/training.json'].includes(u.pathname),route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(route.request().url().includes('today.json')?emptyToday:emptyTraining)}`}));
- await emptyPlanned.goto(`${url}/?fixture=planned-empty#today`);
+ await emptyPlanned.goto(`${url}/?fixture=planned-empty#training`);
  await emptyPlanned.getByText(/No workouts in Garmin’s cached schedule.*16 Oct.*30 Oct/).waitFor();
- await emptyPlanned.getByRole('navigation').getByRole('button',{name:'Training'}).click();
  await emptyPlanned.getByText('No upcoming race in Garmin’s next 90 days.',{exact:true}).waitFor();
  emptyTraining.raceState='partial';
  await emptyPlanned.goto(`${url}/?fixture=planned-partial#training`);
@@ -181,13 +182,14 @@ try {
  assert.equal(await page.locator('.stress-row').count(),5);
  await back('today');
  await tab('Health');
- await page.getByRole('button',{name:/^Stress/}).click();await waitRoute('metric/stress');
+ await page.getByRole('button',{name:'Stress through today'}).click();await waitRoute('metric/stress');
  await back('health');
  await page.getByRole('button',{name:'View Respiration',exact:true}).click();await waitRoute('metric/respiration');
  await back('health');await back('today');
  await page.locator('.activity').first().click();await waitRoute('workout/9000000000001');
  await back('today');
  await tab('Training');
+ await page.getByRole('tab',{name:'Activities'}).click();
  await page.locator('.activity').first().click();await waitRoute('workout/9000000000001');
  await page.reload();await waitRoute('workout/9000000000001');
  await back('training');await back('today');
@@ -204,16 +206,26 @@ try {
  assert.equal(await page.locator('.history-bar').count(),30);
  await back('today');
  // After waking, tonight's plan is one line that opens Sleep.
- await page.getByRole('button',{name:/^Tonight · Garmin plan/}).click();await waitRoute('sleep');
- assert.ok((await page.locator('.sleep-plan').textContent()).includes('23:06'));
- assert.ok((await page.locator('.sleep-plan').textContent()).includes('22:30–23:06'));
- const plan=page.locator('.sleep-plan');
+ await page.getByRole('button',{name:/^Tonight · Garmin plan/}).click();await waitRoute('sleep/tonight');
+ assert.equal(await page.getByRole('tab',{name:'Tonight'}).getAttribute('aria-selected'),'true','the tonight line opens the Tonight tab');
+ const plan=page.locator('.tonight-plan');
+ assert.ok((await plan.textContent()).includes('22:30–23:06'));
+ assert.equal(await plan.getByRole('img',{name:/^Tonight: now/}).count(),1,'a compact dial with labelled times');
  assert.ok((await plan.textContent()).includes('Wind down22:00'),'the plan leads with the wind-down time');
  assert.ok((await plan.textContent()).includes('Garmin plan'));
  assert.ok((await plan.textContent()).includes("Garmin added 20 min for today's activity and load."));
  await plan.getByRole('button',{name:'Why this plan'}).click();
  const evidence=await plan.locator('.evidence').textContent();
  assert.ok(evidence.includes("Garmin's recommendation for tonight.") && evidence.includes("Training: today's activity and load") && evidence.includes('30 min before the window starts'),evidence);
+ const recentNights=page.locator('.tonight-nights');
+ assert.ok((await recentNights.textContent()).includes('2 of 6 recorded nights below Garmin’s need.'),await recentNights.textContent());
+ assert.ok((await recentNights.getByRole('img').getAttribute('aria-label')).includes('Sun 12 Oct not recorded'),'a missing night is labelled, not zero');
+ assert.equal(await page.locator('.tonight-goals').count(),1);
+ await page.getByRole('tab',{name:'Last night'}).click();await waitRoute('sleep/last');
+ assert.equal(await page.locator('.tonight-plan').count(),0);
+ await page.goBack();await waitRoute('today');
+ await page.getByRole('button',{name:/^Tonight · Garmin plan/}).click();await waitRoute('sleep/tonight');
+ await page.getByRole('tab',{name:'Last night'}).click();await waitRoute('sleep/last');
  const alignment=page.locator('.alignment');
  assert.equal(await alignment.locator('h3 .pill').textContent(),'Aligned');
  assert.equal(await alignment.locator('.night').count(),7,'a week of nights against Garmin\'s optimal window');
@@ -221,7 +233,11 @@ try {
  assert.ok((await alignment.textContent()).includes('Optimal 22:45–06:15'));
  assert.ok((await page.locator('.consistency .averages').textContent()).includes('22:55'));
  await tab('Health');
- assert.equal(await page.locator('.dashboard>.card').first().locator('h3>span').first().textContent(),'Vitals');
+ assert.equal(await page.locator('.dashboard>.card').first().locator('h3>span').first().textContent(),'Long-term health · Fitness Age','long-term health leads (U55)');
+ const titles=await page.locator('.health-dashboard>.card h3>span:first-child').allTextContents();
+ assert.ok(titles.indexOf('Vitals')<titles.indexOf('Resting heart rate'),'vitals come before the metric charts: '+titles.join(', '));
+ assert.equal(await page.getByText('Heart rate · all day',{exact:true}).count(),0,'Your day stays on Today');
+ assert.equal(await page.locator('.over-time .history').count(),4,'daily metrics over a range');
  assert.equal(await page.locator('.signal-tile').count(),5);
  await page.getByRole('button',{name:'View HRV',exact:true}).click();await waitRoute('metric/hrv');
  const history=page.locator('.history'),slider=history.getByRole('slider');
@@ -322,7 +338,8 @@ try {
 
  await page.setViewportSize({width:390,height:844});
  await page.goto(`${url}/#training`);await waitRoute('training');
- await page.getByRole('button',{name:/^Strength · this week/}).click();await waitRoute('strength');
+ await page.getByRole('tab',{name:'Strength'}).click();
+ await page.getByRole('button',{name:/^Strength this week/}).click();await waitRoute('strength');
  await page.getByText('Heaviest set each session',{exact:true}).waitFor();
  const strengthSample=JSON.parse(await readFile(resolve('src/lib/sample/strength.json'),'utf8'));
  const historyWorkouts=JSON.parse(await readFile(resolve('src/lib/sample/strengthWorkoutHistory.json'),'utf8'));
@@ -360,11 +377,12 @@ try {
  await page.locator('.strength-history .workout-item').nth(9).getByRole('button').click();await waitRoute('workout/'+oldWorkout.id);
  await assertStrengthWorkout(oldWorkout.id,oldWorkout.startLocal.slice(0,10));
  await back('strength');
- assert.equal(await page.locator('.heat-card').isVisible(),false,'the weekly heatmap waits for wider screens');
+ assert.equal(await page.locator('.heat-card').count(),0,'the 12-week heatmap is replaced by the muscle range');
  await page.getByRole('button',{name:'Barbell Bench Press',exact:true}).click();
  assert.equal(await page.locator('.card h3',{hasText:'Barbell Bench Press'}).count(),1);
- await page.getByRole('button',{name:'4 weeks',exact:true}).click();
- await page.getByText('Last 4 weeks',{exact:true}).waitFor();
+ const muscleRange=page.getByRole('group',{name:'Muscle range'});
+ await muscleRange.getByRole('button',{name:'7 days'}).click();
+ assert.equal(await muscleRange.getByRole('button',{name:'7 days'}).getAttribute('aria-pressed'),'true');
  await page.getByRole('button',{name:/^Wed 15 Oct/}).click();await waitRoute('workout/9000000000111');
  await back('strength');
  await page.getByRole('button',{name:'Help',exact:true}).click();await waitRoute('help');
@@ -372,6 +390,7 @@ try {
  await page.getByText(/1\.8 times/).waitFor();
  await page.getByText(/Later edits will not appear in Raring, even after Refresh/).waitFor();
  await back('help');await back('strength');await back('training');
+ await page.getByRole('tab',{name:'Activities'}).click();
  await page.getByRole('button',{name:/^Lower A/}).click();await waitRoute('workout/9000000000002');
  await page.getByText('3 things look off',{exact:true}).waitFor();
  await page.getByText('A 0-rep set, a doubled set and an unnamed exercise',{exact:true}).waitFor();
@@ -424,7 +443,8 @@ try {
    assert.ok(layout.body<=width && layout.content<=layout.main+1,`${width}/${route}: horizontal overflow ${JSON.stringify(layout)}`);
    if(width>=660 && layout.columns)assert.equal(layout.columns,2,`${width}/${route}: two columns`);
    if(route==='health'){
-    assert.ok(await page.getByText('Last measured Tue 14 Oct').isVisible(),`${width}/health: dated weigh-in`);
+    await page.locator('.weight-card .fresh').waitFor();
+    assert.ok((await page.locator('.weight-card .fresh').textContent()).includes('Last measured Thu 16 Oct'),`${width}/health: dated weigh-in`);
     assert.ok(await page.getByText('recorded weigh-ins only',{exact:false}).isVisible(),`${width}/health: sparse trend label`);
    }
    assert.ok(layout.holes<=18,`${width}/${route}: ${layout.holes}px hole between cards`);
@@ -437,31 +457,48 @@ try {
   }
  }
  console.log('Today, Sleep, Training, Workout, Health and plan text contrast at 390/840: passed');
- // Isolated readings must have visible markers, but gaps must not become lines.
- const weightSample=JSON.parse(await readFile(resolve('src/lib/sample/health.json'),'utf8'));
+ // Generated by the actual Rust projection from independently synthetic weigh-ins.
+ const weightSource=await readFile(resolve('src/lib/sample/weight.ts'),'utf8');
+ const weightFixtures=JSON.parse(weightSource.match(/export const weightFixtures = (.+) satisfies /)[1]);
  for(const indices of [[2],[1,7]]){
-  const sparse=structuredClone(weightSample);
-  sparse.bodyWeight.trend=Array(12).fill(null);
-  for(const [i,index] of indices.entries())sparse.bodyWeight.trend[index]=72+i;
-  const sparsePage=await browser.newPage({viewport:{width:390,height:844}});
-  await sparsePage.route('**/src/lib/sample/health.json*',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(sparse)}`}));
-  await sparsePage.goto(`${url}/?weight-sparse=${indices.join('-')}#health`);
-  const weightCard=sparsePage.locator('.health-dashboard .card').filter({has:sparsePage.locator('h3', {hasText:'Weight'})});
-  await weightCard.getByText('Last measured',{exact:false}).waitFor();
-  const svg=weightCard.locator('svg');
-  const circles=svg.locator('circle');
-  assert.equal(await circles.count(),indices.length,`${indices}: all recorded weeks have visible dots`);
-  const path=await svg.locator('path').getAttribute('d');
-  assert.equal((path?.match(/M/g)??[]).length,indices.length,`${indices}: one segment per isolated reading`);
-  assert.ok(!path?.includes('L'),`${indices}: do not connect empty weeks`);
-  for(const [i,index] of indices.entries()){
-   const x=Number(await circles.nth(i).getAttribute('cx'));
-   assert.ok(Math.abs(x-(4+index*152/11))<0.1,`${indices}: circle follows the path's x coordinate`);
+  const sparse=structuredClone(weightFixtures);
+  for(const range of Object.keys(sparse.kg)){
+   sparse.kg[range].points=Array.from({length:12},(_,i)=>({date:`2025-10-${String(i+1).padStart(2,'0')}`,scale:indices.includes(i)?72+i/10:null,trend:72,breakScale:indices.includes(i)&&i!==indices[0]}));
   }
-  assert.equal(await sparsePage.locator('.health-dashboard .card').filter({has:sparsePage.locator('h3', {hasText:'Stress'})}).locator('svg circle').count(),1,'other sparklines keep their final marker');
+  const sparsePage=await browser.newPage({viewport:{width:390,height:844}});
+  await sparsePage.route('**/src/lib/sample/weight.ts*',route=>route.fulfill({contentType:'text/javascript',body:`export const weightFixtures=${JSON.stringify(sparse)}`}));
+  await sparsePage.goto(`${url}/?weight-sparse=${indices.join('-')}#health`);
+  const card=sparsePage.locator('.weight-card');
+  await card.locator('.fresh').waitFor();
+  assert.equal(await card.locator('.scale-mark').count(),indices.length,'each actual scale reading has a marker');
+  assert.equal(await card.locator('.trend-mark').count(),indices.length,'trend markers correspond to actual weigh-ins');
+  const path=await card.locator('.scale-line').getAttribute('d');
+  assert.equal((path.match(/M/g)??[]).length,indices.length,'core-defined long gaps split the scale line');
+  assert.ok(!path.includes('L')&&!path.includes('C'),'isolated readings are not joined');
   await sparsePage.close();
  }
- console.log('Sparse weight dots and unconnected empty weeks: passed');
+ for(const unit of ['kg','lb']){
+  const wp=await browser.newPage({viewport:{width:390,height:844}});
+  const fixtures={kg:structuredClone(weightFixtures[unit])};
+  for(const v of Object.values(fixtures.kg)){v.freshness.ageDays=12;v.freshness.stale=true;}
+  await wp.route('**/src/lib/sample/weight.ts*',r=>r.fulfill({contentType:'text/javascript',body:`export const weightFixtures=${JSON.stringify(fixtures)}`}));
+  await wp.goto(`${url}/?weight-unit=${unit}#health`);
+  const card=wp.locator('.weight-card');await card.locator('.fresh.stale').waitFor();
+  assert.ok((await card.locator('.weight-head').textContent()).includes(unit));
+  assert.equal(await card.locator('.changes li').count(),6);
+  assert.equal(await card.getByRole('button',{name:'Add weight',exact:true}).isDisabled(),true);
+  await card.getByRole('group',{name:'Weight range'}).getByRole('button',{name:'14 days',exact:true}).click();
+  await wp.waitForFunction(()=>document.querySelector('.weight-card')?.getAttribute('aria-busy')==='false');
+  await card.getByRole('slider',{name:'Weight readings'}).press('Home');
+  assert.ok((await card.getByRole('slider').getAttribute('aria-valuetext')).includes(unit));
+  assert.deepEqual(await contrastFailures(wp),[],`weight ${unit} contrast`);
+  await card.getByRole('button',{name:'Weight details'}).click();
+  await wp.waitForFunction(()=>location.hash==='#health/weight');
+  await wp.locator('.weight-card .fresh').waitFor();
+  assert.equal(await wp.getByRole('group',{name:'Weight range'}).getByRole('button',{name:'14 days',exact:true}).getAttribute('aria-pressed'),'true','range persists into canonical detail');
+  await wp.close();
+ }
+ console.log('Weight: core fixtures, gap markers, units, freshness, ranges and canonical detail passed');
  // Folding/unfolding should reflow in place, without losing the open detail.
  await page.setViewportSize({width:390,height:844});
  await page.goto(`${url}/#metric/hrv`);await waitRoute('metric/hrv');
@@ -539,14 +576,13 @@ try {
   const rest={...sample,call:null,focus:{...sample.focus,effort:false},
    lead:{id:'rest:2025-10-16',kind:'rest',headline:'Rest day',line:'Through tonight',action:{label:'View plan',route:'plan',adapt:false},dismissable:false,activity:null,intention:null,
     reasons:[{gate:'Privacy',result:'Journal entries never feed Today.'},{gate:'Circumstances',result:'Rest day: no exercise prompts today or tonight; your plan stays as it is.'}]},
-   adapt:{rest:true,pause:null,limits:{excluded:['running'],note:''},label:'Rest day',reviewDue:false,blocked:true}};
+   adapt:{rest:true,pause:null,limits:{excluded:['running'],note:''},label:'Rest day',reviewDue:false,blocked:true,routines:[{item:{id:'r1',name:'Wall sit 3 × 30 s',how:'From my physio'},done:false}]}};
   await leadPage.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(rest)}`}));
   await leadPage.goto(`${url}/#today`);
   await leadPage.getByRole('heading',{name:'Rest day',exact:true}).waitFor();
   assert.equal(await leadPage.locator('.hero .effort').count(),0,'no effort scale on a rest day');
   assert.equal(await leadPage.locator('.top .adapt').textContent(),'Rest day','the header names the circumstance');
-  await leadPage.getByRole('button',{name:'Why this?'}).click();
-  assert.ok((await leadPage.locator('.trace').textContent()).includes('no exercise prompts'),'Why this names the actual reason');
+  assert.equal(await leadPage.getByRole('button',{name:'Why this?'}).count(),0,'the reason line replaces Why this');
   await leadPage.locator('.top .adapt').click();
   const sheet=leadPage.getByRole('dialog',{name:'Adapt today'});
   await sheet.getByText('Rest day is on').waitFor();
@@ -557,12 +593,25 @@ try {
   assert.deepEqual(await contrastFailures(leadPage),[],'Adapt sheet contrast');
   await leadPage.keyboard.press('Escape');
   assert.equal(await leadPage.getByRole('dialog').count(),0);
+  // My routines: the person's own checklist, self-reported, sent as local actions only.
+  await leadPage.locator('.top .adapt').click();
+  await leadPage.getByRole('dialog',{name:'Adapt today'}).getByRole('button',{name:/^My routines/}).click();
+  const routines=leadPage.getByRole('dialog',{name:'My routines'});
+  await routines.waitFor();
+  assert.ok((await routines.textContent()).includes('Wall sit 3 × 30 s') && (await routines.textContent()).includes('From my physio'));
+  assert.equal(await routines.getByRole('button',{name:'Mark done today'}).count(),1);
+  assert.ok((await routines.textContent()).includes('no Garmin activity, intensity minutes or records'));
+  assert.ok(await routines.getByRole('button',{name:'Add to checklist'}).isDisabled(),'a name is required');
+  await routines.getByLabel('Exercise').fill('Calf raises');
+  assert.ok(!(await routines.getByRole('button',{name:'Add to checklist'}).isDisabled()));
+  assert.deepEqual(await contrastFailures(leadPage),[],'Routines contrast');
+  await leadPage.keyboard.press('Escape');
   await leadPage.getByRole('navigation').getByRole('button',{name:'Plan',exact:true}).click();
   await leadPage.waitForURL('**/#plan');
   assert.equal(await leadPage.locator('.top .adapt').textContent(),'Rest day','Adapt keeps its place on every root page');
   // An option to train is dismissable for the day.
   const suggest={...sample,lead:{id:'suggest:2025-10-16',kind:'suggest',headline:'Training is an option today',line:'After 7:48 of sleep',action:{label:'Plan a session',route:'plan',adapt:false},dismissable:true,activity:null,intention:null,reasons:[]},
-   adapt:{rest:false,pause:null,limits:{excluded:[],note:''},label:'Adapt today',reviewDue:false,blocked:false}};
+   adapt:{rest:false,pause:null,limits:{excluded:[],note:''},label:'Adapt today',reviewDue:false,blocked:false,routines:[]}};
   await leadPage.close();
   const optionPage=await browser.newPage({viewport:{width:390,height:844}});
   await optionPage.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(suggest)}`}));
@@ -574,6 +623,430 @@ try {
   await optionPage.close();
  }
  console.log('Today lead, Why this and Adapt sheet: passed');
+ // Your day: one 00–24 axis with sleep, Body Battery, stress, heart rate and events, nothing past the
+ // upload; the nap is listed under Recorded today. A kept session offers Keep · Choose another.
+ {
+  const dayPage=await browser.newPage({viewport:{width:390,height:844}});
+  dayPage.on('pageerror',e=>errors.push(e.message));
+  const sample=JSON.parse(await readFile(resolve('src/lib/sample/today.json'),'utf8'));
+  const board=JSON.parse(await readFile(resolve('src/lib/sample/board.json'),'utf8'));
+  const own={...board.items[1],intention:{...board.items[1].intention,id:'i-today',date:'2025-10-16',time:'18:00',name:'Hill run',sport:'running'}};
+  board.items.push(own);board.garmin.push({date:'2025-10-16',name:'Tempo'});
+  const nap=sample.day.events.find(e=>e.kind==='nap');nap.bodyBatteryChange=6;
+  const session={...sample,lead:{id:'session:i-today',kind:'session',headline:'Hill run at 18:00',line:'Your plan',action:{label:'Your plan',route:'plan',adapt:false},dismissable:false,kept:false,garmin:null,activity:null,intention:'i-today',reasons:[]},
+   adapt:{rest:false,pause:null,limits:{excluded:['cycling'],note:''},label:'Limits on',reviewDue:false,blocked:false,routines:[]}};
+  await dayPage.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(session)}`}));
+  await dayPage.route(u=>u.pathname==='/src/lib/sample/board.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(board)}`}));
+  await dayPage.goto(`${url}/#today`);
+  const yd=dayPage.getByRole('region',{name:'Your day on one timeline'});
+  await yd.waitFor();
+  assert.equal(await yd.getByText('Watch upload 13:30').count(),1);
+  assert.equal(await yd.getByText('Now 14:05').count(),1,'the now marker is labelled');
+  assert.equal(await yd.locator('.track.sleep i').count(),sample.day.sleep.length,'every stage after midnight is drawn');
+  const bbPath=await yd.locator('.track.chart path').first().getAttribute('d');
+  assert.ok(Math.max(...bbPath.match(/[ML](\d+)/g).map(t=>+t.slice(1)))<=810,'nothing is drawn after the upload');
+  assert.equal(await yd.getByRole('button',{name:'Body Battery 78 at 13:30, nap +6'}).count(),1,'the nap change is on the Body Battery row');
+  assert.equal(await yd.getByText('+6 nap').count(),1);
+  assert.equal(await yd.getByRole('button',{name:/^Heart rate through the day, resting 54/}).count(),1);
+  assert.equal(await yd.getByRole('button',{name:'Morning Run 06:12, 52 min'}).count(),1);
+  assert.equal(await dayPage.locator('.dashboard').getByRole('button',{name:/^Body Battery/}).count(),0,'Your day replaces the separate Body Battery card');
+  const recorded=dayPage.locator('.card').filter({hasText:'Recorded today'});
+  assert.ok((await recorded.textContent()).includes('Body Battery +6 · separate from last night'),'the nap row shows its Body Battery change');
+  assert.equal(await dayPage.getByRole('button',{name:'Keep',exact:true}).count(),1);
+  const week=dayPage.locator('.week-card');
+  const left=week.getByRole('group',{name:'Left this week'});
+  assert.equal(await left.getByRole('button',{name:'Do it today'}).count(),board.backlog.filter(b=>b.kind!=='sleepTiming').length,'This week and what is left share one card');
+  await dayPage.getByText('That’s today.',{exact:true}).waitFor();
+  const length=await dayPage.evaluate(()=>{const el=document.querySelector('main.scroll');return el.scrollHeight/el.clientHeight});
+  console.log(`Today at 390×844 is ${length.toFixed(2)} viewports`);
+  await left.getByRole('button',{name:'Do it today'}).first().click();
+  await dayPage.getByRole('dialog').first().waitFor();
+  assert.equal(await dayPage.url().endsWith('#today'),true,'Do it today stays on Today');
+  await dayPage.keyboard.press('Escape');
+  await dayPage.getByRole('button',{name:'Choose another'}).click();
+  const choose=dayPage.getByRole('dialog',{name:'Choose today’s session'});
+  await choose.waitFor();
+  assert.equal(await choose.getByRole('button',{name:/^Tempo/}).count(),1,"Garmin's session today is offered");
+  assert.equal(await choose.getByRole('button',{name:/^Hill run · 18:00/}).count(),1);
+  assert.ok(await choose.getByRole('button',{name:/^Easy ride/}).isDisabled(),'an excluded sport cannot be chosen');
+  assert.equal(await choose.getByRole('button',{name:/^Strength.*move to today/}).count(),1,'a later session can be moved to today');
+  assert.equal(await choose.getByRole('button',{name:/Do it today$/}).count(),board.backlog.length);
+  assert.deepEqual(await contrastFailures(dayPage),[],'Choose sheet contrast');
+  await choose.getByRole('button',{name:/^Add a session/}).click();
+  assert.equal(await choose.count(),0,'Add a session closes Choose');
+  await dayPage.getByRole('dialog').first().waitFor();
+  for(const width of [320,700]){await dayPage.setViewportSize({width,height:900});await dayPage.keyboard.press('Escape');
+   assert.equal(await dayPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`Your day fits ${width}px`);}
+  await dayPage.close();
+  const many=await browser.newPage({viewport:{width:390,height:844}});
+  const extra=[1,2,3].map(i=>({...sample.activities[0],id:`900000000010${i}`,name:`Walk ${i}`}));
+  await many.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify({...sample,activities:[...sample.activities,...extra]})}`}));
+  await many.goto(`${url}/#today`);
+  const recordedMany=many.locator('.card').filter({hasText:'Recorded today'});
+  await recordedMany.waitFor();
+  assert.equal(await recordedMany.locator('.activity').count(),3,'two activities and the nap');
+  await recordedMany.getByRole('button',{name:/^All today’s activities \(4\)/}).click();
+  await many.waitForURL('**/#activities');
+  await many.close();
+  const shifted=await browser.newPage({viewport:{width:390,height:844}});
+  const dst={...sample,day:{...sample.day,clockChange:true,bodyBattery:[],stress:[],heartRate:[]}};
+  await shifted.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(dst)}`}));
+  await shifted.goto(`${url}/#today`);
+  await shifted.getByRole('region',{name:'Your day on one timeline'}).waitFor();
+  assert.equal(await shifted.getByText('Clock change today · open the detail').count(),3,'a clock-change day sends intraday rows to their details');
+  assert.equal(await shifted.getByRole('note').filter({hasText:'Clocks changed by an hour today'}).count(),1,'U39: the clock change is said once');
+  await shifted.close();
+ }
+ console.log('Your day timeline, nap Body Battery and Keep / Choose another: passed');
+ // Sleep: a plain #sleep opens the closer tab; Tonight is a plan with a self-report, at every width.
+ {
+  const sp=await browser.newPage({viewport:{width:390,height:844}});
+  sp.on('pageerror',e=>errors.push(e.message));
+  const sleepSample=JSON.parse(await readFile(resolve('src/lib/sample/sleep.json'),'utf8'));
+  await sp.route(u=>u.pathname==='/src/lib/sample/sleep.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify({...sleepSample,tonightFirst:true,woundDown:true})}`}));
+  await sp.goto(`${url}/#sleep`);
+  await sp.getByRole('tab',{name:'Tonight'}).waitFor();
+  assert.equal(await sp.getByRole('tab',{name:'Tonight'}).getAttribute('aria-selected'),'true','evening opens Tonight');
+  const wound=sp.getByRole('button',{name:/Wound down · self-reported/});
+  assert.ok(await wound.isDisabled(),'a reported wind-down is shown, once');
+  for(const width of [320,700,1100]){
+   await sp.setViewportSize({width,height:900});
+   assert.equal(await sp.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`Tonight fits ${width}px`);
+   await sp.getByRole('tab',{name:'Last night'}).click();
+   const stack=sp.locator('.stage-stack').first();
+   if(await stack.count()){const box=await stack.boundingBox(),card=await stack.locator('xpath=ancestor::section[1]').boundingBox();
+    assert.ok(box.x>=card.x && box.x+box.width<=card.x+card.width+1,`stage totals stay inside their card at ${width}px`)}
+   assert.equal(await sp.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`Last night fits ${width}px`);
+   await sp.getByRole('tab',{name:'Tonight'}).click();
+  }
+  assert.deepEqual(await contrastFailures(sp),[],'Tonight contrast');
+  await sp.close();
+ }
+ // Training's week lanes: one per goal kind against the goal and the usual week, labelled.
+ {
+  const tp=await browser.newPage({viewport:{width:390,height:844}});
+  tp.on('pageerror',e=>errors.push(e.message));
+  await tp.goto(`${url}/#training`);
+  const card=tp.locator('.week-lanes');
+  await card.waitFor();
+  const zone=card.getByRole('img',{name:/^Zone 2:/});
+  assert.equal(await zone.getAttribute('aria-label'),'Zone 2: 30 min so far of a 150 goal; usual week by now 65');
+  assert.equal(await card.getByRole('img',{name:/^Strength: 2 sessions so far of a 4 goal/}).count(),1);
+  assert.ok((await card.textContent()).includes('middle half of 8 recent complete weeks'));
+  assert.equal(await card.locator('svg path[opacity=".13"]').count(),2,'a usual-week band per lane');
+  for(const width of [320,700]){await tp.setViewportSize({width,height:900});assert.equal(await tp.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`lanes fit ${width}px`)}
+  assert.deepEqual(await contrastFailures(tp),[],'Lanes contrast');
+  await tp.close();
+ }
+ console.log('Training week lanes: goal, usual-week band and labels: passed');
+ // Training sections: Fitness's three questions, Strength's muscles with gaps, Activities in Garmin's words.
+ {
+  const ts=await browser.newPage({viewport:{width:390,height:844}});
+  ts.on('pageerror',e=>errors.push(e.message));
+  await ts.goto(`${url}/#training`);
+  await ts.getByRole('tablist',{name:'Training section'}).waitFor();
+  for(const q of ['Enough, or too much?','Is my fitness improving?','What am I ready for?'])assert.equal(await ts.getByText(q,{exact:true}).count(),1,q);
+  assert.equal(await ts.locator('.semi').count(),0,'no full-width load gauge');
+  assert.ok((await ts.locator('.q-load .lbar').getAttribute('aria-label')).includes("Garmin's optimal range 420–760"));
+  assert.equal(await ts.locator('.gear').count(),0,'gear lives in Profile');
+  await ts.getByRole('tab',{name:'Strength'}).click();
+  const mus=ts.locator('.q-muscles');
+  await mus.getByRole('list',{name:'Sets per muscle group'}).waitFor();
+  assert.ok((await mus.textContent()).includes('Every group had more than 2 sets'),'no gaps over 30 days in the sample');
+  await mus.getByRole('group',{name:'Muscle range'}).getByRole('button',{name:'7 days'}).click();
+  await ts.waitForFunction(()=>document.querySelector('.q-muscles')?.textContent.includes('Few or no sets since'));
+  assert.ok(await mus.locator('li.gap').count()>0,'gaps are marked');
+  await ts.getByRole('tab',{name:'Activities'}).click();
+  const acts=ts.locator('.q-activities');
+  assert.ok((await acts.textContent()).includes('Aerobic 3.8 · Improving'),'Garmin’s training effect label');
+  assert.ok((await acts.textContent()).includes('Primary benefit · Tempo'));
+  // The chosen section holds across a detail and Back.
+  await acts.locator('.activity').first().click();await ts.waitForURL(/#workout\//);
+  await ts.goBack();await ts.waitForURL(/#training$/);
+  assert.equal(await ts.getByRole('tab',{name:'Activities'}).getAttribute('aria-selected'),'true');
+  for(const width of [320,700,1100]){await ts.setViewportSize({width,height:900});assert.equal(await ts.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`Training fits ${width}px`)}
+  assert.deepEqual(await contrastFailures(ts),[],'Training sections contrast');
+  await ts.close();
+ }
+ console.log('Training sections: three questions, muscles with gaps, activity contributions, section kept: passed');
+ // "?" help: short sheets on root pages and cards; Back and Escape close them before navigating.
+ {
+  const hp=await browser.newPage({viewport:{width:390,height:844}});
+  hp.on('pageerror',e=>errors.push(e.message));
+  const seen=new Set();
+  for(const [route,count] of [['today',1],['plan',2],['training',2],['health',2],['progress',2],['sleep/tonight',1],['profile',1],['workout/9000000000001',1]]){
+   await hp.goto(`${url}/#${route}`);
+   await hp.locator('h1').waitFor();
+   const buttons=hp.getByRole('button',{name:/^Help: /});
+   await buttons.first().waitFor();
+   assert.ok(await buttons.count()>=count,`${route} has ${count}+ help buttons`);
+   for(const name of await buttons.evaluateAll(bs=>bs.map(b=>b.getAttribute('aria-label'))))seen.add(name);
+  }
+  assert.ok(seen.size>=10,'help covers many topics: '+[...seen].join(', '));
+  await hp.goto(`${url}/#training`);
+  await hp.getByRole('button',{name:'Help: On track this week?'}).click();
+  const sheet=hp.getByRole('dialog',{name:'On track this week?'});
+  await sheet.waitFor();
+  assert.ok((await sheet.textContent()).includes('usual week'));
+  assert.equal(await hp.evaluate(()=>window.__raringBack()),true,'Back closes the sheet');
+  await sheet.waitFor({state:'detached'});
+  assert.equal(await hp.evaluate(()=>location.hash),'#training');
+  await hp.getByRole('button',{name:'Help: Acute load'}).click();
+  await hp.keyboard.press('Escape');
+  assert.equal(await hp.getByRole('dialog').count(),0);
+  await hp.getByRole('button',{name:'Help: Acute load'}).click();
+  assert.deepEqual(await contrastFailures(hp),[],'Help sheet contrast');
+  await hp.getByRole('dialog').getByRole('button',{name:'All help'}).click();
+  await hp.waitForURL('**/#help');
+  await hp.close();
+ }
+ console.log('Help: ? sheets on root pages and cards, Back/Escape close, link to all help: passed');
+ // Stage-5 journeys: activity rows name average HR (U05), unsupported readiness says why (U07),
+ // Fitness Age is Garmin's dated estimate (U48), and Settings says Raring doesn't learn from use (U54).
+ {
+  const sp=await browser.newPage({viewport:{width:390,height:844}});
+  sp.on('pageerror',e=>errors.push(e.message));
+  const sample=JSON.parse(await readFile(resolve('src/lib/sample/today.json'),'utf8'));
+  await sp.goto(`${url}/#today`);
+  assert.ok((await sp.locator('.card').filter({hasText:'Recorded today'}).textContent()).includes('avg HR 152'),'U05');
+  const rp=await browser.newPage({viewport:{width:390,height:844}});
+  await rp.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify({...sample,readiness:null,missingMetricReasons:{readiness:'This watch can’t record Training Readiness.'}})}`}));
+  await rp.goto(`${url}/#readiness`);
+  await rp.locator('.detail-gauge').getByText('This watch can’t record Training Readiness.',{exact:true}).waitFor();
+  await rp.close();
+  await sp.goto(`${url}/#health`);
+  assert.ok((await sp.locator('.age-source').textContent()).startsWith('Garmin estimate · '),'U48');
+  await sp.goto(`${url}/#settings`);
+  await sp.getByText(/Raring doesn’t learn from how you use the app/).waitFor();
+  await sp.close();
+ }
+ console.log('Stage-5 U05/U07/U48/U54 content: passed');
+ // U58: a link this version can't open explains itself on Today; U46: tonight's need says when it was read;
+ // U17: bests are in available history; U41: the migrated observation offers Review timing.
+ {
+  const lk=await browser.newPage({viewport:{width:390,height:844}});
+  lk.on('pageerror',e=>errors.push(e.message));
+  await lk.goto(`${url}/#no-such-page`);
+  await lk.getByRole('status').filter({hasText:'That link isn’t in this version of Raring, so Today opened.'}).waitFor();
+  await lk.getByRole('button',{name:'Dismiss'}).click();
+  assert.equal(await lk.getByText(/That link isn’t in this version/).count(),0);
+  await lk.goto(`${url}/#sleep/tonight`);
+  assert.ok((await lk.locator('.tonight-plan').textContent()).includes('Garmin · read '),'U46');
+  await lk.goto(`${url}/#strength`);
+  await lk.getByText('in available history',{exact:true}).first().waitFor();
+  await lk.close();
+  // The sample module is cached once loaded, so the observation case uses a fresh page.
+  const ob=await browser.newPage({viewport:{width:390,height:844}});
+  const board=JSON.parse(await readFile(resolve('src/lib/sample/board.json'),'utf8'));
+  board.explainObservation=true;
+  await ob.route(u=>u.pathname==='/src/lib/sample/board.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(board)}`}));
+  await ob.goto(`${url}/#plan`);
+  await ob.getByRole('button',{name:'Review timing'}).click();
+  await ob.waitForURL('**/#sleep/tonight');
+  await ob.close();
+ }
+ console.log('U58/U46/U17/U41: invalid link, need read time, bests in available history, Review timing: passed');
+ // U36: in the evening a session still planned today is a quiet line, not a prompt.
+ {
+  const ev=await browser.newPage({viewport:{width:390,height:844}});
+  ev.on('pageerror',e=>errors.push(e.message));
+  const sample=JSON.parse(await readFile(resolve('src/lib/sample/today.json'),'utf8'));
+  const board=JSON.parse(await readFile(resolve('src/lib/sample/board.json'),'utf8'));
+  board.items.push({...board.items[1],intention:{...board.items[1].intention,id:'i-eve',date:'2025-10-16',time:'19:30',name:'Evening run',sport:'running'},state:'planned'});
+  const evening={...sample,call:null,focus:{...sample.focus,phase:'evening',effort:false},lead:{id:'evening:2025-10-17',kind:'sleep',headline:'Make room for sleep',line:'Wind down from 22:00',action:{label:'Tonight’s plan',route:'sleep/tonight',adapt:false},dismissable:false,kept:false,garmin:null,activity:null,intention:null,reasons:[]}};
+  await ev.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(evening)}`}));
+  await ev.route(u=>u.pathname==='/src/lib/sample/board.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(board)}`}));
+  await ev.goto(`${url}/#today`);
+  await ev.getByRole('heading',{name:'Make room for sleep'}).waitFor();
+  await ev.getByRole('button',{name:/^Evening run 19:30 · still in your plan/}).waitFor();
+  const hero=await ev.locator('.hero').textContent();
+  assert.ok(!/missed|Hurry/i.test(hero),'no pressure in the evening');
+  await ev.close();
+ }
+ console.log('U36: an evening session stays as a quiet still-in-your-plan line: passed');
+ // U59: larger text keeps every root page inside the phone width; reduced motion stops animation.
+ {
+  const big=await browser.newPage({viewport:{width:390,height:844}});
+  big.on('pageerror',e=>errors.push(e.message));
+  await big.emulateMedia({reducedMotion:'reduce'});
+  for(const route of ['today','plan','training','health','progress','sleep/tonight','profile']){
+   await big.goto(`${url}/#${route}`);
+   await big.locator('h1').waitFor();
+   await big.addStyleTag({content:'html{zoom:1.3}'});
+   await big.waitForTimeout(150);
+   const overflow=await big.evaluate(()=>document.documentElement.scrollWidth-innerWidth);
+   assert.ok(overflow<=2,`${route} at 130% text: ${overflow}px horizontal overflow`);
+   const running=await big.evaluate(()=>document.getAnimations().filter(a=>a.playState==='running'&&(a.effect?.getTiming().iterations===Infinity)).length);
+   assert.equal(running,0,`${route}: no endless animation with reduced motion`);
+  }
+  await big.close();
+ }
+ console.log('U59: 130% text without horizontal overflow and reduced motion on root pages: passed');
+ // U31/U32: under your limits Garmin's workouts need review (contents unknown); Garmin's schedule has a read-only detail.
+ {
+  const lp=await browser.newPage({viewport:{width:390,height:844}});
+  lp.on('pageerror',e=>errors.push(e.message));
+  const sample=JSON.parse(await readFile(resolve('src/lib/sample/today.json'),'utf8'));
+  const board=JSON.parse(await readFile(resolve('src/lib/sample/board.json'),'utf8'));
+  const lift={id:'coach:2025-10-18:1',date:'2025-10-18',name:'Coach strength',kind:'strength',durationMin:40,effect:null,restDay:false,garminStatus:'Not complete'};
+  board.coach={name:'Synthetic Coach',state:'available',sessions:[lift]};
+  board.items.push({intention:{id:lift.id,date:lift.date,time:null,sport:'strength',typeKey:null,name:lift.name,durationMin:40,allocation:{strengthSessions:1,zone2Min:0,highIntensityMin:0,intensityMin:0,sleepNights:0},kind:'workout',garminId:lift.id,status:'open',history:[]},state:'planned',recording:null,matchedBy:null,candidates:[],coach:lift});
+  const limited={...sample,adapt:{rest:false,pause:null,limits:{excluded:['strength'],note:'No deep knee bends'},label:'Limits on',reviewDue:false,blocked:false,routines:[]}};
+  await lp.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(limited)}`}));
+  await lp.route(u=>u.pathname==='/src/lib/sample/board.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(board)}`}));
+  await lp.goto(`${url}/#today`);
+  await lp.locator('.top .adapt').click();
+  await lp.getByRole('dialog',{name:'Adapt today'}).getByRole('button',{name:/^My routines/}).click();
+  const routines=lp.getByRole('dialog',{name:'My routines'});
+  const rt=await routines.textContent();
+  assert.ok(rt.includes('Easy Run') && rt.includes('Contents unknown to Raring') && rt.includes('Review needed'),'U31: '+rt);
+  assert.ok(!/Compatible|Safe/.test(rt));
+  await lp.keyboard.press('Escape');
+  await lp.getByRole('navigation').getByRole('button',{name:'Plan',exact:true}).click();
+  await lp.getByRole('button',{name:/^Friday 17 Oct/}).click();
+  await lp.getByRole('button',{name:/Easy Run/}).click();
+  const g=lp.getByRole('dialog',{name:'Easy Run'});
+  const gt=await g.textContent();
+  assert.ok(gt.includes('read-only') && gt.includes('Review needed') && gt.includes('Contents unknown to Raring') && gt.includes('completion flag isn’t read'),'U32: '+gt);
+  assert.ok(!/Removed from Garmin|Compatible|Safe/.test(gt));
+  assert.deepEqual(await contrastFailures(lp),[],'Garmin sheet contrast');
+  await lp.keyboard.press('Escape');
+  await lp.getByRole('button',{name:/^Saturday 18 Oct/}).click();
+  await lp.locator('.days').getByRole('button',{name:/Coach strength/}).click();
+  await lp.getByRole('dialog',{name:'Coach strength'}).getByText('Conflicts with your excluded activity.').waitFor();
+  await lp.close();
+ }
+ console.log('U31/U32: Garmin workouts need review under limits; scheduled workouts have a read-only detail; Coach conflict named: passed');
+
+ // Lifts: one Max weight / Volume choice and the shared range picker for every lift chart.
+ {
+  const lp=await browser.newPage({viewport:{width:390,height:844}});
+  lp.on('pageerror',e=>errors.push(e.message));
+  await lp.goto(`${url}/#strength`);
+  const chart=lp.getByRole('img',{name:/^Heaviest set each session, \d+ sessions/}).first();
+  await chart.waitFor();
+  const before=await chart.getAttribute('aria-label');
+  await lp.getByRole('group',{name:'Lift measure'}).getByRole('button',{name:'Volume'}).click();
+  const vol=lp.getByRole('img',{name:/^Volume each session/}).first();
+  await vol.waitFor();
+  assert.notEqual(await vol.getAttribute('aria-label'),before.replace('Heaviest set','Volume'),'volume plots different values');
+  assert.ok((await lp.locator('.strength-history').textContent()).includes('weight × reps over weighted sets'));
+  assert.ok((await lp.locator('.strength-history').textContent()).includes('No estimated one-rep max'));
+  const picker=lp.getByRole('group',{name:'Lift range'});
+  for(const label of ['7D','14D','30D','90D','1Y','Max'])assert.equal(await picker.getByRole('button',{name:new RegExp(label==='Max'?'All history':label.replace('D',' days').replace('1Y','1 year'))}).count(),1,`${label} offered`);
+  await picker.getByRole('button',{name:'7 days'}).click();
+  await lp.waitForFunction(()=>[...document.querySelectorAll('.strength-history p.dim')].some(p=>/Fewer than two sessions|No sessions in this range/.test(p.textContent))||document.querySelector('svg.trend'));
+  // The choice holds when switching exercise.
+  const chips=lp.getByRole('group',{name:'Exercise'}).getByRole('button');
+  if(await chips.count()>1){await chips.nth(1).click();assert.equal(await lp.getByRole('group',{name:'Lift measure'}).getByRole('button',{name:'Volume'}).getAttribute('aria-pressed'),'true')}
+  assert.deepEqual(await contrastFailures(lp),[],'Lift controls contrast');
+  await lp.close();
+ }
+ console.log('Lifts: Max weight / Volume, shared range picker, excluded sets note: passed');
+ // Workout detail: stored streams with heart rate on one axis, effects in plain words, only recorded fields.
+ {
+  const wp=await browser.newPage({viewport:{width:390,height:844}});
+  wp.on('pageerror',e=>errors.push(e.message));
+  await wp.goto(`${url}/#workout/9000000000001`);
+  const along=wp.getByRole('region',{name:'Along the way'});
+  await along.waitFor();
+  for(const name of [/^Heart rate over/,/^Pace over .*minutes per km/,/^Elevation over/,/^Cadence over .*spm/])assert.equal(await along.getByRole('img',{name}).count(),1,String(name));
+  assert.equal(await along.getByRole('img',{name:/^Power over/}).count(),0,'no power without a power meter');
+  const did=await wp.getByRole('region',{name:'What it did'}).textContent();
+  for(const want of ['3.8','Improving','builds your aerobic base','Minor benefit','62','14 moderate + 2 × 24 vigorous','-9'])assert.ok(did.includes(want),`${want} in ${did}`);
+  const rec=await wp.getByRole('region',{name:'Recorded by your watch'}).textContent();
+  for(const want of ['Moving time','Descent41 m','Stride length113.4 cm','Recovery heart rate31 bpm'])assert.ok(rec.includes(want),`${want} in ${rec}`);
+  assert.equal(await wp.getByText(/new VO₂ max estimate/).count(),0,'no VO₂ max link without a new estimate');
+  const hic=await wp.getByRole('region',{name:'How it counted'}).textContent();
+  assert.ok(hic.includes('18 min Zone 2') && hic.includes('100 of 150 this week') && hic.includes('Best in available history'),'U15: '+hic);
+  assert.ok(!/Fitness Age will|younger/.test(hic));
+  for(const width of [320,700]){await wp.setViewportSize({width,height:900});assert.equal(await wp.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`workout fits ${width}px`)}
+  assert.deepEqual(await contrastFailures(wp),[],'Workout detail contrast');
+  await wp.goto(`${url}/#workout/9000000000002`);
+  await wp.locator('h1').waitFor();
+  assert.equal(await wp.getByRole('region',{name:'Along the way'}).count(),0,'strength sessions show sets, not streams');
+  assert.ok((await wp.getByRole('region',{name:'How it counted'}).textContent()).includes('2 of 4 strength sessions'),'U15 strength');
+  await wp.close();
+ }
+ console.log('Workout detail: aligned streams, effects in plain words, recorded fields only: passed');
+ // An event groups this week's sessions of its sport; each still counts toward weekly goals.
+ {
+  const ep=await browser.newPage({viewport:{width:390,height:844}});
+  ep.on('pageerror',e=>errors.push(e.message));
+  const board=JSON.parse(await readFile(resolve('src/lib/sample/board.json'),'utf8'));
+  const run={...board.items[1],state:'planned',intention:{...board.items[1].intention,id:'i-run',date:'2025-10-18',sport:'running',name:'Tempo run'}};
+  board.items.push(run);
+  board.eventWeek={event:board.events[0],sport:'running',items:['i-run'],recordedMin:52};
+  await ep.route(u=>u.pathname==='/src/lib/sample/board.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(board)}`}));
+  await ep.goto(`${url}/#plan`);
+  const group=ep.getByRole('group',{name:'Harbour 10K this week'});
+  await group.waitFor();
+  assert.ok((await group.textContent()).includes('Run this week: 52 min recorded'),await group.textContent());
+  assert.equal(await group.getByRole('button',{name:/Tempo run/}).count(),1,'the run is grouped under the event');
+  assert.equal(await group.getByRole('button',{name:/Easy ride/}).count(),0,'other sports are not');
+  assert.ok((await group.textContent()).includes('once per goal'));
+  assert.deepEqual(await contrastFailures(ep),[],'Event group contrast');
+  await ep.close();
+  const plain=await browser.newPage({viewport:{width:390,height:844}});
+  await plain.goto(`${url}/#plan`);
+  await plain.getByText('Harbour 10K',{exact:true}).first().waitFor();
+  assert.equal(await plain.getByRole('group',{name:/this week$/}).count(),0,'without its sessions the event only counts down');
+  await plain.close();
+ }
+ console.log('Event week: sessions of its sport grouped, others not, countdown only otherwise: passed');
+ // Garmin Coach: read-only planned work grouped under the plan, rest days shown, Garmin's status never completion.
+ {
+  const cp=await browser.newPage({viewport:{width:390,height:844}});
+  cp.on('pageerror',e=>errors.push(e.message));
+  const board=JSON.parse(await readFile(resolve('src/lib/sample/board.json'),'utf8'));
+  const session=(date,n,name,kind,min,extra={})=>({id:`coach:${date}:${n}`,date,name,kind,durationMin:min,effect:null,restDay:false,garminStatus:'Not complete',...extra});
+  const lift=session('2025-10-16',1,'Strength','strength',40),run=session('2025-10-18',1,'Threshold','cardio',45,{effect:'Lactate threshold'});
+  const rest={...session('2025-10-17',1,'Rest day',null,null),kind:null,restDay:true};
+  board.coach={name:'Synthetic Coach',state:'available',sessions:[lift,rest,run]};
+  const asItem=(c,state)=>({intention:{id:c.id,date:c.date,time:null,sport:c.kind==='strength'?'strength':'other',typeKey:c.kind==='cardio'?'garmin_coach_cardio':null,name:c.name,durationMin:c.durationMin,
+   allocation:{strengthSessions:c.kind==='strength'?1:0,zone2Min:0,highIntensityMin:0,intensityMin:0,sleepNights:0},kind:'workout',garminId:c.id,status:'open',history:[]},state,recording:null,matchedBy:null,candidates:[],coach:c});
+  board.items.push(asItem(lift,'planned'),asItem(run,'planned'));
+  await cp.route(u=>u.pathname==='/src/lib/sample/board.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(board)}`}));
+  await cp.goto(`${url}/#plan`);
+  const group=cp.getByRole('group',{name:'Synthetic Coach this week'});
+  await group.waitFor();
+  assert.ok((await group.textContent()).includes('Garmin Coach · read-only') && (await group.textContent()).includes('0 of 2 done'));
+  assert.ok((await group.textContent()).includes('plan no zone or intensity minutes'));
+  await cp.getByRole('button',{name:/^Friday 17 Oct/}).click();
+  assert.ok((await cp.locator('.days').textContent()).includes('Rest day'),'Garmin Coach rest day is listed');
+  await group.getByRole('button',{name:/Threshold/}).click();
+  const sheet=cp.getByRole('dialog',{name:'Threshold'});
+  await sheet.waitFor();
+  const text=await sheet.textContent();
+  assert.ok(text.includes('Garmin Coach · read-only') && text.includes('Lactate threshold') && text.includes('Garmin: Not complete') && text.includes('only from a matching recording'),text);
+  for(const name of [/^Edit/,/^Move/,/^Let it go/,/^Remove/,/^Send to Garmin/])assert.equal(await sheet.getByRole('button',{name}).count(),0,`no ${name} for Garmin's session`);
+  assert.deepEqual(await contrastFailures(cp),[],'Coach contrast');
+  await cp.close();
+ }
+ console.log('Garmin Coach: grouped read-only sessions, rest day, Garmin status not completion: passed');
+ // Profile: Garmin's facts with dates, limitations into Adapt's limits, gear, Settings; no Garmin writes.
+ {
+  const pp=await browser.newPage({viewport:{width:390,height:844}});
+  pp.on('pageerror',e=>errors.push(e.message));
+  const sample=JSON.parse(await readFile(resolve('src/lib/sample/profile.json'),'utf8'));
+  await pp.route(u=>u.pathname==='/src/lib/sample/profile.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify({...sample,limits:{excluded:['running'],note:'No overhead pressing'},weightFreshness:{...sample.weightFreshness,ageDays:12,stale:true}})}`}));
+  await pp.goto(`${url}/#profile`);
+  const facts=pp.getByRole('region',{name:'What Garmin knows'});
+  await facts.waitFor();
+  const text=await facts.textContent();
+  for(const want of ['Age46','72.4 kg','Last weigh-in Tue 14 Oct','Metric · km, kg','Last upload'])assert.ok(text.includes(want),`${want} in ${text}`);
+  assert.ok(await pp.getByRole('button',{name:'Add a weight'}).isDisabled(),'adding a weight stays disabled');
+  assert.ok((await pp.getByRole('region',{name:'Limitations and injuries'}).textContent()).includes('Avoiding run · “No overhead pressing”'));
+  await pp.getByRole('button',{name:/^Manage limitations/}).click();
+  await pp.getByRole('dialog',{name:'Your limits'}).waitFor();
+  await pp.keyboard.press('Escape');
+  assert.equal(await pp.locator('.gear').count(),1,'gear lives in Profile');
+  for(const width of [320,700]){await pp.setViewportSize({width,height:900});assert.equal(await pp.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`Profile fits ${width}px`)}
+  assert.deepEqual(await contrastFailures(pp),[],'Profile contrast');
+  await pp.close();
+ }
+ console.log('Profile: Garmin facts with dates, limitations, gear, disabled weight write: passed');
+ console.log('Sleep tabs: closer default, Tonight plan, wind-down self-report, recent nights and widths: passed');
 
  // Today through the day: the same data at different clocks. Only the leading card changes; the hero,
  // its reconciliation pill and the metric cards stay put, and nothing invites effort after wind-down.
@@ -613,7 +1086,8 @@ try {
   await pill.click();
   await phasePage.getByText(differ.reconcile.line).waitFor();
   assert.equal(await phasePage.locator('.hero .effort').count(),focus.effort?1:0,`${name}: effort call ${focus.effort?'shown':'hidden'}`);
-  assert.equal(await phasePage.locator('.planned-session').count(),['winddown','late'].includes(name)?0:1,`${name}: no planned exercise card during sleep phases`);
+  assert.equal(await phasePage.locator('.planned-session').count(),0,`${name}: Garmin's next session isn't repeated on Today`);
+  assert.equal(await phasePage.locator('.week-card').count(),['winddown','late'].includes(name)?0:1,`${name}: no week card during sleep phases`);
   const text=await phasePage.locator('.dashboard').textContent();
   // The week card's "left" counts the week's goals, not the time to bed; it is hidden in sleep phases.
   const advice=await phasePage.locator('.dashboard > :not(.week-card)').allTextContents();
@@ -638,9 +1112,11 @@ try {
  console.log('Today through the day: one leading card, stable hero and pill, calm nights at 390/700/1100: passed');
 
  const samples={};
- for(const name of ['today','sleep','training','health','status','workout'])samples[name]=JSON.parse(await readFile(resolve(`src/lib/sample/${name}.json`),'utf8'));
+ for(const name of ['today','sleep','training','health','status','workout','profile'])samples[name]=JSON.parse(await readFile(resolve(`src/lib/sample/${name}.json`),'utf8'));
  samples.plan_board=JSON.parse(await readFile(resolve('src/lib/sample/board.json'),'utf8'));
  samples.progress=JSON.parse(await readFile(resolve('src/lib/sample/progress.json'),'utf8'));
+ samples.progress_domains=JSON.parse(await readFile(resolve('src/lib/sample/progressDomains.json'),'utf8'));
+ samples.weight_trend=weightFixtures.kg.days30;
  // Progress controls invoke the Rust contract. These responses are synthetic;
  // period arithmetic, evidence coverage and awards are tested in the core.
  {
@@ -656,7 +1132,7 @@ try {
     if(command==='progress'){
      window.progressCalls.push(args);
      const p=structuredClone(samples.progress);
-     if(args.period==='year'){p.period='year';p.from='2024-11-01';p.to='2025-10-31';p.calendar=[];}
+     if(args.period==='year'){p.period='year';p.from='2024-11-01';p.to='2025-10-31';p.calendar=[];p.ringDays=[];}
      if(args.period==='week'){
       p.period='week';p.from='2025-10-13';p.to='2025-10-19';
       if(args.date==='2025-10-12'){p.from='2025-10-06';p.to=p.end='2025-10-12';p.current=false;}
@@ -674,20 +1150,25 @@ try {
   await progressPage.getByRole('heading',{name:'October 2025',exact:true}).waitFor();
   assert.ok((await progressPage.locator('.report').textContent()).includes('Active on 4 of 16 days'));
   assert.ok((await progressPage.locator('.report').textContent()).includes('Intensity: known total from 4 of 16 days'));
-  assert.equal(await progressPage.locator('.cal .day.future').count(),15);
+  assert.equal(await progressPage.locator('.ring-cal .dc.future').count(),17,'the month’s whole weeks, future days empty');
+  assert.equal(await progressPage.locator('.ring-cal .dc.outside').count(),4,'days outside October are faint');
+  assert.ok((await progressPage.locator('.ring-cal .dc').filter({hasText:'8'}).first().getAttribute('aria-label')).includes('ill'));
   assert.ok((await progressPage.locator('.ms').first().textContent()).includes('Longest run'));
   await progressPage.getByRole('group',{name:'Period',exact:true}).getByRole('button',{name:'Year',exact:true}).click();
   await progressPage.waitForFunction(()=>window.progressCalls.some(c=>c.period==='year'));
   await progressPage.getByRole('button',{name:'Year',exact:true}).getAttribute('aria-pressed').then(v=>assert.equal(v,'true'));
-  assert.equal(await progressPage.locator('.cal').count(),0);
+  assert.equal(await progressPage.locator('.cal, .ring-cal').count(),0);
   await progressPage.getByRole('group',{name:'Period',exact:true}).getByRole('button',{name:'Week',exact:true}).click();
   await progressPage.waitForFunction(()=>window.progressCalls.some(c=>c.period==='week'));
   await progressPage.getByRole('button',{name:'Previous period',exact:true}).click();
   await progressPage.waitForFunction(()=>document.querySelector('.rep-h h2')?.textContent.includes('6 Oct')&&document.querySelector('.report')?.getAttribute('aria-busy')==='false');
   const historicalLabel=await progressPage.locator('.rep-h h2').textContent();
+  await progressPage.getByRole('tab',{name:'Long-term'}).click();
   await progressPage.locator('.tiles2 button').filter({hasText:'HRV'}).click();
   await progressPage.waitForFunction(()=>location.hash==='#metric/hrv');
   await progressPage.goBack();
+  await progressPage.waitForFunction(()=>document.querySelector('[role=tab][aria-selected=true]')?.textContent==='Long-term');
+  await progressPage.getByRole('tab',{name:'Overall'}).click();
   await progressPage.waitForFunction(label=>location.hash==='#progress'&&document.querySelector('.rep-h h2')?.textContent===label,historicalLabel);
   const beforeResume=await progressPage.evaluate(()=>window.progressReplies);
   await progressPage.evaluate(()=>{window.progressStatus.lastSync='2025-10-16T12:34:56Z';window.dispatchEvent(new Event('raring:resume'));});
@@ -705,6 +1186,147 @@ try {
   await progressPage.close();
  }
  console.log('Progress contract: periods, coverage, calendar, records, Back/resume and stale-read selection passed');
+ // Progress sections: Cardio's weekly zone and intensity against goals with VO₂ max, Strength's sessions
+ // and bests, Long-term's months; marks and unknown weeks stay visible, never zero.
+ {
+  const pd=await browser.newPage({viewport:{width:390,height:844}});
+  pd.on('pageerror',e=>errors.push(e.message));
+  await pd.goto(`${url}/#progress`);
+  await pd.getByRole('tablist',{name:'Progress section'}).waitFor();
+  await pd.getByRole('tab',{name:'Cardio'}).click();
+  const z2=pd.getByRole('region',{name:'Zone 2 minutes per week'});
+  await z2.waitFor();
+  assert.ok((await z2.textContent()).includes('goal 150'));
+  const label=await z2.getByRole('img').getAttribute('aria-label');
+  assert.ok(label.includes('unknown'),'an unknown week stays unknown: '+label);
+  assert.equal(await pd.getByRole('region',{name:'Intensity minutes per week'}).count(),1);
+  assert.equal(await pd.getByRole('region',{name:'Zone 4–5 minutes per week'}).count(),0,'no lane without its goal');
+  assert.ok((await pd.getByRole('region',{name:'VO₂ max, same weeks'}).getByRole('img').getAttribute('aria-label')).includes('none'),'weeks without an estimate stay empty');
+  await pd.getByRole('tab',{name:'Strength'}).click();
+  await pd.getByRole('region',{name:'Strength sessions per week'}).waitFor();
+  const bests=pd.getByRole('region',{name:'Bests in available history'});
+  assert.ok((await bests.textContent()).includes('Barbell Back Squat') && (await bests.textContent()).includes('105 kg × 3'));
+  const squat=pd.getByRole('region',{name:'Barbell Back Squat over the year'});
+  await squat.waitFor();
+  assert.ok((await squat.getByRole('img').getAttribute('aria-label')).startsWith('Barbell Back Squat: heaviest set per session'));
+  assert.equal(await pd.getByRole('region',{name:/over the year$/}).count(),2,'the two heaviest lifts');
+  await pd.getByRole('tab',{name:'Overall'}).click();
+  await pd.getByRole('button',{name:/^All records and milestones/}).click();
+  await pd.waitForURL('**/#progress/milestones');
+  await pd.getByRole('heading',{name:'Records and milestones',level:1}).waitFor();
+  const months=pd.locator('.archive-month');
+  assert.ok(await months.count()>=1,'grouped by month');
+  assert.ok(await months.first().locator('.ms').count()>=1);
+  await pd.goBack();await pd.waitForURL(/#progress$/);
+  await pd.getByRole('tab',{name:'Strength'}).click();
+  await pd.getByRole('tab',{name:'Long-term'}).click();
+  for(const r of ['Training per month','Resting heart rate by month','Overnight HRV by month','VO₂ max and Fitness Age by month'])await pd.getByRole('region',{name:r}).waitFor();
+  assert.ok((await pd.getByRole('region',{name:'Training per month'}).getByRole('img').getAttribute('aria-label')).includes('Nov unknown'),'before history is unknown');
+  for(const width of [320,700,1100]){await pd.setViewportSize({width,height:900});assert.equal(await pd.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`Progress fits ${width}px`)}
+  assert.deepEqual(await contrastFailures(pd),[],'Progress sections contrast');
+  await pd.close();
+ }
+ console.log('Progress sections: Cardio, Strength and Long-term from the core, unknown weeks kept: passed');
+ // U57: a declined permission is remembered; Settings stops offering to ask.
+ {
+  const np=await browser.newPage({viewport:{width:390,height:844}});
+  await np.addInitScript(samples=>{
+   window.isTauri=true;window.asked=0;localStorage.setItem('notifications-step-done','1');
+   window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command)=>{
+    if(command.startsWith('plugin:'))return 1;
+    if(command==='request_notification_permission'){window.asked++;return false}
+    if(command==='app_status')return structuredClone(samples.status);
+    if(command==='get_settings')return {};
+    if(command in samples)return structuredClone(samples[command]);
+    return null;
+   }};
+  },samples);
+  await np.goto(`${url}/#settings`);
+  await np.getByRole('button',{name:'Enable notifications'}).click();
+  await np.getByText(/Notifications were declined\. Raring won’t ask again/).waitFor();
+  assert.equal(await np.getByRole('button',{name:'Enable notifications'}).count(),0);
+  await np.reload();
+  await np.getByText(/Notifications were declined/).waitFor();
+  assert.equal(await np.evaluate(()=>window.asked),0,'not asked again after a reload');
+  await np.close();
+ }
+ console.log('U57: declined notifications are remembered and not asked again: passed');
+ // Plan edits and tonight's wind-down go to the core as local actions.
+ {
+  const ep=await browser.newPage({viewport:{width:390,height:844}});
+  ep.on('pageerror',e=>errors.push(e.message));
+  const board=JSON.parse(await readFile(resolve('src/lib/sample/board.json'),'utf8'));
+  board.goals.targets={...board.goals.targets,sleepNights:4,sleepTime:'22:30',sleepKind:'windDown'};
+  board.ledger.push({kind:'sleepTiming',target:4,original:null,revisedOn:null,recorded:2,planned:0,remaining:2,reached:false,review:0,unavailable:null,observation:false});
+  const mock={...samples,plan_board:board,today:{...samples.today,adapt:{rest:false,pause:{id:'p1',since:'2025-10-14',until:null,reason:'ill',review:null},limits:{excluded:[],note:''},label:'Ill',reviewDue:false,blocked:true,routines:[]}}};
+  await ep.addInitScript(samples=>{
+   window.isTauri=true;window.actions=[];localStorage.setItem('notifications-step-done','1');
+   window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
+    if(command.startsWith('plugin:'))return 1;
+    if(command==='local_action'){window.actions.push(args.action);return null}
+    if(command==='app_status')return structuredClone(samples.status);
+    if(command==='trend')return {range:'days30',bucket:'day',from:'2025-09-17',to:'2025-10-16',series:{metric:'hrv',name:'HRV',unit:'ms',points:[],average:null,days:0},overlay:null,previous:null,change:null,available:[],freshness:null};
+    if(command in samples)return structuredClone(samples[command]);
+    if(command==='get_settings')return {};
+    return null;
+   }};
+  },mock);
+  await ep.goto(`${url}/#plan`);
+  await ep.getByRole('button',{name:/^Friday 17 Oct/}).click();
+  await ep.getByRole('button',{name:/Easy ride/}).first().click();
+  const sheet=ep.getByRole('dialog',{name:'Easy ride'});
+  await sheet.getByRole('button',{name:/^Edit/}).click();
+  const form=sheet.getByRole('group',{name:'Edit session'});
+  await form.getByLabel('Time').fill('07:15');
+  await form.getByLabel('Minutes').fill('50');
+  await form.getByRole('button',{name:'More Zone 2'}).click();
+  await form.getByRole('button',{name:'Save'}).click();
+  await ep.waitForFunction(()=>window.actions.some(a=>a.action==='editIntention'));
+  const edit=(await ep.evaluate(()=>window.actions)).find(a=>a.action==='editIntention');
+  assert.equal(edit.id,'i1760380000001');
+  assert.equal(edit.time,'07:15');assert.equal(edit.durationMin,50);assert.equal(edit.name,'Easy ride');
+  assert.ok(edit.allocation.zone2Min>board.items[1].intention.allocation.zone2Min,'the Zone 2 share went up');
+  await ep.goto(`${url}/#sleep/tonight`);
+  await ep.getByRole('button',{name:'Make tonight one of them'}).click();
+  await ep.waitForFunction(()=>window.actions.some(a=>a.action==='addIntention'));
+  const wind=(await ep.evaluate(()=>window.actions)).find(a=>a.action==='addIntention');
+  assert.deepEqual([wind.kind,wind.date,wind.time,wind.allocation.sleepNights,wind.name],['windDown','2025-10-16','22:30',1,'Wind down 22:30']);
+
+  await ep.locator('.top .adapt').click();
+  await ep.getByRole('dialog',{name:'Adapt today'}).getByRole('button',{name:/^Resume training/}).click();
+  const resume=ep.getByRole('dialog',{name:'Resume training'});
+  await resume.waitFor();
+  assert.ok((await resume.textContent()).includes('Strength: 4 sessions') && (await resume.textContent()).includes('Nothing is added to catch up'),await resume.textContent());
+  assert.equal((await ep.evaluate(()=>window.actions)).filter(a=>a.action==='resume').length,0,'opening Resume changes nothing');
+  await resume.getByRole('button',{name:/^Resume and change goals/}).click();
+  await ep.waitForURL('**/#plan/commitments');
+  assert.equal((await ep.evaluate(()=>window.actions)).filter(a=>a.action==='resume').length,1);
+  await ep.close();
+ }
+ console.log('Plan: edit time, minutes and goal shares; place tonight’s wind-down; resume shows goals first: passed');
+ // U34: a lighter week is one tap from Adapt; the original targets stay on record (core rule).
+ {
+  const lw=await browser.newPage({viewport:{width:390,height:844}});
+  await lw.addInitScript(samples=>{
+   window.isTauri=true;window.actions=[];localStorage.setItem('notifications-step-done','1');
+   window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
+    if(command.startsWith('plugin:'))return 1;
+    if(command==='local_action'){window.actions.push(args.action);return null}
+    if(command==='app_status')return structuredClone(samples.status);
+    if(command==='get_settings')return {};
+    if(command in samples)return structuredClone(samples[command]);
+    return null;
+   }};
+  },{...samples,today:{...samples.today,adapt:{rest:false,pause:null,limits:{excluded:[],note:''},label:'Adapt today',reviewDue:false,blocked:false,routines:[]}}});
+  await lw.goto(`${url}/#today`);
+  await lw.locator('.top .adapt').click();
+  const sheet=lw.getByRole('dialog',{name:'Adapt today'});
+  assert.ok((await sheet.getByRole('button',{name:/^Lighter week/}).textContent()).includes('Original targets stay on record'));
+  await sheet.getByRole('button',{name:/^Lighter week/}).click();
+  await lw.waitForFunction(()=>window.actions.some(a=>a.action==='lighterWeek'));
+  await lw.close();
+ }
+ console.log('U34: Lighter week from Adapt: passed');
  // The sample's phase ended long ago; phase expiry has its own check below.
  samples.today.focus.until=null;
  const statusDenied=await browser.newPage({viewport:{width:390,height:844}});
@@ -943,7 +1565,7 @@ function trendFixture(q){
      const end=q.end??samples.today.date;
      const points=Array.from({length:n},(_,i)=>{const d=new Date(end+'T12:00:00Z');d.setUTCDate(d.getUTCDate()-n+1+i);const date=d.toISOString().slice(0,10),value=source[source.length-n+i]??null;return {start:date,end:date,value,days:value==null?0:1}});
      const present=points.filter(p=>p.value!=null),series={metric:q.metric,name:q.metric,unit:q.metric==='hrv'?'ms':'',points,average:present.length?present.reduce((s,p)=>s+p.value,0)/present.length:null,days:present.length};
-     return {range:q.range,bucket:'day',from:points[0].start,to:end,series,overlay:null,previous:null,change:null,available:[q.metric]};
+     return {range:q.range,bucket:'day',from:points[0].start,to:end,series,overlay:null,previous:null,change:null,available:[q.metric],freshness:(q.end??samples.today.date)!==samples.today.date?null:samples.freshness?.[q.metric]??null};
     }
   localStorage.setItem('notifications-step-done','1');
   const state=window.testBackend={samples,syncs:0,reads:0,lastAttempt:null,failSync:false,failRead:false,holdToday:false,pendingToday:null};
@@ -1102,12 +1724,23 @@ function trendFixture(q){
  console.log('Partial baselines, outliers, missing history and unavailable sleep plans: passed');
  await live.evaluate(()=>{Object.assign(window.testBackend.samples.training.acute,{label:'',tone:'neutral',band:null})});
  await live.getByRole('navigation').getByRole('button',{name:'Training',exact:true}).click();
- await live.locator('.semi .gauge-center').waitFor();
- assert.equal(await live.locator('.semi .gauge-center b').textContent(),'612');
- assert.equal(await live.locator('.semi .gauge-center').getByText('Acute load',{exact:true}).count(),1,'missing ranges do not repeat the metric name as a status');
- assert.equal(await live.locator('.semi .gauge-center em').count(),0,'missing ranges do not imply a load assessment');
+ if(await live.getByRole('tab',{name:'Fitness'}).getAttribute('aria-selected')!=='true')await live.getByRole('tab',{name:'Fitness'}).click();
+ const load=live.locator('.q-load .load');
+ await load.waitFor();
+ assert.equal(await load.locator('b').textContent(),'612');
+ assert.equal(await load.getByText('Acute load · Garmin',{exact:true}).count(),1);
+ assert.equal((await load.locator('div').first().locator('span').textContent()).trim(),'','missing ranges do not imply a load assessment');
+ assert.equal(await load.getByText(/^Optimal/).count(),0,'no optimal range is drawn without Garmin\'s');
+ assert.equal(await live.locator('.q-load .lbar .band').count(),0);
  await live.screenshot({path:resolve(output,'training-no-range.png')});
  console.log('Training load without an optimal range: passed');
+ // A daily metric whose newest reading is older than two days says so on its chart.
+ await live.evaluate(()=>{window.testBackend.samples.freshness={restingHr:{recordedOn:'2025-10-12',ageDays:4,stale:true,thresholdDays:2},hrv:{recordedOn:'2025-10-16',ageDays:0,stale:false,thresholdDays:2}};window.dispatchEvent(new Event('raring:resume'))});
+ await live.getByRole('navigation').getByRole('button',{name:'Health',exact:true}).click();
+ await live.locator('.over-time').first().getByRole('note').waitFor();
+ assert.equal(await live.locator('.over-time').first().getByRole('note').textContent(),'Last reading Sun 12 Oct · 4 days ago');
+ assert.equal(await live.getByRole('note').filter({hasText:/^Last reading/}).count(),1,'only the stale metric is flagged');
+ console.log('Health: stale daily readings are flagged on their chart: passed');
  // Real Garmin shapes are covered in Rust; exercise their partial/mixed-sport UI states here.
  await live.evaluate(()=>{
   const s=window.testBackend.samples;
@@ -1119,6 +1752,7 @@ function trendFixture(q){
   window.dispatchEvent(new Event('raring:resume'));
  });
  await live.getByRole('navigation').getByRole('button',{name:'Training',exact:true}).click();
+ await live.getByRole('tab',{name:'Activities'}).click();
  await live.getByText('Wed 14 Oct · 07:23',{exact:true}).waitFor();
  await live.locator('.activity').first().click();
  await live.locator('.hr-trace').waitFor();
@@ -1166,7 +1800,7 @@ function trendFixture(q){
      const end=q.end??samples.today.date;
      const points=Array.from({length:n},(_,i)=>{const d=new Date(end+'T12:00:00Z');d.setUTCDate(d.getUTCDate()-n+1+i);const date=d.toISOString().slice(0,10),value=source[source.length-n+i]??null;return {start:date,end:date,value,days:value==null?0:1}});
      const present=points.filter(p=>p.value!=null),series={metric:q.metric,name:q.metric,unit:q.metric==='hrv'?'ms':'',points,average:present.length?present.reduce((s,p)=>s+p.value,0)/present.length:null,days:present.length};
-     return {range:q.range,bucket:'day',from:points[0].start,to:end,series,overlay:null,previous:null,change:null,available:[q.metric]};
+     return {range:q.range,bucket:'day',from:points[0].start,to:end,series,overlay:null,previous:null,change:null,available:[q.metric],freshness:(q.end??samples.today.date)!==samples.today.date?null:samples.freshness?.[q.metric]??null};
     }
   localStorage.setItem('notifications-step-done','1');
   const state=window.testViews={samples,reads:{},completed:{},pending:{},holdNext:{},statusReads:0,statusCompleted:0,syncCalls:0};
@@ -1487,10 +2121,9 @@ function trendFixture(q){
  for(const width of [390,700,1100]){
   const hr=await browser.newPage({viewport:{width,height:844}});
   await hr.goto(`${url}/?fixture=heart-rate#health`);
-  await hr.getByText('Heart rate · all day').waitFor();
-  assert.equal(await hr.getByText('Garmin resting HR',{exact:true}).count(),1);
+  await hr.getByRole('button',{name:'Heart rate through today'}).waitFor();
   await hr.screenshot({path:resolve(output,`heart-rate-health-${width}.png`)});
-  await hr.getByText('Heart rate · all day').click();
+  await hr.getByRole('button',{name:'Heart rate through today'}).click();
   await hr.getByRole('slider',{name:/Heart rate through the day/}).waitFor();
   assert.equal(await hr.getByText('Garmin daily resting HR',{exact:false}).count(),1);
   assert.ok(await hr.getByText('Asleep',{exact:true}).count());
@@ -1519,7 +2152,7 @@ function trendFixture(q){
   }};
  },samples);
  await hrSwitch.goto(`${url}/#health`);
- await hrSwitch.getByText('Heart rate · all day').click();
+ await hrSwitch.getByRole('button',{name:'Heart rate through today'}).click();
  await hrSwitch.getByRole('button',{name:'Previous'}).click();
  const hrSlider=hrSwitch.getByRole('slider',{name:/Heart rate through the day/});
  await hrSlider.focus();await hrSwitch.keyboard.press('End');

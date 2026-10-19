@@ -21,6 +21,8 @@ describe('routes', () => {
     expect(normalizeRoute('#checkin')).toBe('review/latest');
     expect(normalizeRoute('#plan-setup')).toBe('plan/commitments');
     expect(normalizeRoute('#explore')).toBe('training');
+    expect(normalizeRoute('#metric/weight')).toBe('health/weight');
+    expect(routeTrail('metric/weight')).toEqual(['today', 'health', 'health/weight']);
     for (const native of ['today', 'readiness', 'sleep', 'metric/bodyBattery', 'metric/stress', 'health', 'training']) {
       expect(normalizeRoute(native)).toBe(native);
     }
@@ -35,6 +37,12 @@ describe('routes', () => {
     expect(routeTrail('plan', ['today', 'health'])).toEqual(['today', 'plan']);
     expect(routeTrail('sleep', ['today', 'health'])).toEqual(['today', 'health', 'sleep']);
     expect(routeTrail('sleep', ['today', 'plan'])).toEqual(['today', 'sleep']);
+    // Sleep's tabs replace each other and keep their caller's section.
+    expect(routeTrail('sleep/tonight', ['today', 'sleep/last'])).toEqual(['today', 'sleep/tonight']);
+    expect(routeTrail('sleep/last', ['today', 'health', 'sleep/tonight'])).toEqual(['today', 'health', 'sleep/last']);
+    expect(routeTrail('metric/hrv', ['today', 'sleep/last'])).toEqual(['today', 'sleep/last', 'metric/hrv']);
+    expect(knownRoute('sleep/tonight')).toBe('sleep/tonight');
+    expect(knownRoute('sleep/naps')).toBeNull();
     expect(routeTrail('workout/7')).toEqual(['today', 'training', 'activities', 'workout/7']);
     expect(routeTrail('workout/7', ['today'])).toEqual(['today', 'workout/7']);
     expect(routeTrail('workout/7', ['today', 'training'])).toEqual(['today', 'training', 'workout/7']);

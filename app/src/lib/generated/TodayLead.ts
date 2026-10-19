@@ -13,6 +13,14 @@ id: string, kind: LeadKind, headline: string, line: string | null, action: LeadA
  */
 dismissable: boolean, 
 /**
+ * The person kept this session for today.
+ */
+kept: boolean, 
+/**
+ * Garmin's scheduled workout it concerns, `garmin:DATE:NAME`.
+ */
+garmin: string | null, 
+/**
  * The recording it recognises.
  */
 activity: string | null, 

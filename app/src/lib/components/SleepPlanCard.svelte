@@ -4,6 +4,7 @@
  import {nightStrip} from '../tonight';
  import Card from './Card.svelte';
  import Icon from './Icon.svelte';
+ import SleepPlanEvidence from './SleepPlanEvidence.svelte';
  // `evidence` adds the "Why this plan" sheet; Today opens Sleep instead. Today's `mode` follows
  // the time of day: one line until the plan leads, then the evening, wind-down or late-night card.
  type Mode='full'|'line'|'evening'|'windDown'|'lateNight';
@@ -68,16 +69,7 @@
  {#if evidence}
   <button class="why" aria-expanded={why} onclick={()=>why=!why}>Why this plan <span class="chevron" class:open={why}><Icon name="arrow-right" size={13}/></span></button>
   {#if why}
-   <dl class="evidence">
-    <dt>{garmin?'Bedtime window':'Asleep by'}</dt>
-    <dd>{garmin?'Garmin\'s recommendation for tonight.':`Raring's estimate: ${wake.toLowerCase()} ${plan.wakeTime} (${wakes}) minus the need. Garmin sent no window for tonight.`}</dd>
-    <dt>Sleep need</dt>
-    <dd>{needSource}{plan.baselineMin!=null?`; your baseline is ${duration(plan.baselineMin)}`:''}.{#each plan.adjustments as a}<br>{a.factor}: {a.detail}{/each}</dd>
-    <dt>Wind down</dt>
-    <dd>{plan.windDownLeadMin} min before {garmin?'the window starts':'the asleep-by time'}. Change it in Settings.</dd>
-    {#if plan.tip}<dt>Rhythm</dt><dd>{plan.tip}</dd>{/if}
-   </dl>
-   <p>A suggestion, not an alarm. Raring doesn't change your watch's sleep schedule.</p>
+   <SleepPlanEvidence {plan}/>
   {/if}
  {/if}
  {#if mode==='evening'}<div class="foot"><span>Timing history</span><Icon name="arrow-right" size={16}/></div>{/if}
@@ -93,11 +85,8 @@
  .plan-row b{font-size:26px;font-weight:500;line-height:1;white-space:nowrap}
  p{font-size:12px;line-height:1.5;color:var(--text2);margin-top:14px}
  .why{display:inline-flex;align-items:center;gap:4px;margin-top:10px;padding:6px 0;background:none;border:0;color:var(--text);font:600 12px Inter}
- .evidence{display:grid;grid-template-columns:auto 1fr;gap:8px 12px;margin:8px 0 0;font-size:12px;line-height:1.45}
  .chevron{display:inline-flex;transform:rotate(90deg);transition:transform .15s}
  .chevron.open{transform:rotate(-90deg)}
- dt{color:var(--text3);font-weight:600}
- dd{margin:0;color:var(--text2)}
  :global(.sleep-plan){container-type:inline-size}
  .plan-line{display:flex;align-items:center;gap:10px;width:100%;padding:12px 14px;color:var(--text);text-align:left;font:inherit}
  .plan-line>:global(svg){color:var(--text3);flex:none}

@@ -415,6 +415,7 @@
     ]
   },
   "sleepPlan": {
+    "needReadAt": "2025-10-16T12:58:00Z",
     "night": "2025-10-17",
     "bedtime": "23:06",
     "bedtimeStart": "22:30",
@@ -439,6 +440,45 @@
     "wakeNights": 14,
     "stale": false
   },
+  "recent": [
+    {
+      "date": "2025-10-10",
+      "asleepMin": 452,
+      "needMin": 450
+    },
+    {
+      "date": "2025-10-11",
+      "asleepMin": 468,
+      "needMin": 455
+    },
+    {
+      "date": "2025-10-12",
+      "asleepMin": null,
+      "needMin": null
+    },
+    {
+      "date": "2025-10-13",
+      "asleepMin": 431,
+      "needMin": 460
+    },
+    {
+      "date": "2025-10-14",
+      "asleepMin": 476,
+      "needMin": 450
+    },
+    {
+      "date": "2025-10-15",
+      "asleepMin": 440,
+      "needMin": 465
+    },
+    {
+      "date": "2025-10-16",
+      "asleepMin": 468,
+      "needMin": 450
+    }
+  ],
+  "tonightFirst": false,
+  "woundDown": false,
   "napsState": "available",
   "naps": [
     {

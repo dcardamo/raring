@@ -371,5 +371,111 @@
         "sets": 3
       }
     ]
+  },
+  "lanes": {
+    "start": "2025-10-13",
+    "today": "2025-10-16",
+    "lanes": [
+      {
+        "kind": "zone2",
+        "goal": 150,
+        "cumulative": [
+          0,
+          30,
+          30,
+          30,
+          null,
+          null,
+          null
+        ],
+        "usual": {
+          "low": [
+            0,
+            15,
+            30,
+            45,
+            60,
+            80,
+            100
+          ],
+          "median": [
+            0,
+            25,
+            45,
+            65,
+            85,
+            110,
+            130
+          ],
+          "high": [
+            10,
+            40,
+            65,
+            90,
+            115,
+            140,
+            160
+          ]
+        },
+        "weeks": 8
+      },
+      {
+        "kind": "strength",
+        "goal": 4,
+        "cumulative": [
+          1,
+          1,
+          2,
+          2,
+          null,
+          null,
+          null
+        ],
+        "usual": {
+          "low": [
+            0,
+            1,
+            1,
+            1,
+            2,
+            2,
+            3
+          ],
+          "median": [
+            1,
+            1,
+            2,
+            2,
+            2,
+            3,
+            3
+          ],
+          "high": [
+            1,
+            2,
+            2,
+            3,
+            3,
+            3,
+            4
+          ]
+        },
+        "weeks": 8
+      }
+    ],
+    "bySport": [
+      {
+        "sport": "strength",
+        "minutes": 96
+      },
+      {
+        "sport": "cycling",
+        "minutes": 84
+      },
+      {
+        "sport": "running",
+        "minutes": 52
+      }
+    ]
   }
 }

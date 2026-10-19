@@ -4,10 +4,10 @@ const metrics = new Set([
   'bodyBattery', 'stress', 'heartRate', 'restingHr', 'hrv', 'respiration', 'spo2', 'skinTemp',
   'vo2max', 'endurance', 'hill', 'runningTolerance',
 ]);
-const routes = new Set([...tabs, 'sleep', 'readiness', 'settings', 'onboarding', 'strength', 'help',
-  'activities', 'profile', 'gear', 'plan/commitments', 'review/latest', 'reviews']);
+const routes = new Set([...tabs, 'sleep', 'sleep/last', 'sleep/tonight', 'readiness', 'settings', 'onboarding', 'strength', 'help',
+  'activities', 'profile', 'gear', 'plan/commitments', 'review/latest', 'reviews', 'health/weight', 'progress/milestones']);
 // Earlier routes keep working; each opens its current page, never a silent Today.
-export const aliases: Record<string, string> = {checkin: 'review/latest', 'plan-setup': 'plan/commitments', explore: 'training'};
+export const aliases: Record<string, string> = {checkin: 'review/latest', 'plan-setup': 'plan/commitments', explore: 'training', 'metric/weight': 'health/weight'};
 export const helpPages = ['strength-start', 'strength-sets', 'strength-muscles', 'strength-watches'] as const;
 const trainingMetrics = new Set(['vo2max', 'endurance', 'hill', 'runningTolerance']);
 
@@ -47,9 +47,11 @@ export function routeTrail(target: string, fromTrail: string[] = []): string[] {
   // Opening the page already shown keeps its trail.
   if (fromTrail.length > 1 && fromTrail.at(-1) === route) return [...fromTrail];
   if (route === 'readiness') return ['today', route];
-  if (route === 'sleep') return section(fromTrail) === 'health' ? ['today', 'health', route] : ['today', route];
+  // Last night and Tonight are tabs of one page: switching replaces, never stacks.
+  if (route === 'sleep' || route.startsWith('sleep/')) return section(fromTrail) === 'health' ? ['today', 'health', route] : ['today', route];
+  if (route === 'health/weight') return ['today','health',route];
   if (route === 'plan/commitments') return fromTrail.at(-1)?.startsWith('review/') ? [...fromTrail, route] : ['today', 'plan', route];
-  if (route === 'reviews') return ['today', 'progress', route];
+  if (route === 'reviews' || route === 'progress/milestones') return ['today', 'progress', route];
   if (route.startsWith('review/')) return fromTrail.at(-1) === 'reviews' ? [...fromTrail, route] : ['today', 'progress', route];
   if (route === 'strength' || route === 'activities') return ['today', 'training', route];
   if (route === 'profile') return over(route, fromTrail, page => page === 'profile' || page === 'settings' || page === 'gear');
@@ -73,7 +75,7 @@ export function routeTrail(target: string, fromTrail: string[] = []): string[] {
   }
   const metric = route.slice(7);
   const tab = section(fromTrail);
-  if (fromTrail.at(-1) === 'sleep') return [...fromTrail, route];
+  if (fromTrail.at(-1)?.startsWith('sleep')) return [...fromTrail, route];
   const parent = tab ?? (fromTrail[0] === 'today' || metric === 'bodyBattery' || metric === 'stress' ? 'today' :
     trainingMetrics.has(metric) ? 'training' : 'health');
   return parent === 'today' ? ['today', route] : ['today', parent, route];

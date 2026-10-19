@@ -105,5 +105,5 @@ export const trend = (query: TrendQuery): Promise<TrendView> => Promise.resolve(
   const previous = query.previous && shift ? series(query.metric, list.map(([s, e]) => [back(s), back(e)])) : null;
   const overlay = query.overlay && query.overlay !== query.metric ? series(query.overlay, list) : null;
   return {range: query.range, bucket, from, to: end, series: now, overlay, previous, change: previous?.average != null && now.average != null ? now.average - previous.average : null,
-    available: Object.keys(UNITS) as TrendMetric[]};
+    available: Object.keys(UNITS) as TrendMetric[], freshness: null};
 });

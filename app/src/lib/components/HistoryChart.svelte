@@ -11,6 +11,7 @@
  import type {TrendView} from '../generated/TrendView';
  import type {TrendPoint} from '../generated/TrendPoint';
  import Icon from './Icon.svelte';
+ import RangePicker from './RangePicker.svelte';
 
  // Without `metric` the chart shows the screen's own 7 or 30 days, ending on `endDate`. With it, longer ranges and comparisons
  // come from the core, which averages long ranges into weeks or months.
@@ -47,7 +48,6 @@
  let activeUnit=$derived(primary?shown?.series.unit??'':unit);
  let activeDecimals=$derived(primary?trendDecimals(primary):decimals);
  let activeReadiness=$derived(activeMetric==='readiness' || !activeMetric && readiness);
- const rangeName=(r:{range:TrendRange,days?:number})=>r.days?`${r.days} ${period}`:r.range==='year'?'1 year':r.range==='custom'?'Custom dates':'All history';
  $effect(()=>{
   generation();
   if(!activeMetric)return;
@@ -107,10 +107,9 @@
 <div class="history" {@attach measure} aria-busy={busy}>
  <div class="history-top">
   {#if metric}<label class="metric-choice"><span class="sr-only">Primary metric</span><select aria-label="Primary metric" value={activeMetric} onchange={(e)=>{primary=e.currentTarget.value as TrendMetric;offset=0;if(overlayMetric===primary)overlayMetric=defaultOverlay(primary)}}>{#each pairs as m}<option value={m}>{trendNames[m]}</option>{/each}</select></label>{:else}<span class="history-label">{label}</span>{/if}
-  <div class="periods" role="group" aria-label="History period">
-   {#each metric?ranges:ranges.slice(0,2) as r}<button class:active={range===r.range} aria-pressed={range===r.range} aria-label={rangeName(r)} onclick={()=>setRange(r.range)}>{metric?r.label:rangeName(r)}</button>{/each}
-  </div>
+  <RangePicker value={range} onchange={setRange} label="History period" custom={!!metric} local={!metric} {nights}/>
  </div>
+ {#if view?.freshness?.stale && view.freshness.recordedOn}<p class="stale-note" role="note">Last reading {dateLabel(view.freshness.recordedOn)} · {view.freshness.ageDays} days ago</p>{/if}
  {#if range==='custom'}<div class="dates"><label>Block start<input aria-label="Block start" type="date" min={firstDay} max={customEnd || latestDay} bind:value={customStart}/></label><label>Block end<input aria-label="Block end" type="date" min={customStart || firstDay} max={latestDay} bind:value={customEnd}/></label></div>{/if}
  <div class="history-reading" aria-live="polite" aria-atomic="true">
   <div class="reading-values">
@@ -200,13 +199,10 @@
 </div>
 
 <style>
+ .stale-note{margin:6px 0 0;font:600 12px Inter;color:var(--fair)}
  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
  .history-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
  .history-label{color:var(--text2);font-size:12px}
- .periods{display:flex;gap:3px;border:1px solid var(--line);border-radius:13px;padding:3px;flex:none}
- .periods button{border:0;border-radius:10px;background:none;color:var(--text2);min-height:38px;padding:0 10px;font-size:12px}
- .periods .active{background:rgba(255,255,255,.1);color:var(--text)}
- .periods button:disabled{opacity:.4}
  .history-reading{display:flex;justify-content:space-between;align-items:center;margin:20px 0 14px;gap:12px}
  .reading-values{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
  .history-reading b{font-size:38px;font-weight:500}
@@ -228,6 +224,10 @@
  .record-count{margin-left:auto}
  .compare{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
  .compare-label{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--text2)}
+ .periods{display:flex;gap:3px;border:1px solid var(--line);border-radius:13px;padding:3px;flex:none;flex-wrap:wrap}
+ .periods button{border:0;border-radius:10px;background:none;color:var(--text2);min-height:38px;padding:0 10px;font-size:12px}
+ .periods .active{background:rgba(255,255,255,.1);color:var(--text)}
+ .periods button:disabled{opacity:.4}
  .compare-options{flex:1}
  .compare-options button{flex:1}
  select{width:100%;min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);padding:0 12px;font:600 14px Inter,sans-serif}
@@ -239,6 +239,6 @@
  .period-averages small{font-size:11px;color:var(--text2);margin-left:2px;font-family:Inter,sans-serif;font-weight:500}
  details p{margin-top:8px}summary{cursor:pointer}
  .history-note,.history-empty{font-size:12px;line-height:1.5;color:var(--text2);margin-top:12px}
- .dates{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}.dates label{flex:1;min-width:120px;font-size:12px;color:var(--text2)}.dates input{display:block;font:inherit;color:var(--text);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px;cursor:auto;box-sizing:border-box}.reset-date{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px;color:var(--text2)}.metric-choice select{width:auto;max-width:100%;font-size:12px}.periods{flex-wrap:wrap}.history-top{min-width:0}
+ .dates{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}.dates label{flex:1;min-width:120px;font-size:12px;color:var(--text2)}.dates input{display:block;font:inherit;color:var(--text);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px;cursor:auto;box-sizing:border-box}.reset-date{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px;color:var(--text2)}.metric-choice select{width:auto;max-width:100%;font-size:12px}.history-top{min-width:0}
  @media(min-width:660px){.compare-options{flex:none;min-width:260px}select{width:auto;min-width:200px}}
 </style>

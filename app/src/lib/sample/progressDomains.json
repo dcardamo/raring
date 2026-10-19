@@ -1,0 +1,255 @@
+{
+  "today": "2025-10-16",
+  "goals": {
+    "strengthSessions": 4,
+    "zone2Min": 150,
+    "highIntensityMin": 0,
+    "intensityMin": 0,
+    "intensityGarminGoal": true,
+    "sleepNights": 0,
+    "sleepTime": null,
+    "sleepKind": "asleepBy",
+    "sleepScore": 0,
+    "restDays": []
+  },
+  "weeks": [
+    {
+      "start": "2025-07-28",
+      "current": false,
+      "mark": null,
+      "zone2Min": 90,
+      "highIntensityMin": null,
+      "intensityMin": 140,
+      "strength": 3,
+      "vo2max": null
+    },
+    {
+      "start": "2025-08-04",
+      "current": false,
+      "mark": null,
+      "zone2Min": 120,
+      "highIntensityMin": null,
+      "intensityMin": 160,
+      "strength": 4,
+      "vo2max": null
+    },
+    {
+      "start": "2025-08-11",
+      "current": false,
+      "mark": null,
+      "zone2Min": 140,
+      "highIntensityMin": null,
+      "intensityMin": 150,
+      "strength": 3,
+      "vo2max": 50
+    },
+    {
+      "start": "2025-08-18",
+      "current": false,
+      "mark": "unknown",
+      "zone2Min": null,
+      "highIntensityMin": null,
+      "intensityMin": null,
+      "strength": null,
+      "vo2max": null
+    },
+    {
+      "start": "2025-08-25",
+      "current": false,
+      "mark": null,
+      "zone2Min": 155,
+      "highIntensityMin": null,
+      "intensityMin": 175,
+      "strength": 4,
+      "vo2max": null
+    },
+    {
+      "start": "2025-09-01",
+      "current": false,
+      "mark": null,
+      "zone2Min": 130,
+      "highIntensityMin": null,
+      "intensityMin": 150,
+      "strength": 4,
+      "vo2max": 51
+    },
+    {
+      "start": "2025-09-08",
+      "current": false,
+      "mark": null,
+      "zone2Min": 160,
+      "highIntensityMin": null,
+      "intensityMin": 180,
+      "strength": 3,
+      "vo2max": null
+    },
+    {
+      "start": "2025-09-15",
+      "current": false,
+      "mark": null,
+      "zone2Min": 150,
+      "highIntensityMin": null,
+      "intensityMin": 165,
+      "strength": 4,
+      "vo2max": null
+    },
+    {
+      "start": "2025-09-22",
+      "current": false,
+      "mark": "ill",
+      "zone2Min": 40,
+      "highIntensityMin": null,
+      "intensityMin": 60,
+      "strength": 1,
+      "vo2max": 52
+    },
+    {
+      "start": "2025-09-29",
+      "current": false,
+      "mark": null,
+      "zone2Min": 135,
+      "highIntensityMin": null,
+      "intensityMin": 155,
+      "strength": 4,
+      "vo2max": null
+    },
+    {
+      "start": "2025-10-06",
+      "current": false,
+      "mark": null,
+      "zone2Min": 165,
+      "highIntensityMin": null,
+      "intensityMin": 170,
+      "strength": 4,
+      "vo2max": null
+    },
+    {
+      "start": "2025-10-13",
+      "current": true,
+      "mark": null,
+      "zone2Min": 100,
+      "highIntensityMin": null,
+      "intensityMin": 124,
+      "strength": 3,
+      "vo2max": 52
+    }
+  ],
+  "bests": [
+    {
+      "key": "SQUAT/BARBELL_BACK_SQUAT",
+      "name": "Barbell Back Squat",
+      "weight": 105,
+      "unit": "kg",
+      "reps": 3,
+      "date": "2025-10-15",
+      "activity": "9000000000111"
+    },
+    {
+      "key": "BENCH_PRESS/BARBELL_BENCH_PRESS",
+      "name": "Barbell Bench Press",
+      "weight": 72.5,
+      "unit": "kg",
+      "reps": 5,
+      "date": "2025-10-08",
+      "activity": "9000000000109"
+    }
+  ],
+  "months": [
+    {
+      "start": "2024-11-01",
+      "minutes": null,
+      "restingHr": null,
+      "hrv": null,
+      "vo2max": null,
+      "fitnessAge": null
+    },
+    {
+      "start": "2024-12-01",
+      "minutes": 1410,
+      "restingHr": 59.7,
+      "hrv": 50.6,
+      "vo2max": 48,
+      "fitnessAge": 43
+    },
+    {
+      "start": "2025-01-01",
+      "minutes": 1620,
+      "restingHr": 59.4,
+      "hrv": 51.2,
+      "vo2max": 48,
+      "fitnessAge": 43
+    },
+    {
+      "start": "2025-02-01",
+      "minutes": 1470,
+      "restingHr": 59.1,
+      "hrv": 51.8,
+      "vo2max": 49,
+      "fitnessAge": 42
+    },
+    {
+      "start": "2025-03-01",
+      "minutes": 1680,
+      "restingHr": 58.8,
+      "hrv": 52.4,
+      "vo2max": 49,
+      "fitnessAge": 42
+    },
+    {
+      "start": "2025-04-01",
+      "minutes": 1890,
+      "restingHr": 58.5,
+      "hrv": 53,
+      "vo2max": 49,
+      "fitnessAge": 42
+    },
+    {
+      "start": "2025-05-01",
+      "minutes": 1740,
+      "restingHr": 58.2,
+      "hrv": 53.6,
+      "vo2max": 50,
+      "fitnessAge": 41
+    },
+    {
+      "start": "2025-06-01",
+      "minutes": 1950,
+      "restingHr": 57.9,
+      "hrv": 54.2,
+      "vo2max": 50,
+      "fitnessAge": 41
+    },
+    {
+      "start": "2025-07-01",
+      "minutes": 2160,
+      "restingHr": 57.6,
+      "hrv": 54.8,
+      "vo2max": 50,
+      "fitnessAge": 41
+    },
+    {
+      "start": "2025-08-01",
+      "minutes": 2010,
+      "restingHr": 57.3,
+      "hrv": 55.4,
+      "vo2max": 51,
+      "fitnessAge": 40
+    },
+    {
+      "start": "2025-09-01",
+      "minutes": 2220,
+      "restingHr": 57,
+      "hrv": 56,
+      "vo2max": 51,
+      "fitnessAge": 40
+    },
+    {
+      "start": "2025-10-01",
+      "minutes": 2430,
+      "restingHr": 56.7,
+      "hrv": 56.6,
+      "vo2max": 51,
+      "fitnessAge": 40
+    }
+  ]
+}

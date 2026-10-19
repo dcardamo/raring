@@ -650,6 +650,39 @@ async fn sync_planned(
             return;
         }
     }
+    sync_coach_adaptive(store, client, report, budget, now).await;
+}
+
+/// An adaptive Garmin Coach plan lists only this week's sessions, in its own
+/// endpoint (not the workout schedule). Read it when the stored plan list has
+/// one, on the same six-hour check and budget; a failed, empty or unfamiliar
+/// answer keeps the last good snapshot.
+async fn sync_coach_adaptive(store: &Store, client: &Client, report: &mut SyncReport, budget: usize, now: DateTime<Utc>) {
+    let Some(id) = store.get("coach_plans", "current").and_then(|v| crate::planned::adaptive_plan_id(&v)) else {
+        return;
+    };
+    let checked = "planned_checked:coach_adaptive";
+    if store
+        .cursor(checked)
+        .and_then(|s| s.parse::<i64>().ok())
+        .is_some_and(|t| t <= now.timestamp() && now.timestamp() - t < 6 * 3600)
+    {
+        return;
+    }
+    let v = match request(store, client, report, "coach_adaptive", &id, None, budget, now).await {
+        Some(Got::Value(v)) => v,
+        Some(Got::Absent) | Some(Got::Later) | None => return,
+    };
+    if !crate::planned::adaptive_snapshot_valid(&v, &id) {
+        report.data_failures += 1;
+        let _ = store.set_cursor(&format!("retry:coach_adaptive:{id}"), &(now.timestamp() + 3600).to_string());
+        return;
+    }
+    if store.put("coach_adaptive", "current", &now.to_rfc3339(), &v).is_err() || store.set_cursor(checked, &now.timestamp().to_string()).is_err() {
+        report.error = Some("local storage failed".into());
+        return;
+    }
+    report.stored += 1;
 }
 
 /// Garmin's weekly intensity rows, read at most daily. Their dates mark where

@@ -3,6 +3,7 @@ import type { ActivityCard } from "./ActivityCard";
 import type { AdaptState } from "./AdaptState";
 import type { BodyBatteryCard } from "./BodyBatteryCard";
 import type { Chip } from "./Chip";
+import type { DayTimeline } from "./DayTimeline";
 import type { Effort } from "./Effort";
 import type { Factor } from "./Factor";
 import type { FitnessAgeCard } from "./FitnessAgeCard";
@@ -69,4 +70,8 @@ lead: TodayLead | null,
 /**
  * Today's circumstances; only for the live day.
  */
-adapt: AdaptState | null, };
+adapt: AdaptState | null, 
+/**
+ * The calendar day on one axis; only for the live day.
+ */
+day: DayTimeline | null, };

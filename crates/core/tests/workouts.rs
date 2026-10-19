@@ -240,3 +240,85 @@ fn unnumbered_zones_and_positional_second_timestamps_remain_supported() {
     assert_eq!(view.summary.zone_seconds, vec![3., 4.]);
     assert_eq!(view.heart_rate[1].t_s, 30.);
 }
+
+#[test]
+fn streams_align_on_one_axis_and_only_recorded_fields_appear() {
+    use raring_core::view::{EffectKind, StreamKind};
+    let store = Store::open(":memory:").unwrap();
+    store.put("activity", "77", "now", &json!({"activityId": 77, "activityName": "Hill Run", "activityTypeDTO": {"typeKey": "running"},
+        "summaryDTO": {"startTimeLocal": "2025-03-12T07:00:00", "duration": 120, "distance": 400, "trainingEffect": 3.4,
+            "anaerobicTrainingEffect": 0.8, "moderateIntensityMinutes": 2, "vigorousIntensityMinutes": 0, "differenceBodyBattery": -3,
+            "normalizedPower": null}})).unwrap();
+    // Timestamp, HR, speed (m/s), elevation, double cadence; the middle sample lacks speed.
+    let row = |t: i64, hr: f64, speed: Option<f64>, elev: f64| json!({"metrics": [t, hr, speed, elev, 160.0]});
+    store.put("details", "77", "now", &json!({
+        // Garmin's factors are not scaling to apply: values are already in the unit.
+        "metricDescriptors": [{"key": "directTimestamp", "metricsIndex": 0}, {"key": "directHeartRate", "metricsIndex": 1},
+            {"key": "directSpeed", "metricsIndex": 2, "unit": {"key": "mps", "factor": 0.1}},
+            {"key": "directElevation", "metricsIndex": 3, "unit": {"key": "meter", "factor": 100.0}},
+            {"key": "directDoubleCadence", "metricsIndex": 4, "unit": {"key": "stepsPerMinute", "factor": 1.0}}],
+        "activityDetailMetrics": [row(1_741_762_800_000, 120., Some(3.), 100.), row(1_741_762_860_000, 140., None, 104.), row(1_741_762_920_000, 150., Some(3.5), 108.)]})).unwrap();
+    store.put("max_metrics", "2025-03-11", "now", &json!([{"generic": {"vo2MaxValue": 50}}])).unwrap();
+    store.put("max_metrics", "2025-03-12", "now", &json!([{"generic": {"vo2MaxValue": 51}}])).unwrap();
+    let w = screens::workout(&store, "77").unwrap();
+    let along = w.along.as_ref().unwrap();
+    assert_eq!(along.t_s, vec![0., 60., 120.], "the HR's time axis");
+    let kinds: Vec<_> = along.series.iter().map(|s| s.kind).collect();
+    assert_eq!(kinds, vec![StreamKind::Speed, StreamKind::Elevation, StreamKind::Cadence], "only recorded streams");
+    assert_eq!(along.series[0].values, vec![Some(10.8), None, Some(12.6)], "km/h, and a gap stays a gap");
+    assert_eq!(along.series[2].unit, "spm");
+    let more: Vec<_> = w.more.iter().map(|m| (m.key.as_str(), m.value)).collect();
+    assert_eq!(more, vec![("moderateIntensityMinutes", 2.), ("vigorousIntensityMinutes", 0.), ("differenceBodyBattery", -3.)], "null fields don't appear");
+    let e: Vec<_> = w.effects.iter().map(|e| (e.kind, e.band.as_str(), e.line.as_str())).collect();
+    assert_eq!(e, vec![(EffectKind::Aerobic, "Improving", "builds your aerobic base"), (EffectKind::Anaerobic, "No benefit", "little sprint or hard work")]);
+    assert_eq!(w.vo2max_new, Some(51.), "a new estimate that day");
+    store.put("max_metrics", "2025-03-11", "now", &json!([{"generic": {"vo2MaxValue": 51}}])).unwrap();
+    assert_eq!(screens::workout(&store, "77").unwrap().vo2max_new, None, "an unchanged estimate isn't new");
+}
+
+#[test]
+fn effect_bands_follow_garmins_scale() {
+    use raring_core::view::EffectKind::*;
+    for (kind, v, band) in [(Aerobic, 0.9, "No benefit"), (Aerobic, 1.0, "Minor benefit"), (Anaerobic, 2.0, "Maintaining"), (Aerobic, 3.99, "Improving"),
+        (Anaerobic, 4.0, "Highly improving"), (Aerobic, 5.0, "Overreaching")] {
+        assert_eq!(screens::effect_band(kind, v).0, band, "{v}");
+    }
+}
+
+#[test]
+fn a_stream_needs_its_expected_unit_key() {
+    for (key, unit, ok) in [
+        ("directSpeed", Some("mps"), true), ("directSpeed", Some("kph"), false), ("directSpeed", None, false),
+        ("directElevation", Some("meter"), true), ("directElevation", Some("foot"), false),
+        ("directDoubleCadence", Some("stepsPerMinute"), true), ("directBikeCadence", Some("rpm"), true), ("directBikeCadence", Some("stepsPerMinute"), false),
+        ("directPower", Some("watt"), true), ("directRespirationRate", Some("breathsPerMinute"), true),
+        ("directAvailableStamina", Some("dimensionless"), true), ("directPerformanceCondition", Some("dimensionless"), true),
+        ("directAirTemperature", Some("celcius"), true), ("directAirTemperature", Some("fahrenheit"), false),
+        ("directRunCadence", Some("stepsPerMinute"), false),
+    ] {
+        assert_eq!(screens::stream_unit_ok(key, unit), ok, "{key} in {unit:?}");
+    }
+}
+
+#[test]
+fn unexpected_units_drop_the_stream_and_factors_are_never_applied() {
+    use raring_core::view::StreamKind;
+    let store = Store::open(":memory:").unwrap();
+    store.put("activity", "78", "now", &json!({"activityId": 78, "activityName": "Ride", "activityTypeDTO": {"typeKey": "cycling"},
+        "summaryDTO": {"startTimeLocal": "2025-03-12T07:00:00", "duration": 60, "averageTemperature": 27.0}})).unwrap();
+    let row = |t: i64| json!({"metrics": [t, 130.0, 5.0, 210.0, 31.0, 88.0]});
+    store.put("details", "78", "now", &json!({
+        "metricDescriptors": [{"key": "directTimestamp", "metricsIndex": 0}, {"key": "directHeartRate", "metricsIndex": 1},
+            {"key": "directSpeed", "metricsIndex": 2, "unit": {"key": "mps", "factor": 10.0}},
+            {"key": "directPower", "metricsIndex": 3, "unit": {"key": "kilowatt", "factor": 1.0}},
+            {"key": "directAirTemperature", "metricsIndex": 4, "unit": {"key": "celcius", "factor": 0.1}},
+            {"key": "directBikeCadence", "metricsIndex": 5}],
+        "activityDetailMetrics": [row(1_741_762_800_000), row(1_741_762_860_000)]})).unwrap();
+    let w = screens::workout(&store, "78").unwrap();
+    let series = &w.along.as_ref().unwrap().series;
+    let kinds: Vec<_> = series.iter().map(|s| s.kind).collect();
+    assert_eq!(kinds, vec![StreamKind::Speed, StreamKind::Temperature], "power in an unexpected unit and cadence without one are dropped");
+    assert_eq!(series[0].values, vec![Some(18.), Some(18.)], "5 m/s is 18 km/h whatever the factor");
+    assert_eq!(series[1].values, vec![Some(31.), Some(31.)], "the watch's °C as recorded");
+    assert!(w.more.iter().any(|m| m.key == "averageTemperature" && m.value == 27.), "the summary's watch temperature");
+}

@@ -531,3 +531,46 @@ async fn sync_fetches_sets_for_strength_activities_then_the_catalog_and_settings
         .collect();
     assert_eq!(again, ["GET /activity-service/activity/11/exerciseSets HTTP/1.1"]);
 }
+
+#[test]
+fn lift_series_takes_max_and_volume_from_counted_sets_only() {
+    use raring_core::view::TrendRange;
+    let store = with_catalog();
+    store.put("profile_settings", "me", "now", &json!({"measurementSystem": "metric"})).unwrap();
+    // Squat on 1 March, then 10 March with a bodyweight set and a zero-rep set.
+    session(&store, "11", "2025-03-01T18:00:00.0", vec![set("SQUAT", Some("BARBELL_BACK_SQUAT"), Some(5), 100_000.), rest(90.), set("SQUAT", Some("BARBELL_BACK_SQUAT"), Some(5), 100_000.)]);
+    session(&store, "12", "2025-03-10T18:00:00.0", vec![
+        set("SQUAT", Some("BARBELL_BACK_SQUAT"), Some(5), 105_000.), set("SQUAT", Some("BARBELL_BACK_SQUAT"), Some(3), 110_000.),
+        set("SQUAT", Some("BARBELL_BACK_SQUAT"), Some(10), 0.), set("SQUAT", Some("BARBELL_BACK_SQUAT"), Some(0), 60_000.),
+        set("BENCH_PRESS", Some("BARBELL_BENCH_PRESS"), Some(5), 70_000.)]);
+    let today = chrono::NaiveDate::from_ymd_opt(2025, 3, 13).unwrap();
+    let key = "SQUAT/BARBELL_BACK_SQUAT";
+    let all = strength::lift_series(&store, key, TrendRange::All, today).unwrap();
+    assert_eq!((all.name.as_str(), all.unit), ("Barbell Back Squat", WeightUnit::Kg));
+    let rows: Vec<_> = all.points.iter().map(|p| (p.date.as_str(), p.max, p.volume, p.excluded)).collect();
+    assert_eq!(rows, vec![("2025-03-01", Some(100.), Some(1000.), 0), ("2025-03-10", Some(110.), Some(855.), 2)],
+        "bodyweight and zero-rep sets are left out of both and counted");
+    let week = strength::lift_series(&store, key, TrendRange::Days7, today).unwrap();
+    assert_eq!(week.points.len(), 1, "7 days ends today");
+    assert!(strength::lift_series(&store, "SQUAT/NOT_DONE", TrendRange::All, today).is_none());
+    assert!(strength::lift_series(&store, key, TrendRange::Custom, today).is_none());
+}
+
+#[test]
+fn muscle_ranges_count_sets_and_flag_gaps() {
+    use raring_core::view::TrendRange;
+    let store = with_catalog();
+    session(&store, "21", "2025-02-01T18:00:00.0", vec![set("BENCH_PRESS", Some("BARBELL_BENCH_PRESS"), Some(5), 70_000.)]);
+    session(&store, "22", "2025-03-10T18:00:00.0", vec![set("SQUAT", Some("BARBELL_BACK_SQUAT"), Some(5), 100_000.), set("SQUAT", Some("BARBELL_BACK_SQUAT"), Some(5), 100_000.)]);
+    let today = chrono::NaiveDate::from_ymd_opt(2025, 3, 13).unwrap();
+    let week = strength::muscles(&store, TrendRange::Days7, today).unwrap();
+    assert_eq!((week.from.as_str(), week.days, week.gap_at), ("2025-03-07", 7, 1.), "7 days: one set or fewer is a gap");
+    assert_eq!(sets_for(&week.muscles, Muscle::Quads), 2.);
+    assert_eq!(sets_for(&week.muscles, Muscle::Chest), 0., "the bench press is outside the week");
+    assert!(week.gaps.contains(&Muscle::Chest) && !week.gaps.contains(&Muscle::Quads));
+    let all = strength::muscles(&store, TrendRange::All, today).unwrap();
+    assert_eq!((all.from.as_str(), all.days, all.gap_at), ("2025-02-01", 41, 3.), "Max starts at the first stored session");
+    assert_eq!(sets_for(&all.muscles, Muscle::Chest), 1.);
+    assert!(all.gaps.contains(&Muscle::Quads), "two sets in six weeks is still a gap");
+    assert!(strength::muscles(&Store::open(":memory:").unwrap(), TrendRange::All, today).is_none(), "no sessions, no muscle view");
+}

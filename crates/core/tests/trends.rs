@@ -446,3 +446,23 @@ fn every_supplied_date_lies_between_the_first_day_and_today() {
     assert_eq!(ok.from, "1990-01-01");
     assert_eq!(ok.to, TODAY);
 }
+
+#[test]
+fn freshness_flags_a_daily_metric_older_than_two_days_on_todays_chart() {
+    let store = Store::open(":memory:").unwrap();
+    let fresh = |store: &Store, metric, end: Option<String>| {
+        let mut q = query(metric, TrendRange::Days30);
+        q.end = end;
+        trend(store, &q, TODAY).freshness
+    };
+    let none = fresh(&store, TrendMetric::Hrv, None).unwrap();
+    assert_eq!((none.recorded_on, none.stale), (None, false), "no reading is unknown, not stale");
+    put(&store, "hrv", &day(2), json!({"hrvSummary": {"lastNightAvg": 47}}));
+    let f = fresh(&store, TrendMetric::Hrv, None).unwrap();
+    assert_eq!((f.recorded_on.as_deref(), f.age_days, f.stale, f.threshold_days), (Some(day(2).as_str()), Some(2), false, 2));
+    put(&store, "hrv", &day(2), json!({"hrvSummary": {"lastNightAvg": null}}));
+    put(&store, "hrv", &day(3), json!({"hrvSummary": {"lastNightAvg": 45}}));
+    assert!(fresh(&store, TrendMetric::Hrv, None).unwrap().stale, "three days old");
+    assert!(fresh(&store, TrendMetric::Hrv, Some(day(10))).is_none(), "a past chart isn't judged");
+    assert!(fresh(&store, TrendMetric::Vo2max, None).is_none(), "sparse estimates are dated, not flagged");
+}

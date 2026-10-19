@@ -7,8 +7,8 @@ const bike=activity('9000000000003','Evening Ride','bike','15T18:12:00',5050,38.
 // Body Battery in three-minute slots to 13:30: charging overnight to 87 at 06:39, the run, then a slow drain to 78.
 const batteryTimeline=Array.from({length:270},(_,i)=>{const m=i*3;return m<399?Math.round(25+62*m/399):m<445?null:Math.round(84-6*(m-445)/365)});
 const vitals={readings:[['restingHr',58,'bpm',[48,68],[52,62],[57,56,58,55,56,58,57,58]],['hrv',58,'ms',[38,72],[48,62],[52,55,54,57,56,55,57,58]],['respiration',14.1,'brpm',[12,16.5],[13.2,15],[14.2,14,14.3,14.1,14,14.2,14.1,14.1]],['spo2',96,'%',[90,100],[94,98],[96,95,96,97,96,96,95,96]],['skinTemp',0.1,'°C',[-1,1],[-.4,.4],[0,-.1,.1,.2,0,-.1,0,.1]]].map(([kind,value,unit,scale,normal,trend])=>({kind,value,unit,scale,normal,trend:Array.from({length:30},(_,i)=>i===9||i===17?null:i===29?value:trend[i%trend.length]),tone:'good',status:'IN_RANGE',rangeSource:'garmin'})),offCount:0,baselineReady:true};
-const age={fitnessAge:39,chronologicalAge:46,trend:[42,41.6,41.4,41,40.6,40.4,40,39.8,39.5,39.3,39.1,39],change12m:-3};
-const sleepPlan={night:'2025-10-17',bedtime:'23:06',bedtimeStart:'22:30',bedtimeSource:'garmin',windDown:'22:00',windDownLeadMin:30,windDownAt:'2025-10-16T22:00:00',bedtimeStartAt:'2025-10-16T22:30:00',bedtimeAt:'2025-10-16T23:06:00',wakeTime:'06:36',needMin:470,source:'tonight',baselineMin:450,adjustments:[{factor:'Training',detail:"today's activity and load"}],reason:"Garmin added 20 min for today's activity and load.",tip:"Your sleep lines up with Garmin's optimal window. Keep waking near 06:36.",wakeNights:14,stale:false};
+const age={recordedOn:'2025-10-12',fitnessAge:39,chronologicalAge:46,trend:[42,41.6,41.4,41,40.6,40.4,40,39.8,39.5,39.3,39.1,39],change12m:-3};
+const sleepPlan={needReadAt:'2025-10-16T12:58:00Z',night:'2025-10-17',bedtime:'23:06',bedtimeStart:'22:30',bedtimeSource:'garmin',windDown:'22:00',windDownLeadMin:30,windDownAt:'2025-10-16T22:00:00',bedtimeStartAt:'2025-10-16T22:30:00',bedtimeAt:'2025-10-16T23:06:00',wakeTime:'06:36',needMin:470,source:'tonight',baselineMin:450,adjustments:[{factor:'Training',detail:"today's activity and load"}],reason:"Garmin added 20 min for today's activity and load.",tip:"Your sleep lines up with Garmin's optimal window. Keep waking near 06:36.",wakeNights:14,stale:false};
 // Garmin's optimal window is a dashed target, distinct from the shaded usual windows; one later night reads as Behind.
 const optimal=[-75,375];
 const alignmentHistory=[[10,22.7,6.5],[11,23,6.7],[12,24,7.1],[13,22.6,6.5],[14,22.9,6.8],[15,22.7,6.6],[16,22.52,6.65]].map(([d,bed,wake])=>({date:`2025-10-${d}`,status:d===12?'Behind':'Aligned',tone:d===12?'fair':'good',window:optimal,sleep:[Math.round((bed-24)*60),Math.round(wake*60)]}));
@@ -49,6 +49,8 @@ const today={date:'2025-10-16',watchLastUpload:null,watchSleepUploadStale:false,
 const stages=[['light',12],['deep',38],['light',22],['rem',14],['light',30],['deep',32],['light',18],['awake',4],['rem',22],['light',34],['deep',18],['light',26],['rem',28],['awake',6],['light',40],['deep',8],['light',24],['rem',30],['light',28],['awake',5],['rem',26],['light',18],['awake',5]];
 let offset=0;const segments=stages.map(([stage,minutes])=>{let x={stage,startMin:offset,minutes};offset+=minutes;return x});
 const sleep={date:'2025-10-16',startLocal:'2025-10-15T22:31:00',endLocal:'2025-10-16T06:39:00',score:today.sleep,asleepMin:468,needMin:450,headline:'A good night',stages:segments,totals:[['deep',96,12],['light',252,-4],['rem',120,9],['awake',20,-6]].map(([stage,minutes,usualDeltaMin])=>({stage,minutes,usualDeltaMin})),overnight:[['hrv',58,'ms',[49,54,57,61,60,58,56,59]],['heartRate',46,'bpm',[52,50,48,47,46,46,47,46,48,47,49,51]],['respiration',14.1,'brpm',[14.4,14.2,14,13.9,14.1,14,14.2,14.1]],['spo2',96,'%',[97,96,95,96,96,95,96,96]]].map(([kind,value,unit,series])=>({kind,value,unit,series})),consistency:[[22.6,6.5],[23.1,6.7],[22.9,6.6],[23.6,7],[22.5,6.4],[23.3,6.9],[22.8,6.6],[22.7,6.5],[23,6.7],[24,7.1],[22.6,6.5],[22.9,6.8],[22.7,6.6],[22.52,6.65]].map(([bedHour,wakeHour],i)=>({date:`2025-10-${String(i+3).padStart(2,'0')}`,bedHour,wakeHour})),consistencySpreadMin:18,bedWindow:[22.5,23],wakeWindow:[6.5,7],garminAverages:{bedtime:'22:55',wakeTime:'06:42',nights:7,through:'2025-10-16'},alignment,sleepPlan};
+// Seven nights against Garmin's need, the 12th unrecorded; Sleep opens Last night in the morning.
+sleep.recent=[[10,452,450],[11,468,455],[12,null,null],[13,431,460],[14,476,450],[15,440,465],[16,468,450]].map(([d,asleepMin,needMin])=>({date:`2025-10-${d}`,asleepMin,needMin}));sleep.tonightFirst=false;sleep.woundDown=false;
 sleep.napsState='available';sleep.naps=[{startLocal:'2025-10-15T23:45:00',endLocal:'2025-10-16T00:15:00',durationMin:30,feedback:null},{startLocal:'2025-10-16T13:10:00',endLocal:'2025-10-16T13:35:00',durationMin:25,feedback:null},{startLocal:null,endLocal:'2025-10-16T16:30:00',durationMin:15,feedback:null}];
 const training={acute:today.load,status:'Productive',statusTone:'good',statusWhy,headline:'Room to build',chips:[{icon:'flame',value:'1.1',text:'Load ratio',tone:'fair'},{icon:'clock',value:'18h',text:'Recovery',tone:'neutral'}],week:[0,142,210,0,95,320,186].map((load,i)=>({date:`2025-10-${String(i+10).padStart(2,'0')}`,load})),loadFocus:[['lowAerobic','Low aerobic',450,[300,600],false],['highAerobic','High aerobic',610,[400,800],false],['anaerobic','Anaerobic',60,[150,350],true]].map(([key,name,value,target,shortage])=>({key,name,value,target,shortage})),vo2max:52,vo2maxChange30d:1,vo2maxTrend:[49,49,50,50,50,51,51,52],races:[['5K',1300],['10K',2710],['Half',5990],['Full',12665]].map(([label,seconds])=>({label,seconds})),enduranceScore:6800,hillScore:74,runningToleranceKm:63,thresholds:[{kind:'runningHr',value:164,unit:'bpm',recordedOn:'2025-10-13',stale:false},{kind:'runningPace',value:264,unit:'s/km',recordedOn:'2025-10-13',stale:false},{kind:'runningPower',value:280,unit:'W',recordedOn:'2025-10-12',stale:false},{kind:'cyclingFtp',value:230,unit:'W',recordedOn:'2025-10-10',stale:false},{kind:'heat',value:0,unit:'%',recordedOn:'2025-10-15',stale:false},{kind:'altitude',value:850,unit:'m',recordedOn:'2025-10-14',stale:false}],workouts:[run,lowerA,bike],planned:today.planned,race:{name:'City 10K',date:'2025-10-28',daysUntil:12},raceState:'available'};
 training.gear={unit:'km',fetchedAt:'2025-10-16T10:30:00Z',items:[
@@ -56,6 +58,16 @@ training.gear={unit:'km',fetchedAt:'2025-10-16T10:30:00Z',items:[
  {id:'sample-bike',name:'City bike',kind:'Bike',status:'Retired',distance:1240,threshold:null},
  {id:'sample-spare',name:'Spare shoes',kind:'Shoes',status:'Active',distance:0,threshold:null}]};
 const workout={summary:run,recoveryHours:18,stats:[['distance','Distance',10.2,'km'],['duration','Time',3134,'s'],['pace','Pace',307,'s/km'],['avgHr','Avg HR',152,'bpm'],['maxHr','Max HR',171,'bpm'],['calories','Calories',712,'kcal']].map(([key,label,value,unit])=>({key,label,value,unit})),route:[[45.421,-75.697],[45.423,-75.699],[45.426,-75.697],[45.428,-75.693],[45.429,-75.688],[45.427,-75.683],[45.424,-75.681],[45.421,-75.683],[45.42,-75.688],[45.422,-75.692],[45.421,-75.697]],heartRate:Array.from({length:210},(_,i)=>({tS:i*15,bpm:Math.round((i<32?112+i*1.3:i>184?160-(i-184)*1.1:Math.floor((i-32)/25)%2?149:164)+Math.sin(i*1.9)*2)})),zoneFloors:[120,138,154,167],splits:[321,308,302,298,305,295,301,297,310,318].map((seconds,i)=>({index:i+1,distanceKm:1,seconds,avgHr:147+i*2}))};
+// Stored streams on the HR's 15 s axis (a sensor gap at 20–21 min), summary fields this run has, and Garmin's effects.
+workout.along={tS:workout.heartRate.map(s=>s.tS),series:[
+ {kind:'speed',unit:'km/h',values:workout.heartRate.map((s,i)=>i===80||i===81?null:Math.round((11.2+Math.sin(i/9)*.8+(s.bpm-150)/40)*10)/10)},
+ {kind:'elevation',unit:'m',values:workout.heartRate.map((_,i)=>Math.round(70+Math.sin(i/30)*9))},
+ {kind:'cadence',unit:'spm',values:workout.heartRate.map((_,i)=>172+Math.round(Math.sin(i/7)*3))}]};
+workout.more=[{key:'movingDuration',label:'Moving time',value:3101,unit:'s'},{key:'moderateIntensityMinutes',label:'Moderate intensity',value:14,unit:'min'},{key:'vigorousIntensityMinutes',label:'Vigorous intensity',value:24,unit:'min'},
+ {key:'differenceBodyBattery',label:'Body Battery',value:-9,unit:'points'},{key:'elevationLoss',label:'Descent',value:41,unit:'m'},{key:'strideLength',label:'Stride length',value:113.4,unit:'cm'},{key:'recoveryHeartRate',label:'Recovery heart rate',value:31,unit:'bpm'}];
+workout.effects=[{kind:'aerobic',value:3.8,band:'Improving',line:'builds your aerobic base',garminLabel:'Improving'},{kind:'anaerobic',value:1.2,band:'Minor benefit',line:'little sprint or hard work',garminLabel:'Minor'}];
+workout.vo2maxNew=null;
+workout.counted={week:'2025-10-13',lines:[{kind:'zone2',amount:18,position:null,recorded:100,target:150}],planItem:null,bests:['Longest run']};
 const health={date:today.date,bodyWeight:{value:72.4,unit:'kg',measuredOn:'2025-10-14',bmi:23.8,bodyFat:null,trend:[71.8,null,72.1,null,72.6,72.3,null,72.5,72.4,null,72.2,72.4]},fitnessAge:age,lever:{key:'vigorousMinutes',name:'Vigorous minutes',current:112,target:150,unit:'min/wk',ageIfMet:38},stress,intensity:{start:'2025-10-13',end:'2025-10-19',total:124,moderate:64,vigorous:30,goal:150},drivers:[['vo2max','VO₂ max',52,'',55,true,'good'],['restingHr','Resting HR',46,'bpm',54,true,'good'],['bmi','BMI',23.8,'',25,true,'good'],['vigorousMinutes','Vigorous',112,'min/wk',150,false,'fair']].map(([key,name,value,unit,target,met,tone])=>({key,name,value,unit,target,met,tone})),vitals};
 health.journalEnabled=true;health.journal=[{date:'2025-10-16',state:'available',entries:[{name:'Stretching',value:'Yes'},{name:'Morning caffeine',value:'2 COFFEE'},{name:'Other reading',value:null}]},{date:'2025-10-15',state:'empty',entries:[]},{date:'2025-10-14',state:'unavailable',entries:[]}];
 const checkin={weekStart:'2025-10-13',timing,cards:[['readiness','More ready to move',82,'pts',76,'good',[70,74,82,78,80,84,82]],['sleep','Sleep is settling',84,'pts',79,'good',[76,81,82,79,84,83,84]],['training','A strong week',612,'load',520,'good',[0,142,210,0,95,320,186]],['health','Younger every year',39,'years',40,'good',[40,40,40,40,39,39,39]]].map(([area,headline,value,unit,previous,tone,series])=>({area,headline,value,unit,previous,tone,series})),vo2maxChange:1,fitnessAgeChange:-1,win:'You made room for recovery and still built your load.',plan:planCheckin,intensity:{start:'2025-10-13',end:'2025-10-19',total:162,moderate:62,vigorous:50,goal:150},focus:'Add one hard interval session to fill your anaerobic gap.'};
@@ -77,7 +89,7 @@ const exercises=[
  {key:'CALF_RAISE/STANDING_CALF_RAISE',name:'Standing Calf Raise',muscles:['calves'],sets:[sset(15,40),sset(15,40),sset(14,40)],lastDate:'2025-10-08',lastSets:[lift(40,15),lift(40,15),lift(40,15)],record:null},
 ];
 const strengthSummary=lowerA;
-const strengthWorkout={summary:strengthSummary,recoveryHours:14,stats:[['duration','Time',2882,'s'],['avgHr','Avg HR',118,'bpm'],['maxHr','Max HR',151,'bpm'],['calories','Calories',312,'kcal']].map(([key,label,value,unit])=>({key,label,value,unit})),route:[],heartRate:Array.from({length:192},(_,i)=>({tS:i*15,bpm:Math.round(104+Math.abs(Math.sin(i/9))*34+Math.sin(i*1.7)*3)})),zoneFloors:[120,138,154,167],splits:[],strength:{unit:'kg',figure:'female',sets:16,reps:161,unknownRepSets:0,restS:1520,records:1,setsRecorded:true,zeroRepSets:1,missingRepSets:0,doubledSets:1,unnamedSets:3,muscles:muscleSets({quads:6,glutes:9,hamstrings:3,calves:3}),exercises}};
+const strengthWorkout={counted:{week:'2025-10-13',lines:[{kind:'strength',amount:1,position:2,recorded:3,target:4}],planItem:'Strength',bests:[]},along:null,more:[],effects:[],vo2maxNew:null,summary:strengthSummary,recoveryHours:14,stats:[['duration','Time',2882,'s'],['avgHr','Avg HR',118,'bpm'],['maxHr','Max HR',151,'bpm'],['calories','Calories',312,'kcal']].map(([key,label,value,unit])=>({key,label,value,unit})),route:[],heartRate:Array.from({length:192},(_,i)=>({tS:i*15,bpm:Math.round(104+Math.abs(Math.sin(i/9))*34+Math.sin(i*1.7)*3)})),zoneFloors:[120,138,154,167],splits:[],strength:{unit:'kg',figure:'female',sets:16,reps:161,unknownRepSets:0,restS:1520,records:1,setsRecorded:true,zeroRepSets:1,missingRepSets:0,doubledSets:1,unnamedSets:3,muscles:muscleSets({quads:6,glutes:9,hamstrings:3,calves:3}),exercises}};
 const mondays=Array.from({length:12},(_,i)=>{const d=new Date(Date.UTC(2025,6,28+i*7));return d.toISOString().slice(0,10)});
 const weekly=mondays.map((weekStart,i)=>({weekStart,muscles:i===11?muscleSets(musclesThisWeek):muscleSets(Object.fromEntries(MUSCLES.map((m,j)=>[m,i===5?Math.round(avg4[m]*.3):Math.max(0,Math.round(avg4[m]+Math.sin(i*1.3+j)*2.5))])))}));
 const last4=Object.fromEntries(MUSCLES.map((m,j)=>[m,weekly.slice(8).reduce((a,w)=>a+w.muscles[j].sets,0)]));
@@ -117,7 +129,7 @@ for(const id of historyIds){
   lastDate:prev?.date??null,lastSets:prev?prev.reps.map(r=>lift(prev.top.weight,r)):[],record:s.record?s.top:null,
  }});
  const counts={};for(const e of exs)for(const m of e.muscles)counts[m]=(counts[m]??0)+e.sets.length;
- strengthWorkoutHistory[id]={summary,recoveryHours:null,stats:[{key:'duration',label:'Time',value:summary.durationS,unit:'s'}],route:[],heartRate:[],zoneFloors:[],splits:[],strength:{
+ strengthWorkoutHistory[id]={counted:null,along:null,more:[],effects:[],vo2maxNew:null,summary,recoveryHours:null,stats:[{key:'duration',label:'Time',value:summary.durationS,unit:'s'}],route:[],heartRate:[],zoneFloors:[],splits:[],strength:{
   unit:strength.unit,figure:strength.figure,sets:exs.reduce((n,e)=>n+e.sets.length,0),
   reps:recorded?exs.reduce((n,e)=>n+e.sets.reduce((n,s)=>n+s.reps,0),0):null,
   unknownRepSets:0,restS:0,records:exs.filter(e=>e.record).length,setsRecorded:recorded,
@@ -135,6 +147,10 @@ const heartTimeline=Array.from({length:720},(_,i)=>{
 const recordedHeart=heartTimeline.filter(value=>value!==null);
 const heartRateDay={date:today.date,resting:54,minimum:Math.min(...recordedHeart),maximum:Math.max(...recordedHeart),durationMin:1440,sleep:[[0,370]],activities:[[510,565]],timeline:heartTimeline};
 today.heartRateDay=heartRateDay;
+// Your day: the same readings on one midnight axis, uploaded at 13:30 and viewed at 14:05.
+// The 13:10 nap ends after the last Body Battery reading, so its change is unknown.
+today.day={date:today.date,nowMin:845,uploadMin:810,sleep:segments.map(s=>({stage:s.stage,startMin:Math.max(0,s.startMin-89),endMin:s.startMin+s.minutes-89})).filter(s=>s.endMin>0),asleepMin:468,bodyBattery:batteryTimeline,stress:stressTimeline,stressAverage:31,heartRate:heartTimeline.slice(0,406),restingHr:54,clockChange:false,
+ events:[{kind:'activity',id:run.id,name:run.name,icon:'run',startMin:372,endMin:424,durationMin:52,bodyBatteryChange:null},{kind:'nap',id:null,name:'Nap',icon:'moon',startMin:790,endMin:815,durationMin:25,bodyBatteryChange:null}]};
 health.heartRateDay=heartRateDay;
 
 // Plan board: Mon 13 – Sun 19 Oct viewed Thu 16. Strength 4, Zone 2 150 min, intensity on Garmin's goal.
@@ -145,9 +161,9 @@ const boardRecs=[rec(training.workouts.find(w=>w.id==='9000000000005')??{id:'900
 const zone2s={'2025-10-13':800,'2025-10-14':1500,'2025-10-15':1320+1800,'2025-10-16':585};
 const intention=(id,date,sport,allocation,extra={})=>({id,date,time:extra.time??null,sport,typeKey:null,name:extra.name??null,durationMin:extra.durationMin??null,allocation:{strengthSessions:0,zone2Min:0,highIntensityMin:0,intensityMin:0,sleepNights:0,...allocation},kind:'workout',garminId:null,status:'open',history:[{at:'2025-10-12T19:00:00',change:'added',from:null,to:date}]});
 const boardItems=[
- {intention:intention('i1760380000000','2025-10-13','strength',{strengthSessions:1},{time:'12:30'}),state:'done',recording:'9000000000005',matchedBy:'automatic',candidates:[]},
- {intention:intention('i1760380000001','2025-10-17','cycling',{zone2Min:40},{durationMin:60,name:'Easy ride'}),state:'planned',recording:null,matchedBy:null,candidates:[]},
- {intention:intention('i1760380000002','2025-10-18','strength',{strengthSessions:1}),state:'planned',recording:null,matchedBy:null,candidates:[]}];
+ {intention:intention('i1760380000000','2025-10-13','strength',{strengthSessions:1},{time:'12:30'}),state:'done',recording:'9000000000005',matchedBy:'automatic',candidates:[],coach:null},
+ {intention:intention('i1760380000001','2025-10-17','cycling',{zone2Min:40},{durationMin:60,name:'Easy ride'}),state:'planned',recording:null,matchedBy:null,candidates:[],coach:null},
+ {intention:intention('i1760380000002','2025-10-18','strength',{strengthSessions:1}),state:'planned',recording:null,matchedBy:null,candidates:[],coach:null}];
 const goalTargets={strengthSessions:4,zone2Min:150,highIntensityMin:0,intensityMin:0,intensityGarminGoal:true,sleepNights:0,sleepTime:null,sleepKind:'asleepBy',sleepScore:0,restDays:[]};
 const boardDays=Array.from({length:7},(_,i)=>{const date=`2025-10-${13+i}`,future=date>'2025-10-16',recs=boardRecs.filter(r=>r.date===date),items=boardItems.filter(p=>p.intention.date===date);
  const plannedOf=k=>items.reduce((n,p)=>n+p.intention.allocation[k],0);
@@ -164,12 +180,38 @@ const review={start:'2025-10-06',end:'2025-10-12',counted:true,reasons:['1 rest 
 const reviews=[{start:'2025-10-06',counted:true,met:3,goals:3,reasons:['1 rest day']},{start:'2025-09-29',counted:false,met:0,goals:3,reasons:['2 ill days']}];
 
 const progressTotals={activities:5,activeMin:Math.round(boardRecs.reduce((n,a)=>n+a.durationMin,0)),distanceKm:48.6,intensityMin:124,intensityDays:4,activeDays:4,coveredDays:16,days:16};
-const progress={today:'2025-10-16',period:'month',from:'2025-10-01',to:'2025-10-31',end:'2025-10-16',current:true,historyStart:'2025-09-01',totals:progressTotals,previous:null,previousFrom:null,previousTo:null,partial:false,
+const progress={milestonesTotal:0,ringDays:[],today:'2025-10-16',period:'month',from:'2025-10-01',to:'2025-10-31',end:'2025-10-16',current:true,historyStart:'2025-09-01',totals:progressTotals,previous:null,previousFrom:null,previousTo:null,partial:false,
  buckets:Array.from({length:31},(_,i)=>{const date=`2025-10-${String(i+1).padStart(2,'0')}`,acts=boardRecs.filter(r=>r.date===date);return {from:date,to:date,minutes:acts.map(a=>({sport:a.sport,minutes:a.durationMin})),total:acts.reduce((n,a)=>n+a.durationMin,0),known:i<16,future:i>=16}}),
  calendar:Array.from({length:31},(_,i)=>{const date=`2025-10-${String(i+1).padStart(2,'0')}`,n=boardRecs.filter(r=>r.date===date).length;return {date,state:i>=16?'future':n?'active':'none',activities:n,covered:i<16}}),
  goalWeeks:[{start:board.start,rings:board.weekRings,counted:true,met:0,goals:3,reasons:[]}],
  milestones:[{id:'longest:running',kind:'longest',title:'Longest run',value:'10.2 km',date:'2025-10-16',route:'workout/9000000000001',new:false,corrected:false}],sleep:{nights:14,belowHour:2}};
-for(const [name,obj] of Object.entries({today,sleep,training,workout,strengthWorkout,strength,health,checkin,status,plan,board,review,reviews,progress})){writeFileSync(new URL(`${name}.json`,import.meta.url),JSON.stringify(obj,null,2)+'\n')}
+// Training's lanes: Zone 2 and strength goals on, Thursday; eight counted weeks behind the band.
+training.lanes={start:'2025-10-13',today:'2025-10-16',lanes:[
+ {kind:'zone2',goal:150,cumulative:[0,30,30,30,null,null,null],usual:{low:[0,15,30,45,60,80,100],median:[0,25,45,65,85,110,130],high:[10,40,65,90,115,140,160]},weeks:8},
+ {kind:'strength',goal:4,cumulative:[1,1,2,2,null,null,null],usual:{low:[0,1,1,1,2,2,3],median:[1,1,2,2,2,3,3],high:[1,2,2,3,3,3,4]},weeks:8}],
+ bySport:[{sport:'cycling',minutes:84},{sport:'strength',minutes:96},{sport:'running',minutes:52}].sort((a,b)=>b.minutes-a.minutes)};
+// Progress: the October ring calendar (whole weeks 29 Sep – 2 Nov) and the domain views.
+{
+ const day=n=>{const d=new Date(Date.UTC(2025,8,29+n));return d.toISOString().slice(0,10)};
+ const fill=(r,p)=>r>0?r/Math.max(p,r):0;
+ progress.milestonesTotal=progress.milestones.length;progress.ringDays=Array.from({length:35},(_,i)=>{const date=day(i),inWeek=boardDays.find(d=>d.date===date);if(inWeek)return inWeek;
+  const future=date>'2025-10-16',lift=!future&&[1,3].includes(i%7)?1:0,z2=!future&&i%7===5?45:0,im=future?0:[0,30,25,10,40,0,55][i%7];
+  return {date,today:false,future,mark:date==='2025-10-08'?'ill':date==='2025-10-09'?'ill':null,rings:[{kind:'strength',recorded:lift,planned:0,fill:fill(lift,0)},{kind:'zone2',recorded:z2,planned:0,fill:fill(z2,0)},{kind:'intensity',recorded:im,planned:0,fill:fill(im,0)}],
+   done:false,notRecorded:false,recordings:[],items:[],garmin:0,sleepScore:null}});
+ const weekStart=n=>{const d=new Date(Date.UTC(2025,6,28+7*n));return d.toISOString().slice(0,10)};
+ const zones=[90,120,140,0,155,130,160,150,40,135,165,100],ims=[140,160,150,null,175,150,180,165,60,155,170,124],str=[3,4,3,2,4,4,3,4,1,4,4,3];
+ const months=['2024-11','2024-12','2025-01','2025-02','2025-03','2025-04','2025-05','2025-06','2025-07','2025-08','2025-09','2025-10'];
+ var progressDomains={today:'2025-10-16',goals:goalTargets,
+  weeks:zones.map((z,i)=>({start:weekStart(i),current:i===11,mark:i===8?'ill':i===3?'unknown':null,zone2Min:i===3?null:z,highIntensityMin:null,intensityMin:ims[i],strength:i===3?null:str[i],vo2max:i%3===2?50+Math.floor(i/4):null})),
+  bests:[{key:'SQUAT/BARBELL_BACK_SQUAT',name:'Barbell Back Squat',weight:105,unit:'kg',reps:3,date:'2025-10-15',activity:'9000000000111'},{key:'BENCH_PRESS/BARBELL_BENCH_PRESS',name:'Barbell Bench Press',weight:72.5,unit:'kg',reps:5,date:'2025-10-08',activity:'9000000000109'}],
+  months:months.map((m,i)=>({start:m+'-01',minutes:i<1?null:1200+i*90+(i%3)*120,restingHr:i<1?null:Math.round((60-i*0.3)*10)/10,hrv:i<1?null:Math.round((50+i*0.6)*10)/10,vo2max:i<1?null:48+Math.floor(i/3),fitnessAge:i<1?null:43-Math.floor(i/3)}))};
+ globalThis.progressDomains=progressDomains;
+}
+// Harbour 10K is a run; no run is planned this week, so it only counts down.
+board.eventWeek=null;board.coach=null;
+// Profile: Garmin's facts as stored, the gear Training lists, and your limits.
+const profile={age:46,units:'metric',weight:72.4,weightUnit:'kg',weightFreshness:{recordedOn:'2025-10-14',ageDays:2,stale:false,thresholdDays:7},watchLastUpload:'2025-10-16T12:30:00.000Z',gear:training.gear,limits:{excluded:[],note:''}};
+for(const [name,obj] of Object.entries({progressDomains:globalThis.progressDomains,profile,today,sleep,training,workout,strengthWorkout,strength,health,checkin,status,plan,board,review,reviews,progress})){writeFileSync(new URL(`${name}.json`,import.meta.url),JSON.stringify(obj,null,2)+'\n')}
 // `satisfies` checks the exact fixtures against the generated Rust contract at build time.
-const types={today:'TodayView',sleep:'SleepView',training:'TrainingView',workout:'WorkoutView',strengthWorkout:'WorkoutView',strength:'StrengthView',health:'HealthView',checkin:'CheckinView',status:'AppStatus',plan:'PlanView',board:'PlanBoard',review:'WeekReview',reviews:'ReviewRow[]',progress:'ProgressView'};
+const types={progressDomains:'ProgressDomains',profile:'ProfileView',today:'TodayView',sleep:'SleepView',training:'TrainingView',workout:'WorkoutView',strengthWorkout:'WorkoutView',strength:'StrengthView',health:'HealthView',checkin:'CheckinView',status:'AppStatus',plan:'PlanView',board:'PlanBoard',review:'WeekReview',reviews:'ReviewRow[]',progress:'ProgressView'};
 writeFileSync(new URL('data.ts',import.meta.url),[...new Set(Object.values(types).map(t=>t.replace('[]','')))].map(t=>`import type { ${t} } from '../generated/${t}';`).join('\n')+'\n'+Object.entries({today,sleep,training,workout,strengthWorkout,strength,health,checkin,status,plan,board,review,reviews,progress}).map(([n,v])=>`export const ${n} = ${JSON.stringify(v)} satisfies ${types[n]};`).join('\n')+'\n'+`export const strengthWorkoutHistory = ${JSON.stringify(strengthWorkoutHistory)} satisfies Record<string,WorkoutView>;\n`);

@@ -15,6 +15,13 @@ import sampleStatus from './sample/status.json';
 import sampleBoard from './sample/board.json';
 import sampleReview from './sample/review.json';
 import sampleReviews from './sample/reviews.json';
+import sampleProfile from './sample/profile.json';
+import sampleDomains from './sample/progressDomains.json';
+import type { ProgressDomains } from './generated/ProgressDomains';
+import type { Milestone } from './generated/Milestone';
+import type { ProfileView } from './generated/ProfileView';
+import type { LiftSeries } from './generated/LiftSeries';
+import type { MuscleRange } from './generated/MuscleRange';
 import type { AppStatus } from './generated/AppStatus';
 import type { TodayView } from './generated/TodayView';
 import type { SleepView } from './generated/SleepView';
@@ -31,6 +38,9 @@ import type { LocalAction } from './generated/LocalAction';
 import type { PlanBoard } from './generated/PlanBoard';
 import type { WeekReview } from './generated/WeekReview';
 import type { ReviewRow } from './generated/ReviewRow';
+import type { WeightView } from './generated/WeightView';
+import type { TrendRange } from './generated/TrendRange';
+import {weightFixtures} from './sample/weight';
 import type { ProgressView } from './generated/ProgressView';
 import type { Period } from './generated/Period';
 import sampleProgress from './sample/progress.json';
@@ -46,13 +56,35 @@ const call = <T>(name:string,args:Record<string,unknown>|undefined,fallback:T):P
 export const app_status = ():Promise<AppStatus> => call('app_status',undefined,sampleStatus as AppStatus);
 export const today = (date?:string):Promise<TodayView> => call('today',{date},sampleToday as unknown as TodayView);
 export const sleep = (date?:string):Promise<SleepView> => call('sleep',{date},sampleSleep as unknown as SleepView);
+// The browser preview uses the sample's week or four weeks; the app asks the core.
+export const muscles = (range:TrendRange):Promise<MuscleRange|null> => {
+ if(isTauri())return invoke<MuscleRange|null>('muscles',{range});
+ const v=sampleStrength as unknown as StrengthView,short=range==='days7'||range==='days14';
+ const days=({days7:7,days14:14,days30:30,days90:90,year:365} as Record<string,number>)[range]??120;
+ const list=short?v.thisWeek:v.last4w,gapAt=Math.round(days/14);
+ return Promise.resolve({range,from:new Date(Date.parse(v.date)-(days-1)*864e5).toISOString().slice(0,10),to:v.date,days,figure:v.figure,muscles:list,
+  gaps:list.filter(m=>m.sets<=gapAt).sort((a,b)=>a.sets-b.sets).map(m=>m.muscle),gapAt});
+};
+// The browser preview derives a series from the sample's sessions; the app asks the core.
+export const lift_series = (key:string,range:TrendRange):Promise<LiftSeries|null> => {
+ if(isTauri())return invoke<LiftSeries|null>('lift_series',{key,range});
+ const e=(sampleStrength as unknown as StrengthView).exercises.find(x=>x.key===key);
+ if(!e)return Promise.resolve(null);
+ const days=({days7:7,days14:14,days30:30,days90:90,year:365} as Record<string,number>)[range];
+ const from=days?new Date(Date.parse(sampleToday.date)-(days-1)*864e5).toISOString().slice(0,10):'';
+ const points=[...e.sessions].reverse().filter(s=>s.date>=from).map(s=>({date:s.date,activityId:s.activityId,max:s.top?.weight??null,volume:s.top?.weight!=null?Math.round(s.top.weight*s.reps.reduce<number>((t,r)=>t+(r??0),0)):null,excluded:s.top?0:s.reps.length}));
+ return Promise.resolve({key,name:e.name,unit:(sampleStrength as unknown as StrengthView).unit,range,points});
+};
+export const milestone_archive = ():Promise<Milestone[]> => call('milestone_archive',undefined,(sampleProgress as unknown as {milestones:Milestone[]}).milestones);
+export const progress_domains = ():Promise<ProgressDomains> => call('progress_domains',undefined,sampleDomains as unknown as ProgressDomains);
+export const profile = ():Promise<ProfileView> => call('profile',undefined,sampleProfile as unknown as ProfileView);
 export const training = (date?:string):Promise<TrainingView> => call('training',{date},sampleTraining as unknown as TrainingView);
 export const workout = (id:string):Promise<WorkoutView> => {
  if(isTauri())return invoke<WorkoutView>('workout',{id});
  const history=sampleStrengthWorkoutHistory as unknown as Record<string,WorkoutView>;
  const listed=sampleTraining.workouts.find(a=>a.id===id);
  // Other listed preview activities keep their own summary, never a run's charts.
- const summaryOnly=listed?{summary:listed,recoveryHours:null,stats:[],route:[],heartRate:[],zoneFloors:[],splits:[],strength:null}:null;
+ const summaryOnly=listed?{summary:listed,recoveryHours:null,stats:[],route:[],heartRate:[],zoneFloors:[],splits:[],strength:null,along:null,more:[],effects:[],vo2maxNew:null,counted:null}:null;
  const value=id===sampleStrengthWorkout.summary.id?sampleStrengthWorkout:id===sampleWorkout.summary.id?sampleWorkout:Object.hasOwn(history,id)?history[id]:summaryOnly;
  return value?Promise.resolve(copy(value as unknown as WorkoutView)):Promise.reject(new Error('No preview workout for this ID'));
 };
@@ -67,6 +99,11 @@ export const plan_board = (date?:string):Promise<PlanBoard> => call('plan_board'
 export const week_review = (date:string):Promise<WeekReview> => call('week_review',{date},sampleReview as unknown as WeekReview);
 export const reviews = ():Promise<ReviewRow[]> => call('reviews',undefined,sampleReviews as unknown as ReviewRow[]);
 export const progress = (period:Period='month',date?:string):Promise<ProgressView> => call('progress',{period,date},sampleProgress as unknown as ProgressView);
+export const weight_trend = (range:TrendRange='days30',date?:string):Promise<WeightView> => {
+ if(isTauri())return invoke<WeightView>('weight_trend',{range,date});
+ if(range==='custom')return Promise.reject(new Error('Use a weight range from 7D to Max'));
+ return Promise.resolve(copy(weightFixtures.kg[range]));
+};
 // Every local change (goals, sessions, links, rest, pauses, limits) goes through one command.
 export const local_action = (action:LocalAction):Promise<void> => {
  if(!isTauri()){

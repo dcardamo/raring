@@ -19,7 +19,7 @@ const GOAL_SPORTS: [(Sport, &str); 7] = [
     (Sport::Other, "Session"),
 ];
 
-fn sport_name(s: Sport) -> &'static str {
+pub(crate) fn sport_name(s: Sport) -> &'static str {
     GOAL_SPORTS.iter().find(|(k, _)| *k == s).map_or("Session", |(_, n)| n)
 }
 
@@ -60,6 +60,12 @@ pub fn adapt(local: &LocalRecords, today: NaiveDate, overnight: bool) -> AdaptSt
         pause,
         limits,
         label: label.to_owned(),
+        routines: local
+            .routines
+            .items
+            .iter()
+            .map(|item| RoutineToday { done: local.routines.reports.iter().any(|x| x.id == item.id && x.date == day), item: item.clone() })
+            .collect(),
     }
 }
 
@@ -88,6 +94,8 @@ impl Lead {
             line,
             action: action.map(|(label, route, adapt)| LeadAction { label: label.into(), route, adapt }),
             dismissable,
+            kept: false,
+            garmin: None,
             activity: None,
             intention: None,
             reasons: self.reasons,
@@ -179,7 +187,7 @@ fn choose(
         l.gate("Time", "Evening: sleep preparation leads, with no exercise prompt.");
         let plan = view.sleep_plan.as_ref();
         let night_id = plan.map_or(day.clone(), |p| p.night.clone());
-        let sleep = route("sleep");
+        let sleep = route("sleep/tonight");
         return match view.focus.phase {
             DayPhase::LateNight => l.done(format!("late:{night_id}"), LeadKind::Sleep, "Rest when you're ready", None, Some(("Tonight's sleep", sleep, false)), false),
             DayPhase::WindDown => {
@@ -211,7 +219,7 @@ fn choose(
     if view.focus.phase == DayPhase::Overview {
         if let Some(note) = &view.focus.note {
             l.gate("Time", "Today keeps its fixed order.");
-            return l.done(format!("fixed:{day}"), LeadKind::Fixed, "Your recorded day", Some(note.clone()), Some(("Last night's sleep", route("sleep"), false)), false);
+            return l.done(format!("fixed:{day}"), LeadKind::Fixed, "Your recorded day", Some(note.clone()), Some(("Last night's sleep", route("sleep/last"), false)), false);
         }
     }
     let excluded = |s: Sport| state.limits.excluded.contains(&s);
@@ -239,20 +247,31 @@ fn choose(
     }
     let dismissed = |id: &str| local.circumstances.dismissals.iter().any(|d| d.date == day && d.id == id);
     let low = matches!(view.call, Some(Effort::Rest | Effort::Easy));
-    if let Some(g) = board.garmin.iter().find(|g| g.date == day && !dismissed(&format!("garmin:{day}:{}", g.name))) {
+    // A session the person kept today leads over other plans for the day.
+    let kept = local.circumstances.today_choice.as_ref().filter(|c| c.date == day).map(|c| c.plan_id.as_str());
+    let own = board.items.iter().filter(|p| p.intention.date == day && p.state == ItemState::Planned && p.intention.kind == IntentionKind::Workout);
+    let own_kept = kept.and_then(|k| own.clone().find(|p| p.intention.id == k));
+    let garmin_today = || board.garmin.iter().filter(|g| g.date == day && !dismissed(&format!("garmin:{day}:{}", g.name)));
+    let garmin_kept = kept.and_then(|k| garmin_today().find(|g| format!("garmin:{day}:{}", g.name) == k));
+    let garmin_lead = if own_kept.is_some() { None } else { garmin_kept.or_else(|| garmin_today().next()) };
+    if let Some(g) = garmin_lead {
         let id = format!("garmin:{day}:{}", g.name);
         l.gate("Decisions", format!("Garmin's schedule: {} today (read-only).", g.name));
-        if !state.limits.excluded.is_empty() || note {
+        let is_kept = garmin_kept.is_some_and(|k| std::ptr::eq(k, g));
+        let mut lead = if !state.limits.excluded.is_empty() || note {
             l.gate("Circumstances", "Your limits apply and Raring can't see this workout's sport or movements.");
-            return l.done(id, LeadKind::Review, "Review needed", Some(format!("{} · contents unknown to Raring", g.name)), Some(("Review your plan", route("plan"), false)), true);
-        }
-        if low {
+            l.done(id.clone(), LeadKind::Review, "Review needed", Some(format!("{} · contents unknown to Raring", g.name)), Some(("Review your plan", route("plan"), false)), true)
+        } else if low {
             l.gate("Garmin guidance", "Garmin suggests an easier day; the session isn't cancelled.");
-            return l.done(id, LeadKind::Garmin, "An easier day may fit", Some(format!("Garmin: {}", g.name)), Some(("Review your plan", route("plan"), false)), true);
-        }
-        return l.done(id, LeadKind::Garmin, g.name.clone(), Some("Garmin schedule".into()), Some(("Your plan", route("plan"), false)), true);
+            l.done(id.clone(), LeadKind::Garmin, "An easier day may fit", Some(format!("Garmin: {}", g.name)), Some(("Review your plan", route("plan"), false)), true)
+        } else {
+            l.done(id.clone(), LeadKind::Garmin, g.name.clone(), Some("Garmin schedule".into()), Some(("Your plan", route("plan"), false)), true)
+        };
+        lead.kept = is_kept;
+        lead.garmin = Some(id);
+        return lead;
     }
-    if let Some(p) = board.items.iter().find(|p| p.intention.date == day && p.state == ItemState::Planned && p.intention.kind == IntentionKind::Workout) {
+    if let Some(p) = own_kept.or_else(|| own.clone().next()) {
         let i = &p.intention;
         let name = i.name.clone().unwrap_or_else(|| sport_name(i.sport).to_owned());
         let mut lead = if note {
@@ -261,10 +280,16 @@ fn choose(
         } else {
             l.gate("Decisions", "Your own session for today leads.");
             let headline = match &i.time { Some(t) => format!("{name} at {t}"), None => format!("{name} today") };
-            let line = if excluded(i.sport) { "Your plan · excluded in your limits" } else { "Your plan" };
+            let line = match (p.coach.is_some(), excluded(i.sport)) {
+                (true, true) => "Garmin Coach · excluded in your limits",
+                (true, false) => "Garmin Coach",
+                (false, true) => "Your plan · excluded in your limits",
+                (false, false) => "Your plan",
+            };
             l.done(format!("session:{}", i.id), LeadKind::Session, headline, Some(line.into()), Some(("Your plan", route("plan"), false)), false)
         };
         lead.intention = Some(i.id.clone());
+        lead.kept = kept == Some(i.id.as_str());
         return lead;
     }
     l.gate("Decisions", "Nothing scheduled, planned or recorded yet today.");
@@ -277,7 +302,7 @@ fn choose(
             ),
             None => ("No sleep recorded".to_owned(), None),
         };
-        return l.done(format!("sleep:{day}"), LeadKind::Summary, headline, line, Some(("Last night's sleep", route("sleep"), false)), false);
+        return l.done(format!("sleep:{day}"), LeadKind::Summary, headline, line, Some(("Last night's sleep", route("sleep/last"), false)), false);
     };
     if !state.limits.excluded.is_empty() || note {
         l.gate("Circumstances", "Your limits constrain training suggestions.");
@@ -292,7 +317,7 @@ fn choose(
     let id = format!("suggest:{day}");
     if dismissed(&id) {
         l.gate("Relevance", "You chose \"Not today\" for training ideas; it stays dismissed after sync and resume.");
-        return l.done("quiet".into(), LeadKind::Quiet, "Nothing else needs you today", Some("Training ideas hidden for today".into()), Some(("Tonight's sleep", route("sleep"), false)), false);
+        return l.done("quiet".into(), LeadKind::Quiet, "Nothing else needs you today", Some("Training ideas hidden for today".into()), Some(("Tonight's sleep", route("sleep/tonight"), false)), false);
     }
     match view.call {
         Some(Effort::Push) => {
@@ -470,6 +495,45 @@ mod tests {
             "entries": [{"calendarDate": DAY, "workoutName": "Threshold intervals"}]})).unwrap();
         let (_, l) = lead(&store, DayPhase::Day);
         assert_eq!((l.kind, l.headline.as_str(), l.line.as_deref()), (LeadKind::Garmin, "An easier day may fit", Some("Garmin: Threshold intervals")));
+    }
+
+    #[test]
+    fn a_garmin_coach_session_leads_with_its_attribution() {
+        let store = fixture("HIGH", 85);
+        let fetched = at(13, 8).to_rfc3339();
+        store.put("coach_plans", "current", &fetched, &json!({"trainingPlanList": [{"trainingPlanId": 42, "trainingPlanCategory": "FBT_ADAPTIVE", "trainingStatus": {"statusKey": "Scheduled"}}]})).unwrap();
+        store.put("coach_adaptive", "current", &fetched, &serde_json::from_str::<serde_json::Value>(include_str!("../tests/fixtures/coach_adaptive.json")).unwrap()).unwrap();
+        let (_, l) = lead(&store, DayPhase::Day);
+        assert_eq!((l.kind, l.headline.as_str(), l.line.as_deref(), l.intention.as_deref()), (LeadKind::Session, "Threshold today", Some("Garmin Coach"), Some("coach:2025-03-13:1")));
+    }
+
+    #[test]
+    fn a_kept_session_leads_and_only_todays_sessions_can_be_kept() {
+        let store = fixture("HIGH", 85);
+        let add = |sport, time: &str| {
+            act(&store, LocalAction::AddIntention { date: DAY.into(), time: Some(time.into()), sport, type_key: None, name: None,
+                duration_min: None, allocation: Allocation::default(), kind: IntentionKind::Workout, garmin_id: None }, at(13, 8));
+            local::load(&store).intentions.items.last().unwrap().id.clone()
+        };
+        add(Sport::Running, "07:00");
+        let lift = add(Sport::Strength, "18:00");
+        let (_, l) = lead(&store, DayPhase::Day);
+        assert_eq!((l.headline.as_str(), l.kept), ("Run at 07:00", false));
+        act(&store, LocalAction::KeepToday { plan_id: lift.clone() }, at(13, 9));
+        let (_, l) = lead(&store, DayPhase::Day);
+        assert_eq!((l.headline.as_str(), l.kept, l.intention.as_deref()), ("Strength at 18:00", true, Some(lift.as_str())));
+        assert!(local::apply(&store, &LocalAction::KeepToday { plan_id: "garmin:2025-03-14:Intervals".into() }, at(13, 9), Weekday::Mon, &[]).is_err());
+        assert!(local::apply(&store, &LocalAction::KeepToday { plan_id: "i-none".into() }, at(13, 9), Weekday::Mon, &[]).is_err());
+        // Keeping Garmin's session puts it ahead of your own.
+        store.put("scheduled_workouts", "current", &at(13, 6).to_rfc3339(), &json!({"startDate": "2025-03-10", "endDate": "2025-03-23",
+            "entries": [{"calendarDate": DAY, "workoutName": "Tempo"}]})).unwrap();
+        act(&store, LocalAction::KeepToday { plan_id: format!("garmin:{DAY}:Tempo") }, at(13, 9));
+        let (_, l) = lead(&store, DayPhase::Day);
+        assert_eq!((l.kind, l.kept, l.garmin.as_deref()), (LeadKind::Garmin, true, Some("garmin:2025-03-13:Tempo")));
+        let tomorrow = NaiveDate::from_ymd_opt(2025, 3, 14).unwrap();
+        let mut v = view(&store, DayPhase::Day);
+        apply(&store, &mut v, tomorrow, at(14, 9).fixed_offset());
+        assert!(!v.lead.unwrap().kept, "a choice lasts its day");
     }
 
     #[test]

@@ -479,6 +479,14 @@ impl Client {
                     vec![("startDate", key)],
                 )
             }
+            // An adaptive Garmin Coach plan with this week's sessions in taskList.
+            "coach_adaptive" => {
+                let id = key.parse::<u64>().map_err(|_| Error::Decode)?;
+                if id == 0 || id.to_string() != key {
+                    return Err(Error::Decode);
+                }
+                (format!("/trainingplan-service/trainingplan/fbt-adaptive/{id}"), vec![])
+            }
             "coach_tasks" => {
                 let id = key.parse::<u64>().map_err(|_| Error::Decode)?;
                 if id == 0 || id.to_string() != key {

@@ -11,3 +11,8 @@ ranked exercise guesses with probabilities, weight in grams and the null
 velocity fields. Exercises, reps, weights and times are invented.
 `exercise_catalog.json` is a short excerpt in the shape of Garmin's public
 catalog (`connect.garmin.com/web-data/exercises/Exercises.json`).
+`coach_adaptive.json` is invented, in the shape of
+`/trainingplan-service/trainingplan/fbt-adaptive/{trainingPlanId}` checked by
+a read-only call: plan fields and `taskList` (one task per day of the current
+week, each with `calendarDate`, `workoutOrder` and `taskWorkout`). Names,
+ids, dates and durations are invented.

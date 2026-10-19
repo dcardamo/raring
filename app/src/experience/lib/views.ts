@@ -80,7 +80,7 @@ export function workoutView(a: Activity): WorkoutView {
   ];
   return {
     summary: activityCard(a), recoveryHours: a.load > 40 ? Math.round(a.load / 6) : null, stats, route: routeFor(a), heartRate: hrTrace(a),
-    zoneFloors: [118, 136, 150, 163], splits: splitsFor(a), strength: strengthSession(a),
+    zoneFloors: [118, 136, 150, 163], splits: splitsFor(a), strength: strengthSession(a), along: null, more: [], effects: [], vo2maxNew: null, counted: null,
   };
 }
 
@@ -216,7 +216,7 @@ function fitnessAgeCard(ctx: Ctx) {
   const pts = range(addDays(ctx.calendarDate, -364), ctx.calendarDate).filter(d => d.slice(8) === '01' || d.slice(8) === '15').map(d => {
     let v: number | null = null; for (let x = d; x >= addDays(d, -40) && v == null; x = addDays(x, -1)) v = fitnessAgeFor(x); return v;
   });
-  return {fitnessAge: 41, chronologicalAge: CHRONOLOGICAL_AGE, trend: pts.slice(-12), change12m: -2};
+  return {fitnessAge: 41, chronologicalAge: CHRONOLOGICAL_AGE, trend: pts.slice(-12), change12m: -2, recordedOn: null};
 }
 export function todayView(ctx: Ctx): TodayView {
   const base = clone(sampleToday) as unknown as TodayView;

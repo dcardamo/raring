@@ -8,7 +8,15 @@
  import {amountColor,textOn} from '../bodymap';
  import {muscleNames,weight,unitLabel} from '../strength';
  import type {StrengthView} from '../generated/StrengthView';
- let {view,navigate}:{view:StrengthView,navigate:(route:string)=>void}=$props();
+ import type {LiftSeries} from '../generated/LiftSeries';
+ import type {TrendRange} from '../generated/TrendRange';
+ import type {MuscleRange} from '../generated/MuscleRange';
+ import RangePicker from './RangePicker.svelte';
+ // `liftSeries` reads one exercise over a range from the core; without it the chart shows the 12 weeks in `view`.
+ // `muscles` reads sets per muscle over a range; without it the map toggles this week and four weeks.
+ let {view,navigate,liftSeries,muscles}:{view:StrengthView,navigate:(route:string)=>void,liftSeries?:(key:string,range:TrendRange)=>Promise<LiftSeries|null>,muscles?:(range:TrendRange)=>Promise<MuscleRange|null>}=$props();
+ let muscleRange=$state<TrendRange>('days30'),muscleView=$state<MuscleRange|null>(null),muscleRequest=0;
+ $effect(()=>{const r=muscleRange,id=++muscleRequest;if(!muscles)return;void muscles(r).then(v=>{if(id===muscleRequest)muscleView=v}).catch(()=>{if(id===muscleRequest)muscleView=null})});
  let span=$state<'week'|'4w'>('week');
  let picked=$state<string|null>(null);
  // Long lists start short; the full 12 weeks are a tap away.
@@ -18,25 +26,32 @@
  let exercise=$derived(view.exercises.find(e=>e.key===picked)??view.exercises[0]??null);
  let latest=$derived(exercise?.sessions[0]??null);
  let unit=$derived(unitLabel(view.unit));
+ // Max weight or volume over the chosen range, from the core; one choice for every lift.
+ let metric=$state<'max'|'volume'>('max'),range=$state<TrendRange>('days90'),series=$state<LiftSeries|null>(null);
+ let request=0;
+ $effect(()=>{const key=exercise?.key,r=range,id=++request;if(!key||!liftSeries){series=null;return}void liftSeries(key,r).then(v=>{if(id===request)series=v}).catch(()=>{if(id===request)series=null})});
+ let shown=$derived(series && series.key===exercise?.key?series:null);
+ let excluded=$derived(shown?shown.points.reduce((t,p)=>t+p.excluded,0):0);
  // Oldest first for the chart; sessions without a weighted set are gaps.
- let points=$derived(exercise?[...exercise.sessions].reverse():[]);
+ let points=$derived(shown?shown.points.map(p=>{const s=exercise?.sessions.find(x=>x.activityId===p.activityId);return {date:p.date,v:metric==='max'?p.max:p.volume,reps:metric==='max'?s?.top?.reps??null:null,record:metric==='max'&&!!s?.record}})
+  :!liftSeries&&exercise?[...exercise.sessions].reverse().map(s=>({date:s.date,v:s.top?.weight??null,reps:s.top?.reps??null,record:s.record})):[]);
  let average=$derived(Object.fromEntries(view.average4w.map(m=>[m.muscle,m.sets])) as Record<string,number>);
  let scale=$derived(Math.max(14,...view.thisWeek.map(m=>m.sets),...view.average4w.map(m=>m.sets)));
  const short=(date:string)=>{const d=new Date(`${date}T12:00:00`);return d.toLocaleDateString('en-GB',{month:'short'})};
  // Phone and wider layouts get their own chart width so axis text keeps its size.
  const H=190,pl=34,pb=22;
  const build=(W:number)=>{
-  const ws=points.map(p=>p.top?.weight??null),present=ws.filter((w):w is number=>w!=null);
+  const ws=points.map(p=>p.v),present=ws.filter((w):w is number=>w!=null);
   if(present.length<2)return null;
   const min=Math.min(...present),max=Math.max(...present);
   // Two or three round gridlines around the range.
-  const step=[1,2.5,5,10,20,25,50,100].find(s=>(max-min)/s<=2.2)??200;
+  const step=[1,2.5,5,10,20,25,50,100,250,500,1000,2500,5000].find(s=>(max-min)/s<=2.2)??10000;
   const lo=Math.floor(min/step)*step-(min%step===0?step/2:0),hi=Math.ceil(max/step)*step+(max%step===0?step/2:0);
   const X=(i:number)=>pl+6+i*(W-pl-14)/Math.max(points.length-1,1),Y=(v:number)=>8+(hi-v)/(hi-lo||1)*(H-pb-14);
   const ticks:number[]=[];for(let t=Math.ceil(lo/step)*step;t<=hi;t+=step)ticks.push(t);
   const months:{x:number,label:string}[]=[];
   points.forEach((p,i)=>{const m=short(p.date);if((!months.length||months.at(-1)!.label!==m) && (!months.length||X(i)-months.at(-1)!.x>=44))months.push({x:X(i),label:m})});
-  const pts=points.map((p,i)=>p.top?.weight!=null?{x:X(i),y:Y(p.top.weight),reps:p.top.reps,record:p.record,last:i===points.length-1}:null);
+  const pts=points.map((p,i)=>p.v!=null?{x:X(i),y:Y(p.v),reps:p.reps,record:p.record,last:i===points.length-1}:null);
   let d='';pts.forEach((p,i)=>{if(p)d+=`${d&&pts[i-1]?'L':'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`});
   return {W,ticks,Y,months,pts,d,base:H-pb};
  };
@@ -52,20 +67,25 @@
   </section>
  </div>
  <div class="col">
-  <section class="card"><h3><span>{span==='week'?'This week':'Last 4 weeks'}</span><span class="segc" role="group" aria-label="Body map period"><button class:on={span==='week'} aria-pressed={span==='week'} onclick={()=>span='week'}>Week</button><button class:on={span==='4w'} aria-pressed={span==='4w'} onclick={()=>span='4w'}>4 weeks</button></span></h3>
-   <BodyMap figure={view.figure} muscles={span==='week'?view.thisWeek:view.last4w} max={span==='week'?12:40}/></section>
+  {#if muscles}<section class="card"><h3><span>Muscles</span></h3><RangePicker value={muscleRange} label="Muscle range" onchange={r=>muscleRange=r}/>
+   {#if muscleView}<BodyMap figure={muscleView.figure} muscles={muscleView.muscles} max={Math.max(8,Math.round(muscleView.days/2))}/>{#if muscleView.gaps.length}<p class="dim">Few or no sets since {dateLabel(muscleView.from)}: {muscleView.gaps.map(m=>muscleNames[m]).join(', ')}</p>{/if}{/if}</section>
+  {:else}  <section class="card"><h3><span>{span==='week'?'This week':'Last 4 weeks'}</span><span class="segc" role="group" aria-label="Body map period"><button class:on={span==='week'} aria-pressed={span==='week'} onclick={()=>span='week'}>Week</button><button class:on={span==='4w'} aria-pressed={span==='4w'} onclick={()=>span='4w'}>4 weeks</button></span></h3>
+   <BodyMap figure={view.figure} muscles={span==='week'?view.thisWeek:view.last4w} max={span==='week'?12:40}/></section>{/if}
   {#if exercise}
    <div class="exchips" role="group" aria-label="Exercise">{#each view.exercises as e}<button class:on={e.key===exercise.key} aria-pressed={e.key===exercise.key} onclick={()=>pick(e.key)}>{e.name}</button>{/each}</div>
    <section class="card"><h3><span>{exercise.name}</span>{#if latest?.record}<span class="pill ok"><Icon name="star" size={12}/>New record</span>{/if}</h3>
     {#if latest?.top}<div class="tr-top"><div class="big n">{weight(latest.top.weight)}<span class="unit">{unit} × {latest.top.reps}</span></div><span class="dim">Heaviest set each session</span></div>{:else}<p class="dim">No weighted sets yet.</p>{/if}
-    {#each charts as chart}{#if chart}<svg class="trend" class:narrow={chart.W<400} class:wide={chart.W>=400} viewBox={`0 0 ${chart.W} ${H}`} role="img" aria-label={`Heaviest set each session, ${points.length} sessions`}>
+    {#if liftSeries}<div class="lift-ctl"><span class="segc" role="group" aria-label="Lift measure"><button class:on={metric==='max'} aria-pressed={metric==='max'} onclick={()=>metric='max'}>Max weight</button><button class:on={metric==='volume'} aria-pressed={metric==='volume'} onclick={()=>metric='volume'}>Volume</button></span><RangePicker value={range} label="Lift range" onchange={r=>range=r}/></div>
+    <p class="dim">{metric==='max'?`Heaviest set each session, ${unit}`:`Volume each session: weight × reps over weighted sets, ${unit}`}{excluded?` · ${excluded} bodyweight, unweighted or flagged set${excluded===1?'':'s'} left out`:''}. No estimated one-rep max.</p>{/if}
+    {#if shown && charts.every(c=>!c)}<p class="dim">{shown.points.length?'Fewer than two sessions with weighted sets in this range.':'No sessions in this range.'}</p>{/if}
+    {#each charts as chart}{#if chart}<svg class="trend" class:narrow={chart.W<400} class:wide={chart.W>=400} viewBox={`0 0 ${chart.W} ${H}`} role="img" aria-label={`${metric==='max'?'Heaviest set':'Volume'} each session, ${points.length} sessions: ${points.map(p=>`${dateLabel(p.date)} ${p.v??'none'}`).join(', ')}`}>
      {#each chart.ticks as t}<line x1={pl} x2={chart.W} y1={chart.Y(t)} y2={chart.Y(t)} stroke="rgba(255,255,255,.06)"/><text x="0" y={chart.Y(t)+4} class="axis n">{t}</text>{/each}
      <path d={chart.d} fill="none" stroke={colors.ink} stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-     {#each chart.pts as p}{#if p}{#if p.last}<circle cx={p.x} cy={p.y} r="6.5" fill={p.record?colors.good:colors.ink} stroke="#0B0F1A" stroke-width="3"/>{:else}<circle cx={p.x} cy={p.y} r="3" fill="#0B0F1A" stroke={colors.ink} stroke-width="2"/>{/if}{#if latest?.top && p.reps!==latest.top.reps}<text x={p.x} y={p.y+18} text-anchor="middle" class="axis n">×{p.reps}</text>{/if}{/if}{/each}
+     {#each chart.pts as p}{#if p}{#if p.last}<circle cx={p.x} cy={p.y} r="6.5" fill={p.record?colors.good:colors.ink} stroke="#0B0F1A" stroke-width="3"/>{:else}<circle cx={p.x} cy={p.y} r="3" fill="#0B0F1A" stroke={colors.ink} stroke-width="2"/>{/if}{#if p.reps!=null && latest?.top && p.reps!==latest.top.reps}<text x={p.x} y={p.y+18} text-anchor="middle" class="axis n">×{p.reps}</text>{/if}{/if}{/each}
      {#each chart.months as m}<text x={m.x} y={H-3} text-anchor="middle" class="axis">{m.label}</text>{/each}
     </svg>{/if}{/each}
    </section>
-   <section class="card"><h3>Best at each rep count</h3><div class="recs">{#each exercise.bests as b}{@const fresh=b.date!=null && b.date===latest?.date && latest.record}<div class="rec" class:new={fresh}><span>{b.reps} rep{b.reps>1?'s':''}</span><b class="n">{weight(b.weight)}</b><small>{b.date?(b.date>=view.weekStart?dateLabel(b.date).split(' ')[0]:short(b.date)):''}</small></div>{/each}</div><p class="note">{unit} · at least that many reps</p></section>
+   <section class="card"><h3>Best at each rep count <small class="h-note">in available history</small></h3><div class="recs">{#each exercise.bests as b}{@const fresh=b.date!=null && b.date===latest?.date && latest.record}<div class="rec" class:new={fresh}><span>{b.reps} rep{b.reps>1?'s':''}</span><b class="n">{weight(b.weight)}</b><small>{b.date?(b.date>=view.weekStart?dateLabel(b.date).split(' ')[0]:short(b.date)):''}</small></div>{/each}</div><p class="note">{unit} · at least that many reps</p></section>
    <section class="card"><h3><span>Sessions</span><span class="h-note">{exercise.sessions.length} in 12 weeks</span></h3>{#each allSessions?exercise.sessions:exercise.sessions.slice(0,SESSIONS) as s}<button class="ses" onclick={()=>navigate('workout/'+s.activityId)}><span>{dateLabel(s.date)}</span><b class="n">{weight(s.top?.weight??null)}<small>{s.top?.weight!=null?unit:''}</small></b><span class="n rr">{s.reps.map(r=>r??'—').join(' · ')}</span><span class="pr">{#if s.record}<Icon name="star" size={13}/>{/if}</span></button>{/each}{#if exercise.sessions.length>SESSIONS}<button class="more" aria-expanded={allSessions} onclick={()=>allSessions=!allSessions}>{allSessions?'Show fewer':`Show all ${exercise.sessions.length} sessions`}</button>{/if}</section>
   {/if}
  </div>
@@ -73,15 +93,16 @@
   <section class="card"><h3><span>Sets per muscle</span><span class="h-note">Since {dateLabel(view.weekStart)}</span></h3>
    <div class="mus">{#each view.thisWeek as m}<div class="mu"><span>{muscleNames[m.muscle]}</span><div class="mu-b"><i style:width={m.sets/scale*100+'%'} style:background={amountColor(m.sets,12)}></i><u style:left={(average[m.muscle]??0)/scale*100+'%'}></u></div><b class="n">{m.sets}</b></div>{/each}</div>
    <p class="note"><i class="tick"></i>Weekly average, previous 4 weeks</p></section>
-  <section class="card heat-card"><h3>Weekly sets · 12 weeks</h3>
+{#if !muscles}  <section class="card heat-card"><h3>Weekly sets · 12 weeks</h3>
    <div class="heat" role="table" aria-label="Sets per muscle each week">
     <span></span>{#each view.weeks as w,i}<small>{i===view.weeks.length-1?'Now':i%4===0?dateLabel(w.weekStart).split(' ').slice(1).join(' '):''}</small>{/each}
     {#each view.thisWeek as row,j}<span>{muscleNames[row.muscle]}</span>{#each view.weeks as w}{@const v=w.muscles[j].sets}{@const fill=amountColor(v,12)}<i class="n" style:background={fill} style:color={textOn(fill)}>{v}</i>{/each}{/each}
-   </div></section>
+   </div></section>{/if}
   {#if view.workouts.length}<section class="card"><h3><span>Strength workouts</span><span class="h-note">{view.workouts.length} in 12 weeks</span></h3>{#each allWorkouts?view.workouts:view.workouts.slice(0,WORKOUTS) as w}<div class="workout-item"><ActivityRow activity={w.activity} open={()=>navigate('workout/'+w.activity.id)}/>{#if !w.setsRecorded}<p class="nosets">No sets recorded</p>{/if}</div>{/each}{#if view.workouts.length>WORKOUTS}<button class="more" aria-expanded={allWorkouts} onclick={()=>allWorkouts=!allWorkouts}>{allWorkouts?'Show fewer':`Show all ${view.workouts.length} workouts`}</button>{/if}</section>{/if}
  </div>
 </div>
 <style>
+ .lift-ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin:8px 0 4px}
  .strength-history{display:grid;gap:0 16px}
  .col{min-width:0}
  .exercises-col{display:none}

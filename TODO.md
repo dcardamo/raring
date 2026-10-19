@@ -119,16 +119,61 @@ morning notification, persistent status and widgets, republished offline on each
 local change (verified on the emulator: Push → Rest day → Push) (`db8314f`).
 **4.1 Plan-loop subset**, not all of 4.1: `18fe3b8`/`f60a630` add/move/let go,
 mark missed, link/unlink, Do it today, local events, prompt, review/proposals and
-review list; Send to Garmin stays disabled. Rehabilitation from the original
-4.1 plan remains unimplemented. `aac5783` is the **Progress foundation
+review list; Send to Garmin stays disabled. The rehabilitation checklist from the
+original 4.1 plan is implemented as My routines. `aac5783` is the **Progress foundation
 subset**, not stage-4 completion. The current checkpoint adds non-destructive
 emulator checks and fixes Progress period selection across detail/Back/resume:
 
 | Area | Core implemented | Production UI implemented | Verified | Still missing within item 26 |
 | --- | --- | --- | --- | --- |
-| Progress foundation | Period totals/coverage/comparison, calendar states, weekly goal rings, sleep-versus-need, canonical-unit records with correction/dedup | Period report, basic calendar, weekly rings, latest-reading links, records and reviews | Synthetic core/browser checks; emulator period IPC, rendered switching, previous/next, coverage/calendar and historical selection through detail/Back/Home/resume; stale-read selection has a browser regression | Approved domain sub-tabs, period trend tiles, nested ring calendar, full dated milestone history, long-history timings and wider route/filter parity |
-| Plan-loop subset | Local actions, ledger/matches, review proposals | Sessions/backlog/reviews/events | Core and browser regressions | **Rehab checklist**, wind-down planning, all edits and review/resume journey, **event-session grouping** and verified populated Garmin integration |
-| Today/Sleep/Profile/domain parity | Existing facts and foundational rules retained | New shell and partial Today/Plan/Progress, existing details | Earlier detail regressions and emulator subset only | **Your day**, **sleep-phase tabs**, **Keep/Choose another**, **bounded overviews**, **full Profile facts**, and **advanced Training/Health/Progress visuals**; stage 4.3 lanes/volume/ranges/trend weight/freshness/workout streams |
+| Progress foundation + domains | Period totals/coverage/comparison, calendar states, weekly goal rings, sleep-versus-need, canonical-unit records with correction/dedup; `ringDays` (whole plan weeks of rings) and `ProgressDomains` (12 weeks of zone/intensity/strength/VO₂ with marks, heaviest bests, 12 months of minutes, RHR/HRV averages, VO₂ max/Fitness Age) | Overall · Cardio · Strength · Long-term; Overall: weekly rings, period report, ring calendar (outside days faint), reviews, milestones; Cardio: weekly zone/intensity against goals + VO₂ max; Strength: sessions/week + bests; Long-term: monthly training, RHR, HRV, VO₂/Fitness Age, latest readings | Core ring-days/domain tests; browser sections, unknown weeks, missing goals, widths, contrast; period/selection regressions | Long-history timings (12 week boards per domain read); emulator check of the archive and lift charts |
+| Plan-loop subset | Local actions, ledger/matches, review proposals; `local:routines` checklist with per-day self-reports | Sessions/backlog/reviews/events; My routines in Adapt | Core and browser regressions (routines: export, switch/sign-out erase, per-day report, off status snapshot, no Garmin evidence) | Edit (time, name, minutes, goal shares) and placing tonight's wind-down session from Tonight are implemented (browser checks of the actions sent); Resume shows the goals as they are first (resume unchanged or resume and change goals); adaptive Garmin Coach sessions are planned work (verified `fbt-adaptive` shape; core, sync and browser checks); remaining: populated `workoutScheduleByPeriod` entries stay read-only by name and date (no populated schedule verified), Coach completion values and next-week behaviour unverified (Garmin Coach sessions can't join an event group until their sport is verified); event-session grouping of your sessions is implemented (core and browser checks) |
+| 4.3 weight subset | Trend weight, steady threshold, changes, ranges, reading freshness from stored weigh-ins (no requests) | Two-line weight card, `health/weight`, shared 7D–Max range control (adds 14D) | Core and browser tests; not emulator-checked | Freshness flags on other metric cards, lanes, lift volume, aligned workout streams |
+| Your day + Today's choice | `DayTimeline` (sleep stages at clock times, intraday Body Battery/stress/HR, activities and naps with nap Body Battery change, upload and now); `KeepToday` local action leading in its gate for the day | Your day rows on Today (replaces the separate Body Battery/Stress cards), nap rows in Recorded today, Keep · Choose another with today's Garmin/your sessions, later sessions moved to today, backlog, add, rest | Core table tests (midnight clipping, upload/now limit, measured-only nap change, clock-change days, Keep day/limits); browser timeline, nap change, sheet, limits, 320/390/700 widths; emulator (signer-verified in-place updates, synthetic demo re-seeded with approval): rows, core limit, width, Back, and Keep / Choose another through the real core on the planned demo day | Real-data check of nap and clock-change days |
+| Sleep tabs | `SleepView.recent` (seven nights against each night's Garmin need), live `tonight_first` from Today's phase, `wound_down`; lead and bedtime-reminder links to `sleep/tonight` / `sleep/last` | Last night / Tonight tabs (replace, not stack); Tonight: compact dial, plan facts with your sleep goal, I wound down, reminder toggle, Why this plan, sleep goals, labelled 7-night chart | Core test; browser tabs, deep link, Back, closer default, self-report, recent-night counts, 320/700/1100 and stage-totals containment, contrast; 16 JVM tests; emulator `sleep/tonight` intent delivery (`am start --es target`) opens Tonight, Back to Today | Actual bedtime notification tap; prototype's patterns/observation sections |
+| Bounded Today | — | Approved order: notices, focus, Recorded today (≤2 rich, the hero's recording excluded, link to all), This week beside Left this week with Do it today, end note; duplicated HRV/Vitals/Garmin-next cards left to Health/Training; Why this replaced by the reason line | Browser: 2.20 viewports at 390×844 with the sample day, backlog, overflow link | Long-text/large-font budget, matching-scenario comparison against the prototype |
+| Profile | `ProfileView` (age, units, latest weigh-in + freshness, watch upload, gear, limits; local only) | What Garmin knows, limitations into Adapt's limits, gear, Settings/Help, Add a weight disabled | Core test; browser facts/stale weigh-in/limits sheet/gear/widths/contrast | Watch model name (device-list key unverified) |
+| Training week lanes | `TrainingWeek` lanes (goal kinds or cardio, strength), cumulative to today with unknown days, usual-week band from counted weeks | Lane chart replaces Training's This week bars on the live read | Core percentile/coverage/ill-week/band tests; browser labels, band, widths, contrast | Long-history timing (16 week boards per read) |
+| Lift Max weight / Volume | `LiftSeries` per exercise and range (max, volume, excluded sets), `lift_series` command | Strength's lift chart with Max weight / Volume and the shared range picker | Core counted-set/range test; browser toggle, picker, note, contrast |
+| Training sections | `MuscleRange` (sets per muscle over 7D–Max, gaps at ≤ round(days ÷ 14)), `TrainingWeek.bySport` | Training: lanes + minutes by sport, then Fitness (three questions, compact load bar, VO₂ max/scores links, predictions/thresholds/race, Garmin's next session) · Strength (goal and sets, muscle range with gaps, lifts link) · Activities (Garmin's benefit, training-effect labels, intensity minutes, sport filter); Strength page: muscle range picker, 12-week heat chart removed; gear only in Profile | Core muscle-range test; browser sections, gaps, section kept across detail/Back, 320/700/1100, contrast |
+| Workout detail | `WorkoutView.along` (stored streams on one axis), `more` (recorded summary fields), `effects` (Garmin's bands + plain lines), `vo2maxNew` | Along the way (HR, pace/speed, elevation, cadence, power…), What it did, Recorded by your watch | Core alignment/gap/field/band/VO₂ tests; browser charts, absent power, fields, strength exclusion, widths, contrast | Emulator check |
+| Health order and freshness | `TrendView.freshness` (2-day flag on today's chart; not for past ends or sparse estimates) | Health: Fitness Age, drivers and lever first, vitals right below, resting HR / HRV / stress / Body Battery as range charts with usual bands and links to the intraday details, weight, intensity, Fitness Age history, journal; all-day HR card removed (Your day stays on Today) | Core freshness test; browser order, no duplicate Your day, four range charts, stale flag on one metric only | Last night / readiness row from the prototype; journal behind a row; emulator check |
+| Help "?" sheets | — | 18 short topics describing shipped rules (Today, Plan, rings, lanes, load, VO₂ max, ready-for, muscles, activities, training effect, vitals, ranges, Fitness Age, trend weight, sleep tabs, Progress, Profile) on root pages and cards; one sheet, Back/Escape close it, link to all help | Browser: buttons on 8 routes, sheet content, Back/Escape, contrast, All help link | Wording not yet reviewed by people; emulator check |
+| Emulator parity pass (`90e8ceb` + demo seed) | Demo seed adds synthetic sets, catalog, metric units and a weigh-in | — | Signer-verified (0d59d1…) in-place update, appId and first-install time unchanged; demo re-seeded (approved); `scripts/android-parity-test.mjs`: Profile facts/limits sheet/Back, My routines add→report→remove, event week grouping, week lanes, Training sections and muscle range, lift Volume/range through the core; all its changes removed (verified none left); navigation default + `--existing` and Progress scripts pass | Full native instrumentation at this checkpoint, physical phone, real data |
+| Emulator parity pass 2 (`14cdfc4` + this change) | Demo seed adds activity-list coverage cursors and unit-keyed speed/elevation streams with summary intensity fields; recorded lanes now unknown on uncovered days | — | Signer-verified (0d59d1…) in-place app and androidTest installs, appId and first-install time unchanged; instrumentation via `am instrument` (no uninstall): OK (14 tests) — its account tests forget local data on the emulator only (they refuse when tokens exist), so the synthetic demo was re-seeded afterwards; navigation default + `--existing`, `android-parity-test.mjs` (now also workout streams, Health order, Progress sections) and `android-progress-test.mjs` pass; parity residue none | Physical phone, real data |
+| Emulator parity pass 3 (`230bb0d`) | — | — | Signer-verified in-place install (appId, first-install time unchanged); parity script now also covers lift charts (none on the demo: one session per lift, as the two-session rule requires), the milestone archive and a help sheet closed by Back; Progress script; instrumentation OK (14 tests), demo re-seeded after it; navigation default + `--existing` | Physical phone, real data |
+| Emulator parity pass 4 (`fb957b7`) | Demo seed adds a synthetic adaptive Coach week | — | Signer-verified app and androidTest in-place installs (appId, first-install time unchanged); instrumentation OK (14 tests), demo re-seeded after; navigation default + `--existing`, parity (now with the Coach group and read-only sheet through the core) and Progress scripts pass; no residue | Real Coach plan on a phone; completion values |
+| Domain parity | Existing facts and foundational rules retained | New shell and partial Today/Plan/Progress, existing details | Earlier detail regressions and emulator subset only | bounded Plan/Training/Health/Progress overviews, and **advanced Training/Health/Progress visuals**; stage 4.3 lanes/volume/ranges/trend weight/freshness/workout streams |
+
+**Verified stored activity `details` facts (2026-10-19, read-only from the
+maintainer's store; structure only).** Each metric descriptor carries
+`unit {key, factor}`. Unit keys seen: `directSpeed`,
+`directGradeAdjustedSpeed`, `directVerticalSpeed` mps; `directElevation`
+meter; `directDoubleCadence`/`directRunCadence`/`directFractionalCadence`
+stepsPerMinute; `directBikeCadence` rpm; `directPower` watt;
+`directRespirationRate` breathsPerMinute; `directAvailableStamina`,
+`directPotentialStamina`, `directPerformanceCondition`, `directBodyBattery`
+dimensionless; `directStrideLength`, `directVerticalOscillation` centimeter;
+`directGroundContactTime` ms; `directAirTemperature` "celcius" (sic); sums
+second/meter. The **factor is not a scale to apply**: stream values are
+already in the base unit (distance, duration and elevation sums agree with
+the summary fields). `directAirTemperature` appears only on some activities,
+with `summaryDTO` average/min/max temperature on the same ones; it is the
+watch's own sensor. The core uses a stream only when its descriptor's unit
+key is the expected one and never applies the factor.
+
+**Spec rewrite (stage 5):** `docs/spec.md` Screens, Look, view cache,
+notification targets and status-surface suppression now describe the shipped
+redesign; the visual reference points at the approved prototype's captures.
+The prototype entry, its preview and `test:experience` stay until Dan has
+compared the phone APK with them; removing them is the final cutover step.
+
+**Stage 5 comparison (2026-10-19):** every U01–U64 journey was compared with
+the prototype ([table](docs/experience-design.md#production-vs-prototype-u01u64-stage-5)):
+39 match, 19 gaps fixed (`65806e1`, `1fd4899`, `7ae1e04`, `a8099a7`,
+`bbdfd31`, `1a66616`, `cb01fbf`), 5 differ by approved decisions, 1 needs
+evidence only. Code and tests only; participants, a phone and real data
+remain open.
 
 These are approved requirements, not optional follow-ups. The detailed
 [production implementation/parity ledger](docs/experience-design.md#production-implementation-and-parity-ledger)
@@ -392,9 +437,29 @@ separate export. The offline JSON/CSV export does not make network requests.
   Raring's next-session name and Garmin calendar day with Garmin Connect,
   and confirm the race title and all-day countdown on a real phone. Current
   empty-account reads cannot verify populated payload fields or Coach task IDs.
+- **Verified 2026-10-19 (read-only, one account with an adaptive Garmin
+  Coach plan; structure only):** `active-plans` lists the plan with
+  `trainingPlanCategory` `FBT_ADAPTIVE`, `trainingStatus.statusKey`,
+  `startDate`/`endDate` local timestamps and a null `taskList`. Adaptive
+  sessions are **not** in `workoutScheduleByPeriod` (empty) or
+  `tasks/{id}` (empty). They are in
+  `GET /trainingplan-service/trainingplan/fbt-adaptive/{trainingPlanId}`:
+  `taskList` holds the current week only (one task per day, `weekId` of the
+  week), each with `calendarDate`, `dayOfWeekId`, `workoutOrder` and
+  `taskWorkout` (`workoutName`, `estimatedDurationInSecs`, `restDay`,
+  `trainingEffectLabel` — seen AEROBIC_BASE, LACTATE_THRESHOLD, RECOVERY,
+  UNKNOWN, INVALID — `sportType.sportTypeKey` — seen `other` for cardio,
+  `strength_training`, null on rest days — `adaptiveCoachingWorkoutStatus`,
+  only NOT_COMPLETE seen, `workoutId` null). The month calendar
+  (`/calendar-service/year/{y}/month/{m0}`, month 0-based) also lists them as
+  `fbtAdaptiveWorkout` items; Raring doesn't read it. Raring now reads
+  `fbt-adaptive` (see spec, Planned training and Rules: Garmin Coach).
+- Verify with a completed and a skipped Coach session which
+  `adaptiveCoachingWorkoutStatus` values Garmin sends, and whether next
+  week's tasks appear at the week boundary. Until then Garmin's status is
+  shown as Garmin's and never treated as completion.
 - Coach tasks (`GET /trainingplan-service/trainingplan/tasks/{planId}?localeKey=en`)
-  are deferred despite the community-client route: verify populated shape and
-  a useful next-session projection before spending background requests.
+  returned empty for an adaptive plan and stay unused.
 - Check whether Garmin's scheduled-workout list exposes explicit completion
   or cancellation fields on populated accounts before assigning either meaning.
   Do not infer completion by matching activity names or times.

@@ -57,6 +57,12 @@ fn stress(date: NaiveDate, days_ago: i64) -> (Value, Value) {
 }
 
 pub fn seed(store: &Store, day: NaiveDate) -> rusqlite::Result<()> {
+    seed_variant(store, day, true)
+}
+
+/// `recorded_today: false` moves the morning run to the day before, so a
+/// planned session can lead today (the debug emulator's Keep / Choose check).
+pub fn seed_variant(store: &Store, day: NaiveDate, recorded_today: bool) -> rusqlite::Result<()> {
     let fixture: Value = serde_json::from_str(include_str!("../tests/fixtures/day.json"))
         .expect("synthetic fixture must be valid JSON");
     for days_ago in (0..42).rev() {
@@ -383,7 +389,7 @@ pub fn seed(store: &Store, day: NaiveDate) -> rusqlite::Result<()> {
             WORKOUT_ID,
             "Morning Run",
             "running",
-            day,
+            if recorded_today { day } else { day - Duration::days(1) },
             10200,
             3134,
             186,
@@ -426,9 +432,43 @@ pub fn seed(store: &Store, day: NaiveDate) -> rusqlite::Result<()> {
         activity["elevationGain"] = Value::Null;
         activity["anaerobicTrainingEffect"] = json!(1.2);
         activity["anaerobicTrainingEffectMessage"] = json!("MINOR");
+        if id == WORKOUT_ID {
+            activity["moderateIntensityMinutes"] = json!(14);
+            activity["vigorousIntensityMinutes"] = json!(24);
+            activity["differenceBodyBattery"] = json!(-9);
+            activity["movingDuration"] = json!(3101);
+        }
         store.put("activity", id, &format!("{when}T09:00:00Z"), &activity)?;
         store.put("zones", id, "synthetic", &json!(zones.iter().enumerate().map(|(i, s)| json!({"zoneNumber":i+1,"secsInZone":s,"minHeartRate":([0,120,138,154,167][i])})).collect::<Vec<_>>()))?;
     }
+    // A synthetic adaptive Garmin Coach week around today, read just now.
+    let task = |offset: i64, name: &str, sport: Option<&str>, seconds: u32, label: &str| {
+        json!({"calendarDate": (day + Duration::days(offset)).to_string(), "workoutOrder": 1, "taskWorkout": {
+            "workoutName": name, "workoutId": null, "estimatedDurationInSecs": seconds, "restDay": sport.is_none(),
+            "trainingEffectLabel": label, "sportType": sport.map(|s| json!({"sportTypeKey": s})), "adaptiveCoachingWorkoutStatus": "NOT_COMPLETE"}})
+    };
+    let fetched = chrono::Utc::now().to_rfc3339();
+    store.put("coach_plans", "current", &fetched, &json!({"trainingPlanList": [{"trainingPlanId": 4242, "trainingPlanCategory": "FBT_ADAPTIVE",
+        "trainingStatus": {"statusKey": "Scheduled"}}]}))?;
+    store.put("coach_adaptive", "current", &fetched, &json!({"trainingPlanId": 4242, "trainingPlanCategory": "FBT_ADAPTIVE", "name": "Sample Coach",
+        "taskList": [task(-1, "Strength", Some("strength_training"), 2400, "UNKNOWN"), task(0, "Base", Some("other"), 1800, "AEROBIC_BASE"),
+            task(1, "Rest", None, 0, "INVALID"), task(2, "Threshold", Some("other"), 2700, "LACTATE_THRESHOLD")]}))?;
+    // The synthetic activity list covers the seeded days, so coverage rules apply.
+    store.set_cursor("listed:lo", &(day - Duration::days(41)).to_string())?;
+    store.set_cursor("listed:hi", &day.to_string())?;
+    // Yesterday's strength session has the synthetic sets fixture, so Strength,
+    // lifts and muscles have something to show; units and a weigh-in fill Profile.
+    let mut sets: Value = serde_json::from_str(include_str!("../tests/fixtures/exercise_sets.json")).expect("valid synthetic sets fixture");
+    sets["activityId"] = json!(123457);
+    store.put("exercise_sets", "123457", "synthetic", &sets)?;
+    let catalog: Value = serde_json::from_str(include_str!("../tests/fixtures/exercise_catalog.json")).expect("valid synthetic catalog fixture");
+    if let Some(reduced) = crate::strength::reduce_catalog(&catalog) {
+        store.put("exercise_catalog", "garmin", "synthetic", &reduced)?;
+    }
+    store.put("profile_settings", "me", "synthetic", &json!({"measurementSystem": "metric"}))?;
+    let weighed = day - Duration::days(3);
+    store.put("weight", &weighed.to_string(), "synthetic", &json!({"weight": 72400.0,
+        "timestampGMT": weighed.and_hms_opt(7, 0, 0).unwrap().and_utc().timestamp_millis()}))?;
     store.put(
         "races",
         &day.to_string(),
@@ -463,10 +503,14 @@ pub fn seed(store: &Store, day: NaiveDate) -> rusqlite::Result<()> {
         let fraction = section - index as f64;
         let x = waypoints[index].0 + (waypoints[index + 1].0 - waypoints[index].0) * fraction;
         let y = waypoints[index].1 + (waypoints[index + 1].1 - waypoints[index].1) * fraction;
-        json!({"metrics":[t * 3134., hr, 45.501 + (0.5 - y) * 0.008, -73.601 + (x - 0.5) * 0.012]})
+        // Speed in m/s and elevation in metres, as Garmin's unit keys say.
+        let speed = 3.3 + 0.25 * (angle * 3.).sin() - (hr - 150.) / 200.;
+        let elevation = 60. + 8. * (angle * 2.).sin();
+        json!({"metrics":[t * 3134., hr, 45.501 + (0.5 - y) * 0.008, -73.601 + (x - 0.5) * 0.012, speed, elevation]})
     }).collect();
     store.put("details", WORKOUT_ID, "synthetic", &json!({
-        "metricDescriptors":[{"key":"directTimestamp"},{"key":"directHeartRate"},{"key":"directLatitude"},{"key":"directLongitude"}],
+        "metricDescriptors":[{"key":"directTimestamp"},{"key":"directHeartRate"},{"key":"directLatitude"},{"key":"directLongitude"},
+            {"key":"directSpeed","metricsIndex":4,"unit":{"key":"mps","factor":0.1}},{"key":"directElevation","metricsIndex":5,"unit":{"key":"meter","factor":100.0}}],
         "activityDetailMetrics":points
     }))?;
     let times = [321, 308, 302, 298, 305, 295, 301, 297, 310, 318];

@@ -355,13 +355,14 @@ fn every_record_is_exported_without_credentials() {
     act(&core, LocalAction::SetLimits { limits: Limits { excluded: vec![Sport::Running], note: "knee".into() } }).unwrap();
     act(&core, LocalAction::SetPromptWeek { week: "2025-03-10".into(), choice: PromptChoice::Planned }).unwrap();
     act(&core, LocalAction::AddEvent { name: "10K".into(), date: "2025-04-01".into(), sport: None }).unwrap();
+    act(&core, LocalAction::AddRoutine { name: "Wall sit".into(), how: None }).unwrap();
     let path = dir.0.join("export.zip");
     core.export(&path, "test").unwrap();
     let mut archive = zip::ZipArchive::new(std::fs::File::open(&path).unwrap()).unwrap();
     let mut body = String::new();
     archive.by_name("settings.json").unwrap().read_to_string(&mut body).unwrap();
     let settings: Value = serde_json::from_str(&body).unwrap();
-    for key in ["local:goals", "local:intentions", "local:links", "local:circumstances", "local:reviews", "local:events"] {
+    for key in ["local:goals", "local:intentions", "local:links", "local:circumstances", "local:reviews", "local:events", "local:routines"] {
         assert_eq!(settings[key]["schema"], 1, "{key} is exported");
     }
     assert_eq!(settings["local:circumstances"]["limits"]["note"], "knee");
@@ -374,6 +375,7 @@ fn records_survive_reauthentication_and_are_erased_on_switch_and_sign_out() {
     bind(&store, 101);
     act(&core, LocalAction::SetGoals { targets: targets(2) }).unwrap();
     act(&core, LocalAction::RestToday).unwrap();
+    act(&core, LocalAction::AddRoutine { name: "Wall sit".into(), how: None }).unwrap();
     let same = json!({"profileId": 101, "displayName": "synthetic"});
     assert!(store.bind_account("101", &same, "later").unwrap());
     assert_eq!(core.local_records().goals.versions.len(), 1, "same-account sign-in keeps local records");
@@ -428,4 +430,26 @@ fn a_refused_mirror_leaves_the_old_plan_row_unchanged() {
     let update = PlanUpdate { targets: PlanTargets::preset(PlanPreset::Custom), paused: false };
     assert!(core.set_plan("2025-03-13", &update).is_err());
     assert_eq!(store.setting("plan").unwrap(), plan);
+}
+
+#[test]
+fn a_lighter_week_halves_this_week_and_next_week_returns() {
+    use chrono::TimeZone;
+    let (_dir, _store, core) = open("lighter");
+    let mon = chrono::Local.with_ymd_and_hms(2025, 3, 10, 9, 0, 0).unwrap();
+    let wed = chrono::Local.with_ymd_and_hms(2025, 3, 12, 9, 0, 0).unwrap();
+    assert!(core.local_action(&LocalAction::LighterWeek, wed).is_err(), "no goals to lighten");
+    let mut t = targets(3);
+    t.zone2_min = 90;
+    core.local_action(&LocalAction::SetGoals { targets: t }, mon).unwrap();
+    assert!(core.local_action(&LocalAction::LighterWeek, mon).is_err(), "first targets stay on record");
+    core.local_action(&LocalAction::LighterWeek, wed).unwrap();
+    let v = core.local_records().goals.versions;
+    let at = |d: &str| v.iter().rev().find(|x| x.from.as_str() <= d).unwrap().targets.clone();
+    assert_eq!((at("2025-03-10").strength_sessions, at("2025-03-10").zone2_min), (3, 90), "Monday's targets are kept");
+    assert_eq!((at("2025-03-12").strength_sessions, at("2025-03-12").zone2_min), (1, 45), "lighter from today");
+    assert_eq!((at("2025-03-17").strength_sessions, at("2025-03-17").zone2_min), (3, 90), "next week returns");
+    let b = core.plan_board("2025-03-12", wed).unwrap();
+    let s = b.ledger.iter().find(|l| l.kind == GoalKind::Strength).unwrap();
+    assert_eq!((s.target, s.original), (1., Some(3.)), "the week shows its original target beside the lighter one");
 }

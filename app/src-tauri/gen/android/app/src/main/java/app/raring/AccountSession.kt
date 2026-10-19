@@ -16,6 +16,13 @@ internal object AccountSession {
         val fixture = BuildConfig.DEBUG && policy(context).getBoolean("demo", false) && state.optBoolean("demo")
         !blocked(context) && (fixture || TokenVault.exists(context)) && state.optBoolean("active")
     } catch (_: Exception) { false }
+    /** Background sync skips only the active debug demo: no tokens, demo policy and demo state. */
+    internal fun syncSkipsDemo(debug: Boolean, demoPolicy: Boolean, demoState: Boolean, active: Boolean, hasTokens: Boolean) =
+        debug && demoPolicy && demoState && active && !hasTokens
+    fun syncSkipsDemo(context: Context): Boolean = try {
+        val state = JSONObject(NativeBridge.accountSession(db(context), "state", "", ""))
+        syncSkipsDemo(BuildConfig.DEBUG, policy(context).getBoolean("demo", false), state.optBoolean("demo"), active(context), TokenVault.exists(context))
+    } catch (_: Exception) { false }
     fun isDemo(context: Context): Boolean = BuildConfig.DEBUG && policy(context).getBoolean("demo", false) && active(context)
     fun loadLocked(context: Context): String? {
         if (blocked(context)) return null

@@ -67,10 +67,10 @@ try {
  await page.getByRole('button',{name:'Next period',exact:true}).click();
  await page.waitForFunction(label=>document.querySelector('.rep-h h2')?.textContent===label,currentWeek);
  await pick('3 months');
- assert.equal(await page.locator('.cal').count(),0);
+ assert.equal(await page.locator('.cal, .ring-cal').count(),0);
  await pick('Year');
  await pick('Month');
- assert.ok(await page.locator('.cal .day').count()>0);
+ assert.ok(await page.locator('.ring-cal .dc').count()>0);
  assert.equal(await page.evaluate(()=>document.querySelector('main').scrollWidth<=document.querySelector('main').clientWidth+1),true,'phone Progress has no horizontal overflow');
  console.log('Android Progress: real core period commands, rendered period switches, previous/next, coverage and calendar passed');
  console.log('Cached synthetic/local read timings (not a real-history benchmark):',JSON.stringify(timing));
@@ -82,10 +82,12 @@ try {
   console.error('Period selection mismatch',await page.evaluate(expected=>({expected,actual:document.querySelector('.rep-h h2')?.textContent,busy:document.querySelector('.report')?.getAttribute('aria-busy')}),previousWeek));
   throw error;
  });
+ await page.getByRole('tab',{name:'Long-term'}).click();
  await page.locator('.tiles2 button').filter({hasText:'HRV'}).click();
  await page.waitForFunction(()=>location.hash==='#metric/hrv');
  adb('shell','input','keyevent','4');
- await page.waitForFunction(()=>location.hash==='#progress');
+ await page.waitForFunction(()=>location.hash==='#progress'&&document.querySelector('[role=tab][aria-selected=true]')?.textContent==='Long-term');
+ await page.getByRole('tab',{name:'Overall'}).click();
  await page.locator('.report').waitFor();
  assert.equal(await page.locator('.rep-h h2').textContent(),previousWeek,'Android Back preserves the selected historical week');
  const beforeResume=await page.evaluate(()=>window.__progressResumes);

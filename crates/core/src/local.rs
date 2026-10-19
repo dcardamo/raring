@@ -49,6 +49,7 @@ pub struct Circumstances {
     pub limits: Limits,
     pub dismissals: Vec<Dismissal>,
     pub wind_downs: Vec<WindDownReport>,
+    pub today_choice: Option<TodayChoice>,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug, PartialEq)]
@@ -89,6 +90,14 @@ pub struct Milestones {
     pub items: Vec<MilestoneRecord>,
 }
 
+/// Your own checklist and its self-reports (reports kept 90 days).
+#[derive(Serialize, Deserialize, Default, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Routines {
+    pub items: Vec<RoutineItem>,
+    pub reports: Vec<RoutineReport>,
+}
+
 trait Record: Serialize + DeserializeOwned + Default {
     const KEY: &'static str;
 }
@@ -113,6 +122,9 @@ impl Record for Events {
 impl Record for Milestones {
     const KEY: &'static str = "local:milestones";
 }
+impl Record for Routines {
+    const KEY: &'static str = "local:routines";
+}
 
 /// Every local record, after migration.
 #[derive(Default, Clone, Debug, PartialEq)]
@@ -124,6 +136,7 @@ pub struct LocalRecords {
     pub reviews: Reviews,
     pub events: Events,
     pub milestones: Milestones,
+    pub routines: Routines,
     /// Rows written by a newer build or unreadable: shown as far as they
     /// parse, never rewritten.
     pub read_only: Vec<&'static str>,
@@ -160,6 +173,7 @@ fn load_tx(tx: &SettingsTx) -> Result<LocalRecords> {
         reviews: read(tx, &mut read_only)?,
         events: read(tx, &mut read_only)?,
         milestones: read(tx, &mut read_only)?,
+        routines: read(tx, &mut read_only)?,
         read_only,
     })
 }
@@ -432,6 +446,35 @@ pub(crate) fn apply(
                 r.goals.versions.sort_by(|a, b| a.from.cmp(&b.from));
                 &[Goals::KEY]
             }
+            LocalAction::LighterWeek => {
+                writable(&r, &[Goals::KEY])?;
+                let Some(current) = goals_on(&r.goals, &today.to_string()).map(|v| v.targets.clone()) else {
+                    return Err(Error::InvalidLocal("no goals to lighten"));
+                };
+                let half = |n: u32| if n == 0 { 0 } else { (n / 2).max(1) };
+                let half_min = |n: u32| if n == 0 { 0 } else { ((n / 2) / 5 * 5).max(5) };
+                let lighter = GoalTargets {
+                    strength_sessions: half(current.strength_sessions),
+                    zone2_min: half_min(current.zone2_min),
+                    high_intensity_min: half_min(current.high_intensity_min),
+                    intensity_min: half_min(current.intensity_min),
+                    ..current.clone()
+                };
+                let lighter = check_targets(&lighter, Some(&current))?;
+                // The week's first targets stay on record; a same-day setup is edited in Goals instead.
+                if r.goals.versions.iter().any(|v| v.from == today.to_string() && v.source == GoalSource::Setup) {
+                    return Err(Error::InvalidLocal("these goals were set today; change them in Goals"));
+                }
+                let next = (week + Duration::days(7)).to_string();
+                // Later weeks keep their own targets; otherwise next week returns to the current ones.
+                if !r.goals.versions.iter().any(|v| v.from.as_str() >= next.as_str()) {
+                    r.goals.versions.push(GoalVersion { from: next, targets: current, source: GoalSource::Revision, saved_at: at.clone() });
+                }
+                r.goals.versions.retain(|v| v.from != today.to_string());
+                r.goals.versions.push(GoalVersion { from: today.to_string(), targets: lighter, source: GoalSource::Revision, saved_at: at.clone() });
+                r.goals.versions.sort_by(|a, b| a.from.cmp(&b.from));
+                &[Goals::KEY]
+            }
             LocalAction::AddIntention { date: d, time: t, sport, type_key, name, duration_min, allocation, kind, garmin_id } => {
                 writable(&r, &[Intentions::KEY])?;
                 let d = date(d)?;
@@ -538,6 +581,7 @@ pub(crate) fn apply(
             LocalAction::Link { plan_id, activity_id } => {
                 writable(&r, &[Links::KEY])?;
                 let known_plan = plan_id.starts_with("garmin:")
+                    || plan_id.starts_with("coach:")
                     || r.intentions.items.iter().any(|i| i.id == *plan_id);
                 if !known_plan || !tx.activity_exists(activity_id)? {
                     return Err(Error::InvalidLocal("no such session or recording"));
@@ -708,10 +752,53 @@ pub(crate) fn apply(
                 r.reviews.decisions.push(ReviewDecision { week: start.to_string(), at: at.clone(), proposals: proposals.to_vec(), accepted: accepted.clone() });
                 &[Goals::KEY, Reviews::KEY]
             }
+            LocalAction::KeepToday { plan_id } => {
+                writable(&r, &[Circumstances::KEY])?;
+                let ok = r.intentions.items.iter().any(|i| {
+                    i.id == *plan_id && i.date == today.to_string() && i.status == IntentionStatus::Open && !r.circumstances.limits.excluded.contains(&i.sport)
+                })
+                    || ["garmin:", "coach:"].iter().any(|p| plan_id.strip_prefix(p).is_some_and(|rest| rest.starts_with(&format!("{today}:")) && rest.len() > 11));
+                if !ok {
+                    return Err(Error::InvalidLocal("only one of today's sessions, outside your limits, can be kept"));
+                }
+                r.circumstances.today_choice = Some(TodayChoice { date: today.to_string(), plan_id: plan_id.clone() });
+                &[Circumstances::KEY]
+            }
             LocalAction::MilestonesSeen => {
                 writable(&r, &[Milestones::KEY])?;
                 r.milestones.items.iter_mut().for_each(|m| m.seen = true);
                 &[Milestones::KEY]
+            }
+            LocalAction::AddRoutine { name, how } => {
+                writable(&r, &[Routines::KEY])?;
+                let name = text(&Some(name.clone()), 80)?.ok_or(Error::InvalidLocal("name"))?;
+                let how = text(how, 300)?;
+                if r.routines.items.len() >= 30 {
+                    return Err(Error::InvalidLocal("at most 30 checklist items"));
+                }
+                let id = new_id("r", now, |id| r.routines.items.iter().any(|i| i.id == id));
+                r.routines.items.push(RoutineItem { id, name, how });
+                &[Routines::KEY]
+            }
+            LocalAction::RemoveRoutine { id } => {
+                writable(&r, &[Routines::KEY])?;
+                r.routines.items.retain(|i| i.id != *id);
+                r.routines.reports.retain(|x| x.id != *id);
+                &[Routines::KEY]
+            }
+            LocalAction::ReportRoutine { id, done } => {
+                writable(&r, &[Routines::KEY])?;
+                if !r.routines.items.iter().any(|i| i.id == *id) {
+                    return Err(Error::InvalidLocal("not on your checklist"));
+                }
+                let day = today.to_string();
+                r.routines.reports.retain(|x| !(x.id == *id && x.date == day));
+                if *done {
+                    r.routines.reports.push(RoutineReport { id: id.clone(), date: day, at: at.clone() });
+                }
+                let oldest = (today - Duration::days(90)).to_string();
+                r.routines.reports.retain(|x| x.date >= oldest);
+                &[Routines::KEY]
             }
             LocalAction::RemoveEvent { id } => {
                 writable(&r, &[Events::KEY])?;
@@ -728,6 +815,7 @@ pub(crate) fn apply(
                 Reviews::KEY => write(tx, &r.reviews)?,
                 Events::KEY => write(tx, &r.events)?,
                 Milestones::KEY => write(tx, &r.milestones)?,
+                Routines::KEY => write(tx, &r.routines)?,
                 _ => {}
             }
         }

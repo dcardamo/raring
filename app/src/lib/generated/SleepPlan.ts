@@ -35,7 +35,12 @@ windDownAt: string, bedtimeStartAt: string | null, bedtimeAt: string,
 /**
  * Median local wake time, HH:MM, when any wake time is recorded.
  */
-wakeTime: string | null, needMin: number, source: SleepNeedSource, 
+wakeTime: string | null, 
+/**
+ * When Raring last read Garmin's need for tonight (it can change after
+ * a nap or a workout); none for older sources.
+ */
+needReadAt: string | null, needMin: number, source: SleepNeedSource, 
 /**
  * Garmin's unadjusted need, minutes, sent with tonight's need.
  */

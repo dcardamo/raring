@@ -1,4 +1,1142 @@
 {
+  "milestonesTotal": 1,
+  "ringDays": [
+    {
+      "date": "2025-09-29",
+      "today": false,
+      "future": false,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-09-30",
+      "today": false,
+      "future": false,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 1,
+          "planned": 0,
+          "fill": 1
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 30,
+          "planned": 0,
+          "fill": 1
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-01",
+      "today": false,
+      "future": false,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 25,
+          "planned": 0,
+          "fill": 1
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-02",
+      "today": false,
+      "future": false,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 1,
+          "planned": 0,
+          "fill": 1
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 10,
+          "planned": 0,
+          "fill": 1
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-03",
+      "today": false,
+      "future": false,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 40,
+          "planned": 0,
+          "fill": 1
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-04",
+      "today": false,
+      "future": false,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 45,
+          "planned": 0,
+          "fill": 1
+        },
+        {
+          "kind": "intensity",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-05",
+      "today": false,
+      "future": false,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 55,
+          "planned": 0,
+          "fill": 1
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-06",
+      "today": false,
+      "future": false,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-07",
+      "today": false,
+      "future": false,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 1,
+          "planned": 0,
+          "fill": 1
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 30,
+          "planned": 0,
+          "fill": 1
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-08",
+      "today": false,
+      "future": false,
+      "mark": "ill",
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 25,
+          "planned": 0,
+          "fill": 1
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-09",
+      "today": false,
+      "future": false,
+      "mark": "ill",
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 1,
+          "planned": 0,
+          "fill": 1
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 10,
+          "planned": 0,
+          "fill": 1
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-10",
+      "today": false,
+      "future": false,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 40,
+          "planned": 0,
+          "fill": 1
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-11",
+      "today": false,
+      "future": false,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 45,
+          "planned": 0,
+          "fill": 1
+        },
+        {
+          "kind": "intensity",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-12",
+      "today": false,
+      "future": false,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 55,
+          "planned": 0,
+          "fill": 1
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-13",
+      "today": false,
+      "future": false,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 1,
+          "planned": 1,
+          "fill": 1
+        },
+        {
+          "kind": "zone2",
+          "recorded": 13,
+          "planned": 0,
+          "fill": 1
+        },
+        {
+          "kind": "intensity",
+          "recorded": 20,
+          "planned": 0,
+          "fill": 1
+        }
+      ],
+      "done": true,
+      "notRecorded": false,
+      "recordings": [
+        "9000000000005"
+      ],
+      "items": [
+        "i1760380000000"
+      ],
+      "garmin": 0,
+      "sleepScore": 81
+    },
+    {
+      "date": "2025-10-14",
+      "today": false,
+      "future": false,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 1,
+          "planned": 0,
+          "fill": 1
+        },
+        {
+          "kind": "zone2",
+          "recorded": 25,
+          "planned": 0,
+          "fill": 1
+        },
+        {
+          "kind": "intensity",
+          "recorded": 28,
+          "planned": 0,
+          "fill": 1
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [
+        "9000000000004"
+      ],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": 76
+    },
+    {
+      "date": "2025-10-15",
+      "today": false,
+      "future": false,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 1,
+          "planned": 0,
+          "fill": 1
+        },
+        {
+          "kind": "zone2",
+          "recorded": 52,
+          "planned": 0,
+          "fill": 1
+        },
+        {
+          "kind": "intensity",
+          "recorded": 40,
+          "planned": 0,
+          "fill": 1
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [
+        "9000000000002",
+        "9000000000003"
+      ],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": 88
+    },
+    {
+      "date": "2025-10-16",
+      "today": true,
+      "future": false,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 9,
+          "planned": 0,
+          "fill": 1
+        },
+        {
+          "kind": "intensity",
+          "recorded": 36,
+          "planned": 0,
+          "fill": 1
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [
+        "9000000000001"
+      ],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": 84
+    },
+    {
+      "date": "2025-10-17",
+      "today": false,
+      "future": true,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 40,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [
+        "i1760380000001"
+      ],
+      "garmin": 1,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-18",
+      "today": false,
+      "future": true,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 1,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [
+        "i1760380000002"
+      ],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-19",
+      "today": false,
+      "future": true,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-20",
+      "today": false,
+      "future": true,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-21",
+      "today": false,
+      "future": true,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-22",
+      "today": false,
+      "future": true,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-23",
+      "today": false,
+      "future": true,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-24",
+      "today": false,
+      "future": true,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-25",
+      "today": false,
+      "future": true,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-26",
+      "today": false,
+      "future": true,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-27",
+      "today": false,
+      "future": true,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-28",
+      "today": false,
+      "future": true,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-29",
+      "today": false,
+      "future": true,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-30",
+      "today": false,
+      "future": true,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-10-31",
+      "today": false,
+      "future": true,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-11-01",
+      "today": false,
+      "future": true,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    },
+    {
+      "date": "2025-11-02",
+      "today": false,
+      "future": true,
+      "mark": null,
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "zone2",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        },
+        {
+          "kind": "intensity",
+          "recorded": 0,
+          "planned": 0,
+          "fill": 0
+        }
+      ],
+      "done": false,
+      "notRecorded": false,
+      "recordings": [],
+      "items": [],
+      "garmin": 0,
+      "sleepScore": null
+    }
+  ],
   "today": "2025-10-16",
   "period": "month",
   "from": "2025-10-01",

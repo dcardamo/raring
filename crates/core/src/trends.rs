@@ -250,6 +250,7 @@ fn period(
     let days = |n: i64| (end - Duration::days(n - 1), TrendBucket::Day, Some(n));
     match range {
         TrendRange::Days7 => days(7),
+        TrendRange::Days14 => days(14),
         TrendRange::Days30 => days(30),
         TrendRange::Days90 => days(90),
         TrendRange::Custom => unreachable!("custom spans are validated by trend"),
@@ -402,6 +403,10 @@ pub fn trend(store: &Store, query: &TrendQuery, today: &str) -> Result<TrendView
         previous,
         change,
         available: METRICS.to_vec(),
+        freshness: (end == today && !matches!(query.metric, TrendMetric::Vo2max | TrendMetric::FitnessAge)).then(|| {
+            let latest = daily(store, query.metric, today - Duration::days(400), today).into_keys().next_back();
+            crate::weight::freshness(latest, today, 2)
+        }),
     })
 }
 

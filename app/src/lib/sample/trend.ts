@@ -74,5 +74,7 @@ export function sampleTrend(query: TrendQuery): TrendView {
     range: query.range, bucket, from, to: end, series: now, overlay, previous,
     change: previous?.average != null && now.average != null ? now.average - previous.average : null,
     available: allMetrics,
+    // The preview's newest point on today's chart, as the core reports it.
+    freshness: end!==SAMPLE_TODAY||query.metric==='vo2max'||query.metric==='fitnessAge'?null:(()=>{const last=[...now.points].reverse().find(p=>p.value!=null);const recordedOn=last?last.end:null;const ageDays=recordedOn?Math.round((Date.parse(SAMPLE_TODAY)-Date.parse(recordedOn))/864e5):null;return {recordedOn,ageDays,stale:ageDays!=null&&ageDays>2,thresholdDays:2}})(),
   };
 }

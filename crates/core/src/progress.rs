@@ -3,7 +3,7 @@
 //! bests in available history and milestones awarded once.
 use crate::{
     local::{self, LocalRecords, MilestoneRecord},
-    plan, review, screens, strength,
+    ledger, plan, review, screens, strength, trends,
     store::Store,
     sync::activities_listed,
     view::*,
@@ -298,19 +298,8 @@ pub fn progress(store: &Store, period: Period, anchor: NaiveDate, today: NaiveDa
     };
     let evidence = evidence(store, &local, end, history);
     let records = if current { local::sync_milestones(store, &evidence, today)? } else { evidence };
-    let unit = strength::weight_unit(store);
-    let mut milestones: Vec<Milestone> = records.into_iter().filter_map(|m| {
-        let kind = m.kind?;
-        let value = if m.withdrawn { "Evidence no longer available".into() } else {
-            match kind {
-                MilestoneKind::Best => format!("{:.1} {}", strength::weight(Some(m.value), unit)?, if unit == WeightUnit::Lb { "lb" } else { "kg" }).replace(".0 ", " "),
-                MilestoneKind::Longest => format!("{:.1} km", m.value),
-                MilestoneKind::GoalWeek => format!("Week ending {}", m.date),
-            }
-        };
-        Some(Milestone { id: m.id, kind, title: m.title, value, date: m.date, route: m.route, new: current && !m.seen, corrected: m.corrected })
-    }).collect();
-    milestones.sort_by(|a, b| b.date.cmp(&a.date));
+    let mut milestones = present(store, records, current);
+    let milestones_total = milestones.len() as u32;
     milestones.truncate(12);
     Ok(ProgressView {
         today: today.to_string(),
@@ -329,6 +318,128 @@ pub fn progress(store: &Store, period: Period, anchor: NaiveDate, today: NaiveDa
         goal_weeks,
         milestones,
         sleep: sleep_need(store, from, end),
+        milestones_total,
+        ring_days: if matches!(period, Period::Week | Period::Month) { ring_days(store, &local, from, to, today) } else { vec![] },
         totals: totals_now,
     })
+}
+
+fn ring_days(store: &Store, local: &LocalRecords, from: NaiveDate, to: NaiveDate, today: NaiveDate) -> Vec<DayCell> {
+    let now = chrono::Utc::now();
+    let mut out = vec![];
+    let mut week = plan::week_start(from, plan::week_starts_on(store));
+    while week <= to {
+        out.extend(ledger::board_with(store, local, week, today, now).days);
+        week += Duration::days(7);
+    }
+    out
+}
+
+/// Milestones as shown, newest first; `current` marks unseen ones new.
+fn present(store: &Store, records: Vec<MilestoneRecord>, current: bool) -> Vec<Milestone> {
+    let unit = strength::weight_unit(store);
+    let mut out: Vec<Milestone> = records.into_iter().filter_map(|m| {
+        let kind = m.kind?;
+        let value = if m.withdrawn { "Evidence no longer available".into() } else {
+            match kind {
+                MilestoneKind::Best => format!("{:.1} {}", strength::weight(Some(m.value), unit)?, if unit == WeightUnit::Lb { "lb" } else { "kg" }).replace(".0 ", " "),
+                MilestoneKind::Longest => format!("{:.1} km", m.value),
+                MilestoneKind::GoalWeek => format!("Week ending {}", m.date),
+            }
+        };
+        Some(Milestone { id: m.id, kind, title: m.title, value, date: m.date, route: m.route, new: current && !m.seen, corrected: m.corrected })
+    }).collect();
+    out.sort_by(|a, b| b.date.cmp(&a.date).then(a.id.cmp(&b.id)));
+    out
+}
+
+/// Every milestone in available history, newest first: the same awards as
+/// Progress, never a second award.
+pub fn milestone_archive(store: &Store, today: NaiveDate) -> crate::Result<Vec<Milestone>> {
+    let local = local::load(store);
+    let history = store.cursor("listed:lo").and_then(|d| NaiveDate::parse_from_str(&d, "%Y-%m-%d").ok());
+    let evidence = evidence(store, &local, today, history);
+    Ok(present(store, local::sync_milestones(store, &evidence, today)?, true))
+}
+
+const DOMAIN_WEEKS: i64 = 12;
+
+/// Weeks, bests and months for Progress's Cardio, Strength and Long-term.
+pub fn domains(store: &Store, today: NaiveDate) -> ProgressDomains {
+    let local = local::load(store);
+    let now = chrono::Utc::now();
+    let wk = plan::week_starts_on(store);
+    let this_week = plan::week_start(today, wk);
+    let history = store.cursor("listed:lo").and_then(|d| NaiveDate::parse_from_str(&d, "%Y-%m-%d").ok());
+    let vo2 = trends::daily(store, TrendMetric::Vo2max, this_week - Duration::days(7 * DOMAIN_WEEKS) - Duration::days(400), today);
+    let weeks = (0..DOMAIN_WEEKS)
+        .rev()
+        .map(|i| this_week - Duration::days(7 * i))
+        .filter(|w| history.is_some_and(|h| *w + Duration::days(6) >= h))
+        .map(|w| {
+            let board = ledger::board_with(store, &local, w, today, now);
+            let complete = board.coverage_complete;
+            let recs = &board.recordings;
+            let sum = |f: fn(&Recording) -> Option<f64>| complete.then(|| recs.iter().map(f).sum::<Option<f64>>()).flatten();
+            let ill = review::days_with(&local, w, Some(PauseReason::Ill));
+            let paused = review::days_with(&local, w, None) - ill;
+            let end = (w + Duration::days(6)).min(today);
+            DomainWeek {
+                start: w.to_string(),
+                current: w == this_week,
+                mark: if ill >= 2 { Some(DayMark::Ill) } else if paused >= 2 { Some(DayMark::Paused) } else if !complete { Some(DayMark::Unknown) } else { None },
+                zone2_min: sum(|r| r.zone2_min),
+                high_intensity_min: sum(|r| r.high_intensity_min),
+                intensity_min: plan::intensity(store, w, today).map(|c| c.total),
+                strength: complete.then(|| recs.iter().filter(|r| r.sport == Sport::Strength).count() as f64),
+                vo2max: vo2.range(w..=end).next_back().map(|(_, v)| *v),
+            }
+        })
+        .collect();
+    let unit = strength::weight_unit(store);
+    let mut heaviest: BTreeMap<String, strength::AllTimeBest> = BTreeMap::new();
+    for b in strength::all_time_bests(store, &today.to_string()) {
+        match heaviest.get(&b.key) {
+            Some(h) if h.grams > b.grams || (h.grams == b.grams && h.reps >= b.reps) => {}
+            _ => {
+                heaviest.insert(b.key.clone(), b);
+            }
+        }
+    }
+    let mut bests: Vec<DomainBest> = heaviest
+        .into_values()
+        .map(|b| DomainBest { weight: strength::weight(Some(b.grams), unit), unit, key: b.key, name: b.name, reps: b.reps, date: b.date, activity: b.activity })
+        .collect();
+    bests.sort_by(|a, b| b.weight.unwrap_or(0.).total_cmp(&a.weight.unwrap_or(0.)));
+    let first_month = month_start(today) - Months::new(11);
+    let span_from = first_month;
+    let acts = activities(store, span_from, today);
+    let read = |m| trends::daily(store, m, span_from, today);
+    let (rhr, hrv, fa) = (read(TrendMetric::RestingHr), read(TrendMetric::Hrv), read(TrendMetric::FitnessAge));
+    let avg = |series: &BTreeMap<NaiveDate, f64>, a: NaiveDate, b: NaiveDate| {
+        let v: Vec<f64> = series.range(a..=b).map(|(_, v)| *v).collect();
+        (!v.is_empty()).then(|| v.iter().sum::<f64>() / v.len() as f64)
+    };
+    let months = (0..12)
+        .map(|i| {
+            let m = first_month + Months::new(i);
+            let end = month_end(m).min(today);
+            let covered = history.is_some_and(|h| h <= m) && activities_listed(store, m, end);
+            DomainMonth {
+                start: m.to_string(),
+                minutes: covered.then(|| acts.iter().filter(|a| a.date >= m && a.date <= end).map(|a| a.minutes).sum()),
+                resting_hr: avg(&rhr, m, end),
+                hrv: avg(&hrv, m, end),
+                vo2max: vo2.range(m..=end).next_back().map(|(_, v)| *v),
+                fitness_age: fa.range(m..=end).next_back().map(|(_, v)| *v),
+            }
+        })
+        .collect();
+    ProgressDomains {
+        today: today.to_string(),
+        goals: ledger::board_with(store, &local, today, today, now).goals.map(|g| g.targets),
+        weeks,
+        bests,
+        months,
+    }
 }
