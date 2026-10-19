@@ -446,6 +446,12 @@ pub struct TodayView {
     pub planned: PlannedTraining,
     /// This week's plan; None until targets are set.
     pub plan: Option<PlanWeek>,
+    /// What leads Today now; only for the live day, never a historical read.
+    #[serde(default)]
+    pub lead: Option<TodayLead>,
+    /// Today's circumstances; only for the live day.
+    #[serde(default)]
+    pub adapt: Option<AdaptState>,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
@@ -2166,4 +2172,98 @@ pub struct PlanBoard {
     pub explain_observation: bool,
     /// Rows written by a newer Raring are shown but can't be changed here.
     pub read_only: bool,
+}
+
+// ---------------------------------------------------------------------------
+// Today's leading message and the circumstances that gate it (docs/spec.md,
+// Rules: Today's lead, Adapt).
+
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum LeadKind {
+    /// The displayed night hasn't synced; nothing current to suggest.
+    Waiting,
+    /// Follow my day is off or timing isn't credible: the recorded day.
+    Fixed,
+    /// Evening, wind-down or late night: tonight's sleep leads.
+    Sleep,
+    Ill,
+    Paused,
+    Rest,
+    /// A recording today leads; the day can finish.
+    Done,
+    /// Garmin's scheduled workout today (read-only).
+    Garmin,
+    /// Your session today.
+    Session,
+    /// A session or schedule whose movements your limits ask you to review.
+    Review,
+    /// No readiness: last night's sleep leads.
+    Summary,
+    /// Your activity limits apply; no training suggestion.
+    Limits,
+    /// Training ideas dismissed for today.
+    Quiet,
+    /// Garmin's guidance allows hard effort: training is an option.
+    Suggest,
+    /// Garmin suggests an easier or steady day.
+    Easy,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct LeadAction {
+    pub label: String,
+    /// A canonical route to open.
+    pub route: Option<String>,
+    /// Open Adapt instead of a page.
+    pub adapt: bool,
+}
+
+/// One gate the lead passed, in order: the actual reason, for "Why this?".
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct LeadReason {
+    pub gate: String,
+    pub result: String,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct TodayLead {
+    /// Stable for the moment it describes; dismissals key on it.
+    pub id: String,
+    pub kind: LeadKind,
+    pub headline: String,
+    pub line: Option<String>,
+    pub action: Option<LeadAction>,
+    /// "Not today" may hide it for the local day.
+    pub dismissable: bool,
+    /// The recording it recognises.
+    pub activity: Option<String>,
+    /// Your session it concerns.
+    pub intention: Option<String>,
+    pub reasons: Vec<LeadReason>,
+}
+
+/// Today's circumstances, for the Adapt control on every root page.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct AdaptState {
+    /// Rest today, or yesterday's rest carried through the night.
+    pub rest: bool,
+    /// The pause covering today.
+    pub pause: Option<Pause>,
+    pub limits: Limits,
+    /// "Adapt today", "Rest day", "Ill", "Paused" or "Limits on".
+    pub label: String,
+    /// A pause's review date has come.
+    pub review_due: bool,
+    /// Exercise prompts are off today: rest, illness or a pause.
+    pub blocked: bool,
 }

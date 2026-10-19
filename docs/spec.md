@@ -550,6 +550,28 @@ Sent by the phone itself.
   day's intensity is Garmin's daily moderate plus twice vigorous minutes. Rest,
   illness and pause mark their days. A week ring is recorded ÷ the weekly
   target, at most full.
+- **Adapt**: today's circumstances come from the local records. Rest covers
+  the local calendar day and, after midnight, the night until the next waking
+  day (late night, or while the night hasn't synced). A pause covers its dates
+  and stays open until resumed; illness is a pause with that reason. While
+  resting, ill or paused, or with limits set (excluded activities or a movement
+  note), Today has no effort call and its focus shows no effort. The control is
+  labelled Ill, Paused, Rest day, Limits on or Adapt today, in that order.
+- **Today's lead**: live Today only (never a historical read), gates in this
+  order, first match leads: a night that hasn't synced waits (no advice);
+  evening, wind-down and late night lead with tonight's sleep (no exercise);
+  illness or a pause (resume from Adapt); rest; the fixed layout's recorded
+  day; a recording today (the latest, skipping walks once goals exist), with
+  its strength count against the goal or Garmin's intensity minutes; Garmin's
+  scheduled workout today unless dismissed (limits make it "Review needed",
+  since its sport and movements are unknown; Garmin's easy or rest call makes
+  it "An easier day may fit"); your planned session today (a movement note
+  asks for review; an excluded sport is labelled); no readiness: last night's
+  sleep against its need; limits: no training suggestion; "Not today" for the
+  day's suggestion: nothing else; Garmin's push call: training is an option, to
+  plan, dismissable; otherwise an easier or steady day naming the worst
+  Garmin-rated readiness factor. Each lead carries a stable id (dismissals key
+  on it), its action and the gates it passed, for Why this.
 - **Backlog**: only for the current week, and empty while today is paused or
   ill: each goal's remaining amount, as one strength session per item, or one
   item of the remaining minutes or nights. A cardio item suggests the endurance

@@ -8,7 +8,7 @@ import {contrastFailures} from './contrast.mjs';
 const server=await createServer({configFile:resolve('vite.config.ts'),server:{host:'127.0.0.1',port:0}});
 const output=resolve('../.data/screens');
 // Sleep opens from Today; Settings sits in Profile, behind each root header's avatar.
-const openSleep=async page=>{if(!page.url().endsWith('#today')){await page.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();await page.waitForURL('**/#today');}await page.locator('.dials .dial-button').first().click();};
+const openSleep=async page=>{if(!page.url().endsWith('#today')){await page.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();await page.waitForURL('**/#today');}await page.locator('.morning .sleep-fact').first().click();};
 const openSettings=async page=>{await page.getByRole('button',{name:'Profile and settings'}).first().click();await page.getByRole('button',{name:/^Settings/}).click();};
 await mkdir(output,{recursive:true});
 let browser;
@@ -198,7 +198,7 @@ try {
  await waitRoute('today');
  console.log('Hierarchical browser, header and native Back: passed');
 
- await page.getByRole('button',{name:/^This morning/}).click();await waitRoute('readiness');
+ await page.getByRole('button',{name:/^Readiness \d+/}).click();await waitRoute('readiness');
  await page.getByText('Readiness history',{exact:true}).waitFor();
  await page.getByRole('button',{name:'30 days',exact:true}).click();
  assert.equal(await page.locator('.history-bar').count(),30);
@@ -414,7 +414,7 @@ try {
      return Math.max(0,...cards.map(c=>{const above=cards.filter(o=>o!==c && o.left<c.right-1 && o.right>c.left+1 && o.bottom<=c.top+1);return above.length?c.top-Math.max(...above.map(o=>o.bottom)):0}));
     };
     // On wide screens Today's headline sits beside the dials, not below them.
-    const hero=()=>{const d=document.querySelector('.today-hero>.dials'),h=document.querySelector('.today-hero>.headline');return d&&h?h.getBoundingClientRect().top<d.getBoundingClientRect().bottom:null};
+    const hero=()=>null;
     const main=document.querySelector('main'),grid=document.querySelector('.dashboard'),phone=document.querySelector('.phone');
     return {viewport:innerWidth,body:document.body.scrollWidth,main:main.clientWidth,content:main.scrollWidth,shell:phone.clientWidth,height:phone.clientHeight,columns:grid?getComputedStyle(grid).gridTemplateColumns.split(' ').length:0,holes:holes(grid),hero:hero()};
    });
@@ -422,7 +422,6 @@ try {
    assert.equal(layout.height,900,`${width}/${route}: shell uses available height`);
    assert.ok(layout.body<=width && layout.content<=layout.main+1,`${width}/${route}: horizontal overflow ${JSON.stringify(layout)}`);
    if(width>=660 && layout.columns)assert.equal(layout.columns,2,`${width}/${route}: two columns`);
-   if(route==='today')assert.equal(layout.hero,width>=660,`${width}/today: headline beside dials only when unfolded`);
    if(route==='health'){
     assert.ok(await page.getByText('Last measured Tue 14 Oct').isVisible(),`${width}/health: dated weigh-in`);
     assert.ok(await page.getByText('recorded weigh-ins only',{exact:false}).isVisible(),`${width}/health: sparse trend label`);
@@ -531,6 +530,49 @@ try {
  await page.unroute(todaySample);
  await page.goto(`${url}/#today`);await waitRoute('today');
  console.log('Why sheets and scores that differ: passed');
+ // The live lead and Adapt: rest outranks readiness, with no effort scale, and Adapt shows its state.
+ {
+  const leadPage=await browser.newPage({viewport:{width:390,height:844}});
+  leadPage.on('pageerror',e=>errors.push(e.message));
+  const sample=JSON.parse(await readFile(resolve('src/lib/sample/today.json'),'utf8'));
+  const rest={...sample,call:null,focus:{...sample.focus,effort:false},
+   lead:{id:'rest:2025-10-16',kind:'rest',headline:'Rest day',line:'Through tonight',action:{label:'View plan',route:'plan',adapt:false},dismissable:false,activity:null,intention:null,
+    reasons:[{gate:'Privacy',result:'Journal entries never feed Today.'},{gate:'Circumstances',result:'Rest day: no exercise prompts today or tonight; your plan stays as it is.'}]},
+   adapt:{rest:true,pause:null,limits:{excluded:['running'],note:''},label:'Rest day',reviewDue:false,blocked:true}};
+  await leadPage.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(rest)}`}));
+  await leadPage.goto(`${url}/#today`);
+  await leadPage.getByRole('heading',{name:'Rest day',exact:true}).waitFor();
+  assert.equal(await leadPage.locator('.hero .effort').count(),0,'no effort scale on a rest day');
+  assert.equal(await leadPage.locator('.top .adapt').textContent(),'Rest day','the header names the circumstance');
+  await leadPage.getByRole('button',{name:'Why this?'}).click();
+  assert.ok((await leadPage.locator('.trace').textContent()).includes('no exercise prompts'),'Why this names the actual reason');
+  await leadPage.locator('.top .adapt').click();
+  const sheet=leadPage.getByRole('dialog',{name:'Adapt today'});
+  await sheet.getByText('Rest day is on').waitFor();
+  assert.ok((await sheet.textContent()).includes('Avoiding Run'));
+  await sheet.getByRole('button',{name:/^Limits/}).click();
+  await leadPage.getByRole('dialog',{name:'Your limits'}).waitFor();
+  assert.equal(await leadPage.getByRole('button',{name:'Run',exact:true}).getAttribute('aria-pressed'),'true');
+  assert.deepEqual(await contrastFailures(leadPage),[],'Adapt sheet contrast');
+  await leadPage.keyboard.press('Escape');
+  assert.equal(await leadPage.getByRole('dialog').count(),0);
+  await leadPage.getByRole('navigation').getByRole('button',{name:'Plan',exact:true}).click();
+  await leadPage.waitForURL('**/#plan');
+  assert.equal(await leadPage.locator('.top .adapt').textContent(),'Rest day','Adapt keeps its place on every root page');
+  // An option to train is dismissable for the day.
+  const suggest={...sample,lead:{id:'suggest:2025-10-16',kind:'suggest',headline:'Training is an option today',line:'After 7:48 of sleep',action:{label:'Plan a session',route:'plan',adapt:false},dismissable:true,activity:null,intention:null,reasons:[]},
+   adapt:{rest:false,pause:null,limits:{excluded:[],note:''},label:'Adapt today',reviewDue:false,blocked:false}};
+  await leadPage.close();
+  const optionPage=await browser.newPage({viewport:{width:390,height:844}});
+  await optionPage.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(suggest)}`}));
+  await optionPage.goto(`${url}/#today`);
+  await optionPage.getByRole('heading',{name:'Training is an option today'}).waitFor();
+  await optionPage.locator('.hero .effort').waitFor();
+  assert.equal(await optionPage.getByRole('button',{name:'Not today'}).count(),1);
+  await optionPage.screenshot({path:resolve(output,'390-today-lead.png')});
+  await optionPage.close();
+ }
+ console.log('Today lead, Why this and Adapt sheet: passed');
 
  // Today through the day: the same data at different clocks. Only the leading card changes; the hero,
  // its reconciliation pill and the metric cards stay put, and nothing invites effort after wind-down.
@@ -538,13 +580,13 @@ try {
  base.reconcile=differ.reconcile;
  const night={asleepMin:468,needMin:450,woke:'06:39'};
  const phases=[
-  ['wake','07:10',{phase:'wake',cards:['focus','sleepPlan'],until:'2025-10-16T09:39:00',effort:true,planOpen:false},'Ready to push','.daily-focus'],
+  ['wake','07:10',{phase:'wake',cards:['focus','sleepPlan'],until:'2025-10-16T09:39:00',effort:true,planOpen:false},'Ready to push','.plan-line'],
   ['day','14:20',{phase:'day',cards:['now','focus','sleepPlan'],until:'2025-10-16T20:30:00',effort:true,planOpen:false},'Ready to push','.now-card'],
   ['evening','20:45',{phase:'evening',cards:['sleepPlan','focus'],until:'2025-10-16T22:00:00',effort:true,planOpen:true},'Wind down at 22:00','.sleep-plan'],
   ['winddown','22:10',{phase:'windDown',cards:['sleepPlan','focus'],until:'2025-10-16T23:06:00',effort:false,planOpen:true},'Time to wind down','.sleep-plan'],
   ['late','23:40',{phase:'lateNight',cards:['sleepPlan','focus'],until:'2025-10-17T06:36:00',effort:false,planOpen:true},"Rest when you're ready",'.sleep-plan'],
-  ['missing','2025-10-17T07:30',{phase:'wake',cards:['focus'],until:'2025-10-17T12:00:00',effort:false,planOpen:false,sleepMissing:true,lastNight:null},"Waiting for last night's sleep",'.daily-focus'],
-  ['overview','14:20',{phase:'overview',cards:['focus','sleepPlan'],until:null,effort:true,planOpen:true,note:'Fixed layout: your wake times vary too much to plan the day around.'},'Ready to push','.daily-focus'],
+  ['missing','2025-10-17T07:30',{phase:'wake',cards:['focus'],until:'2025-10-17T12:00:00',effort:false,planOpen:false,sleepMissing:true,lastNight:null},"Waiting for last night's sleep",null],
+  ['overview','14:20',{phase:'overview',cards:['focus','sleepPlan'],until:null,effort:true,planOpen:true,note:'Fixed layout: your wake times vary too much to plan the day around.'},'Ready to push','.sleep-plan'],
  ];
  const phasePage=await browser.newPage({viewport:{width:390,height:844},hasTouch:true});
  phasePage.on('pageerror',e=>errors.push(e.message));
@@ -558,15 +600,18 @@ try {
   await phasePage.setViewportSize({width:390,height:844});
   await phasePage.goto(`${url}/?phase=${name}#today`);await phasePage.getByRole('heading',{name:headline}).waitFor();
   await phasePage.evaluate(()=>document.fonts.ready);
-  const first=await phasePage.locator('.dashboard > *').first().evaluate(el=>el.className);
-  assert.ok(first.includes(leader.slice(1)) && first.includes('lead'),`${name}: ${leader} leads (${first})`);
-  const top=await phasePage.locator('.dials').evaluate(el=>Math.round(el.getBoundingClientRect().top));
+  if(leader){
+   const first=await phasePage.locator('.dashboard > *').first().evaluate(el=>el.className);
+   // The one-line plan is first without taking the lead: the hero leads mornings.
+   assert.ok(first.includes(leader.slice(1)) && (leader==='.plan-line' || first.includes('lead')),`${name}: ${leader} leads (${first})`);
+  }
+  const top=await phasePage.locator('.morning').evaluate(el=>Math.round(el.getBoundingClientRect().top));
   heroTop??=top;
   assert.equal(top,heroTop,`${name}: the scores stay where they are`);
   const pill=phasePage.getByRole('button',{name:differ.reconcile.label});
   await pill.click();
   await phasePage.getByText(differ.reconcile.line).waitFor();
-  assert.equal(await phasePage.locator('.daily-focus .segments').count(),focus.effort?1:0,`${name}: effort call ${focus.effort?'shown':'hidden'}`);
+  assert.equal(await phasePage.locator('.hero .effort').count(),focus.effort?1:0,`${name}: effort call ${focus.effort?'shown':'hidden'}`);
   assert.equal(await phasePage.locator('.planned-session').count(),['winddown','late'].includes(name)?0:1,`${name}: no planned exercise card during sleep phases`);
   const text=await phasePage.locator('.dashboard').textContent();
   // The week card's "left" counts the week's goals, not the time to bed; it is hidden in sleep phases.
@@ -575,7 +620,7 @@ try {
   assert.ok(!/\bin \d+ ?(min|h)\b|left\b/i.test(advice.join(' ')),`${name}: no countdown`);
   if(name==='evening')assert.equal(await phasePage.locator('.sleep-plan .strip-bar u').count(),1,'the strip marks now against the window');
   if(name==='late')assert.ok(text.includes("Tonight's window was"));
-  if(name==='missing')assert.ok(text.includes('Not synced yet') && !text.includes('Lowest readiness factor'),'an unsynced night is neutral');
+  if(name==='missing'){const all=await phasePage.locator('main').textContent();assert.ok(all.includes('Not synced yet') && !all.includes('holds it back'),'an unsynced night is neutral')}
   if(name==='day')assert.ok(text.includes('As of watch sync') && text.includes('Done today'),'the day card is labeled as synced data');
   if(name==='overview')await phasePage.getByText(focus.note).waitFor();
   if(['wake','day'].includes(name))await phasePage.locator('.plan-line').waitFor();
@@ -803,7 +848,7 @@ try {
  await onboarding.getByRole('button',{name:'Sign in with Garmin'}).click();
  await onboarding.getByRole('heading',{name:'Stay in the loop'}).waitFor();
  await onboarding.getByRole('button',{name:'Not now',exact:true}).click();
- await onboarding.waitForURL('**/#today');await onboarding.locator('.dials').waitFor();
+ await onboarding.waitForURL('**/#today');await onboarding.locator('.morning').waitFor();
  assert.equal(await onboarding.evaluate(()=>window.testOnboarding.signIns),2,'sign-in button invokes the native command');
  assert.equal(await onboarding.evaluate(()=>window.testOnboarding.permissions),0,'notification permission is optional');
  await openSettings(onboarding);
@@ -865,12 +910,12 @@ function trendFixture(q){
   };
  },samples);
  await live.goto(`${url}/#today`);
- await live.waitForFunction(()=>window.testBackend.syncs===1 && document.querySelector('.dial-button.large'));
+ await live.waitForFunction(()=>window.testBackend.syncs===1 && document.querySelector('.ready-fact'));
  await live.evaluate(()=>{window.testBackend.samples.today.readiness.value=64});
  await live.clock.fastForward(30_000);
- await live.waitForFunction(()=>document.querySelector('.dial-button.large .gauge-center b')?.textContent==='64');
+ await live.waitForFunction(()=>document.querySelector('.ready-fact .gauge-center b')?.textContent==='64');
  assert.equal(await live.evaluate(()=>window.testBackend.syncs),1,'cache poll does not sync every 30 seconds');
- await live.locator('.dial-button.large').click();
+ await live.locator('.ready-fact').click();
  await live.waitForURL('**/#readiness');
  await live.evaluate(()=>{window.testBackend.samples.today.readiness.value=59});
  await live.clock.fastForward(30_000);
@@ -986,7 +1031,7 @@ function trendFixture(q){
  await live.locator('.sleep-hero').waitFor();
  assert.equal(await live.locator('.sleep-plan').count(),0,'no inferred sleep plan without Garmin need');
  await live.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();
- await live.locator('.dials').waitFor();
+ await live.locator('.morning').waitFor();
  assert.equal(await live.locator('.sleep-plan, .plan-line').count(),0);
  console.log('Partial baselines, outliers, missing history and unavailable sleep plans: passed');
  await live.evaluate(()=>{Object.assign(window.testBackend.samples.training.acute,{label:'',tone:'neutral',band:null})});
@@ -1093,13 +1138,13 @@ function trendFixture(q){
  const release=command=>cached.evaluate(command=>window.testViews.pending[command].shift()(),command);
  const pending=command=>cached.waitForFunction(command=>window.testViews.pending[command]?.length,command);
  await cached.goto(`${url}/#today`);
- await cached.locator('.dials').waitFor();
+ await cached.locator('.morning').waitFor();
  await cached.waitForFunction(()=>['sleep','training','health'].every(key=>window.testViews.completed[key]>=1));
  const statusReads=await cached.evaluate(()=>window.testViews.statusReads);
  const todayOffset=await cached.locator('.scroll').evaluate(el=>{el.scrollTop=350;return el.scrollTop});
  assert.ok(todayOffset>100,'Today can be scrolled for restoration');
  await hold('sleep');
- await cached.evaluate(()=>document.querySelector('.dials .dial-button').click());
+ await cached.evaluate(()=>document.querySelector('.morning .sleep-fact').click());
  await pending('sleep');
  assert.equal(await cached.locator('.sleep-hero').isVisible(),true,'prefetched Sleep appears before navigation read finishes');
  assert.equal(await cached.locator('.empty').count(),0,'cached tab switches without loading state');
@@ -1109,7 +1154,7 @@ function trendFixture(q){
  await hold('today');
  await tabCached('Today');
  await pending('today');
- assert.equal(await cached.locator('.dials').isVisible(),true,'cached Today is visible before its read finishes');
+ assert.equal(await cached.locator('.morning').isVisible(),true,'cached Today is visible before its read finishes');
  await cached.waitForFunction(expected=>document.querySelector('.scroll').scrollTop===expected,todayOffset);
  await release('today');
 
@@ -1123,7 +1168,7 @@ function trendFixture(q){
  await cached.evaluate(()=>window.dispatchEvent(new Event('raring:resume')));
  await pending('today');await release('today');
  await cached.waitForFunction(()=>window.testViews.completed.today>=3);
- assert.notEqual(await cached.locator('.headline h2').textContent(),'After touch cancel','view swap is deferred while touching');
+ assert.notEqual(await cached.locator('.hero h2').textContent(),'After touch cancel','view swap is deferred while touching');
  await cached.locator('main').evaluate(el=>el.dispatchEvent(new TouchEvent('touchcancel',{bubbles:true})));
  await cached.getByRole('heading',{name:'After touch cancel'}).waitFor();
  await cached.evaluate(()=>{window.testViews.samples.today.headline='After hide'});
@@ -1131,14 +1176,14 @@ function trendFixture(q){
  await cached.evaluate(()=>window.dispatchEvent(new Event('raring:resume')));
  await pending('today');await release('today');
  await cached.waitForFunction(()=>window.testViews.completed.today>=4);
- assert.notEqual(await cached.locator('.headline h2').textContent(),'After hide','hidden-page swap is deferred while touching');
+ assert.notEqual(await cached.locator('.hero h2').textContent(),'After hide','hidden-page swap is deferred while touching');
  await cached.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});document.dispatchEvent(new Event('visibilitychange'));delete document.visibilityState});
  await cached.getByRole('heading',{name:'After hide'}).waitFor();
 
  // A cached Today whose phase has ended is read again rather than shown, so its leading card can't swap after appearing.
  await cached.evaluate(()=>{Object.assign(window.testViews.samples.today,{headline:'Old phase'});window.testViews.samples.today.focus.until='2000-01-01T00:00:00';window.dispatchEvent(new Event('raring:resume'))});
  await cached.getByRole('heading',{name:'Old phase'}).waitFor();
- await cached.evaluate(()=>document.querySelector('.dials .dial-button').click());await cached.locator('.sleep-hero').waitFor();
+ await cached.evaluate(()=>document.querySelector('.morning .sleep-fact').click());await cached.locator('.sleep-hero').waitFor();
  await cached.evaluate(()=>{Object.assign(window.testViews.samples.today,{headline:'New phase'});window.testViews.samples.today.focus.until=null});
  await hold('today');await tabCached('Today');await pending('today');
  assert.equal(await cached.getByRole('heading',{name:'Old phase'}).count(),0,'an ended phase is not served from the cache');
@@ -1155,12 +1200,12 @@ function trendFixture(q){
  const completedBeforeOld=await cached.evaluate(()=>window.testViews.completed.today);
  await release('today');
  await cached.waitForFunction(previous=>window.testViews.completed.today>previous,completedBeforeOld);
- assert.equal(await cached.locator('.headline h2').textContent(),'After sync','old in-flight result cannot replace synced view');
+ assert.equal(await cached.locator('.hero h2').textContent(),'After sync','old in-flight result cannot replace synced view');
  const previousSleep=await cached.evaluate(()=>window.testViews.completed.sleep);
  await cached.evaluate(()=>{const s=window.testViews.samples;s.today.headline='Background sync';s.sleep.score.value=51;s.status.lastSync='2026-10-16T14:02:00Z';window.dispatchEvent(new Event('raring:resume'))});
  await cached.getByRole('heading',{name:'Background sync'}).waitFor();
  await cached.waitForFunction(previous=>window.testViews.completed.sleep>previous,previousSleep);
- await hold('sleep');await cached.evaluate(()=>document.querySelector('.dials .dial-button').click());await pending('sleep');
+ await hold('sleep');await cached.evaluate(()=>document.querySelector('.morning .sleep-fact').click());await pending('sleep');
  assert.equal(await cached.locator('.sleep-hero .gauge-center b').textContent(),'51','changed lastSync refreshes cached tabs');
  await release('sleep');await tabCached('Today');
  await cached.getByRole('heading',{name:'Background sync'}).waitFor();
@@ -1176,12 +1221,12 @@ function trendFixture(q){
  await cached.waitForFunction(previous=>window.testViews.completed.sleep>previous,sleepReads);
  await release('today');
  await cached.waitForFunction(()=>window.testViews.pending.today?.length===0);
- assert.equal(await cached.locator('.headline h2').textContent(),'Next day','previous-day result cannot replace next day');
- await hold('sleep');await cached.evaluate(()=>document.querySelector('.dials .dial-button').click());await pending('sleep');
+ assert.equal(await cached.locator('.hero h2').textContent(),'Next day','previous-day result cannot replace next day');
+ await hold('sleep');await cached.evaluate(()=>document.querySelector('.morning .sleep-fact').click());await pending('sleep');
  assert.equal(await cached.locator('.sleep-hero .gauge-center b').textContent(),'42','next-day prefetch is visible before navigation read');
  await release('sleep');
  await tabCached('Today');
- await cached.locator('.dials').waitFor();
+ await cached.locator('.morning').waitFor();
  const pollReads=await cached.evaluate(()=>window.testViews.completed.sleep);
  await cached.clock.setFixedTime(new Date('2026-10-18T14:00:00Z'));
  await cached.evaluate(()=>{const s=window.testViews.samples;s.today.headline='Poll rollover';s.sleep.score.value=43});
@@ -1196,7 +1241,7 @@ function trendFixture(q){
  await hold('app_status');
  await cached.evaluate(()=>window.dispatchEvent(new Event('raring:resume')));
  await pending('app_status');
- await cached.evaluate(()=>document.querySelector('.dials .dial-button').click());
+ await cached.evaluate(()=>document.querySelector('.morning .sleep-fact').click());
  await cached.locator('.sleep-hero').waitFor();
  await release('app_status');
  await cached.waitForFunction(previous=>window.testViews.completed.health>previous,healthReads);
@@ -1208,7 +1253,7 @@ function trendFixture(q){
  await cached.evaluate(()=>window.dispatchEvent(new Event('raring:resume')));
  await pending('app_status');
  await tabCached('Today');
- await cached.locator('.dials').waitFor();
+ await cached.locator('.morning').waitFor();
  await release('app_status');
  await cached.waitForURL('**/#onboarding');
  assert.equal(await cached.getByRole('navigation').count(),0,'in-flight sign-out status gates navigation');
@@ -1345,7 +1390,7 @@ function trendFixture(q){
  assert.ok((await leader()).includes('now-card'),'before the save lands, Today still has the stored layout');
  await saved();
  // Well inside the 30-second cache poll, so the save itself must bring the new layout.
- await layout.waitForFunction(()=>!document.querySelector('.now-card') && document.querySelector('.dashboard > *')?.className.includes('daily-focus'),null,{timeout:5000});
+ await layout.waitForFunction(()=>!document.querySelector('.now-card') && document.querySelector('.dashboard > *')?.className.includes('sleep-plan'),null,{timeout:5000});
  assert.equal(await layout.evaluate(()=>location.hash),'#today','the user stays where they went');
  // A failed save is reported and the switch returns to the stored choice.
  await layout.evaluate(()=>{location.hash='#settings'});
@@ -1360,7 +1405,7 @@ function trendFixture(q){
  assert.equal(await followSwitch().isEnabled(),true,'a failed save unlocks the switch');
  await layout.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();
  await layout.locator('.dashboard > *').first().waitFor();
- assert.ok((await leader()).includes('daily-focus') && await layout.locator('.now-card').count()===0,'Today keeps the stored fixed layout');
+ assert.ok((await leader()).includes('sleep-plan') && await layout.locator('.now-card').count()===0,'Today keeps the stored fixed layout');
  // A later change is accepted after the pending save has finished.
  await layout.evaluate(()=>{location.hash='#settings'});
  await followSwitch().waitFor();

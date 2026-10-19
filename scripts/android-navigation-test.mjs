@@ -44,7 +44,7 @@ try {
  const back=async(route)=>{adb('shell','input','keyevent','4');await waitRoute(route)};
  await waitRoute('today');
  await tab('Plan');await tab('Training');await tab('Health');await tab('Progress');await back('today');
- await page.locator('.dials .dial-button').first().click();await waitRoute('sleep');await back('today');
+ await page.locator('.morning .sleep-fact').click();await waitRoute('sleep');await back('today');
  await page.locator('.activity').first().click();await waitRoute(`workout/${workout}`);await back('today');
  await tab('Training');
  await page.locator('.activity').first().click();await waitRoute(`workout/${workout}`);await back('training');
@@ -63,6 +63,17 @@ try {
   await waitRoute(route);
  }
  console.log('Android native targets and the check-in alias: passed');
+ // Adapt goes through the real core: rest replaces the lead, offline and at once, and turns off again.
+ await page.goto('http://tauri.localhost/?fixture=demo#today');await waitRoute('today');
+ await page.locator('.top .adapt').click();
+ await page.getByRole('dialog',{name:'Adapt today'}).getByRole('button',{name:/^Rest today/}).click();
+ await page.getByRole('heading',{name:'Rest day',exact:true}).waitFor();
+ assert.equal(await page.locator('.top .adapt').textContent(),'Rest day');
+ assert.equal(await page.locator('.hero .effort').count(),0,'no effort scale while resting');
+ await page.locator('.top .adapt').click();
+ await page.getByRole('dialog',{name:'Adapt today'}).getByRole('button',{name:/^Rest day is on/}).click();
+ await page.waitForFunction(()=>document.querySelector('.top .adapt')?.textContent==='Adapt today');
+ console.log('Android Adapt: rest on and off through the core: passed');
 
  await page.evaluate(()=>{
   window.__foldSentinel=true;

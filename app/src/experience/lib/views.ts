@@ -242,7 +242,7 @@ export function todayView(ctx: Ctx): TodayView {
     bodyBatteryWhy: ctx.bodyBattery != null ? {title: `Why Body Battery is ${ctx.bodyBattery}`, summary: n ? `Sleep charged it by ${bodyBatteryDay(ctx, ctx.displayedDay).charged}.` : 'No recorded night.', feedback:null,source:'Garmin Body Battery events and feedback',inputs:[{key:'overnight',name:'Overnight',value:n ? `+${bodyBatteryDay(ctx, ctx.displayedDay).charged}` : null,rating:null,tone:'neutral',detail:n ? `${n.bed}–${n.wake}` : 'No recorded night'},{key:'stress',name:'Stress',value:String(stressCard(ctx).average ?? '—'),rating:stressCard(ctx).qualifier,tone:stressCard(ctx).tone,detail:'Average through the day at the last upload'}]} : null,
     stress: stressCard(ctx), heartRateDay: heartRateDay(ctx), hrv: {lastNight: n ? hrvFor(ctx.displayedDay) : null, status: 'Balanced', tone: 'good', baseline: [38, 56], week: range(addDays(ctx.displayedDay, -6), ctx.displayedDay).map(d => nightFor(d) ? hrvFor(d) : null)},
     vitals: vitalsFor(ctx), activities: ctx.actsToday.map(activityCard), fitnessAge: fitnessAgeCard(ctx), checkinReady: false,
-    focus: {...base.focus, lastNight: n ? {asleepMin: n.asleep, needMin: n.need, woke: n.wake} : null}, plan: null, sleepPlan: sleepPlanFor(ctx),
+    focus: {...base.focus, lastNight: n ? {asleepMin: n.asleep, needMin: n.need, woke: n.wake} : null}, plan: null, lead: null, adapt: null, sleepPlan: sleepPlanFor(ctx),
     planned: {state: 'empty', session: null, coach: null, coverageStart: ctx.calendarDate, coverageEnd: addDays(ctx.calendarDate, 14)},
     reconcile: null, missingMetricReasons: ctx.world.readinessSupported ? {} : {readiness: 'Your watch doesn’t record Training Readiness'},
   };

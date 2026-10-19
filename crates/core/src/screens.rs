@@ -1913,6 +1913,8 @@ pub fn today_at_calendar(store: &Store, date: &str, now: DateTime<FixedOffset>, 
         focus,
         planned: planned::session(store, &calendar.to_string(), now.with_timezone(&Utc)),
         plan: plan::this_week(store, date),
+        lead: None,
+        adapt: None,
     };
     view.readiness_why = explain::readiness_why(&r, &view.factors, rl.as_deref());
     view.body_battery_why =

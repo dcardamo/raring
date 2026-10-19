@@ -9,7 +9,9 @@
  import {metricSource,metricNames} from './lib/metrics';
  import MetricDetail from './lib/components/MetricDetail.svelte';
  import HistoryChart from './lib/components/HistoryChart.svelte';
- import DailyFocus from './lib/components/DailyFocus.svelte';
+ import TodayHero from './lib/components/TodayHero.svelte';
+ import AdaptSheet from './lib/components/AdaptSheet.svelte';
+ import type {AdaptState} from './lib/generated/AdaptState';
  import AboutRaring from './lib/components/AboutRaring.svelte';
  import SleepPlanCard from './lib/components/SleepPlanCard.svelte';
  import NowCard from './lib/components/NowCard.svelte';
@@ -54,7 +56,7 @@
  import {colors,toneColor,batteryColor,stressColors,stressNames} from './lib/charts';import {duration,elapsed,pace,clock,dateLabel,monthLabel,signed,num} from './lib/format';
  type StrengthPage={strengthPage:StrengthView|null};
  type PageData=TodayView|SleepView|TrainingView|WorkoutView|HealthView|CheckinView|PlanBoard|StrengthPage;
- let sheet=$state(false),search=$state(false),weekBoard=$state<PlanBoard|null>(null),statusOffer=$state(false),savingStatus=$state(false);
+ let sheet=$state(false),search=$state(false),adaptOpen=$state(false),adaptState=$state<AdaptState|null>(null),weekBoard=$state<PlanBoard|null>(null),statusOffer=$state(false),savingStatus=$state(false);
  let checkingStatusOffer=false,settingsRevision=0;
  let settingsBusy=$state<Partial<Record<keyof api.Settings,boolean>>>({});
  function canApplySettingsRead(revision:number){return revision===settingsRevision && !Object.values(settingsBusy).some(Boolean) && !savingStatus}
@@ -155,7 +157,9 @@
  const fixture=new URLSearchParams(location.search).get('fixture');
  const live=isTauri() && fixture===null;
  let syncBusy=$derived(syncing || status?.syncing===true);
- const rootControls={onSearch:()=>search=true,onProfile:()=>navigate('profile')};
+ let rootControls=$derived({onSearch:()=>search=true,onProfile:()=>navigate('profile'),onAdapt:()=>adaptOpen=true,adapt:adaptState?.label});
+ // Every root header shows today's circumstances; they come with the live Today.
+ function readAdapt(){void readView('today').then(v=>{adaptState=(v as TodayView).adapt??null}).catch(()=>{})}
  let activeTab=$derived([...trail].reverse().find(r=>(tabs as readonly string[]).includes(r))??'today');
  let parentLabel=$derived.by(()=>{const parent=trail.at(-2);if(!parent)return 'Today';if(parent.startsWith('workout/'))return 'Workout';if(parent.startsWith('help/'))return 'Help';return ({today:'Today',sleep:'Sleep',training:'Training',health:'Health',readiness:'Readiness',plan:'Plan',progress:'Progress',profile:'Profile',activities:'Activities','plan/commitments':'Goals',strength:'Strength',help:'Help',settings:'Settings'} as Record<string,string>)[parent]??'Back'});
  function navigate(to:string){navigation.navigate(to)}
@@ -224,6 +228,8 @@
     if(touching && data && updated)pendingSwap={route:current,data:updated};
     else data=updated;
     if(data){hasRendered=true;prefetchTabs()}
+    if(current==='today' && updated)adaptState=(updated as TodayView).adapt??adaptState;
+    else if(!adaptState)readAdapt();
    }
    if(hasRendered && !prefetched && current!=='onboarding')prefetchTabs();
    if(current==='today'){void offerStatus();void readView('plan').then(b=>{if(request===requestId)weekBoard=b as PlanBoard}).catch(()=>{})}
@@ -289,7 +295,7 @@
  }
  // Local changes run in order; each reloads every cached view, since Today shows the week too.
  let localChanges=Promise.resolve(),changing=$state(false);
- function act(action:LocalAction,then?:()=>void){changing=true;localChanges=localChanges.then(async()=>{try{await api.local_action(action);clearViews();then?.();await refresh(true)}catch(e){error=String(e)}finally{changing=false}})}
+ function act(action:LocalAction,then?:()=>void){changing=true;localChanges=localChanges.then(async()=>{try{await api.local_action(action);clearViews();then?.();await refresh(true);readAdapt()}catch(e){error=String(e)}finally{changing=false}})}
  // Today's layout depends on this switch: once it is stored, drop every view read before it and read
  // the visible Today again, wherever the user has gone meanwhile. A failed save puts the switch back.
  let savingTodayLayout=$state(false);
@@ -345,14 +351,12 @@
 {:else if todayData && route==='today'}
  <div class="page-hero today-hero"><Header title="Today" eyebrow={dateLabel(todayData.date)} {...rootControls}/>
  <div class="sync-indicator"><span class="small" aria-live="polite">{#if todayData.watchLastUpload}{watchLabel(todayData.watchLastUpload,now)}{:else}Watch upload time unavailable{/if}{#if syncBusy} · Refreshing…{:else if syncError || status?.lastError} · Raring sync delayed · {syncError || status?.lastError}{/if}</span><button class="sync-button" disabled={syncBusy} onclick={syncNow}>Refresh</button></div>
- <section class="dials"><button class="dial-button" onclick={()=>navigate('sleep')}>{#if todayData.sleep}<Gauge size={100} value={todayData.sleep.value} max={todayData.sleep.max} color={toneColor(todayData.sleep.tone)} caption="Sleep"/>{:else}<Gauge size={100} value={null} caption="Sleep"/>{/if}</button><button class="dial-button large" onclick={()=>navigate('readiness')}>{#if todayData.readiness}<Gauge size={156} stroke={13} value={todayData.readiness.value} max={todayData.readiness.max} color={toneColor(todayData.readiness.tone)} caption="Readiness" label={todayData.readiness.label}/>{:else}<Gauge size={156} stroke={13} value={null} caption="Readiness"/>{/if}</button><button class="dial-button" onclick={()=>navigate('training')}>{#if todayData.load}<Gauge size={100} value={todayData.load.value} max={todayData.load.max} color={toneColor(todayData.load.tone)} caption="Load" band={todayData.load.band} marker/>{:else}<Gauge size={100} value={null} caption="Load"/>{/if}</button></section>
- <div class="headline"><h2>{todayData.headline||'Your day is taking shape'}</h2><div class="chips">{#each todayData.chips as chip}<Chip {chip} label={chip.icon==='moon'?'View sleep':chip.icon==='hrv'?'View HRV':'View training'} onclick={()=>navigate(chip.icon==='moon'?'sleep':chip.icon==='hrv'?'metric/hrv':'training')}/>{/each}</div>{#if todayData.reconcile}<Reconcile reconcile={todayData.reconcile}/>{/if}{#if todayData.focus.note}<p class="phase-note"><Icon name="clock" size={14}/>{todayData.focus.note}</p>{/if}</div></div><div class="dashboard" {@attach masonry}>
+ <TodayHero today={todayData} {navigate} {act} adapt={()=>adaptOpen=true}/></div><div class="dashboard" {@attach masonry}>
  {#if statusOffer}<Card title="Your day, at a glance"><p>Keep Body Battery, stress and today's focus in a silent notification. Always labeled with the watch's upload time.</p><p class="small">Off unless you choose it. No extra Garmin requests. You can change this in Settings.</p><button class="primary" disabled={savingStatus} onclick={()=>void toggleStatus(true)}>Enable persistent status</button><button class="secondary" disabled={savingStatus} onclick={()=>statusOffer=false}>Not now</button></Card>{/if}
  {#if watchNeedsSync(todayData,now)}<Card title="Watch upload" extra="watch-notice"><p>Open Garmin Connect to sync your watch</p>{#if todayData.watchSleepUploadStale}<p class="small">Last night's sleep hasn't uploaded yet.</p>{/if}{#if connectUnavailable}<p class="small" role="status">Open Garmin Connect on your phone, then sync your watch there.</p>{:else}<button class="watch-open" onclick={openConnect}>Open Garmin Connect <Icon name="arrow-right" size={16}/></button>{/if}</Card>{/if}
  {#if Object.keys(todayData.missingMetricReasons).length}<Card title="About missing readings" extra="watch-notice"><div class="missing-reasons">{#each Object.values(todayData.missingMetricReasons) as reason}<p>{reason}</p>{/each}</div></Card>{/if}
- {#each todayData.focus.cards as card,i (card)}
-  {#if card==='focus' && (todayData.call || todayData.factors.length || todayData.focus.phase==='wake')}<DailyFocus today={todayData} {now} lead={i===0} open={()=>navigate('readiness')}/>
-  {:else if card==='now'}<NowCard today={todayData} lead={i===0} open={navigate}/>
+ {#each todayData.focus.cards.filter(c=>c!=='focus') as card,i (card)}
+  {#if card==='now'}<NowCard today={todayData} lead={i===0} open={navigate}/>
   {:else if card==='sleepPlan' && todayData.sleepPlan}<SleepPlanCard plan={todayData.sleepPlan} {now} lead={i===0} mode={todayData.focus.planOpen?(({evening:'evening',windDown:'windDown',lateNight:'lateNight'} as const)[todayData.focus.phase as 'evening']??'full'):'line'} open={()=>navigate('sleep')}/>
   {:else if card==='vitals' && todayData.vitals.readings.length}<VitalsMonitor vitals={todayData.vitals} compact open={(kind)=>navigate('metric/'+kind)}/>{/if}
  {/each}
@@ -363,7 +367,6 @@
  {#if todayData.stress.average!=null || todayData.stress.timeline.length}{@const stress=todayData.stress}<Card title="Stress" onclick={()=>navigate('metric/stress')}>{#snippet aside()}{#if stress.qualifier}<span class="pill" style:color={toneColor(stress.tone)}>{stress.qualifier}</span>{/if}{/snippet}<div class="stress-summary"><div><div class="big n" style:color={stress.level?stressColors[stress.level]:undefined}>{num(stress.average)}</div><div class="small">{stress.level?stressNames[stress.level]+' · ':''}average</div></div>{#if stress.timeline.length}<StressTimeline {stress} compact/>{/if}</div></Card>{/if}
  {#if todayData.vitals.readings.length && !todayData.focus.cards.includes('vitals')}<VitalsMonitor vitals={todayData.vitals} compact open={(kind)=>navigate('metric/'+kind)}/>{/if}
  {#if todayData.activities.length}<Card title="Activities">{#each todayData.activities as a}<ActivityRow activity={a} open={()=>navigate('workout/'+a.id)}/>{#if a.aerobicTe!=null || a.benefit}<div class="tags">{#if a.aerobicTe!=null}<span class="pill">Aerobic {a.aerobicTe} · {a.aerobicLabel}</span>{/if}{#if a.benefit}<span class="pill">{a.benefit}</span>{/if}</div>{/if}{/each}</Card>{/if}
- {#if todayData.fitnessAge.fitnessAge!=null}<Card title="Fitness Age" onclick={()=>navigate('health')}><div class="age-small"><div><div class="big n" style:color={fitnessAgeColor(todayData.fitnessAge.fitnessAge,todayData.fitnessAge.chronologicalAge)}>{num(todayData.fitnessAge.fitnessAge)}</div>{#if todayData.fitnessAge.chronologicalAge!=null}<span class="pill" style:color={fitnessAgeColor(todayData.fitnessAge.fitnessAge!,todayData.fitnessAge.chronologicalAge)}>{num(todayData.fitnessAge.chronologicalAge-todayData.fitnessAge.fitnessAge)} yrs younger</span>{/if}</div><Sparkline values={todayData.fitnessAge.trend} w={160} h={64} color={colors.ink}/></div></Card>{/if}
  {#if todayData.checkinReady}<Card title="Weekly check-in" onclick={()=>navigate('review/latest')}><div class="checkin-tease"><span>See your week at a glance</span><b><Icon name="arrow-right" size={18}/></b></div></Card>{/if}
 </div>
 {:else if route==='readiness' && todayData}
@@ -395,4 +398,4 @@
 {:else if checkinData}
  <Header title="Weekly review" eyebrow={'Week of '+dateLabel(checkinData.weekStart)} back={back} backLabel={parentLabel}/><div class="checkin-progress">{#each Array(checkinPages+1) as _,i}<span class:on={i===checkinIndex}></span>{/each}</div><div class="checkin-swiper" role="group" aria-label="Weekly check-in cards" ontouchstart={(e)=>swipeX=e.touches[0].clientX} ontouchend={(e)=>{let dx=e.changedTouches[0].clientX-swipeX;if(Math.abs(dx)>50)checkinIndex=Math.max(0,Math.min(checkinPages,checkinIndex+(dx<0?1:-1)))}}>{#if checkinIndex<checkinData.cards.length}{@const c=checkinData.cards[checkinIndex]}<Card title={c.area}><div class="checkin-content"><div class="eyebrow">YOUR WEEK IN {c.area.toUpperCase()}</div>{#if c.value!=null}<Gauge size={210} stroke={15} value={c.value} max={c.area==='training'?1000:c.area==='health'?50:100} color={toneColor(c.tone)} caption={c.unit}/>{/if}<h2>{c.headline}</h2><span class="pill" class:ok={c.previous!=null && c.value!=null && (c.area==='health'?c.value<=c.previous:c.value>=c.previous)}>{#if c.previous!=null && c.value!=null && Math.abs(c.value-c.previous)>=1}<Icon name={c.value<c.previous?'trend-down':'trend-up'} size={14}/>{signed(c.value-c.previous)} vs last week{:else if c.value==null}No readings this week{:else if c.previous!=null}Steady vs last week{:else}No previous week to compare{/if}</span><Sparkline values={c.series} w={240} h={60} color={colors.ink}/></div></Card>{:else if checkinPage==='timing' && checkinData.timing}{@const t=checkinData.timing}<Card title="Timing" extra="timing-review"><div class="checkin-content"><div class="eyebrow">YOUR WEEK IN SLEEP TIMING</div><ConsistencyChart nights={t.nights} date={addDays(checkinData.weekStart,6)} days={7}/><div class="timing-ranges">{#if t.bedRange}<div><span>Bedtimes</span><b class="n">{t.bedRange[0]}–{t.bedRange[1]}</b></div>{/if}{#if t.wakeRange}<div><span>Wake times</span><b class="n">{t.wakeRange[0]}–{t.wakeRange[1]}</b></div>{/if}</div>{#if t.aligned+t.ahead+t.behind>0}<span class="pill">Garmin: {[[t.aligned,'aligned'],[t.behind,'behind'],[t.ahead,'ahead']].filter(([n])=>Number(n)>0).map(([n,w])=>`${n} ${w}`).join(' · ')}</span>{/if}<h3>THE TIMING FOCUS</h3><p>{t.focus}</p></div></Card>{:else if checkinPage==='intensity' && checkinData.intensity}{@const im=checkinData.intensity}<Card title="Intensity" extra="intensity-review"><div class="checkin-content"><div class="eyebrow">YOUR WEEK IN INTENSITY MINUTES</div><Gauge size={210} stroke={15} value={im.total} max={im.goal??Math.max(im.total,1)} display={num(im.total)} caption={im.goal!=null?`of ${num(im.goal)} min`:'min'} color={im.goal!=null&&im.total>=im.goal?colors.good:colors.ink}/><h2>{im.goal==null?'Intensity minutes':im.total>=im.goal?"Garmin's goal reached":`${num(Math.ceil(im.goal-im.total))} min short`}</h2><span class="pill">{num(im.moderate)} moderate · {num(im.vigorous)} vigorous, counted twice</span></div></Card>{:else if checkinPage==='plan' && checkinData.plan}<PlanCheckinCard plan={checkinData.plan} keep={()=>checkinIndex++} change={()=>navigate('plan-setup')}/>{:else}<Card title="Your week ahead"><div class="checkin-summary"><div class="brand-mark"><Icon name="sparkle" size={70}/></div><h2>Keep the momentum</h2>{#if checkinData.vo2maxChange!=null && Math.abs(checkinData.vo2maxChange)>=1}<span class="pill ok">VO₂ max {signed(checkinData.vo2maxChange)}</span>{/if}{#if checkinData.fitnessAgeChange!=null && Math.abs(checkinData.fitnessAgeChange)>=1}<span class="pill ok">Fitness Age {signed(checkinData.fitnessAgeChange)}</span>{/if}{#if checkinData.win}<h3>THE WIN</h3><p>{checkinData.win}</p>{/if}{#if checkinData.focus}<h3>THE FOCUS</h3><p>{checkinData.focus}</p>{/if}</div></Card>{/if}</div><div class="checkin-controls"><button disabled={checkinIndex===0} onclick={()=>checkinIndex--}><Icon name="arrow-left" size={16}/> Previous</button><span>{checkinIndex+1} / {checkinPages+1}</span><button disabled={checkinIndex===checkinPages} onclick={()=>checkinIndex++}>Next <Icon name="arrow-right" size={16}/></button></div>
 {/if}
-</div></main>{#if sheet && workoutData?.strength}<HelpSheet close={()=>sheet=false} more={()=>{sheet=false;navigate('help/strength-sets')}}/>{/if}{#if search}<SearchSheet close={()=>search=false} {navigate}/>{/if}{#if route!=='onboarding'}<TabBar active={activeTab} {navigate}/>{/if}</div>
+</div></main>{#if sheet && workoutData?.strength}<HelpSheet close={()=>sheet=false} more={()=>{sheet=false;navigate('help/strength-sets')}}/>{/if}{#if adaptOpen}<AdaptSheet current={adaptState} close={()=>adaptOpen=false} {act} busy={changing}/>{/if}{#if search}<SearchSheet close={()=>search=false} {navigate}/>{/if}{#if route!=='onboarding'}<TabBar active={activeTab} {navigate}/>{/if}</div>

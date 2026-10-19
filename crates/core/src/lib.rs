@@ -4,6 +4,7 @@ pub mod demo;
 mod export;
 pub mod garmin;
 mod gear;
+pub mod lead;
 pub mod ledger;
 pub mod local;
 pub mod notifications;
@@ -133,8 +134,11 @@ impl Raring {
     pub fn today_at(&self, date: &str, now: DateTime<Local>) -> view::TodayView {
         screens::today_at(&self.store, date, now.fixed_offset())
     }
+    /// The live Today, with its lead and today's circumstances applied.
     pub fn today_live_at(&self, display_date: &str, now: DateTime<Local>) -> view::TodayView {
-        screens::today_at_calendar(&self.store, display_date, now.fixed_offset(), now.date_naive())
+        let mut view = screens::today_at_calendar(&self.store, display_date, now.fixed_offset(), now.date_naive());
+        lead::apply(&self.store, &mut view, now.date_naive(), now.fixed_offset());
+        view
     }
     pub fn sleep(&self, date: &str) -> view::SleepView {
         screens::sleep_view(&self.store, date)
