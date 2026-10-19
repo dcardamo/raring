@@ -96,11 +96,12 @@ Dan decides): whether a weight direction the person chooses may colour changes. 
 the comparison is closed. That approval is the maintainer's decision, not
 usability evidence.
 
-**Usability gate remains pending; no stage 2 authorised yet.** No unfamiliar people have evaluated
-first meaning, discovery, comprehension or pressure. Three participants (including
-simple-needs and detail-oriented people) remain required by the design's
-evaluation plan. Stage 2 starts only when the coordinator confirms Dan's
-decision to proceed with these named limitations. The five tabs (Today · Plan · Training · Health · Progress) have no unfamiliar-user validation. Later
+**Stage 2 authorised with limited evidence (2026-10-19).** Dan approved starting
+stage 2 on his design approval plus browser checks. The usability gate stays open:
+no unfamiliar people have evaluated first meaning, discovery, comprehension or
+pressure, and three participants (including simple-needs and detail-oriented
+people) remain required before cutover is called validated. The five tabs (Today · Plan · Training · Health · Progress) have no unfamiliar-user validation.
+The stage 2–5 checkpoints are in the design's [implementation plan](docs/experience-design.md#17-implementation-plan-stages-25). Later
 implemented-app/Android, real-data and full migration/evidence checks also remain
 unverified; no endpoint claims or shipped-feature contracts were changed.
 

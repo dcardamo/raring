@@ -69,6 +69,7 @@ leaving an older motivational experience running alongside the new one.
 14. [Preservation and implementation boundaries](#14-implementation-boundaries-and-preservation-map)
 15. [Usability criteria and U01–U64 journeys](#15-usability-evaluation-journeys-not-screenshot-approval)
 16. [Sequential delivery and completion](#16-sequential-delivery-and-completion)
+17. [Implementation plan, stages 2–5](#17-implementation-plan-stages-25)
 
 ## 1. Product promise
 
@@ -1743,6 +1744,203 @@ resumes simply because one screen looks finished.
 - The spec describes what shipped, the TODO item records the shipping commits,
   and remaining endpoint/physical-device limitations are documented without
   claiming them fixed by the redesign.
+
+## 17. Implementation plan, stages 2–5
+
+Dan authorised stage 2 on 2026-10-19 with limited evidence: his approval of
+the prototype (`0c58f47`, recorded in `64c4e45`) plus browser checks. No
+unfamiliar-participant, device, real-data or migration evidence exists yet;
+the build gathers device and real-data evidence as it goes, and the
+participant gate stays open for Dan's decision at stage 5. Weight changes stay
+neutral (one metric accent, never good or bad).
+
+All work lands as sequential checkpoints on `feat/experience-redesign`. Nothing
+merges to or pushes `main` (every push there is a release) until the definition
+of done and Dan's explicit go. No Garmin writes, no new Garmin requests unless
+separately verified and budgeted; request budgets, token serialization and the
+on-demand gates stay as they are.
+
+### Principles of the build
+
+- **Rules live in the core.** The prototype's TypeScript rules (`rules.ts`,
+  `allocation.ts`, `match.ts`, `week.ts`, `progress.ts`, `lanes.ts`,
+  `weight.ts`) are the reference behaviour, not shipped code. Each rule is
+  written into `spec.md` Rules in the checkpoint that ships it, implemented in
+  Rust, and tested there; the prototype's unit cases are ported as table tests.
+  The UI renders view models and formats; it does no goal, match or period math.
+- **Reuse, don't redraw.** Screens are composed from `app/src/lib/screens/`,
+  the shipped components and the prototype components, ported into
+  `app/src/lib/` to take view-model props instead of the prototype's `Ctx`.
+  The prototype (`app/src/experience/`) stays frozen as the reference and its
+  checks keep passing until it is removed at stage 5.
+- **Every checkpoint leaves the branch releasable in principle:** `cargo test
+  --workspace` (regenerates TS; committed), clippy `-D warnings`, `npm run check
+  && npm test && npm run test:ui && npm run build`, the prototype build and
+  `test:experience` while it exists, `scripts/check-secrets.sh`. Checkpoints that
+  touch native code or the shell also build the debug APK, run it on
+  `emulator-5560` and run the Android unit/instrumentation tests.
+
+### Local records (stage 2.1)
+
+New local state is stored as versioned JSON documents in the existing
+`settings` table, one row per collection, each `{"schema": 1, …}`. Rows in that
+table are already exported (credential fields stripped recursively), cleared
+in the same SQLite transaction on a verified account switch, and erased on
+sign-out, so isolation needs no new table or transaction. A `local_schema`
+row records the migration level. A newer `schema` than the build understands
+is read-only: shown where possible, never rewritten, so a downgrade cannot
+destroy it. Every mutation is one immediate transaction under the existing
+short local barrier, rejects a changed account like queued settings saves,
+invalidates the view cache and refreshes the status snapshot offline.
+
+| Row | Contents |
+| --- | --- |
+| `goals` | Versions keyed by the plan week they take effect: strength sessions, Zone 2 min, Zone 4–5 min, intensity min (a number, or Garmin's weekly goal), sleep timing (nights, time, kind; or a migrated *observation*), average Sleep Score target; usual rest weekdays. Zero is off. Mid-week revisions keep the original and revised targets with their effective date |
+| `intentions` | Your sessions: id, date, optional time, sport, optional name/duration, allocation per goal kind, status (open, let go, marked missed), dated history (moves, edits) |
+| `links` | Explicit plan↔recording links and unlinks with their time; an unlink keeps an automatic pair apart |
+| `circumstances` | Rest days (local date, through the following night), pauses (since, until, reason ill or pause, optional review date), limits (excluded sports, movement note), dismissals (suggestion id and local day), wind-down self-reports |
+| `reviews` | Per plan week: the proposals shown, which were accepted, and when |
+| `events` | Local dated events (name, date, sport); Garmin races stay Garmin's |
+| `milestones` | Stable evidence identity, kind, date, value, seen time, correction note |
+
+The weekly-plan prompt switch is a `Settings` field (`planPrompt`, default on)
+so it uses `patch_settings`; per-week "done/dismissed" lives in `reviews`.
+
+**Migration from the current plan row** (`plan`: `versions` and `paused`),
+run once and idempotently on open and before any local read or write:
+
+- No `plan` row, or no saved version (`configured: false`): no goals. The
+  Strength preset preview is never adopted.
+- Each saved version becomes a goal version from the same week: strength,
+  Zone 2 and intensity (`None` → Garmin's weekly goal), rest weekdays; zero off.
+- A saved `asleep_nights` target becomes a **sleep timing observation**:
+  frequency kept as a reference, nights shown neutrally, no verdict. Plan
+  explains it once (flag in `goals`) and offers, never creates, a wind-down
+  intention. Unsaved defaults migrate to nothing.
+- Paused weeks become whole-week pauses in `circumstances`.
+- The `plan` row and `sleep_plan:*` captures are kept untouched: weeks before
+  the migration week keep their original evaluation (existing Plan progress,
+  completion and asleep-on-time rules); the migration week is labelled
+  adjusted. Until the old setup screen is retired (2.3), `set_plan` also writes
+  the matching goal version so the two cannot diverge.
+
+Tests: one per row (round trip, unknown-schema read-only, export content,
+same-account reauth keeps it, verified switch and sign-out clear it), the
+migration cases above including partial saved plans and paused weeks, and one
+typed `local_action` command covering every mutation.
+
+### Rules (each into `spec.md` Rules with core tests, in its checkpoint)
+
+| Rule | Source in this design | Checkpoint |
+| --- | --- | --- |
+| Local records, migration, export/erase | above | 2.1 |
+| Plan↔recording matching (explicit, automatic, ask, count once) | Proposed rules: matching | 2.2 |
+| Goal ledger: recorded / planned / remaining, ambiguity, coverage (existing evidence-coverage rule; intensity stays Garmin's daily/weekly total) | Plan, allocation tests | 2.2 |
+| Day and week rings (recorded only, order, marks) | Day and week rings | 2.2 |
+| Backlog | P3a, `week.ts` | 2.2 |
+| Today eligibility and precedence; rest, ill, pause, limits, dismissals; recognition | §5, §6, §8 | 3.1 |
+| Surface suppression (morning readiness, compact focus, widgets) | §6 Notifications | 3.2 |
+| Revisions and pauses (Reached · adjusted, Adjusted · paused) | §7 Changing expectations | 4.1 |
+| Week outcome and next-goal proposals | Proposed rules: next week's goals | 4.1 |
+| Period summaries, comparison, active days, coverage, bests, trend tiles, sleep against need | Proposed rules for Progress | 4.2 |
+| Milestones: identity, correction once, no repeat, quiet phases | §12 Milestones | 4.2 |
+| Usual-week band and lanes; lift volume; ranges | Proposed rules: week lanes and lift volume | 4.3 |
+| Trend weight, changes and steady threshold | Proposed rules: trend weight | 4.3 |
+| Reading freshness (2 days; weight 7) | P5 | 4.3 |
+
+The superseded rules (pace verdicts, weekly focus as the biggest deficit, the
+four-tab view cache) are replaced in the same change, not left beside the new ones.
+
+### View contract
+
+`view.rs` gains, with TypeScript regenerated by `cargo test`:
+
+- `PlanBoard` (Plan tab, Today's week): current goals and their versions, the
+  week's day cells with rings and marks, plan items with their match state and
+  matched recording, the per-goal ledger, backlog, prompt state, event week.
+- `WeekReview` (`review/:week`) and a review list; `ProgressView` for a period
+  and anchor; `TrainingWeek` lanes; `WeightView`; a small `ShellState`
+  (Adapt label, prompt due, upload freshness) for every header.
+- `TodayLead` in `TodayView` (stage 3): stable id, kind, eligible period, source
+  dates, evidence, action, dismissal.
+- Stored but not exposed (provenance table), no new request: the intraday
+  Body Battery array and nap changes; `ActivityCard` average HR and Garmin's
+  per-activity moderate/vigorous minutes; workout detail streams and summary
+  fields per sport; the stored Garmin schedule list (not only the next
+  session); nightly need per night.
+- **Garmin schedule entries:** only `calendarDate` and `workoutName` are
+  verified. Sport, duration, ids and step targets are read from the
+  maintainer's stored snapshot (key names only, read-only) before use. Until
+  verified, Garmin sessions appear by name and date in the week and agenda,
+  attributed and read-only, but are not allocated to goals or matched.
+
+### Stage 2 — shell and shared context
+
+- **2.1 Local records.** As above. No UI change.
+- **2.2 Ledger and matching.** The 2.2 rules, `PlanBoard`, the stored-not-
+  exposed fields above. The current app keeps working on migrated data.
+- **2.3 Shell.** A new `App.svelte`: Today · Plan · Training · Health ·
+  Progress, a header with date and upload freshness, Adapt (entry shown;
+  its actions arrive in 3.1), search, and the avatar → Profile (Garmin facts,
+  gear, limits, Settings, help). Canonical routes from the prototype; legacy
+  aliases for every existing route (`checkin` → latest review, `plan-setup` →
+  `plan/commitments`, `explore` → Training) and native targets (`today`,
+  `readiness`, `sleep`, `metric/bodyBattery`, `metric/stress`, `checkin`,
+  `health`, `training`); invalid links explain themselves. Android Back,
+  browser history and links agree; caller-aware Back keeps scroll, filters
+  and sections. Cached-first: the five tabs prefetch from local data only, the
+  phase-end and sync invalidation rules carry over. Plan shows goals (steppers),
+  the ledger, rings and the day agenda with recordings and Garmin's schedule.
+  The old shell is deleted when the parity checklist holds with every shipped
+  detail reachable; `test:ui` moves to the new shell. Debug APK for Dan.
+
+### Stage 3 — Today and adaptations
+
+- **3.1 Eligibility.** The gates in §6 in order, typed in `TodayLead`; Adapt
+  (Rest today, Ill, Pause/Resume, Limits) and "Not today" work offline and
+  persist across sync, resume and midnight; Keep · Choose another · Rest;
+  sleep phases from the existing phase rules (no fixed hours). Hero variants,
+  effort bar and reason line from Garmin's inputs. Core tests per U-case
+  (U10–U14, U28–U37, U56).
+- **3.2 Surfaces.** Morning readiness, compact focus, notification and widgets
+  apply the same suppression from the same records; weekly check-in opens the
+  review alias, bedtime opens `sleep/tonight` with its night. No injury notes,
+  limits text, journal or weight in snapshot or lock screen. Kotlin unit and
+  instrumentation tests, RemoteViews at the declared sizes, emulator check,
+  debug APK.
+
+### Stage 4 — Plan and Progress
+
+- **4.1 Plan loop.** Add, move, let go and mark missed; link and unlink;
+  backlog "Do it today"; the plan-your-week prompt (never in wind-down or late
+  night); revisions; week review with proposals needing acceptance (an
+  accepted proposal is a goal version from next week; Keep all always offered);
+  the review list; local events, Garmin's race countdown and Coach detail
+  (read-only); a user-supplied rehabilitation checklist with self-reported
+  completion. Send to Garmin is disabled and labelled not yet available.
+- **4.2 Progress.** Overall · Cardio · Strength · Long-term: period report and
+  comparisons, calendar with coverage, ring month, bests in available
+  history, milestones with stable identities and correction once, trend tiles
+  through the existing trend command (sparse estimates as dated dots), sleep
+  against need.
+- **4.3 Training and Health depth.** Week lanes with the usual-week band, lift
+  Max weight / Volume, the shared range picker (adds 14 days; Max is All),
+  richer workout detail from stored streams and summary fields with Garmin's
+  training-effect bands in plain words, trend weight and freshness flags. Add
+  weight stays disabled (Garmin write, backlog 20–22).
+
+### Stage 5 — journeys and cutover readiness
+
+Port the applicable U01–U64 journeys and counted paths from `test:experience`
+to the real app's browser suite; private real-data review through
+`.data/garmin-run.sh` (read-only, notes and screenshots only in `.data/`);
+Android device checks on Dan's phone via a debug APK beside the release app;
+cold-start and long-history timings; large text, TalkBack basics and reduced
+motion. Rewrite `spec.md` Screens, Look, view cache and notification sections
+to the shipped behaviour and point its visual reference at the new mockup;
+remove the prototype entry, keeping its captures; move TODO 26 to Done with
+the commits. The unfamiliar-participant gate is reported as held or passed for
+Dan's decision, never waived silently.
 
 ## Garmin references
 
