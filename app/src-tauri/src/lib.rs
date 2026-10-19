@@ -350,6 +350,16 @@ async fn plan_board(app: tauri::AppHandle, date: Option<String>) -> Result<rarin
     .await
 }
 
+/// The review of the plan week containing `date`, with next week's proposals.
+#[tauri::command]
+async fn week_review(app: tauri::AppHandle, date: String) -> Result<raring_core::view::WeekReview, String> {
+    read_view(app, move |core| core.week_review(&date, Local::now()).map_err(|e| e.to_string())).await
+}
+#[tauri::command]
+async fn reviews(app: tauri::AppHandle) -> Result<Vec<raring_core::view::ReviewRow>, String> {
+    read_view(app, move |core| Ok(core.reviews(Local::now()))).await
+}
+
 #[tauri::command]
 async fn begin_sign_in(app: tauri::AppHandle) -> Result<(), String> {
     *app.state::<SignInPending>().0.lock().map_err(|e| e.to_string())? = None;
@@ -830,6 +840,8 @@ pub fn run() {
                     trend,
                     local_action,
                     plan_board,
+                    week_review,
+                    reviews,
                     sync_now,
                     begin_sign_in,
                     sign_out,
@@ -856,6 +868,8 @@ pub fn run() {
                     trend,
                     local_action,
                     plan_board,
+                    week_review,
+                    reviews,
                     sync_now,
                     begin_sign_in,
                     sign_out,
