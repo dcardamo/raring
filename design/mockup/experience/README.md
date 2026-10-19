@@ -1,81 +1,40 @@
-# Raring experience prototype v2 — unshipped
+# Raring redesign — the approved design record
 
-Stage 1 of item 26. The prototype uses the shipped Svelte components and view
-contract, with independently synthetic data. No credentials, Garmin writes,
-analytics, external fonts or map tiles. Production behaviour remains unchanged.
+The captures here are the design Dan approved on 2026-10-19 and that shipped
+as item 26: Today · Plan · Training · Health · Progress, Profile from the
+header, Adapt on every root page and short "?" help. They came from the
+stage-1 prototype, which ran on synthetic data and has since been removed;
+git keeps its source (`app/src/experience/` before the cutover commit).
 
-**Preview:** http://neptune:48726/ · first visit opens mixed Wednesday. **Scenario**
-selects simple, sleep-first, mixed or sparse; U01–U64; time/day; offline; sync;
-background/resume; naps; calendar coverage; status surfaces; legacy links; and
-**Compare** (shipped | retired v1 | v2 captures). Tabs: Today · Plan · Training ·
-Health · Progress; the header search sheet finds any metric. Explore is retired
-and `#explore` opens Training.
-Prototype-only choices persist in this browser. Export is disclosure-only.
+- `shots/`: synthetic captures by checkpoint (P1–P5) and journey (U-cases),
+  at phone, unfolded and desktop widths.
+- `fonts/`: the Inter and Outfit files the captures use, with their licences.
 
-**Comparison provenance:** coordinator routing records identify `b965aa4` as the
-Opus 5.5 checkpoint A. The session switched to GPT-6 Astra at 13:05Z; completion
-`adbb43e` is therefore mixed-model. Do not label the whole v2 result Opus-only.
-This preview owns port 48726. On 2026-10-19 Dan selected this candidate and
-approved its design; the comparison is closed and the other candidate's branch
-stays unmerged as a reference. No participant, device, real-data or migration
-evidence exists yet.
-
-## Run and check
-
-From the repo, inside `nix develop`:
-
-```sh
-cd app
-npm run experience                  # separate Vite entry: /experience.html
-npm run check                       # real view-contract type checks
-npm run test:experience             # U starts, journeys, layout/privacy checks
-npm run test:experience -- --shots   # regenerate synthetic captures here
-npm run build:experience            # app/dist-experience/index.html
-```
-
-Serve **only** `app/dist-experience`, never the repository or `.data`:
-
-```sh
-nix develop -c python3 -m http.server 48726 --bind 0.0.0.0 --directory app/dist-experience
-```
-
-The active server's verified PID is in ignored `.data/experience-preview.pid`.
-Stop only that verified PID. To check the served build:
-`cd app && EXPERIENCE_URL=http://neptune:48726/ npm run test:experience`.
-
-Source: `app/src/experience/`. Shipped screen extraction: `app/src/lib/screens/`.
-Provenance, proposed period rules, parity and evidence limits:
-[`docs/experience-design.md`](../../../docs/experience-design.md).
-The vanilla v1 renderer is retired; git keeps it and Compare keeps its captures.
-The original mockup at `../index.html` still describes the shipped app.
+`docs/spec.md` describes what ships; `docs/experience-design.md` holds the
+decisions, the parity ledger and the U01–U64 comparison of the app against
+this design. The original mockup at `../index.html` shows the app before the
+redesign.
 
 ## Unfamiliar-person walkthrough
 
-Choose the case before showing the screen, dismiss the case label, and give no
-navigation hints. Record first meaning/action time, wrong turns, extra setup,
-source confusion and pressure. Keep consented observations in ignored `.data/`
-or `.research/`, never committed.
+Still to do: at least three unfamiliar participants, including simple-needs
+and detail-oriented people, on the shipped app (a debug build with the
+synthetic demo, or their own account with consent). Give no navigation
+hints. Record first meaning and action time, wrong turns, extra setup, source
+confusion and pressure. Keep consented observations in ignored `.data/` or
+`.research/`, never committed.
 
-1. **U01:** “What matters now? What would you do next?”
-2. **U03:** “How was last night? What about tonight? Is there a pattern?”
-3. **U19:** “Find your workout and explain what counted. Find strength bests,
-   a rare metric, gear, a comparison and exported data.”
-   **U41:** “What is left of this week’s goals? Deal with the session you
-   didn’t record. Is the Garmin plan yours?”
-4. **U11:** “Plan something tomorrow, then choose a rest day.” Repeat offline
-   and after resume. “What changed? What didn’t?”
-5. **U30/U31:** “What does the restriction do? Is this routine compatible?”
-   Misunderstood compatibility blocks progression.
-6. **U52/U53:** “Find lifestyle logs, decide whether to allow reads, open,
-   leave, return, turn reads off, and explain what an export contains.”
-7. **Interrupted week:** Monday strength → Tuesday wind-down self-report →
-   Wednesday short night/conflicting intervals → rest through midnight →
-   Thursday pause → Friday high readiness without a training prompt → Sunday
-   explicit resume and review. Inspect the original targets and pause interval.
+1. "What matters now? What would you do next?" (Today)
+2. "How was last night? What about tonight? Is there a pattern?" (Sleep)
+3. "Find your workout and explain how it counted. Find strength bests, a rare
+   metric, gear, a comparison and exported data."
+4. "What is left of this week's goals? Deal with a session you didn't record.
+   Is the Garmin Coach session yours?"
+5. "Plan something tomorrow, then choose a rest day." Repeat offline and after
+   resume. "What changed? What didn't?"
+6. "What do your limits do? Is this Garmin workout compatible?" Reading it as
+   checked for compatibility is a failure.
+7. "Find lifestyle logs, decide whether to allow reads, open, leave, return,
+   turn reads off, and explain what an export contains."
 
-At least three unfamiliar participants, including simple-needs and
-detail-oriented people, must complete the usability gate. Browser checks and
-AI review are not participants. Android/device, real data, long-history
-performance and migrations remain unverified. **Stop before stage 2** for the
-coordinator/Dan decision: proceed with named limited evidence, or pause and
-release exclusivity. No main merge, push or release is authorised.
+Browser checks and AI review are not participants.

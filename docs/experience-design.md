@@ -2,10 +2,11 @@
 
 ## Status and scope
 
-This is the target product and interaction design for TODO item 26. It is
-not a description of features already shipped. `spec.md` remains the contract
-for the current implementation; implementation must update it as this design
-ships. All example people, restrictions, messages and achievements below are
+This is the product and interaction design for TODO item 26, which shipped
+(v0.1.28 and v0.1.29; Dan approved it on his phone with his real data).
+`spec.md` is the contract for what ships; this document keeps the decisions,
+evidence and the parity record. Open evidence (participants, Coach status
+values, real-data journeys, phone checks) is TODO item 26a. All example people, restrictions, messages and achievements below are
 illustrative, not a record of anyone's health or Garmin account.
 
 This is **one initiative, including the usability work**, not a feature
@@ -1135,7 +1136,11 @@ pressure criteria. Stage 2 starts only when the coordinator confirms Dan's
 decision to proceed with these named limitations. No merge/push/release is
 authorised.
 
-#### How the prototype is built
+#### How the prototype was built
+
+Removed at cutover (after Dan approved v0.1.29 on his phone); git keeps the
+source and `design/mockup/experience/shots/` keeps the captures. The notes
+below describe it as it was.
 
 - A separate Vite entry, `app/experience.html` → `app/src/experience/`, built by
   `app/vite.experience.config.ts` (`npm run experience`, `npm run build:experience`).
@@ -1150,7 +1155,7 @@ authorised.
   links, milestones, period summaries) are prototype types and browser-local
   state. Rules and cases are ported from v1 (`experience/lib/rules.ts`,
   `cases.ts`). There is no network beyond the prototype's own origin.
-- Served for review at `http://neptune:48726/` (built prototype only; `.git` and
+- Was served for review at `http://neptune:48726/` (built prototype only; `.git` and
   `.data` return 404). The verified server PID is kept in `.data/experience-preview.pid`.
   The first visit opens the mixed profile's Wednesday; **Scenario** selects
   profiles, U01–U64 starts, day/time, offline, sync, naps, calendar coverage,
@@ -1779,8 +1784,8 @@ budgets, token serialization and on-demand gates stay as they are.
 - **Reuse, don't redraw.** Screens are composed from `app/src/lib/screens/`,
   the shipped components and the prototype components, ported into
   `app/src/lib/` to take view-model props instead of the prototype's `Ctx`.
-  The prototype (`app/src/experience/`) stays frozen as the reference and its
-  checks keep passing until it is removed at stage 5.
+  The prototype (`app/src/experience/`) stayed frozen as the reference and its
+  checks kept passing until the cutover removed it.
 - **Every checkpoint must build and pass its checks; that is not design
   completion or release readiness:** `cargo test
   --workspace` (regenerates TS; committed), clippy `-D warnings`, `npm run check
@@ -1987,10 +1992,11 @@ remove the prototype entry, keeping its captures; move TODO 26 to Done with
 the commits. The unfamiliar-participant gate is reported as held or passed for
 Dan's decision, never waived silently.
 
-#### Cutover: removing the prototype (after Dan's phone review)
+#### Cutover: removing the prototype (done)
 
-The prototype stays until Dan has compared the released app with it. The
-removal is one change, written when the coordinator says so:
+Dan reviewed v0.1.29 on his phone with his real data and approved it; the
+cutover commit then made these changes (the coordinator stops the preview
+server):
 
 - Delete `app/src/experience/`, `app/experience.html`,
   `app/vite.experience.config.ts`, `app/experience-public/` and

@@ -5,19 +5,17 @@
  import ActivityRow from './ActivityRow.svelte';
  import {colors} from '../charts';
  import {dateLabel} from '../format';
- import {amountColor,textOn} from '../bodymap';
+ import {amountColor} from '../bodymap';
  import {muscleNames,weight,unitLabel} from '../strength';
  import type {StrengthView} from '../generated/StrengthView';
  import type {LiftSeries} from '../generated/LiftSeries';
  import type {TrendRange} from '../generated/TrendRange';
  import type {MuscleRange} from '../generated/MuscleRange';
  import RangePicker from './RangePicker.svelte';
- // `liftSeries` reads one exercise over a range from the core; without it the chart shows the 12 weeks in `view`.
- // `muscles` reads sets per muscle over a range; without it the map toggles this week and four weeks.
- let {view,navigate,liftSeries,muscles}:{view:StrengthView,navigate:(route:string)=>void,liftSeries?:(key:string,range:TrendRange)=>Promise<LiftSeries|null>,muscles?:(range:TrendRange)=>Promise<MuscleRange|null>}=$props();
+ // `liftSeries` reads one exercise over a range and `muscles` sets per muscle over a range, both from the core.
+ let {view,navigate,liftSeries,muscles}:{view:StrengthView,navigate:(route:string)=>void,liftSeries:(key:string,range:TrendRange)=>Promise<LiftSeries|null>,muscles:(range:TrendRange)=>Promise<MuscleRange|null>}=$props();
  let muscleRange=$state<TrendRange>('days30'),muscleView=$state<MuscleRange|null>(null),muscleRequest=0;
- $effect(()=>{const r=muscleRange,id=++muscleRequest;if(!muscles)return;void muscles(r).then(v=>{if(id===muscleRequest)muscleView=v}).catch(()=>{if(id===muscleRequest)muscleView=null})});
- let span=$state<'week'|'4w'>('week');
+ $effect(()=>{const r=muscleRange,id=++muscleRequest;void muscles(r).then(v=>{if(id===muscleRequest)muscleView=v}).catch(()=>{if(id===muscleRequest)muscleView=null})});
  let picked=$state<string|null>(null);
  // Long lists start short; the full 12 weeks are a tap away.
  const SESSIONS=6,WORKOUTS=8;
@@ -29,12 +27,11 @@
  // Max weight or volume over the chosen range, from the core; one choice for every lift.
  let metric=$state<'max'|'volume'>('max'),range=$state<TrendRange>('days90'),series=$state<LiftSeries|null>(null);
  let request=0;
- $effect(()=>{const key=exercise?.key,r=range,id=++request;if(!key||!liftSeries){series=null;return}void liftSeries(key,r).then(v=>{if(id===request)series=v}).catch(()=>{if(id===request)series=null})});
+ $effect(()=>{const key=exercise?.key,r=range,id=++request;if(!key){series=null;return}void liftSeries(key,r).then(v=>{if(id===request)series=v}).catch(()=>{if(id===request)series=null})});
  let shown=$derived(series && series.key===exercise?.key?series:null);
  let excluded=$derived(shown?shown.points.reduce((t,p)=>t+p.excluded,0):0);
  // Oldest first for the chart; sessions without a weighted set are gaps.
- let points=$derived(shown?shown.points.map(p=>{const s=exercise?.sessions.find(x=>x.activityId===p.activityId);return {date:p.date,v:metric==='max'?p.max:p.volume,reps:metric==='max'?s?.top?.reps??null:null,record:metric==='max'&&!!s?.record}})
-  :!liftSeries&&exercise?[...exercise.sessions].reverse().map(s=>({date:s.date,v:s.top?.weight??null,reps:s.top?.reps??null,record:s.record})):[]);
+ let points=$derived(shown?shown.points.map(p=>{const s=exercise?.sessions.find(x=>x.activityId===p.activityId);return {date:p.date,v:metric==='max'?p.max:p.volume,reps:metric==='max'?s?.top?.reps??null:null,record:metric==='max'&&!!s?.record}}):[]);
  let average=$derived(Object.fromEntries(view.average4w.map(m=>[m.muscle,m.sets])) as Record<string,number>);
  let scale=$derived(Math.max(14,...view.thisWeek.map(m=>m.sets),...view.average4w.map(m=>m.sets)));
  const short=(date:string)=>{const d=new Date(`${date}T12:00:00`);return d.toLocaleDateString('en-GB',{month:'short'})};
@@ -67,16 +64,14 @@
   </section>
  </div>
  <div class="col">
-  {#if muscles}<section class="card"><h3><span>Muscles</span></h3><RangePicker value={muscleRange} label="Muscle range" onchange={r=>muscleRange=r}/>
+  <section class="card"><h3><span>Muscles</span></h3><RangePicker value={muscleRange} label="Muscle range" onchange={r=>muscleRange=r}/>
    {#if muscleView}<BodyMap figure={muscleView.figure} muscles={muscleView.muscles} max={Math.max(8,Math.round(muscleView.days/2))}/>{#if muscleView.gaps.length}<p class="dim">Few or no sets since {dateLabel(muscleView.from)}: {muscleView.gaps.map(m=>muscleNames[m]).join(', ')}</p>{/if}{/if}</section>
-  {:else}  <section class="card"><h3><span>{span==='week'?'This week':'Last 4 weeks'}</span><span class="segc" role="group" aria-label="Body map period"><button class:on={span==='week'} aria-pressed={span==='week'} onclick={()=>span='week'}>Week</button><button class:on={span==='4w'} aria-pressed={span==='4w'} onclick={()=>span='4w'}>4 weeks</button></span></h3>
-   <BodyMap figure={view.figure} muscles={span==='week'?view.thisWeek:view.last4w} max={span==='week'?12:40}/></section>{/if}
   {#if exercise}
    <div class="exchips" role="group" aria-label="Exercise">{#each view.exercises as e}<button class:on={e.key===exercise.key} aria-pressed={e.key===exercise.key} onclick={()=>pick(e.key)}>{e.name}</button>{/each}</div>
    <section class="card"><h3><span>{exercise.name}</span>{#if latest?.record}<span class="pill ok"><Icon name="star" size={12}/>New record</span>{/if}</h3>
     {#if latest?.top}<div class="tr-top"><div class="big n">{weight(latest.top.weight)}<span class="unit">{unit} × {latest.top.reps}</span></div><span class="dim">Heaviest set each session</span></div>{:else}<p class="dim">No weighted sets yet.</p>{/if}
-    {#if liftSeries}<div class="lift-ctl"><span class="segc" role="group" aria-label="Lift measure"><button class:on={metric==='max'} aria-pressed={metric==='max'} onclick={()=>metric='max'}>Max weight</button><button class:on={metric==='volume'} aria-pressed={metric==='volume'} onclick={()=>metric='volume'}>Volume</button></span><RangePicker value={range} label="Lift range" onchange={r=>range=r}/></div>
-    <p class="dim">{metric==='max'?`Heaviest set each session, ${unit}`:`Volume each session: weight × reps over weighted sets, ${unit}`}{excluded?` · ${excluded} bodyweight, unweighted or flagged set${excluded===1?'':'s'} left out`:''}. No estimated one-rep max.</p>{/if}
+    <div class="lift-ctl"><span class="segc" role="group" aria-label="Lift measure"><button class:on={metric==='max'} aria-pressed={metric==='max'} onclick={()=>metric='max'}>Max weight</button><button class:on={metric==='volume'} aria-pressed={metric==='volume'} onclick={()=>metric='volume'}>Volume</button></span><RangePicker value={range} label="Lift range" onchange={r=>range=r}/></div>
+    <p class="dim">{metric==='max'?`Heaviest set each session, ${unit}`:`Volume each session: weight × reps over weighted sets, ${unit}`}{excluded?` · ${excluded} bodyweight, unweighted or flagged set${excluded===1?'':'s'} left out`:''}. No estimated one-rep max.</p>
     {#if shown && charts.every(c=>!c)}<p class="dim">{shown.points.length?'Fewer than two sessions with weighted sets in this range.':'No sessions in this range.'}</p>{/if}
     {#each charts as chart}{#if chart}<svg class="trend" class:narrow={chart.W<400} class:wide={chart.W>=400} viewBox={`0 0 ${chart.W} ${H}`} role="img" aria-label={`${metric==='max'?'Heaviest set':'Volume'} each session, ${points.length} sessions: ${points.map(p=>`${dateLabel(p.date)} ${p.v??'none'}`).join(', ')}`}>
      {#each chart.ticks as t}<line x1={pl} x2={chart.W} y1={chart.Y(t)} y2={chart.Y(t)} stroke="rgba(255,255,255,.06)"/><text x="0" y={chart.Y(t)+4} class="axis n">{t}</text>{/each}
@@ -93,11 +88,6 @@
   <section class="card"><h3><span>Sets per muscle</span><span class="h-note">Since {dateLabel(view.weekStart)}</span></h3>
    <div class="mus">{#each view.thisWeek as m}<div class="mu"><span>{muscleNames[m.muscle]}</span><div class="mu-b"><i style:width={m.sets/scale*100+'%'} style:background={amountColor(m.sets,12)}></i><u style:left={(average[m.muscle]??0)/scale*100+'%'}></u></div><b class="n">{m.sets}</b></div>{/each}</div>
    <p class="note"><i class="tick"></i>Weekly average, previous 4 weeks</p></section>
-{#if !muscles}  <section class="card heat-card"><h3>Weekly sets · 12 weeks</h3>
-   <div class="heat" role="table" aria-label="Sets per muscle each week">
-    <span></span>{#each view.weeks as w,i}<small>{i===view.weeks.length-1?'Now':i%4===0?dateLabel(w.weekStart).split(' ').slice(1).join(' '):''}</small>{/each}
-    {#each view.thisWeek as row,j}<span>{muscleNames[row.muscle]}</span>{#each view.weeks as w}{@const v=w.muscles[j].sets}{@const fill=amountColor(v,12)}<i class="n" style:background={fill} style:color={textOn(fill)}>{v}</i>{/each}{/each}
-   </div></section>{/if}
   {#if view.workouts.length}<section class="card"><h3><span>Strength workouts</span><span class="h-note">{view.workouts.length} in 12 weeks</span></h3>{#each allWorkouts?view.workouts:view.workouts.slice(0,WORKOUTS) as w}<div class="workout-item"><ActivityRow activity={w.activity} open={()=>navigate('workout/'+w.activity.id)}/>{#if !w.setsRecorded}<p class="nosets">No sets recorded</p>{/if}</div>{/each}{#if view.workouts.length>WORKOUTS}<button class="more" aria-expanded={allWorkouts} onclick={()=>allWorkouts=!allWorkouts}>{allWorkouts?'Show fewer':`Show all ${view.workouts.length} workouts`}</button>{/if}</section>{/if}
  </div>
 </div>
@@ -141,10 +131,6 @@
  .mu-b i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
  .mu-b u{position:absolute;top:-4px;bottom:-4px;width:2px;border-radius:1px;background:var(--ink);opacity:.7}
  .tick{display:inline-block;width:2px;height:12px;border-radius:1px;background:var(--ink);opacity:.7}
- .heat-card{display:none}
- .heat{display:grid;grid-template-columns:76px repeat(12,minmax(0,1fr));gap:3px;align-items:center;font-size:12px;color:var(--text2)}
- .heat small{font:500 9px Inter;color:var(--text3);white-space:nowrap;overflow:visible}
- .heat i{height:20px;border-radius:5px;display:grid;place-items:center;font:600 10px Outfit;font-style:normal}
  .exl{display:flex;align-items:center;gap:10px;width:calc(100% + 16px);padding:10px 8px;margin:0 -8px;border:0;border-radius:12px;background:none;text-align:left;min-height:44px}
  .exl.on{background:rgba(255,255,255,.07)}
  .exl>span{flex:1;min-width:0}
@@ -153,7 +139,6 @@
  @media(min-width:660px){
   .strength-history{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
   .col>:global(.card:first-child){margin-top:0}
-  .heat-card{display:block}
   .trend.wide{display:block}
   .trend.narrow{display:none}
   .exchips{flex-wrap:wrap;overflow:visible}

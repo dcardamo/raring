@@ -15,270 +15,29 @@ availability on every account or watch.
 
 ## Now
 
-### 26. A focused, adaptive Raring experience — exclusive
+### 26a. Experience follow-ups
 
-**Design:** [A focused, adaptive Raring experience](docs/experience-design.md).
-**Current status: implementation in progress; interim local integration approved.**
-Dan requested merging the committed checkpoint through `2316ae0` into local
-`main`, then continuing item 26 on `feat/experience-redesign`. This is not
-completion, a scope reduction, or permission to push/release the unfinished
-rebuild. Keep the remaining parity and validation work below open.
+In priority order; the redesign shipped (Done, item 26) without them.
 
-**Prototype history (stage 1):** the rejected v1
-(`302a69e`) is replaced by a Svelte prototype in `app/src/experience/`, starting
-with `b3567c8` (shared shipped details) and `b965aa4` (checkpoint A). The coordinator
-approved the richer visual direction; its A–K follow-ups and read-only review
-findings are fixed in `adbb43e`. Routing provenance: `b965aa4` is the pre-switch
-Opus 5.5 checkpoint; the session switched to GPT-6 Astra at 13:05Z, so the later
-whole result is mixed-model. The prototype has 64 scenario starts, linked browser checks,
-76 unit tests, rich synthetic captures and an explicit data-provenance table.
-See the design's stage-1 checkpoint for
-working routes, preservation/legacy mappings, measured scripted paths, screenshots
-and U01–U64 evidence limits. The redesign and usability/discoverability work remain
-**one item**, not a feature project followed by a UX cleanup.
-
-**Start gate confirmed:** items 9+10 are integrated in `2580ffb`; repository,
-Android unit/instrumentation and release checks passed. Their workspace and
-the old merge queue are archived; no other Raring implementation lane is
-active. This initiative uses the single `feat/experience-redesign` branch.
-Stage 1 has linked Today/Plan/Progress/Explore journeys, interrupted-week and
-privacy transitions, browser checks and synthetic screenshots. Preview:
-`http://neptune:48726/` (built prototype only). Intraday Body Battery is already
-stored in `dailyStress.bodyBatteryValuesArray` (`screens.rs::battery_latest`);
-the ribbon needs a view change, not a new Garmin request. No endpoint spike is
-needed for that curve.
-
-**Stage-1 route evidence correction:** route outlines use one sport/neutral
-colour. `WorkoutView.route` has lat/lon without timestamps; independently
-sampled HR cannot truthfully colour geographic segments. HR charts and zones
-remain separate. Time-aligned colouring needs verified position/HR evidence and
-a future projection, not an index-based association or a gate-time schema change.
-Focused rendered regressions vary unaligned HR array lengths/order and confirm
-that full and thumbnail maps keep the same single-colour route.
-
-**Plan-led rebuild (maintainer feedback), still stage 1:** checkpoint P1
-(`8b51cb9`) rebuilt Today (last night first; Keep · Choose another · Rest; Garmin
-schedule, your plan and Raring effort labelled apart) and Plan (weekly goals →
-placed sessions → recorded, planned, not yet placed). Checkpoint P2 adds focused
-Training, Health and Progress tabs, retires Explore (`#explore` opens Training;
-header search sheet), a shared 00–24 day axis with a now marker, day cells with
-blank future days, the Garmin Coach detail, and the Not recorded → reschedule /
-let go journey. Counting regressions: a recording and its linked intention count
-once; a same-day same-sport possible match "needs review" and is never planned;
-Zone 2 is only recorded zone time or intended minutes the person enters; unknown
-coverage shows "awaiting data"; Not recorded is never Missed unless the person
-marks it. Pinned Opus 5.5 continued P2 from a mixed-model P1. Not recorded
-without a recording offers Reschedule and Let it go only; a self-reported
-"done without the watch" is not built. P3 (Dan's P2 review, `.data/lanes/experience-p3-feedback.md`): a
-widget-justification table, ring and next-week-goal rules are in the design.
-**P3a** adds the weekly loop (Plan your week prompt on every tab with review →
-proposed goals needing acceptance → place → done; Today's backlog with Do it
-today; one-tap Ill), nested goal rings on every date cell and a week ring,
-compact Plan with steppers, Move, inline Garmin items, Zone 4–5 and Sleep
-Score goals, a race page and a disabled Send to Garmin; Today's effort
-chevrons, HR row and nap Body Battery. **P3b** rebuilds Training around three
-questions (enough or too much? improving? ready for what?) with a labelled
-week chart against the usual day, goal-led Strength with muscle gaps, and
-activities showing what they worked; Health with vitals under long-term and
-range-picker charts with usual ranges; Sleep tabs (Last night / Tonight as a
-plan); Progress as Overall / Cardio / Strength / Long-term; "?" help sheets;
-and a Profile (Garmin facts, limitations, gear, settings; weight write
-disabled). **P4** (`.data/lanes/experience-p4-feedback.md`): unambiguous
-same-day, same-sport plan/recording pairs now match automatically with Unlink
-(replacing the explicit-link-only rule; Raring asks only when ambiguous);
-Garmin scheduled workouts are planned work toward goals ("Count it" removed);
-done / planned / not recorded look the same everywhere; rings draw no track;
-the event groups its sessions; Today has a continuous effort bar, a reason line
-instead of Why, and week + backlog side by side; Training week lanes; one range
-picker; lift Max weight / Volume; richer workout detail from stored fields
-(provenance recorded); weight as a metric card. Remaining: usability, device,
-real-data and migration gates. **P5** (Dan's chat feedback): rings draw only
-recorded work; weight is a trend-weight card (smoothed weigh-ins, 1–90 day
-changes, freshness); metric cards flag old readings. Dan confirmed neutral weight changes; direction-based colouring is not enabled.
-Prototype approval was not release permission.
-
-**Design selected and approved (2026-10-19).** Dan selected this candidate
-(`feat/experience-redesign`, prototype at `0c58f47`) and approved its design;
-the comparison is closed. That approval is the maintainer's decision, not
-usability evidence.
-
-**Stage 2 authorised with limited evidence (2026-10-19).** Dan approved starting
-stage 2 on his design approval plus browser checks. The usability gate stays open:
-no unfamiliar people have evaluated first meaning, discovery, comprehension or
-pressure, and three participants (including simple-needs and detail-oriented
-people) remain required before cutover is called validated. The five tabs (Today · Plan · Training · Health · Progress) have no unfamiliar-user validation.
-The stage 2–5 checkpoints are in the design's [implementation plan](docs/experience-design.md#17-implementation-plan-stages-25).
-
-**Stage 2 progress.** 2.1 local records and plan migration (`7e90c78`); 2.2
-matching, goal ledger, rings, backlog and the `PlanBoard` view (`b395dd8`); 2.3
-the five-tab shell (Today · Plan · Training · Health · Progress, Profile, search,
-aliases for every earlier route and native target) with the old plan screens
-retired (`5f3e00c`). Stage 3: Today's lead through hard gates with Adapt (rest,
-illness, pause, limits) and Why this (`6bedbf0`); the same suppression in the
-morning notification, persistent status and widgets, republished offline on each
-local change (verified on the emulator: Push → Rest day → Push) (`db8314f`).
-**4.1 Plan-loop subset**, not all of 4.1: `18fe3b8`/`f60a630` add/move/let go,
-mark missed, link/unlink, Do it today, local events, prompt, review/proposals and
-review list; Send to Garmin stays disabled. The rehabilitation checklist from the
-original 4.1 plan is implemented as My routines. `aac5783` is the **Progress foundation
-subset**, not stage-4 completion. The current checkpoint adds non-destructive
-emulator checks and fixes Progress period selection across detail/Back/resume:
-
-| Area | Core implemented | Production UI implemented | Verified | Still missing within item 26 |
-| --- | --- | --- | --- | --- |
-| Progress foundation + domains | Period totals/coverage/comparison, calendar states, weekly goal rings, sleep-versus-need, canonical-unit records with correction/dedup; `ringDays` (whole plan weeks of rings) and `ProgressDomains` (12 weeks of zone/intensity/strength/VO₂ with marks, heaviest bests, 12 months of minutes, RHR/HRV averages, VO₂ max/Fitness Age) | Overall · Cardio · Strength · Long-term; Overall: weekly rings, period report, ring calendar (outside days faint), reviews, milestones; Cardio: weekly zone/intensity against goals + VO₂ max; Strength: sessions/week + bests; Long-term: monthly training, RHR, HRV, VO₂/Fitness Age, latest readings | Core ring-days/domain tests; browser sections, unknown weeks, missing goals, widths, contrast; period/selection regressions | Long-history timings (12 week boards per domain read); emulator check of the archive and lift charts |
-| Plan-loop subset | Local actions, ledger/matches, review proposals; `local:routines` checklist with per-day self-reports | Sessions/backlog/reviews/events; My routines in Adapt | Core and browser regressions (routines: export, switch/sign-out erase, per-day report, off status snapshot, no Garmin evidence) | Edit (time, name, minutes, goal shares) and placing tonight's wind-down session from Tonight are implemented (browser checks of the actions sent); Resume shows the goals as they are first (resume unchanged or resume and change goals); adaptive Garmin Coach sessions are planned work (verified `fbt-adaptive` shape; core, sync and browser checks); remaining: populated `workoutScheduleByPeriod` entries stay read-only by name and date (no populated schedule verified), Coach completion values and next-week behaviour unverified (Garmin Coach sessions can't join an event group until their sport is verified); event-session grouping of your sessions is implemented (core and browser checks) |
-| 4.3 weight subset | Trend weight, steady threshold, changes, ranges, reading freshness from stored weigh-ins (no requests) | Two-line weight card, `health/weight`, shared 7D–Max range control (adds 14D) | Core and browser tests; not emulator-checked | Freshness flags on other metric cards, lanes, lift volume, aligned workout streams |
-| Your day + Today's choice | `DayTimeline` (sleep stages at clock times, intraday Body Battery/stress/HR, activities and naps with nap Body Battery change, upload and now); `KeepToday` local action leading in its gate for the day | Your day rows on Today (replaces the separate Body Battery/Stress cards), nap rows in Recorded today, Keep · Choose another with today's Garmin/your sessions, later sessions moved to today, backlog, add, rest | Core table tests (midnight clipping, upload/now limit, measured-only nap change, clock-change days, Keep day/limits); browser timeline, nap change, sheet, limits, 320/390/700 widths; emulator (signer-verified in-place updates, synthetic demo re-seeded with approval): rows, core limit, width, Back, and Keep / Choose another through the real core on the planned demo day | Real-data check of nap and clock-change days |
-| Sleep tabs | `SleepView.recent` (seven nights against each night's Garmin need), live `tonight_first` from Today's phase, `wound_down`; lead and bedtime-reminder links to `sleep/tonight` / `sleep/last` | Last night / Tonight tabs (replace, not stack); Tonight: compact dial, plan facts with your sleep goal, I wound down, reminder toggle, Why this plan, sleep goals, labelled 7-night chart | Core test; browser tabs, deep link, Back, closer default, self-report, recent-night counts, 320/700/1100 and stage-totals containment, contrast; 16 JVM tests; emulator `sleep/tonight` intent delivery (`am start --es target`) opens Tonight, Back to Today | Actual bedtime notification tap; prototype's patterns/observation sections |
-| Bounded Today | — | Approved order: notices, focus, Recorded today (≤2 rich, the hero's recording excluded, link to all), This week beside Left this week with Do it today, end note; duplicated HRV/Vitals/Garmin-next cards left to Health/Training; Why this replaced by the reason line | Browser: 2.20 viewports at 390×844 with the sample day, backlog, overflow link | Long-text/large-font budget, matching-scenario comparison against the prototype |
-| Profile | `ProfileView` (age, units, latest weigh-in + freshness, watch upload, gear, limits; local only) | What Garmin knows, limitations into Adapt's limits, gear, Settings/Help, Add a weight disabled | Core test; browser facts/stale weigh-in/limits sheet/gear/widths/contrast | Watch model name (device-list key unverified) |
-| Training week lanes | `TrainingWeek` lanes (goal kinds or cardio, strength), cumulative to today with unknown days, usual-week band from counted weeks | Lane chart replaces Training's This week bars on the live read | Core percentile/coverage/ill-week/band tests; browser labels, band, widths, contrast | Long-history timing (16 week boards per read) |
-| Lift Max weight / Volume | `LiftSeries` per exercise and range (max, volume, excluded sets), `lift_series` command | Strength's lift chart with Max weight / Volume and the shared range picker | Core counted-set/range test; browser toggle, picker, note, contrast |
-| Training sections | `MuscleRange` (sets per muscle over 7D–Max, gaps at ≤ round(days ÷ 14)), `TrainingWeek.bySport` | Training: lanes + minutes by sport, then Fitness (three questions, compact load bar, VO₂ max/scores links, predictions/thresholds/race, Garmin's next session) · Strength (goal and sets, muscle range with gaps, lifts link) · Activities (Garmin's benefit, training-effect labels, intensity minutes, sport filter); Strength page: muscle range picker, 12-week heat chart removed; gear only in Profile | Core muscle-range test; browser sections, gaps, section kept across detail/Back, 320/700/1100, contrast |
-| Workout detail | `WorkoutView.along` (stored streams on one axis), `more` (recorded summary fields), `effects` (Garmin's bands + plain lines), `vo2maxNew` | Along the way (HR, pace/speed, elevation, cadence, power…), What it did, Recorded by your watch | Core alignment/gap/field/band/VO₂ tests; browser charts, absent power, fields, strength exclusion, widths, contrast | Emulator check |
-| Health order and freshness | `TrendView.freshness` (2-day flag on today's chart; not for past ends or sparse estimates) | Health: Fitness Age, drivers and lever first, vitals right below, resting HR / HRV / stress / Body Battery as range charts with usual bands and links to the intraday details, weight, intensity, Fitness Age history, journal; all-day HR card removed (Your day stays on Today) | Core freshness test; browser order, no duplicate Your day, four range charts, stale flag on one metric only | Last night / readiness row from the prototype; journal behind a row; emulator check |
-| Help "?" sheets | — | 18 short topics describing shipped rules (Today, Plan, rings, lanes, load, VO₂ max, ready-for, muscles, activities, training effect, vitals, ranges, Fitness Age, trend weight, sleep tabs, Progress, Profile) on root pages and cards; one sheet, Back/Escape close it, link to all help | Browser: buttons on 8 routes, sheet content, Back/Escape, contrast, All help link | Wording not yet reviewed by people; emulator check |
-| Emulator parity pass (`90e8ceb` + demo seed) | Demo seed adds synthetic sets, catalog, metric units and a weigh-in | — | Signer-verified (0d59d1…) in-place update, appId and first-install time unchanged; demo re-seeded (approved); `scripts/android-parity-test.mjs`: Profile facts/limits sheet/Back, My routines add→report→remove, event week grouping, week lanes, Training sections and muscle range, lift Volume/range through the core; all its changes removed (verified none left); navigation default + `--existing` and Progress scripts pass | Full native instrumentation at this checkpoint, physical phone, real data |
-| Emulator parity pass 2 (`14cdfc4` + this change) | Demo seed adds activity-list coverage cursors and unit-keyed speed/elevation streams with summary intensity fields; recorded lanes now unknown on uncovered days | — | Signer-verified (0d59d1…) in-place app and androidTest installs, appId and first-install time unchanged; instrumentation via `am instrument` (no uninstall): OK (14 tests) — its account tests forget local data on the emulator only (they refuse when tokens exist), so the synthetic demo was re-seeded afterwards; navigation default + `--existing`, `android-parity-test.mjs` (now also workout streams, Health order, Progress sections) and `android-progress-test.mjs` pass; parity residue none | Physical phone, real data |
-| Emulator parity pass 3 (`230bb0d`) | — | — | Signer-verified in-place install (appId, first-install time unchanged); parity script now also covers lift charts (none on the demo: one session per lift, as the two-session rule requires), the milestone archive and a help sheet closed by Back; Progress script; instrumentation OK (14 tests), demo re-seeded after it; navigation default + `--existing` | Physical phone, real data |
-| Emulator parity pass 4 (`fb957b7`) | Demo seed adds a synthetic adaptive Coach week | — | Signer-verified app and androidTest in-place installs (appId, first-install time unchanged); instrumentation OK (14 tests), demo re-seeded after; navigation default + `--existing`, parity (now with the Coach group and read-only sheet through the core) and Progress scripts pass; no residue | Real Coach plan on a phone; completion values |
-| Long-history timings (U61, synthetic) | `demo::seed_long_history` (3 years of daily Garmin rows, 937 activities with zones, strength sets, list pages and listed rows as sync stores them); activity lookups fixed (see below) | — | `tests/long_history.rs` times the app's core reads with budgets for gross regressions. Release build on neptune (desktop, not a phone): Today 9 ms, Plan 3, Sleep 4, Training 23, Health 2, Progress week/month/quarter/year 42/43/41/57, domains 26, milestone archive 23, Strength 6, trends ≤4 ms. Before the fix Progress took 3.2 s | Phone timings and a real multi-year account |
-| Domain parity | Existing facts and foundational rules retained | New shell and partial Today/Plan/Progress, existing details | Earlier detail regressions and emulator subset only | bounded Plan/Training/Health/Progress overviews, and **advanced Training/Health/Progress visuals**; stage 4.3 lanes/volume/ranges/trend weight/freshness/workout streams |
-
-**Verified stored activity `details` facts (2026-10-19, read-only from the
-maintainer's store; structure only).** Each metric descriptor carries
-`unit {key, factor}`. Unit keys seen: `directSpeed`,
-`directGradeAdjustedSpeed`, `directVerticalSpeed` mps; `directElevation`
-meter; `directDoubleCadence`/`directRunCadence`/`directFractionalCadence`
-stepsPerMinute; `directBikeCadence` rpm; `directPower` watt;
-`directRespirationRate` breathsPerMinute; `directAvailableStamina`,
-`directPotentialStamina`, `directPerformanceCondition`, `directBodyBattery`
-dimensionless; `directStrideLength`, `directVerticalOscillation` centimeter;
-`directGroundContactTime` ms; `directAirTemperature` "celcius" (sic); sums
-second/meter. The **factor is not a scale to apply**: stream values are
-already in the base unit (distance, duration and elevation sums agree with
-the summary fields). `directAirTemperature` appears only on some activities,
-with `summaryDTO` average/min/max temperature on the same ones; it is the
-watch's own sensor. The core uses a stream only when its descriptor's unit
-key is the expected one and never applies the factor.
-
-**Spec rewrite (stage 5):** `docs/spec.md` Screens, Look, view cache,
-notification targets and status-surface suppression now describe the shipped
-redesign; the visual reference points at the approved prototype's captures.
-The prototype entry, its preview and `test:experience` stay until Dan has
-compared the phone APK with them; removing them is the final cutover step.
-
-**Long-history finding (fixed):** with three years of synthetic history a
-Progress read took 3.2 s in release (about 10 s in debug), and the milestone
-archive was as slow: `store.listed_activity` scanned every stored Garmin row
-for each activity. The lookup now filters to list pages through the primary
-key and skips pages without the id; Progress and the archive read type,
-minutes and distance from the stored detail and consult list pages only for
-missing fields. Synthetic timings are in the parity table; phone timings
-remain open.
-
-**Stage 5 comparison (2026-10-19):** every U01–U64 journey was compared with
-the prototype ([table](docs/experience-design.md#production-vs-prototype-u01u64-stage-5)):
-39 match, 19 gaps fixed (`65806e1`, `1fd4899`, `7ae1e04`, `a8099a7`,
-`bbdfd31`, `1a66616`, `cb01fbf`), 5 differ by approved decisions, 1 needs
-evidence only. Code and tests only; participants, a phone and real data
-remain open.
-
-These are approved requirements, not optional follow-ups. The detailed
-[production implementation/parity ledger](docs/experience-design.md#production-implementation-and-parity-ledger)
-separates implementation from evidence. Before cutover, compare production with
-the approved prototype using matching scenarios and U01–U64, not just old-app
-regressions. Keep item 26 open.
-
-**Android checkpoint:** coordinator completed matching debug-key recovery and
-an in-place emulator update without uninstall/clear; audit/backups remain private
-in `/home/dan/git/raring/.data/debug-signing-SXp1r3/`. `3a5f32c` anchors both Android
-homes to the checkout root. With the hold lifted, this lane built the Progress
-selection fix for x86_64, verified its signer against the recovered certificate,
-and installed with `adb -s emulator-5560 install -r`; package UID and
-first-install timestamp stayed unchanged.
-
-`scripts/android-progress-test.mjs` passed against the real core/WebView using
-existing cached synthetic data: four periods, rendered switching, previous/next,
-coverage/calendar, detail/Back historical selection and Home/resume. Local period
-reads were 8–19 ms in that small fixture, **not** a long-history benchmark.
-`scripts/android-navigation-test.mjs --existing` passed Back/fragment destinations,
-Profile/Settings/goals, unfold and root exit/resume without reseeding or changing
-circumstances. Actual notification-intent delivery, current-checkpoint full native
-instrumentation, physical phone and full matching-scenario parity remain open.
-Private logs are in `.data/qa-progress-native/`.
-
-Preserve the recovered matching root `.android-user/debug.keystore` at eventual
-cutover/worktree retirement; its backup is in main `.data`. For this interim
-integration, main's canonical `.android-user/debug.keystore` was aligned with
-the recovered key after backing up its older key under
-`.data/main-merge-signing-IyRuTI/`. Both checkouts now use the existing installed
-app's debug certificate; no release key was changed.
-Always verify signer before installing; never clear/uninstall to fix a mismatch.
-The phone artifact remains `.data/apk/raring-debug-arm64-db8314f.apk`, labelled
-`db8314f`; no newer arm64 binary has been published.
-
-Verified on the maintainer's stored data (key names only, read-only): activity
-`summaryDTO.averageHR` on all 30 stored activities, per-activity
-`moderate/vigorousIntensityMinutes` on 15 of 30 (absent ones stay unknown), and
-the daily stress payload's `bodyBatteryValuesArray` rows are
-`[timestamp, status, level, version]` per `bodyBatteryValueDescriptorsDTOList`
-(statuses MEASURED, MODELED, RESET and null-level gaps; three-minute spacing).
-The stored Garmin schedule snapshot has an empty `entries` list, so scheduled
-workout sport, duration, ids and steps remain unverified: Garmin sessions are
-listed by name and date only, not counted or matched. These stored-data shape
-checks are not real-data production journey or migration evidence. Physical
-phone, complete native journeys, real-data migration and unfamiliar-user
-validation remain open.
-
-**Comparison closed (2026-10-19):** the independent candidate on
-`experiment/raring-26-deepseek` (workspace `wks_ed18d1aad5f3d96a`) is archived;
-its branch stays unmerged as a reference. This branch is the one that may merge.
-The interim local merge is authorised above; unrelated work, pushing and
-releasing the unfinished rebuild are not.
-
-**Exclusive workstream:** suspend other feature work
-and parallel implementation lanes, including unrelated items below. Work through
-this initiative's stages sequentially on one integration branch; do not release
-an unfinished shell through `main`'s automatic release workflow. Read-only reviews
-and checks may support it, including time-sensitive daylight-saving/device checks.
-An urgent unrelated fix needs an explicit decision to pause this work. If a
-usability gate is blocked, ask whether to proceed with explicitly limited evidence
-or pause and lift the exclusivity hold; do not silently waive it or freeze work
-indefinitely.
-
-- Deliver immediate value without choosing a goal, configuring a dashboard or
-  completing a tour. Several ambitions can coexist with always-relevant sleep,
-  recovery and longer-term health; only the leading message is focused.
-- Prove the navigation and progressive disclosure through whole user journeys
-  before restructuring the app. The current four tabs are not a constraint.
-  The approved design is Today, Plan, Training, Health and Progress; production
-  must match its journeys and content hierarchy before cutover.
-- Replace the stats-led Today with timely context, one useful next decision and
-  recorded accomplishments. Show direct contributions separately from Garmin's
-  estimates and longer-term outcomes; no invented strain or wellbeing score.
-- Make explicit rest, illness pauses, activity/movement restrictions, local
-  intentions and user-supplied rehabilitation routines first-class. They must
-  constrain all advice/reminders, not be overridden by readiness or a weekly gap.
-- Connect plans and progress with honest target versions, evidence coverage and
-  private milestones. No engagement/wear streaks, catch-up pressure or rewards
-  for higher physiological scores. Sleep preparation is not a performance contest.
-- Preserve every shipped capability and its data/privacy rules, including the
-  **already-landed naps and consented journal**. Numeric sleep debt, populated
-  Coach/schedule semantics and Garmin writes are not assumed available.
-- Run the design's **U01–U64 journey catalogue** across simple/no-plan users,
-  curious users, mixed sports, events, interrupted plans, sparse data and
-  accessibility. Include unfamiliar-user discovery, private real-data review and
-  Android checks; screenshots and passing unit tests alone do not validate UX.
-
-Sequence: linked prototype and journey gate → shell/shared context → Today and
-adaptations → Plan/Progress → complete usability, migration and regression checks.
-Update `docs/spec.md` as behaviour ships. Complete the definition of done in the
-design before resuming unrelated features; record shipping commits here and move
-this item to Done then. Existing follow-ups below remain tracked: incorporate
-relevant UX checks into this work, but do not claim deferred endpoint or device
-verification is solved by changing the presentation.
+1. **Unfamiliar participants:** at least three, including simple-needs and
+   detail-oriented people, on the shipped app, with the walkthrough in
+   [design/mockup/experience](design/mockup/experience/README.md). Record
+   first meaning, discovery, comprehension and pressure; consented notes stay
+   in ignored `.data/`. Dan's approval is a maintainer decision, not this gate.
+2. **Garmin Coach status and week boundary:** after a completed and a skipped
+   Coach session, one serialized read-only `fbt-adaptive` read to see which
+   `adaptiveCoachingWorkoutStatus` values Garmin sends, and whether next
+   week's tasks appear at the week boundary (see 15a). Until then Garmin's
+   status is shown as Garmin's and never completes a session.
+3. **Real-data journeys:** walk the U01–U64 journeys on a real account through
+   `.data/garmin-run.sh` (read-only), notes and screenshots only in `.data/`,
+   including migration of an earlier weekly plan and a long history on the
+   phone (cold start and Progress timings).
+4. **Phone checks:** TalkBack, large system text, Doze/background sync, and
+   tapping each notification (morning, weekly check-in, bedtime → Tonight).
+5. **Populated Garmin schedule:** `workoutScheduleByPeriod` entries stay
+   read-only by name and date until a populated response verifies their
+   sport, duration and completion fields.
 
 ### Time-of-day follow-ups
 
@@ -298,9 +57,9 @@ From item 4, in priority order.
 - On desktop widths the masonry columns can place the leading card beside a
   notice rather than first in reading order; check it once desktop ships.
 - "Timing history" opens Sleep at its top; scroll it to Consistency.
-- After item 26, item 9's notification must use its shared eligible context
-  and adaptation rules rather than a separate phase rule or frozen `TodayFocus`
-  shape.
+- Item 9's notification applies item 26's rest, illness and limits
+  suppression from the same records, but still chooses its focus with the
+  `TodayFocus` phase rules rather than Today's lead gates; align the two.
 
 ### Sleep rhythm follow-ups
 
@@ -370,8 +129,8 @@ From item 11, in priority order.
   a lap press after each set and weights entered, compare Raring's workout
   screen with Connect, then decide whether the compatibility page can move
   from partial to Tested.
-- **Strength introduction and figure choice**: depends on item 26's
-  progressive-disclosure design. Replace the mandatory-seeming four-step
+- **Strength introduction and figure choice**: now that item 26's
+  progressive disclosure has shipped, Replace the mandatory-seeming four-step
   `intro-1` to `intro-4` concept in `design/mockup/` with help at the point of
   use; keep the optional female/male figure override discoverable in Strength.
   The figure follows the Garmin profile until then.
@@ -405,10 +164,8 @@ From item 11, in priority order.
 
 ### 9–10a. Status surface follow-ups
 
-Items 9 and 10 are now shipped. Item 26 must preserve both surfaces and
-adapt their shared eligibility, rest/restriction, privacy and freshness rules;
-the current notification layout and widget gauge hierarchy are not constraints
-on the redesign.
+Items 9 and 10 are shipped, and item 26 kept both surfaces with its shared
+rest, illness, limits and privacy rules.
 
 - On a real phone, add both widgets, enable the silent notification and
   compare readings/upload time after a Connect sync. Check metric taps,
@@ -573,10 +330,48 @@ faces, screens, sensors and audio prompts stay in Connect.
   service that sees the data.
 - Social feeds, competitive leaderboards/challenges, engagement rewards and
   app-open or wearable-use streaks. Private, evidence-backed milestones and
-  optional quiet celebrations are in scope for item 26; no new wellbeing score.
+  optional quiet celebrations shipped with item 26; no new wellbeing score.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **26. A focused, adaptive Raring experience** (commits "Rebuild Raring
+  around the weekly plan: Today, Plan, Training, Health, Progress", "Time
+  three years of synthetic history and fix the activity lookup that made
+  Progress take seconds", and the cutover "Remove the redesign prototype
+  now that the app ships it"). Five tabs (Today · Plan · Training · Health ·
+  Progress), Profile and Adapt on every root page, short "?" help; local goals,
+  sessions, links, circumstances, routines, reviews, events and milestones with
+  migration from the earlier weekly plan; matching, ledger, rings, backlog and
+  week review with proposals; Today's lead with Keep · Choose another and Your
+  day; Sleep's Last night and Tonight; week lanes, lift volume, muscle gaps,
+  workout streams and plain-language training effect; Health's long-term
+  order and freshness; Progress by domain with a ring calendar and milestone
+  archive; adaptive Garmin Coach sessions as read-only planned work. The design
+  was approved on 2026-10-19 from a synthetic prototype; every U01–U64 journey
+  was compared with it (39 match, 19 gaps fixed, 5 differ by approved
+  decisions, 1 needs device evidence; table in the design). Released as
+  v0.1.28, with the Progress fix in v0.1.29; **Dan installed the release on
+  his phone with his real data and approved it**. The prototype was then
+  removed; its captures stay in `design/mockup/experience/`. Verified
+  read-only: the adaptive Coach shape (15a) and these stored activity facts.
+  **Verified stored activity `details` facts (2026-10-19, read-only from the
+  maintainer's store; structure only).** Each metric descriptor carries
+  `unit {key, factor}`. Unit keys seen: `directSpeed`,
+  `directGradeAdjustedSpeed`, `directVerticalSpeed` mps; `directElevation`
+  meter; `directDoubleCadence`/`directRunCadence`/`directFractionalCadence`
+  stepsPerMinute; `directBikeCadence` rpm; `directPower` watt;
+  `directRespirationRate` breathsPerMinute; `directAvailableStamina`,
+  `directPotentialStamina`, `directPerformanceCondition`, `directBodyBattery`
+  dimensionless; `directStrideLength`, `directVerticalOscillation` centimeter;
+  `directGroundContactTime` ms; `directAirTemperature` "celcius" (sic); sums
+  second/meter. The **factor is not a scale to apply**: stream values are
+  already in the base unit (distance, duration and elevation sums agree with
+  the summary fields). `directAirTemperature` appears only on some activities,
+  with `summaryDTO` average/min/max temperature on the same ones; it is the
+  watch's own sensor. The core uses a stream only when its descriptor's unit
+  key is the expected one and never applies the factor.
+  Open evidence is tracked in 26a.
 
 - **18. Naps and journal, read-only** (commit "Show Garmin naps and consented journal").
   Sleep shows Garmin's separately recorded naps without changing main-sleep

@@ -7,10 +7,9 @@ no invented scores.
 
 Android first. iOS and desktop come next, then web.
 
-The visual reference is the approved redesign: its captures in
-[design/mockup/experience](../design/mockup/experience/) (`shots/`) and, until
-cutover, the prototype in `app/src/experience/` (`npm run experience`). It
-uses synthetic data. `design/mockup/index.html` shows the earlier app.
+The visual reference is the approved redesign's captures in
+[design/mockup/experience](../design/mockup/experience/) (`shots/`), made with
+synthetic data. `design/mockup/index.html` shows the app before the redesign.
 
 ## Principles
 
