@@ -109,6 +109,7 @@ pub fn hold_back(local: &LocalRecords, view: &mut TodayView, today: NaiveDate) -
     let state = adapt(local, today, phase == DayPhase::LateNight || waiting);
     if state.blocked || limited(&state) {
         view.call = None;
+        view.call_note = None;
         view.focus.effort = false;
     }
     let id = format!("suggest:{today}");
@@ -334,7 +335,7 @@ mod tests {
         store
     }
     fn act(store: &Store, action: LocalAction, when: DateTime<Local>) {
-        local::apply(store, &action, when, Weekday::Mon).unwrap();
+        local::apply(store, &action, when, Weekday::Mon, &[]).unwrap();
     }
     fn view(store: &Store, phase: DayPhase) -> TodayView {
         let mut v = screens::today_at(store, DAY, at(13, 12).fixed_offset());

@@ -5,7 +5,7 @@ const metrics = new Set([
   'vo2max', 'endurance', 'hill', 'runningTolerance',
 ]);
 const routes = new Set([...tabs, 'sleep', 'readiness', 'settings', 'onboarding', 'strength', 'help',
-  'activities', 'profile', 'gear', 'plan/commitments', 'review/latest']);
+  'activities', 'profile', 'gear', 'plan/commitments', 'review/latest', 'reviews']);
 // Earlier routes keep working; each opens its current page, never a silent Today.
 export const aliases: Record<string, string> = {checkin: 'review/latest', 'plan-setup': 'plan/commitments', explore: 'training'};
 export const helpPages = ['strength-start', 'strength-sets', 'strength-muscles', 'strength-watches'] as const;
@@ -49,7 +49,8 @@ export function routeTrail(target: string, fromTrail: string[] = []): string[] {
   if (route === 'readiness') return ['today', route];
   if (route === 'sleep') return section(fromTrail) === 'health' ? ['today', 'health', route] : ['today', route];
   if (route === 'plan/commitments') return fromTrail.at(-1)?.startsWith('review/') ? [...fromTrail, route] : ['today', 'plan', route];
-  if (route.startsWith('review/')) return ['today', 'progress', route];
+  if (route === 'reviews') return ['today', 'progress', route];
+  if (route.startsWith('review/')) return fromTrail.at(-1) === 'reviews' ? [...fromTrail, route] : ['today', 'progress', route];
   if (route === 'strength' || route === 'activities') return ['today', 'training', route];
   if (route === 'profile') return over(route, fromTrail, page => page === 'profile' || page === 'settings' || page === 'gear');
   if (route === 'gear') return fromTrail.at(-1) === 'profile' ? [...fromTrail, route] : ['today', 'training', route];

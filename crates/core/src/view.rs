@@ -1958,6 +1958,9 @@ pub enum LocalAction {
     RemoveEvent { id: String },
     /// Plan has explained the migrated sleep-timing observation.
     ObservationExplained,
+    /// Accept some of a week's proposals (none keeps every goal). Accepted
+    /// ones apply from the next week.
+    DecideReview { week: String, accepted: Vec<GoalKind> },
 }
 
 // ---------------------------------------------------------------------------
@@ -2172,6 +2175,9 @@ pub struct PlanBoard {
     pub explain_observation: bool,
     /// Rows written by a newer Raring are shown but can't be changed here.
     pub read_only: bool,
+    pub prompt: Option<PlanPrompt>,
+    /// Garmin's next race and your local events, soonest first.
+    pub events: Vec<EventLine>,
 }
 
 // ---------------------------------------------------------------------------
@@ -2266,4 +2272,117 @@ pub struct AdaptState {
     pub review_due: bool,
     /// Exercise prompts are off today: rest, illness or a pause.
     pub blocked: bool,
+}
+
+// ---------------------------------------------------------------------------
+// The week review: what was met, why weeks don't count, and next week's goals
+// proposed from history (docs/spec.md, Rules: Week review).
+
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum OutcomeState {
+    Met,
+    Partly,
+    None,
+    /// The week had incomplete coverage or more than one paused or ill day.
+    NotCounted,
+    /// The migrated sleep-timing observation: shown without a verdict.
+    Observed,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct GoalOutcome {
+    pub kind: GoalKind,
+    pub target: f64,
+    pub recorded: Option<f64>,
+    pub state: OutcomeState,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct GoalProposal {
+    pub kind: GoalKind,
+    pub current: f64,
+    pub proposed: f64,
+    pub reason: String,
+}
+
+/// A decision on a week's proposals; nothing changes without one.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ReviewDecision {
+    pub week: String,
+    pub at: String,
+    pub proposals: Vec<GoalProposal>,
+    pub accepted: Vec<GoalKind>,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WeekReview {
+    pub start: String,
+    pub end: String,
+    /// Counts toward proposals: complete coverage, at most one paused or ill day.
+    pub counted: bool,
+    /// Why the week doesn't count, or what shaped it (rest days).
+    pub reasons: Vec<String>,
+    pub ill_days: u32,
+    pub paused_days: u32,
+    pub rest_days: u32,
+    pub not_recorded: u32,
+    pub goals: Vec<GoalOutcome>,
+    /// For the week after this one; empty without goals.
+    pub proposals: Vec<GoalProposal>,
+    pub next_start: String,
+    pub decision: Option<ReviewDecision>,
+}
+
+/// One past week in the review list.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ReviewRow {
+    pub start: String,
+    pub counted: bool,
+    pub met: u32,
+    pub goals: u32,
+    pub reasons: Vec<String>,
+}
+
+/// The plan-your-week prompt, when it applies (never in wind-down or late night).
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PlanPrompt {
+    /// Last week, to review first, at the start of a week after a week with goals.
+    pub review: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum EventSource {
+    Garmin,
+    Local,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct EventLine {
+    /// The local event's id; None for Garmin's race.
+    pub id: Option<String>,
+    pub name: String,
+    pub date: String,
+    pub days_until: i32,
+    pub sport: Option<Sport>,
+    pub source: EventSource,
+    /// Garmin's page was full: later races may exist.
+    pub partial: bool,
 }

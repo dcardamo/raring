@@ -1,0 +1,48 @@
+{
+  "start": "2025-10-06",
+  "end": "2025-10-12",
+  "counted": true,
+  "reasons": [
+    "1 rest day"
+  ],
+  "illDays": 0,
+  "pausedDays": 0,
+  "restDays": 1,
+  "notRecorded": 1,
+  "goals": [
+    {
+      "kind": "strength",
+      "target": 4,
+      "recorded": 4,
+      "state": "met"
+    },
+    {
+      "kind": "zone2",
+      "target": 150,
+      "recorded": 168,
+      "state": "met"
+    },
+    {
+      "kind": "intensity",
+      "target": 150,
+      "recorded": 162,
+      "state": "met"
+    }
+  ],
+  "proposals": [
+    {
+      "kind": "strength",
+      "current": 4,
+      "proposed": 4,
+      "reason": "Not enough complete weeks to suggest a change"
+    },
+    {
+      "kind": "zone2",
+      "current": 150,
+      "proposed": 165,
+      "reason": "Met in your last two complete weeks, 168 of 150 min last week"
+    }
+  ],
+  "nextStart": "2025-10-13",
+  "decision": null
+}

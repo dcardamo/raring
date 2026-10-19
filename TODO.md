@@ -110,9 +110,12 @@ aliases for every earlier route and native target) with the old plan screens
 retired (`5f3e00c`). Stage 3: Today's lead through hard gates with Adapt (rest,
 illness, pause, limits) and Why this (`6bedbf0`); the same suppression in the
 morning notification, persistent status and widgets, republished offline on each
-local change (verified on the emulator: Push → Rest day → Push). Interim gaps until stage 4: Progress shows trends and the latest review
-only (the 8-week plan history returns as goals over time in 4.2), and the review
-list is not built yet.
+local change (verified on the emulator: Push → Rest day → Push) (`db8314f`). 4.1: the
+plan loop (add, move, let go, mark missed, link and unlink, Do it today, events,
+the plan-your-week prompt, the week review with proposals needing acceptance, the
+review list; Send to Garmin disabled) and fixes from a read-only review of stages
+2–3 (this change). Interim gaps until 4.2: Progress shows trends and reviews; goals over time, the
+period report, calendar, bests and milestones arrive in 4.2.
 Verified on the maintainer's stored data (key names only, read-only): activity
 `summaryDTO.averageHR` on all 30 stored activities, per-activity
 `moderate/vigorousIntensityMinutes` on 15 of 30 (absent ones stay unknown), and

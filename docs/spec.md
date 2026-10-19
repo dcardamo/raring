@@ -493,7 +493,7 @@ Sent by the phone itself.
   or later; a passed open session stays until the person lets it go or marks
   it missed, and moving one clears its link. One recording links to at most
   one plan item; unlinking an automatic pair keeps it apart until linked
-  again. A pause has one open interval until the person resumes; resuming ends
+  again, and an unlinked session no longer competes for that recording. A pause has one open interval until the person resumes; resuming ends
   it the day before (a pause begun the same day leaves none), and a review
   date only prompts. A dismissal lasts its local day (kept 30 days). A wind-down
   reported before noon belongs to the evening before.
@@ -505,7 +505,10 @@ Sent by the phone itself.
   observation against each night's saved plan, shown without a verdict; it can
   be kept or turned off, not restarted. Paused weeks become whole-week pauses.
   The old row and saved sleep plans stay, so earlier weeks keep their original
-  results. An empty database writes nothing, so a first sign-in can bind.
+  results. An empty database writes nothing, so a first sign-in can bind. A
+  row this build may not rewrite is left alone and the migration stays
+  unfinished; the earlier setup's saves update the goals first and change
+  nothing if that is refused.
 - **Plan matching**: plan items are your sessions. Garmin's scheduled workouts
   are listed read-only by name and date; their sport, duration and targets are
   unverified, so they are neither counted nor matched. A link the person made
@@ -538,7 +541,10 @@ Sent by the phone itself.
   least zero, and unknown while evidence is incomplete or the week has a pause
   through today. Reached means recorded ≥ target (never for the observation).
   A change during the week shows the week's starting target beside the new one.
-  A future week records nothing yet. Average Sleep Score is Garmin's nightly
+  A future week records nothing yet. First targets and migrated versions apply
+  to the whole plan week they were saved in, even when Garmin's week starts
+  before their date. Sleep timing with no recorded night yet is unknown, not
+  zero. Average Sleep Score is Garmin's nightly
   score averaged over the week's recorded mornings through today, shown against
   its target as a reading.
 - **Rings**: one per goal on, in the order strength, Zone 2, Zone 4–5,
@@ -546,16 +552,43 @@ Sent by the phone itself.
   ring draws only what was recorded that day: recorded ÷ the larger of what was
   planned that day and what was recorded, so recorded work with nothing planned
   fills it and planned work alone draws nothing. Days still to come, and passed
-  days whose activity list is incomplete (marked unknown), draw nothing. A
+  days whose activity list is incomplete (marked unknown), and zone rings on a
+  day with an activity lacking zones, draw nothing. A
   day's intensity is Garmin's daily moderate plus twice vigorous minutes. Rest,
   illness and pause mark their days. A week ring is recorded ÷ the weekly
   target, at most full.
+- **Week review**: each week is measured against the goals in effect at its
+  end (Goal ledger). A week counts when its activity list is complete and it
+  had at most one paused or ill day; otherwise it is listed with its reasons
+  (incomplete list, ill days, paused days; rest days are noted) and ignored.
+  Met means recorded ≥ target; a minute goal is met comfortably at ≥ 110%.
+  For next week, for each goal on (not Sleep Score, not intensity following
+  Garmin's goal, not the migrated observation), from up to eight counted weeks
+  since goals began: two or more ill days in the week just reviewed ease back;
+  fewer than two counted weeks keep; the last two counted weeks met and the
+  latest comfortably (sessions and nights: the last three met) nudge up by 10%
+  rounded to 5 minutes (at most +20) or one session (strength at most 5,
+  nights at most 7); two of the last three counted weeks under 70% (sessions
+  and nights: under target) ease back by 10% rounded to 5 (at least 5) or one
+  (at least one); otherwise keep. Each proposal shows its reason. Only the
+  person's acceptance changes goals, as a version from the next week; Keep all
+  and ignoring a review change nothing. The decision is kept with the
+  proposals it saw.
+- **Plan prompt**: for people who have chosen goals before, while the setting
+  is on and the week isn't answered: at the start of a week (its first two
+  days) after a week with goals, it offers last week's review then planning;
+  otherwise only while this week has nothing placed. Never in wind-down or late
+  night. Plan now, Not this week and turning it off are answers.
+- **Events**: local events from today and Garmin's next race (Planned
+  training) count down by calendar date; an event date is not proof of
+  preparation or completion.
 - **Adapt**: today's circumstances come from the local records. Rest covers
   the local calendar day and, after midnight, the night until the next waking
   day (late night, or while the night hasn't synced). A pause covers its dates
   and stays open until resumed; illness is a pause with that reason. While
   resting, ill or paused, or with limits set (excluded activities or a movement
-  note), Today has no effort call and its focus shows no effort. The control is
+  note), Today has no effort call or Garmin call note and its focus shows no
+  effort. The control is
   labelled Ill, Paused, Rest day, Limits on or Adapt today, in that order.
 - **Today's lead**: live Today only (never a historical read), gates in this
   order, first match leads: a night that hasn't synced waits (no advice);
@@ -810,14 +843,16 @@ Sent by the phone itself.
   plan or recorded sleep, exclude the night rather than count a miss. This
   intentionally provides no retroactive adherence for nights before capture
   existed, even if their sleep data and recommendations can be backfilled.
-- **Pace**: a target is behind when its share reached (value ÷ target) is
+- **Pace** (earlier weekly plan; kept for its history and the CLI, not shown
+  in the app): a target is behind when its share reached (value ÷ target) is
   below the share of the week's training days that have passed: days before
   today that aren't rest days, over all training days. Today hasn't passed,
   so a session later today is never late. Asleep on time uses nights instead:
   nights already counted over the nights in the week that weren't left out.
   Done means value ≥ target. "On track" counts measurable targets that
   aren't behind; the check-in counts targets reached.
-- **Completion and history**: each target's completion is value ÷ target,
+- **Completion and history** (earlier weekly plan; the check-in plan card and
+  the Week review now read the local goals): each target's completion is value ÷ target,
   capped at 100%; a week's completion is the average over its measurable
   targets. Paused weeks and weeks with no measurable targets have none. Each
   week is measured against the targets in effect that week; weeks before the
@@ -826,7 +861,8 @@ Sent by the phone itself.
   Check-ins distinguish All reached, Partly reached, No targets reached,
   Partial evidence, Not enough evidence and Paused. All reached requires
   every enabled target to be measured and reached.
-- **Weekly focus**: the biggest gap among sleep against need, load-focus
+- **Weekly focus** (the weekly check-in's closing card only; Today's lead
+  follows its own rule): the biggest gap among sleep against need, load-focus
   shortage, falling readiness, and intensity minutes against Garmin's weekly
   goal for the plan week that just ended (without them, Fitness Age's
   vigorous-minutes average against its target).

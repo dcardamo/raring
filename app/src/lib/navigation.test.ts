@@ -5,7 +5,7 @@ describe('routes', () => {
   it('accepts known routes and rejects invalid or malformed fragments', () => {
     expect(tabs).toEqual(['today', 'plan', 'training', 'health', 'progress']);
     for (const route of [...tabs, 'sleep', 'readiness', 'settings', 'onboarding', 'strength', 'help', 'help/strength-sets',
-      'activities', 'profile', 'gear', 'plan/commitments', 'review/latest', 'review/2025-10-13',
+      'activities', 'profile', 'gear', 'plan/commitments', 'review/latest', 'reviews', 'review/2025-10-13',
       'workout/123_abc-2', ...['bodyBattery', 'stress', 'restingHr', 'hrv', 'respiration', 'spo2',
         'skinTemp', 'vo2max', 'endurance', 'hill', 'runningTolerance'].map(id => `metric/${id}`)]) {
       expect(normalizeRoute(`#${route}`)).toBe(route);
@@ -48,6 +48,7 @@ describe('routes', () => {
     expect(routeTrail('gear', ['today', 'profile'])).toEqual(['today', 'profile', 'gear']);
     expect(routeTrail('gear')).toEqual(['today', 'training', 'gear']);
     expect(routeTrail('review/2025-10-13', ['today'])).toEqual(['today', 'progress', 'review/2025-10-13']);
+    expect(routeTrail('review/2025-10-13', ['today', 'progress', 'reviews'])).toEqual(['today', 'progress', 'reviews', 'review/2025-10-13']);
     expect(routeTrail('metric/hrv')).toEqual(['today', 'health', 'metric/hrv']);
     expect(routeTrail('metric/hrv', ['today'])).toEqual(['today', 'metric/hrv']);
     expect(routeTrail('metric/hrv', ['today', 'progress'])).toEqual(['today', 'progress', 'metric/hrv']);

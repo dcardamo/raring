@@ -144,7 +144,10 @@ pub(crate) fn match_items(
         let i = &items[n];
         let c = free(&before, i);
         if let [r] = c[..] {
-            let rival = open.iter().filter(|m| items[**m].date == i.date && same_sport(&items[**m], &recs[r])).count();
+            let rival = open
+                .iter()
+                .filter(|m| items[**m].date == i.date && same_sport(&items[**m], &recs[r]) && !unlinked(&items[**m], &recs[r]))
+                .count();
             if rival == 1 && !unlinked(i, &recs[r]) {
                 taken.insert(recs[r].id.as_str());
                 out[n] = Some(Matched { state: ItemState::Done, recording: Some(recs[r].id.clone()), by: Some(MatchKind::Automatic), candidates: vec![] });
@@ -282,14 +285,54 @@ fn usual_cardio(store: &Store, today: NaiveDate) -> Option<Sport> {
 
 /// The plan week containing `anchor`, measured on `today`.
 pub fn board(store: &Store, anchor: NaiveDate, today: NaiveDate, now: DateTime<Utc>) -> PlanBoard {
-    let local = local::load(store);
+    board_with(store, &local::load(store), anchor, today, now)
+}
+
+/// The plan-your-week prompt, for people who have chosen goals before. It
+/// offers last week's review at the start of a week that followed goals, and
+/// planning when this week has nothing placed; answered weeks stay quiet.
+fn prompt(store: &Store, local: &LocalRecords, start: NaiveDate, today: NaiveDate, items: &[PlanItem]) -> Option<PlanPrompt> {
+    let week = start.to_string();
+    if local.goals.versions.is_empty() || !store.settings().plan_prompt || local.reviews.prompts.contains_key(&week) {
+        return None;
+    }
+    let active = |d: NaiveDate| local::goals_on(&local.goals, &d.to_string()).is_some_and(|v| RING_KINDS.iter().chain([GoalKind::SleepScore].iter()).any(|k| target_of(&v.targets, *k, Some(1.)).is_some()));
+    let placed = active(today) && items.iter().any(|p| !matches!(p.state, ItemState::LetGo | ItemState::Missed));
+    let had = active(start - Duration::days(1));
+    let opening = today <= start + Duration::days(1);
+    if placed && (!opening || !had) {
+        return None;
+    }
+    Some(PlanPrompt { review: (had && opening).then(|| (start - Duration::days(7)).to_string()) })
+}
+
+/// Garmin's next race and your local events from today, soonest first.
+fn events(store: &Store, local: &LocalRecords, today: NaiveDate, now: DateTime<Utc>) -> Vec<EventLine> {
+    let mut list: Vec<EventLine> = local
+        .events
+        .events
+        .iter()
+        .filter_map(|e| {
+            let d = NaiveDate::parse_from_str(&e.date, "%Y-%m-%d").ok().filter(|d| *d >= today)?;
+            Some(EventLine { id: Some(e.id.clone()), name: e.name.clone(), date: e.date.clone(), days_until: (d - today).num_days() as i32, sport: e.sport, source: EventSource::Local, partial: false })
+        })
+        .collect();
+    if let (state, Some(race)) = planned::race(store, &today.to_string(), now) {
+        list.push(EventLine { id: None, name: race.name, date: race.date, days_until: race.days_until, sport: None, source: EventSource::Garmin, partial: state == PlannedState::Partial });
+    }
+    list.sort_by(|a, b| a.date.cmp(&b.date));
+    list
+}
+
+/// The plan week containing `anchor`, from already loaded local records.
+pub fn board_with(store: &Store, local: &LocalRecords, anchor: NaiveDate, today: NaiveDate, now: DateTime<Utc>) -> PlanBoard {
     let start = plan::week_start(anchor, plan::week_starts_on(store));
     let end = start + Duration::days(6);
     let through = end.min(today);
     let as_of = if end < today { end } else if start > today { start } else { today };
     let (start_s, as_of_s) = (start.to_string(), as_of.to_string());
-    let version = local::goals_on(&local.goals, &as_of_s).cloned();
-    let opening = local::goals_on(&local.goals, &start_s).cloned();
+    let version = local::goals_in_week(&local.goals, start, as_of).cloned();
+    let opening = local::goals_in_week(&local.goals, start, start).cloned();
 
     let counted = recordings(store, start, through);
     let recs: Vec<Recording> = counted.iter().map(|c| c.rec.clone()).collect();
@@ -349,11 +392,14 @@ pub fn board(store: &Store, anchor: NaiveDate, today: NaiveDate, now: DateTime<U
                             None => (None, Some("Intensity minutes not synced")),
                         },
                         GoalKind::SleepTiming => {
-                            let met = (0..7)
-                                .map(|i| start + Duration::days(i))
-                                .filter(|d| night_met(store, &local, &v.targets, *d, today) == Some(true))
-                                .count();
-                            (Some(met as f64), None)
+                            let nights: Vec<Option<bool>> = (0..7).map(|i| night_met(store, local, &v.targets, start + Duration::days(i), today)).collect();
+                            let passed = (0..7).filter(|i| start + Duration::days(i + 1) <= today).count();
+                            // Nights without evidence aren't misses, and none at all is unknown, not zero.
+                            if passed > 0 && nights.iter().all(Option::is_none) {
+                                (None, Some("No recorded nights yet"))
+                            } else {
+                                (Some(nights.iter().filter(|n| **n == Some(true)).count() as f64), None)
+                            }
                         }
                         GoalKind::SleepScore => (None, None),
                     }
@@ -391,7 +437,7 @@ pub fn board(store: &Store, anchor: NaiveDate, today: NaiveDate, now: DateTime<U
             let future = d > today;
             let mark = if local.circumstances.rest.iter().any(|r| r.date == ds) {
                 Some(DayMark::Rest)
-            } else if let Some(p) = pause_on(&local, &ds) {
+            } else if let Some(p) = pause_on(local, &ds) {
                 Some(if p.reason == PauseReason::Ill { DayMark::Ill } else { DayMark::Paused })
             } else if !future && unknown_day(&ds) {
                 Some(DayMark::Unknown)
@@ -411,11 +457,12 @@ pub fn board(store: &Store, anchor: NaiveDate, today: NaiveDate, now: DateTime<U
                     } else {
                         match l.kind {
                             GoalKind::Strength => day_recs.iter().filter(|c| c.rec.sport == Sport::Strength).count() as f64,
-                            GoalKind::Zone2 => (day_recs.iter().filter_map(|c| c.zone2_s).sum::<f64>() / 60.).floor(),
-                            GoalKind::HighIntensity => (day_recs.iter().filter_map(|c| c.high_s).sum::<f64>() / 60.).floor(),
+                            // A day with unknown zones draws nothing rather than a part.
+                            GoalKind::Zone2 => day_recs.iter().map(|c| c.zone2_s).sum::<Option<f64>>().map_or(0., |s| (s / 60.).floor()),
+                            GoalKind::HighIntensity => day_recs.iter().map(|c| c.high_s).sum::<Option<f64>>().map_or(0., |s| (s / 60.).floor()),
                             GoalKind::Intensity => daily_intensity(store, d).unwrap_or(0.),
                             GoalKind::SleepTiming => {
-                                let met = version.as_ref().is_some_and(|v| night_met(store, &local, &v.targets, d, today) == Some(true));
+                                let met = version.as_ref().is_some_and(|v| night_met(store, local, &v.targets, d, today) == Some(true));
                                 if met { 1. } else { 0. }
                             }
                             GoalKind::SleepScore => 0.,
@@ -460,8 +507,8 @@ pub fn board(store: &Store, anchor: NaiveDate, today: NaiveDate, now: DateTime<U
 
     let current = (start..=end).contains(&today);
     let today_s = today.to_string();
-    let backlog_paused = current && pause_on(&local, &today_s).is_some();
-    let cardio = usual_cardio(store, today);
+    let backlog_paused = current && pause_on(local, &today_s).is_some();
+    let cardio = if current { usual_cardio(store, today) } else { None };
     let backlog = if !current || backlog_paused {
         vec![]
     } else {
@@ -493,6 +540,8 @@ pub fn board(store: &Store, anchor: NaiveDate, today: NaiveDate, now: DateTime<U
             reason: p.reason,
             whole_week: p.since <= start_s && p.until.as_deref().is_none_or(|u| u >= end.to_string().as_str()),
         });
+    let plan_prompt = if current { prompt(store, local, start, today, &items) } else { None };
+    let event_lines = if current { events(store, local, today, now) } else { vec![] };
     PlanBoard {
         today: today_s,
         start: start_s,
@@ -515,5 +564,7 @@ pub fn board(store: &Store, anchor: NaiveDate, today: NaiveDate, now: DateTime<U
         pause,
         coverage_complete: listed,
         read_only: !local.read_only.is_empty(),
+        prompt: plan_prompt,
+        events: event_lines,
     }
 }

@@ -370,3 +370,39 @@ fn the_weekly_check_in_reads_the_same_goals_as_plan() {
     let kinds: Vec<(PlanTargetKind, f64)> = week.items.iter().map(|i| (i.kind, i.target)).collect();
     assert_eq!(kinds, [(PlanTargetKind::Strength, 2.), (PlanTargetKind::Zone2, 60.)], "kinds the check-in never had wait for the new review");
 }
+
+#[test]
+fn a_migrated_monday_version_covers_a_sunday_week_without_reading_as_a_revision() {
+    let f = fx("sunday");
+    // Garmin's intensity week starts on Sunday 9 March.
+    f.store.put("intensity_weeks", "me", "now", &json!([{"calendarDate": "2025-03-09", "moderateValue": 0, "vigorousValue": 0, "weeklyGoal": 150}])).unwrap();
+    f.store.set_setting("plan", &json!({"versions": {"2025-03-10": {"preset": "custom", "strengthSessions": 2, "intensityMin": 0,
+        "zone2Min": 0, "asleepNights": 0, "restDays": []}}, "paused": []}).to_string()).unwrap();
+    for day in ["2025-03-09", "2025-03-13"] {
+        let b = f.core.plan_board(day, at(THU, 12)).unwrap();
+        assert_eq!(b.start, "2025-03-09");
+        let l = row(&b, GoalKind::Strength);
+        assert_eq!((l.target, l.original), (2., None), "the saved week's targets, not a revision");
+    }
+}
+
+#[test]
+fn an_unlinked_session_no_longer_competes_for_the_recording() {
+    let f = fx("unlinked-rival");
+    let a = lift(&f, "2025-03-11");
+    let b = lift(&f, "2025-03-11");
+    rec(&f.store, 1, "2025-03-11 18:00:00", "strength_training", 45., Some([0; 5]));
+    f.core.local_action(&LocalAction::Unlink { plan_id: a.clone(), activity_id: "1".into() }, at(THU, 9)).unwrap();
+    let board = board(&f);
+    assert_eq!(item(&board, &b).state, ItemState::Done, "the remaining session is the sole match");
+    assert_eq!(item(&board, &a).state, ItemState::NotRecorded);
+}
+
+#[test]
+fn sleep_timing_without_any_recorded_night_is_unknown_not_zero() {
+    let f = fx("sleep-unknown");
+    goals(&f, GoalTargets { sleep_nights: 3, sleep_time: Some("23:00".into()), ..Default::default() });
+    let b = board(&f);
+    let l = row(&b, GoalKind::SleepTiming);
+    assert_eq!((l.recorded, l.remaining, l.unavailable.as_deref()), (None, None, Some("No recorded nights yet")));
+}

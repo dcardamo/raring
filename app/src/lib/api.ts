@@ -13,6 +13,8 @@ import type {HeartRateDay} from './generated/HeartRateDay';
 import sampleCheckin from './sample/checkin.json';
 import sampleStatus from './sample/status.json';
 import sampleBoard from './sample/board.json';
+import sampleReview from './sample/review.json';
+import sampleReviews from './sample/reviews.json';
 import type { AppStatus } from './generated/AppStatus';
 import type { TodayView } from './generated/TodayView';
 import type { SleepView } from './generated/SleepView';
@@ -27,6 +29,8 @@ import type { TrendView } from './generated/TrendView';
 import { sampleTrend } from './sample/trend';
 import type { LocalAction } from './generated/LocalAction';
 import type { PlanBoard } from './generated/PlanBoard';
+import type { WeekReview } from './generated/WeekReview';
+import type { ReviewRow } from './generated/ReviewRow';
 
 export type { Settings } from './generated/Settings';
 export type SettingsPatch = Partial<Settings>;
@@ -56,11 +60,14 @@ export const trend = (query:TrendQuery):Promise<TrendView> => isTauri()?invoke<T
 // The preview keeps local changes in memory; only the Rust core applies the plan rules.
 let previewBoard:PlanBoard = copy(sampleBoard as unknown as PlanBoard);
 export const plan_board = (date?:string):Promise<PlanBoard> => call('plan_board',{date},previewBoard);
+export const week_review = (date:string):Promise<WeekReview> => call('week_review',{date},sampleReview as unknown as WeekReview);
+export const reviews = ():Promise<ReviewRow[]> => call('reviews',undefined,sampleReviews as unknown as ReviewRow[]);
 // Every local change (goals, sessions, links, rest, pauses, limits) goes through one command.
 export const local_action = (action:LocalAction):Promise<void> => {
  if(!isTauri()){
   if(action.action==='setGoals')previewBoard={...previewBoard,goals:{from:previewBoard.today,targets:copy(action.targets),source:'revision',savedAt:`${previewBoard.today}T12:00:00`}};
   if(action.action==='observationExplained')previewBoard={...previewBoard,explainObservation:false};
+  if(action.action==='setPromptWeek')previewBoard={...previewBoard,prompt:null};
   return Promise.resolve();
  }
  return invoke<void>('local_action',{action});

@@ -405,3 +405,27 @@ fn sport_families_keep_mixed_types_apart() {
     assert_eq!(local::sport_of("hiit"), Sport::Other, "HIIT is never strength");
     assert_eq!(local::sport_of("lap_swimming"), Sport::Swimming);
 }
+
+#[test]
+fn a_newer_row_doesnt_stop_the_other_rows_migrating_and_the_migration_stays_unfinished() {
+    let (_dir, store, core) = open("partial-migration");
+    store.set_setting("plan", &legacy_plan(Value::Null, 0)).unwrap();
+    let newer = json!({"schema": 2, "versions": []}).to_string();
+    store.set_setting("local:goals", &newer).unwrap();
+    let r = core.local_records();
+    assert_eq!(r.circumstances.pauses.len(), 1, "paused weeks still migrate");
+    assert_eq!(store.setting("local:goals").unwrap(), newer);
+    assert!(store.setting("local:schema").is_none(), "unfinished, so a build that can will finish it");
+}
+
+#[test]
+fn a_refused_mirror_leaves_the_old_plan_row_unchanged() {
+    let (_dir, store, core) = open("refused-mirror");
+    let plan = legacy_plan(json!(150), 0);
+    store.set_setting("plan", &plan).unwrap();
+    let _ = core.local_records();
+    store.set_setting("local:goals", &json!({"schema": 2, "versions": []}).to_string()).unwrap();
+    let update = PlanUpdate { targets: PlanTargets::preset(PlanPreset::Custom), paused: false };
+    assert!(core.set_plan("2025-03-13", &update).is_err());
+    assert_eq!(store.setting("plan").unwrap(), plan);
+}

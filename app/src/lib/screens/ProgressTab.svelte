@@ -17,7 +17,8 @@
  ]);
 </script>
 {@render header()}
-<button class="card review" onclick={() => navigate('review/latest')}><span><b>Last week</b><small>What was met, what changed and next week’s targets</small></span><Icon name="chevron" size={16}/></button>
+<button class="card review" onclick={() => navigate('review/latest')}><span><b>Last week</b><small>What was met, what changed and next week’s goals</small></span><Icon name="chevron" size={16}/></button>
+<button class="card review" onclick={() => navigate('reviews')}><span><b>Earlier weeks</b><small>Each week against its own goals</small></span><Icon name="chevron" size={16}/></button>
 <div class="sec-h"><h2>Trends</h2></div>
 <div class="tiles2">
  {#each tiles as t}<button class="card tile2" onclick={() => navigate(t.route)}><span>{t.name}</span>{#if t.value != null}<b class="n">{num(t.value)}<small>{t.unit}</small></b>{:else}<em>Open chart</em>{/if}</button>{/each}

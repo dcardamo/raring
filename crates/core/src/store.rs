@@ -397,6 +397,17 @@ impl Store {
         tx.commit()?;
         Ok(out)
     }
+    /// Several settings rows read in one consistent snapshot, without the write lock.
+    pub(crate) fn settings_read<T, E: From<rusqlite::Error>>(
+        &self,
+        f: impl FnOnce(&SettingsTx) -> Result<T, E>,
+    ) -> Result<T, E> {
+        let mut db = self.db.lock().unwrap();
+        let tx = db.transaction_with_behavior(TransactionBehavior::Deferred)?;
+        let out = f(&SettingsTx(&tx))?;
+        tx.commit()?;
+        Ok(out)
+    }
     /// Prospective evidence is immutable: a later sync must not move a night's target.
     pub fn insert_setting(&self, key: &str, value: &str) -> rusqlite::Result<()> {
         self.db.lock().unwrap().execute(

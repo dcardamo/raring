@@ -533,5 +533,17 @@
   "pause": null,
   "coverageComplete": true,
   "explainObservation": false,
-  "readOnly": false
+  "readOnly": false,
+  "prompt": null,
+  "events": [
+    {
+      "id": "e1760000000000",
+      "name": "Harbour 10K",
+      "date": "2025-11-09",
+      "daysUntil": 24,
+      "sport": "running",
+      "source": "local",
+      "partial": false
+    }
+  ]
 }

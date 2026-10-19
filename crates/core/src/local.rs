@@ -56,6 +56,8 @@ pub struct Circumstances {
 pub struct Reviews {
     /// Plan week start → the answer to that week's prompt.
     pub prompts: BTreeMap<String, PromptChoice>,
+    /// The latest decision on each reviewed week's proposals.
+    pub decisions: Vec<ReviewDecision>,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug, PartialEq)]
@@ -146,10 +148,11 @@ fn migrate(tx: &SettingsTx) -> Result<()> {
         return Ok(());
     };
     let (versions, paused) = plan::legacy(&raw).unwrap_or_default();
-    let mut ignored = vec![];
-    let mut goals: Goals = read(tx, &mut ignored)?;
-    let mut circumstances: Circumstances = read(tx, &mut ignored)?;
-    if goals.versions.is_empty() {
+    // Each row is protected on its own; a row this build may not rewrite
+    // leaves the migration unfinished, to be completed by a build that can.
+    let mut blocked = vec![];
+    let mut goals: Goals = read(tx, &mut blocked)?;
+    if !blocked.contains(&Goals::KEY) && goals.versions.is_empty() {
         goals.versions = versions
             .iter()
             .map(|(from, t)| GoalVersion {
@@ -159,26 +162,30 @@ fn migrate(tx: &SettingsTx) -> Result<()> {
                 saved_at: format!("{from}T00:00:00"),
             })
             .collect();
-    }
-    for week in &paused {
-        let Ok(start) = NaiveDate::parse_from_str(week, "%Y-%m-%d") else {
-            continue;
-        };
-        let id = format!("plan-{week}");
-        if !circumstances.pauses.iter().any(|p| p.id == id) {
-            circumstances.pauses.push(Pause {
-                id,
-                since: start.to_string(),
-                until: Some((start + Duration::days(6)).to_string()),
-                reason: PauseReason::Pause,
-                review: None,
-            });
-        }
-    }
-    circumstances.pauses.sort_by(|a, b| a.since.cmp(&b.since));
-    if ignored.is_empty() {
         write(tx, &goals)?;
+    }
+    let mut circumstances: Circumstances = read(tx, &mut blocked)?;
+    if !blocked.contains(&Circumstances::KEY) {
+        for week in &paused {
+            let Ok(start) = NaiveDate::parse_from_str(week, "%Y-%m-%d") else {
+                continue;
+            };
+            let id = format!("plan-{week}");
+            if !circumstances.pauses.iter().any(|p| p.id == id) {
+                circumstances.pauses.push(Pause {
+                    id,
+                    since: start.to_string(),
+                    until: Some((start + Duration::days(6)).to_string()),
+                    reason: PauseReason::Pause,
+                    review: None,
+                });
+            }
+        }
+        circumstances.pauses.sort_by(|a, b| a.since.cmp(&b.since));
         write(tx, &circumstances)?;
+    }
+    if !blocked.is_empty() {
+        return Ok(());
     }
     tx.set(MARKER, &SCHEMA.to_string())?;
     Ok(())
@@ -203,19 +210,32 @@ fn migrated(t: &PlanTargets) -> GoalTargets {
     }
 }
 
-/// Every local record, migrating the earlier plan first if needed.
+/// Every local record, migrating the earlier plan first if needed. Reads take
+/// the write lock only when a migration is due.
 pub fn load(store: &Store) -> LocalRecords {
-    store
-        .settings_tx(|tx| {
+    let due = store.setting(MARKER).is_none() && store.setting("plan").is_some();
+    let read = |tx: &SettingsTx| -> Result<LocalRecords> {
+        if due {
             migrate(tx)?;
-            load_tx(tx)
-        })
-        .unwrap_or_default()
+        }
+        load_tx(tx)
+    };
+    if due { store.settings_tx(read) } else { store.settings_read(read) }.unwrap_or_default()
 }
 
 /// The goal version in effect on `date`, if any.
 pub fn goals_on<'a>(goals: &'a Goals, date: &str) -> Option<&'a GoalVersion> {
     goals.versions.iter().rev().find(|v| v.from.as_str() <= date)
+}
+
+/// The version in effect on `date` in the plan week starting `start`. First
+/// targets and migrated versions apply to the whole week they were saved in,
+/// even when Garmin's week starts before their date.
+pub fn goals_in_week(goals: &Goals, start: NaiveDate, date: NaiveDate) -> Option<&GoalVersion> {
+    let (date, end) = (date.to_string(), (start + Duration::days(6)).to_string());
+    goals.versions.iter().rev().find(|v| {
+        v.from <= date || (matches!(v.source, GoalSource::Setup | GoalSource::Migrated) && v.from >= start.to_string() && v.from <= end)
+    })
 }
 
 /// The old setup screen writes through until it is retired, so its saves
@@ -339,6 +359,7 @@ pub(crate) fn apply(
     action: &LocalAction,
     now: DateTime<Local>,
     first: Weekday,
+    proposals: &[GoalProposal],
 ) -> Result<()> {
     store.settings_tx(|tx| {
         migrate(tx)?;
@@ -617,6 +638,42 @@ pub(crate) fn apply(
                 writable(&r, &[Goals::KEY])?;
                 r.goals.observation_explained = true;
                 &[Goals::KEY]
+            }
+            LocalAction::DecideReview { week: w, accepted } => {
+                writable(&r, &[Goals::KEY, Reviews::KEY])?;
+                let start = date(w)?;
+                if start > today || plan::week_start(start, first) != start {
+                    return Err(Error::InvalidLocal("review week"));
+                }
+                let next = (start + Duration::days(7)).to_string();
+                let chosen: Vec<&GoalProposal> = proposals
+                    .iter()
+                    .filter(|p| accepted.contains(&p.kind) && p.proposed != p.current)
+                    .collect();
+                if chosen.len() != accepted.len() {
+                    return Err(Error::InvalidLocal("only offered changes can be accepted"));
+                }
+                if !chosen.is_empty() {
+                    let base = goals_on(&r.goals, &next).ok_or(Error::InvalidLocal("no goals"))?;
+                    let mut targets = base.targets.clone();
+                    for p in &chosen {
+                        let v = p.proposed.round() as u32;
+                        match p.kind {
+                            GoalKind::Strength => targets.strength_sessions = v,
+                            GoalKind::Zone2 => targets.zone2_min = v,
+                            GoalKind::HighIntensity => targets.high_intensity_min = v,
+                            GoalKind::Intensity => targets.intensity_min = v,
+                            GoalKind::SleepTiming => targets.sleep_nights = v,
+                            GoalKind::SleepScore => return Err(Error::InvalidLocal("Sleep Score is never proposed")),
+                        }
+                    }
+                    r.goals.versions.retain(|v| v.from != next);
+                    r.goals.versions.push(GoalVersion { from: next, targets, source: GoalSource::Proposal, saved_at: at.clone() });
+                    r.goals.versions.sort_by(|a, b| a.from.cmp(&b.from));
+                }
+                r.reviews.decisions.retain(|d| d.week != start.to_string());
+                r.reviews.decisions.push(ReviewDecision { week: start.to_string(), at: at.clone(), proposals: proposals.to_vec(), accepted: accepted.clone() });
+                &[Goals::KEY, Reviews::KEY]
             }
             LocalAction::RemoveEvent { id } => {
                 writable(&r, &[Events::KEY])?;

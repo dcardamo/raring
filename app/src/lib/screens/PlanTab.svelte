@@ -10,7 +10,15 @@
  // Plan: the week at a glance (rings and one line per goal), the days with
  // what was planned and recorded, and what's left. Garmin's schedule is shown
  // read-only in the same days.
- let {board, navigate, act, header}: {board: PlanBoard, navigate: (route: string) => void, act: (a: LocalAction) => void, header: import('svelte').Snippet} = $props();
+ let {board, navigate, act, header, openAdd, openItem, openEvent}: {board: PlanBoard, navigate: (route: string) => void, act: (a: LocalAction) => void, header: import('svelte').Snippet,
+  openAdd: (draft: {date?: string, sport?: import('../generated/Sport').Sport, allocation?: Record<string, number>, name?: string}) => void, openItem: (item: PlanItem) => void, openEvent: () => void} = $props();
+ const CHUNK: Record<string, [string, number]> = {zone2: ['zone2Min', 45], highIntensity: ['highIntensityMin', 20], intensity: ['intensityMin', 30]};
+ // A backlog item taken for a day: one session, or a share of the minutes left.
+ function take(b: PlanBoard['backlog'][number], date: string) {
+  if (b.kind === 'strength') return openAdd({date, sport: 'strength', allocation: {strengthSessions: 1}});
+  const [field, chunk] = CHUNK[b.kind] ?? ['zone2Min', 30];
+  openAdd({date, sport: b.sport ?? 'running', allocation: {[field]: Math.min(b.amount, chunk)}});
+ }
  let picked = $state<string | null>(null);
  let selected = $derived(picked && board.days.some(d => d.date === picked) ? picked : board.days.find(d => d.today)?.date ?? board.start);
  let day = $derived(board.days.find(d => d.date === selected)!);
@@ -19,6 +27,7 @@
  let loose = $derived(board.recordings.filter(r => r.date === selected && !matched.has(r.id)));
  let garmin = $derived(board.garmin.filter(g => g.date === selected));
  let review = $derived(board.items.filter(p => p.state === 'review'));
+ const dateName = (d: string) => new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', {weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC'});
  const dayName = (d: string, long = false) => new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', {weekday: long ? 'long' : 'short', day: 'numeric', month: 'short', timeZone: 'UTC'});
  let range = $derived(`${dayName(board.start)} – ${dayName(board.end)}`);
  const recordingOf = (p: PlanItem) => board.recordings.find(r => r.id === p.recording);
@@ -47,10 +56,10 @@
  <div class="agenda-h"><h3>{day.today ? 'Today' : dayName(selected, true)}</h3>{#if day.mark}<span class="pill">{({rest: 'Rest day', ill: 'Ill', paused: 'Paused', unknown: 'Awaiting data'} as const)[day.mark]}</span>{/if}</div>
  {#each items as p (p.intention.id)}
   {@const r = recordingOf(p)}
-  <button class="row-item" class:done={p.state === 'done'} class:muted={p.state === 'notRecorded' || p.state === 'missed' || p.state === 'awaiting'} disabled={!r} onclick={() => r && navigate('workout/' + r.id)}>
+  <button class="row-item" class:done={p.state === 'done'} class:muted={p.state === 'notRecorded' || p.state === 'missed' || p.state === 'awaiting'} onclick={() => openItem(p)}>
    <span class="ico" class:outline={p.state !== 'done'}><Icon name={p.state === 'done' ? 'check' : SPORT_ICONS[p.intention.sport]} size={18}/></span>
    <span><small>{STATE_WORD[p.state]}{p.matchedBy === 'automatic' ? ' · matched by Raring' : p.matchedBy === 'linked' ? ' · linked by you' : ''}</small><b>{title(p)}</b><em>{r ? `${clock(r.startLocal)} · ${duration(r.durationMin)}` : when(p)}{goalsOf(p) ? ' · ' + goalsOf(p) : ''}</em></span>
-   {#if r}<Icon name="chevron" size={15}/>{/if}
+   <Icon name="chevron" size={15}/>
   </button>
  {/each}
  {#each loose as r (r.id)}
@@ -60,6 +69,7 @@
   <div class="row-item garmin"><span class="ico gm" aria-hidden="true">◇</span><span><small>Garmin schedule · read-only</small><b>{g.name}</b><em>Not counted toward your goals</em></span></div>
  {/each}
  {#if !items.length && !loose.length && !garmin.length}<p class="empty-day">{day.mark === 'rest' ? 'A day of rest' : 'Nothing on this day'}</p>{/if}
+ {#if selected >= board.today}<button class="secondary" onclick={() => openAdd({date: selected})}>Add a session</button>{/if}
  {#if garminNote}<p class="small">{garminNote}.</p>{/if}
 </section>
 
@@ -67,9 +77,14 @@
  <div class="sec-h"><h2>Left this week</h2></div>
  <section class="card">
   {#if board.backlogPaused}<p class="small">Paused · nothing to catch up.</p>
-  {:else}<ul class="left">{#each board.backlog as b}<li style:--c={GOALS[b.kind].color}><i></i>{b.kind === 'strength' ? 'Strength session' : `${amount(b.kind, b.amount)} ${GOALS[b.kind].name}`}</li>{/each}</ul>{/if}
+  {:else}<ul class="left">{#each board.backlog as b}<li style:--c={GOALS[b.kind].color}><i></i><span>{b.kind === 'strength' ? 'Strength session' : `${amount(b.kind, b.amount)} ${GOALS[b.kind].name}`}</span>{#if b.kind !== 'sleepTiming'}<button class="small-edit" onclick={() => take(b, board.today)}>Do it today</button>{/if}</li>{/each}</ul>{/if}
  </section>
 {/if}
+
+<div class="sec-h"><h2>Events</h2><button class="link" onclick={openEvent}>Add a race or event</button></div>
+{#each board.events as e}
+ <div class="card event"><span class="cd"><b class="n">{e.daysUntil}</b><small>days</small></span><span><b>{e.name}</b><small>{dateName(e.date)} · {e.source === 'garmin' ? `Garmin calendar${e.partial ? ' · later races may be missing' : ''}` : 'Saved on this phone'}</small></span>{#if e.id}<button class="link" aria-label={`Remove ${e.name}`} onclick={() => act({action: 'removeEvent', id: e.id!})}>Remove</button>{/if}</div>
+{:else}<p class="small none">No race or event. A date to count down to is optional.</p>{/each}
 <style>
  .wk{padding:14px}.wk-h{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px}.wk-h h2{font:600 20px Outfit}.wk-h small{display:block;font-size:11.5px;color:#A9C8FF;margin-top:2px}
  .small-edit{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:11px;display:flex;gap:5px;align-items:center;padding:8px 10px;color:var(--text);font:600 12px Inter;min-height:36px}
@@ -82,5 +97,9 @@
  .row-item.done small{color:var(--good)}.row-item.muted{opacity:.72}.row-item.garmin{border-style:dashed;border-color:rgba(164,139,255,.35)}
  .ico{width:32px;height:32px;border-radius:11px;display:grid;place-items:center;background:rgba(255,255,255,.08)}.ico.outline{background:none;border:1.5px solid var(--text3)}.done .ico{background:rgba(61,220,151,.16);color:var(--good)}.gm{font-size:20px;color:#BDAAFF;background:none}
  .empty-day{color:var(--text3);font-size:13px;margin:12px 4px}
- .left{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:14px}.left li{display:flex;gap:8px;align-items:center}.left i{width:9px;height:9px;border-radius:50%;background:var(--c)}
+ .left{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:14px}.left li{display:grid;grid-template-columns:10px 1fr auto;gap:8px;align-items:center}.left i{width:9px;height:9px;border-radius:50%;background:var(--c)}
+ .link{background:none;border:0;color:var(--ink);font:600 13px Inter;min-height:40px}
+ .event{display:grid;grid-template-columns:40px 1fr auto;gap:10px;align-items:center}.event b{display:block;font:600 15px Inter}.event small{display:block;font-size:12px;color:var(--text2)}
+ .cd{display:grid;place-items:center;line-height:1}.cd b{font-size:20px;color:var(--fair)}.cd small{font-size:10px;color:var(--text2)}
+ .none{margin:8px 4px}
 </style>

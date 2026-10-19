@@ -11,6 +11,7 @@ pub mod notifications;
 mod naps_journal;
 pub mod phase;
 pub mod plan;
+pub mod review;
 pub mod planned;
 pub mod rules;
 pub mod screens;
@@ -202,6 +203,15 @@ impl Raring {
         let anchor = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d").map_err(|_| Error::InvalidLocal("date"))?;
         Ok(ledger::board(&self.store, anchor, now.date_naive(), now.with_timezone(&Utc)))
     }
+    /// The review of the plan week containing `date`, with next week's proposals.
+    pub fn week_review(&self, date: &str, now: DateTime<Local>) -> Result<view::WeekReview> {
+        let anchor = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d").map_err(|_| Error::InvalidLocal("date"))?;
+        Ok(review::week_review(&self.store, anchor, now.date_naive()))
+    }
+    /// Reviewed weeks with goals, newest first.
+    pub fn reviews(&self, now: DateTime<Local>) -> Vec<view::ReviewRow> {
+        review::list(&self.store, now.date_naive(), 26)
+    }
     /// Goals, sessions, links, circumstances, prompts and events, migrated.
     pub fn local_records(&self) -> local::LocalRecords {
         local::load(&self.store)
@@ -221,7 +231,14 @@ impl Raring {
             return Err(Error::InvalidLocal("the account changed"));
         }
         let first = plan::week_starts_on(&self.store);
-        local::apply(&self.store, action, now, first)?;
+        // Proposals are recomputed now, so only what the review offers can be accepted.
+        let proposals = match action {
+            view::LocalAction::DecideReview { week, .. } => chrono::NaiveDate::parse_from_str(week, "%Y-%m-%d")
+                .map(|w| review::proposals(&self.store, w, now.date_naive()))
+                .unwrap_or_default(),
+            _ => vec![],
+        };
+        local::apply(&self.store, action, now, first, &proposals)?;
         // Surfaces follow rest, pauses and limits without waiting for a sync;
         // a failed publication is retried offline and never undoes the change.
         let _ = self.write_status_snapshot(now, *signed_out);

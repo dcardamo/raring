@@ -140,9 +140,11 @@ pub fn set(store: &Store, today: NaiveDate, update: &PlanUpdate) -> crate::Resul
     }
     let json = serde_json::to_string(&stored)
         .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+    // Goals migrated from this row follow later saves, so the two agree; a
+    // refused mirror leaves the row unchanged too.
+    crate::local::mirror_legacy_plan(store, first_day, update)?;
     store.set_setting(KEY, &json)?;
-    // Goals migrated from this row follow later saves, so the two agree.
-    crate::local::mirror_legacy_plan(store, first_day, update)
+    Ok(())
 }
 
 fn number(v: &Value, key: &str) -> Option<f64> {

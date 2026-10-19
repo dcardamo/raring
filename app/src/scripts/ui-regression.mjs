@@ -87,7 +87,7 @@ try {
   const toggle=surface.getByRole('checkbox',{name:/Persistent status/});
   await toggle.waitFor();
   assert.equal(await toggle.isChecked(),false,'status is opt-in');
-  assert.equal(await surface.getByRole('checkbox').count(),9,'internal offer flag is not a toggle');
+  assert.equal(await surface.getByRole('checkbox').count(),10,'internal offer flag is not a toggle (the plan prompt is)');
   await toggle.check();
   await surface.screenshot({path:resolve(output,`status-settings-${width}.png`)});
   await toggle.uncheck();
@@ -246,21 +246,30 @@ try {
  for(let i=0;i<4;i++)await page.getByRole('button',{name:'Next'}).click();
  const timing=page.locator('.timing-review');
  await timing.waitFor();
- assert.equal(await page.locator('.checkin-controls span').textContent(),'5 / 8','the timing review follows the area cards');
+ assert.equal(await page.locator('.checkin-controls span').textContent(),'5 / 7','the timing review follows the area cards');
  const review=await timing.textContent();
  assert.ok(review.includes('Bedtimes22:31–00:30') && review.includes('Garmin: 5 aligned · 2 behind') && review.includes('Keep waking near 06:48.'),review);
  assert.equal(await timing.locator('rect.night').count(),7);
  await page.getByRole('button',{name:'Next'}).click();
  assert.ok((await page.locator('.intensity-review').textContent()).includes("Garmin's goal reached"));
  await page.getByRole('button',{name:'Next'}).click();
- const planReview=page.locator('.plan-checkin');
- assert.ok((await planReview.textContent()).includes('Zone 2 and Asleep on time came up short'));
- assert.deepEqual(await planReview.locator('.delta').allTextContents(),['same','▲ 12','▼ 13','▼ 1']);
- await planReview.getByRole('button',{name:'Keep'}).click();
  await page.getByText('THE FOCUS',{exact:true}).waitFor();
- await page.getByRole('button',{name:'Previous'}).click();
- await page.locator('.plan-checkin').getByRole('button',{name:'Change'}).click();await waitRoute('plan/commitments');
+ // Goals: each week against its own goals, then proposals that need acceptance.
+ const goalsReview=page.locator('.wr');
+ const reviewText=await goalsReview.textContent();
+ assert.ok(reviewText.includes('Zone 2 168 of 150 min') && reviewText.includes('Met'),reviewText);
+ assert.ok(reviewText.includes('Met in your last two complete weeks, 168 of 150 min last week'));
+ assert.equal(await goalsReview.getByRole('button',{name:/^Accept/}).isDisabled(),true,'nothing is accepted by default');
+ await goalsReview.getByRole('checkbox').check();
+ assert.equal(await goalsReview.getByRole('button',{name:'Accept 1 change'}).isEnabled(),true);
+ assert.equal(await goalsReview.getByRole('button',{name:'Keep all'}).count(),1,'Keep all is always offered');
+ await goalsReview.getByRole('button',{name:'Edit goals'}).click();await waitRoute('plan/commitments');
  await back('review/latest');
+ await page.goto(`${url}/#reviews`);await waitRoute('reviews');await page.locator('.review-row').first().waitFor();
+ assert.equal(await page.locator('.review-row').count(),2);
+ assert.ok((await page.locator('.review-row').nth(1).textContent()).includes('Not counted · 2 ill days'));
+ await page.locator('.review-row').first().click();await waitRoute('review/2025-10-06');
+ await back('reviews');
  await page.goto(`${url}/#today`);await waitRoute('today');
  await page.locator('.week-card').click();await waitRoute('plan');
  const week=await page.locator('.wk').textContent();
@@ -274,6 +283,27 @@ try {
  await page.getByRole('button',{name:/^Monday 13 Oct/}).click();
  assert.ok((await page.locator('.days').textContent()).includes('Done · matched by Raring'));
  assert.ok((await page.locator('main').textContent()).includes('Left this week'));
+ // The plan loop: a session's choices, the backlog taken for today, events and the disabled Garmin write.
+ await page.getByRole('button',{name:/^Friday 17 Oct/}).click();
+ await page.locator('.row-item',{hasText:'Easy ride'}).click();
+ const item=page.getByRole('dialog',{name:'Easy ride'});
+ await item.getByRole('button',{name:/^Move/}).waitFor();
+ assert.equal(await item.getByRole('button',{name:/^Mark as missed/}).count(),0,'a future session is never missed');
+ assert.equal(await item.getByRole('button',{name:/^Send to Garmin/}).isDisabled(),true,'Garmin writes are not available yet');
+ await item.getByRole('button',{name:/^Move/}).click();
+ await item.getByRole('group',{name:'Move to'}).waitFor();
+ await page.keyboard.press('Escape');
+ await page.locator('.left li',{hasText:'10 min Zone 2'}).getByRole('button',{name:'Do it today'}).click();
+ const add=page.getByRole('dialog',{name:'Add to my plan'});
+ assert.equal(await add.getByRole('spinbutton',{name:'Zone 2 minutes you intend'}).inputValue(),'10','the backlog amount is prefilled');
+ assert.equal(await add.getByRole('group',{name:'Day'}).getByRole('button',{name:'Today'}).getAttribute('aria-pressed'),'true');
+ assert.deepEqual(await contrastFailures(page),[],'add sheet contrast');
+ await page.keyboard.press('Escape');
+ assert.ok((await page.locator('.event').first().textContent()).includes('Harbour 10K'));
+ await page.getByRole('button',{name:'Add a race or event'}).click();
+ await page.getByRole('dialog',{name:'Add a race or event'}).getByRole('button',{name:'Add event'}).waitFor();
+ assert.equal(await page.getByRole('dialog',{name:'Add a race or event'}).getByRole('button',{name:'Add event'}).isDisabled(),true,'a name and date are needed');
+ await page.keyboard.press('Escape');
  await page.getByRole('button',{name:'Goals',exact:true}).click();await waitRoute('plan/commitments');
  await page.getByRole('button',{name:'More Strength'}).click();
  assert.equal(await page.locator('.eg').first().locator('output').textContent(),'5');
@@ -281,35 +311,6 @@ try {
  await page.getByRole('button',{name:'Save weekly goals'}).click();await waitRoute('plan');
  await back('today');
  console.log('Plan week, goals, check-in plan and intensity pages: passed');
- for(const width of [390,700,1100]){
-  for(const fixture of ['plan-partial','plan-unavailable']){
-   const evidence=await browser.newPage({viewport:{width,height:1000}});
-   evidence.on('pageerror',e=>errors.push(e.message));
-   for(const route of ['checkin']){
-    await evidence.goto(`${url}/?fixture=${fixture}#${route}`);
-    if(route==='checkin'){
-     await evidence.locator('.checkin-controls').waitFor();
-     for(let i=0;i<7 && !(await evidence.locator('.plan-checkin').count());i++)await evidence.getByRole('button',{name:'Next',exact:true}).click();
-    }
-    const card=evidence.locator('.plan-checkin');
-    await card.waitFor();
-    const text=await card.textContent();
-    assert.ok(text.includes(fixture==='plan-partial'?'Partial evidence':'Not enough evidence'));
-    assert.ok(text.includes('Workout list incomplete') && text.includes('Needs a saved sleep plan and recorded night'));
-    assert.ok(!text.includes('All reached')&&!text.includes('Every target reached'));
-    if(route==='plan' && fixture==='plan-partial'){
-     assert.equal(await evidence.locator('.plan-history .now b').textContent(),'100*');
-     const color=await evidence.locator('.plan-history .now .track i').evaluate(el=>getComputedStyle(el).backgroundColor);
-     assert.notEqual(color,'rgb(61, 220, 151)','known-only 100% is not all reached');
-    }
-    assert.deepEqual(await contrastFailures(evidence),[],`${width}/${fixture}/${route}: contrast`);
-    assert.ok(await evidence.evaluate(()=>document.querySelector('main').scrollWidth<=document.querySelector('main').clientWidth+1));
-    await evidence.screenshot({path:resolve(output,`weekly-evidence-${fixture}-${width}-${route}.png`)});
-   }
-   await evidence.close();
-  }
- }
- console.log('Partial/unavailable plan evidence at phone, unfolded and desktop widths: passed');
  await page.goto(`${url}/#settings`);await waitRoute('settings');
  assert.equal(await page.locator('.setting.lead').count(),0,'the lead appears with the bedtime reminder');
  await page.locator('label.setting',{hasText:'Bedtime'}).locator('input').check();
@@ -713,7 +714,7 @@ try {
  const weekly=patches.getByRole('checkbox',{name:'Weekly check-in'});
  const privacy=patches.getByRole('checkbox',{name:/Persistent status/});
  await morning.waitFor();
- assert.equal(await patches.getByRole('checkbox').count(),9,'journal has its own consent control');
+ assert.equal(await patches.getByRole('checkbox').count(),10,'journal has its own consent control');
  assert.equal(await patches.locator('.card').filter({has:patches.getByRole('heading',{name:'Notifications',exact:true})}).getByRole('checkbox').count(),7,'journal consent is not a notification switch');
  await patches.evaluate(()=>window.testPatch.holdKeys=['notifyMorningReadiness','notifyStatus']);
  await morning.uncheck();

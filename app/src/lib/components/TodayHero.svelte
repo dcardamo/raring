@@ -10,7 +10,7 @@
  import {duration} from '../format';
  // Last night and readiness first, then one leading message with at most one
  // action. The effort scale is Garmin's call, shown only when nothing holds it back.
- let {today, navigate, act, adapt}: {today: TodayView, navigate: (route: string) => void, act: (a: LocalAction) => void, adapt: () => void} = $props();
+ let {today, navigate, act, adapt, plan}: {today: TodayView, navigate: (route: string) => void, act: (a: LocalAction) => void, adapt: () => void, plan: () => void} = $props();
  let lead = $derived(today.lead);
  let night = $derived(today.focus.lastNight);
  let asleep = $derived(night?.asleepMin ?? null);
@@ -23,7 +23,7 @@
  function run() {
   const a = lead?.action;
   if (!a) return;
-  if (a.adapt) adapt(); else if (a.route) navigate(a.route);
+  if (a.adapt) adapt(); else if (lead?.kind === 'suggest') plan(); else if (a.route) navigate(a.route);
  }
 </script>
 <section class="morning" aria-label="Last night and readiness">

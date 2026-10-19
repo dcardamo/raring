@@ -309,3 +309,22 @@ fn surfaces_respect_rest_illness_pauses_limits_and_not_today_without_private_tex
     let morning = core.notifications(now(9)).into_iter().find(|n| n.kind == "morning").unwrap();
     assert!(morning.title.contains("readiness 88"), "{}", morning.title);
 }
+
+#[test]
+fn the_morning_update_drops_garmins_advice_while_resting() {
+    use raring_core::view::LocalAction;
+    let path = db_path();
+    let store = Store::open(&path).unwrap();
+    seed(&store);
+    store.put("readiness", "2025-03-12", "fetch", &json!({"score": 88, "level": "HIGH", "feedbackShort": "READY_FOR_HIGH_INTENSITY"})).unwrap();
+    store.put("activity", "9", "fetch", &json!({"activityId": 9, "activityName": "Early Run", "activityTypeDTO": {"typeKey": "running"},
+        "summaryDTO": {"startTimeLocal": "2025-03-12 06:00:00", "duration": 1800, "activityTrainingLoad": 80}})).unwrap();
+    let core = Raring::open(&path).unwrap();
+    let body = |core: &Raring| core.notifications(now(9)).into_iter().find(|n| n.kind == "morning").unwrap().body;
+    let before = body(&core);
+    core.local_action(&LocalAction::RestToday, now(8)).unwrap();
+    let rested = body(&core);
+    assert!(rested.ends_with("Rest day · no training call"), "{rested}");
+    let advice: Vec<&str> = before.lines().filter(|l| !rested.contains(*l)).collect();
+    assert!(!rested.contains("done ·"), "no workout or Garmin call note beside the rest line: {rested} (before: {advice:?})");
+}
