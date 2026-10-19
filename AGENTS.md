@@ -27,6 +27,12 @@ Run everything inside the flake's dev shell: `nix develop -c <command>`. It
 provides Rust (with Android targets), tauri-cli, Node 22, JDK 17 and the
 Android SDK, NDK and emulator.
 
+- Enter the shell from this checkout (root or a subdirectory such as `app/`).
+  `ANDROID_USER_HOME` and `ANDROID_AVD_HOME` are anchored to the checkout root,
+  not the entry directory; source archives use the enclosing project root.
+  The private debug key is `.android-user/debug.keystore`. Preserve it for
+  in-place debug updates; a certificate mismatch needs key recovery, not an
+  uninstall or a newly generated key. The shell does not move or generate keys.
 - Emulator: `scripts/emulator.sh` boots `pepo35` headless as
   `emulator-5560` (`ANDROID_SERIAL` is set by the shell). Other emulators may
   run on this host; never kill processes by pattern.

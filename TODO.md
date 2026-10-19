@@ -130,9 +130,15 @@ the approved prototype using matching scenarios and U01–U64, not just old-app
 regressions. Keep item 26 open.
 
 **Android checkpoint:** the new x86_64 debug APK built, but emulator installation
-failed with `INSTALL_FAILED_UPDATE_INCOMPATIBLE` (different debug certificate).
-No uninstall or clear followed that failure. Latest Progress behavior is not
-Android-verified. The phone artifact remains
+failed with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`. Coordinator verified the cause:
+`$PWD`-relative Android homes selected different private debug keys when entering
+from root versus `app/`. The dev shell now anchors both Android homes to the
+checkout root (source archives use the enclosing project root). Verified that
+root/app `nix develop` entry paths agree, and the archive fallback creates no
+Android state. Coordinator owns recovery of the existing matching key
+and the in-place emulator update. No builds, installs, key changes, uninstall or
+clear in this lane until that recovery is confirmed. Latest Progress behavior
+is not Android-verified. The phone artifact remains
 `.data/apk/raring-debug-arm64-db8314f.apk`, labelled `db8314f`; a new label requires
 a newly built and verified phone binary.
 

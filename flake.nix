@@ -149,12 +149,25 @@
         export GIO_MODULE_DIR=${pkgs.glib-networking}/lib/gio/modules
         export XDG_DATA_DIRS=${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}:$XDG_DATA_DIRS
         export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath linuxDeps}:$LD_LIBRARY_PATH
-        export ANDROID_AVD_HOME=$PWD/.android-avd
-        export ANDROID_USER_HOME=$PWD/.android-user
+        # Worktrees keep their own Android state, independent of the entry directory.
+        raring_root="$(git rev-parse --show-toplevel 2>/dev/null)" || raring_root="$PWD"
+        # Source archives have no Git metadata; find their enclosing project root.
+        while [ ! -f "$raring_root/flake.nix" ] || [ ! -d "$raring_root/app/src-tauri" ]; do
+          if [ "$raring_root" = / ]; then
+            echo "Enter the Raring dev shell from within its checkout or source archive." >&2
+            exit 1
+          fi
+          raring_root="$(dirname "$raring_root")"
+        done
+        export ANDROID_AVD_HOME="$raring_root/.android-avd"
+        export ANDROID_USER_HOME="$raring_root/.android-user"
         # Raring's emulator runs on its own port; other emulators may be up.
         export ANDROID_SERIAL=''${ANDROID_SERIAL:-emulator-5560}
         # Secret scan before every commit (.githooks/pre-commit).
-        [ "$(git config --get core.hooksPath)" = .githooks ] || git config core.hooksPath .githooks
+        if [ "$(git -C "$raring_root" rev-parse --show-toplevel 2>/dev/null)" = "$raring_root" ]; then
+          [ "$(git -C "$raring_root" config --get core.hooksPath)" = .githooks ] || git -C "$raring_root" config core.hooksPath .githooks
+        fi
+        unset raring_root
       '';
     };
   };
