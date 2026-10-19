@@ -18,7 +18,13 @@ availability on every account or watch.
 ### 26. A focused, adaptive Raring experience — exclusive
 
 **Design:** [A focused, adaptive Raring experience](docs/experience-design.md).
-**Stage 1 v2 rebuilt; stopped at the usability gate**, not production shell changes: the rejected v1
+**Current status: implementation in progress; interim local integration approved.**
+Dan requested merging the committed checkpoint through `2316ae0` into local
+`main`, then continuing item 26 on `feat/experience-redesign`. This is not
+completion, a scope reduction, or permission to push/release the unfinished
+rebuild. Keep the remaining parity and validation work below open.
+
+**Prototype history (stage 1):** the rejected v1
 (`302a69e`) is replaced by a Svelte prototype in `app/src/experience/`, starting
 with `b3567c8` (shared shipped details) and `b965aa4` (checkpoint A). The coordinator
 approved the richer visual direction; its A–K follow-ups and read-only review
@@ -88,8 +94,8 @@ picker; lift Max weight / Volume; richer workout detail from stored fields
 (provenance recorded); weight as a metric card. Remaining: usability, device,
 real-data and migration gates. **P5** (Dan's chat feedback): rings draw only
 recorded work; weight is a trend-weight card (smoothed weigh-ins, 1–90 day
-changes, freshness); metric cards flag old readings. Open decision (neutral until
-Dan decides): whether a weight direction the person chooses may colour changes. This does not authorise stage 2 or a release.
+changes, freshness); metric cards flag old readings. Dan confirmed neutral weight changes; direction-based colouring is not enabled.
+Prototype approval was not release permission.
 
 **Design selected and approved (2026-10-19).** Dan selected this candidate
 (`feat/experience-redesign`, prototype at `0c58f47`) and approved its design;
@@ -149,8 +155,11 @@ instrumentation, physical phone and full matching-scenario parity remain open.
 Private logs are in `.data/qa-progress-native/`.
 
 Preserve the recovered matching root `.android-user/debug.keystore` at eventual
-cutover/worktree retirement; its backup is in main `.data`. Main's own
-`.android-user` still has a different older debug key and was not overwritten.
+cutover/worktree retirement; its backup is in main `.data`. For this interim
+integration, main's canonical `.android-user/debug.keystore` was aligned with
+the recovered key after backing up its older key under
+`.data/main-merge-signing-IyRuTI/`. Both checkouts now use the existing installed
+app's debug certificate; no release key was changed.
 Always verify signer before installing; never clear/uninstall to fix a mismatch.
 The phone artifact remains `.data/apk/raring-debug-arm64-db8314f.apk`, labelled
 `db8314f`; no newer arm64 binary has been published.
@@ -171,7 +180,8 @@ validation remain open.
 **Comparison closed (2026-10-19):** the independent candidate on
 `experiment/raring-26-deepseek` (workspace `wks_ed18d1aad5f3d96a`) is archived;
 its branch stays unmerged as a reference. This branch is the one that may merge.
-No unrelated work, main merge, push or release is authorised.
+The interim local merge is authorised above; unrelated work, pushing and
+releasing the unfinished rebuild are not.
 
 **Exclusive workstream:** suspend other feature work
 and parallel implementation lanes, including unrelated items below. Work through

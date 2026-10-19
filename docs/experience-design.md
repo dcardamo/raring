@@ -30,19 +30,18 @@ Dan authorised one exception during stage 1: a second isolated item-26
 candidate, `experiment/raring-26-deepseek` (workspace `wks_ed18d1aad5f3d96a`),
 built independently from `3b213ff`. On 2026-10-19 Dan selected this candidate
 and approved its design; the comparison is closed, the other candidate is
-archived and its branch stays unmerged as a reference. This permits neither
-unrelated work nor a main merge/push/release. Time-sensitive
-verification, such as a real daylight-saving transition, may continue as checks
-and feed this initiative; the freeze is not a reason to miss that evidence.
+archived and its branch stays unmerged as a reference. No unrelated work is
+authorised. Time-sensitive verification, such as a real daylight-saving
+transition, may continue as checks; the freeze is not a reason to miss evidence.
 
-Use one integration branch for the coordinated cutover. Every push to `main`
-creates a release, so intermediate shell/route changes must not be merged there
-as unfinished stages. Keep the current app releasable on `main` until the
-integrated experience passes the release gate. Commit sequential checkpoints
-on that branch; this is not permission for parallel implementation branches.
-If a smaller independently releasable slice is proposed, agree its complete user
-journeys and migration boundary before merging it. No automatic push or release
-is authorised by this document.
+**Interim local integration:** Dan subsequently requested merging the committed
+work through `2316ae0` into local `main`, then continuing item 26. This expressly
+permits that partial local integration, not a claim of design completion or a
+waiver of the remaining parity and validation work. Continue sequential
+checkpoints on `feat/experience-redesign`, with no parallel implementation lanes.
+Every push to `main` creates a release: keep remote `main` unchanged until the
+release gate and release permission are satisfied. This local merge does not
+authorise a push or publication of the unfinished rebuild.
 
 The baseline includes **shipped naps and the consented Garmin journal**, as well
 as thresholds, gear, planned training, strength, long-range trends and the weekly
@@ -1759,11 +1758,13 @@ the build gathers device and real-data evidence as it goes, and the
 participant gate stays open for Dan's decision at stage 5. Weight changes stay
 neutral (one metric accent, never good or bad).
 
-All work lands as sequential checkpoints on `feat/experience-redesign`. Nothing
-merges to or pushes `main` (every push there is a release) until the definition
-of done and Dan's explicit go. No Garmin writes, no new Garmin requests unless
-separately verified and budgeted; request budgets, token serialization and the
-on-demand gates stay as they are.
+Work continues as sequential checkpoints on `feat/experience-redesign`. Dan
+requested an interim local merge of the committed work through `2316ae0`, then
+continued implementation. Item 26 and the parity ledger remain open; the merge
+is not design completion. Do not push `main` (every push there is a release)
+until the definition of done and release permission are satisfied. No Garmin
+writes, no new Garmin requests unless separately verified and budgeted; request
+budgets, token serialization and on-demand gates stay as they are.
 
 ### Principles of the build
 
