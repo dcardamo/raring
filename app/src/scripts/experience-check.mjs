@@ -451,7 +451,8 @@ await journey('Weight is a metric like the others', 'U13', async (page) => {
  const card = page.locator('.wc');
  if (await card.getByRole('group', {name: 'Weight range'}).locator('button').count() !== 6) throw new Error('weight lacks the range picker');
  if (!await card.getByRole('button', {name: /Add a weight/}).isDisabled()) throw new Error('weight write enabled');
- if (!await card.locator('svg path').count()) throw new Error('weight has no trend line');
+ if (await card.locator('.wch svg path').count() < 2) throw new Error('weight lacks scale and trend lines');
+ if (await card.locator('.chg li svg[role=img]').count() < 5) throw new Error('trend change rows lack sparklines');
  for (const t of ['Trend weight', 'Scale', 'Last weigh-in', '7 days', '30 days']) if (!(await card.innerText()).includes(t)) throw new Error(`weight card lacks ${t}`);
  await set(page, {profile: 'sparse'}); await ext(page, 'health');
  if (!await page.locator('.wc .fresh.stale').count()) throw new Error('stale weigh-in not flagged');

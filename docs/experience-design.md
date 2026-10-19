@@ -1261,7 +1261,7 @@ screens link to it. This table drives P3; anything marked *cut* is removed.
 | Training · Gear | — | Move to Profile (P3b) |
 | Health · long-term, then vitals | Know long-term direction, then today's readings | Change (P3b): vitals directly below |
 | Health · 90-day sparklines | — | Cut (P3b): charts with axes, ranges and a range picker |
-| Health · weight | Know if I'm gaining or losing, and how fresh it is | Change (P5): trend weight over weigh-ins, 1–90 day changes, last weigh-in age; no goals or verdicts |
+| Health · weight | Know if I'm gaining or losing, and how fresh it is | Change (P5/P6): one accent colour; scale line and trend line with weigh-in markers; range average and change; 1–90 day changes with sparklines and direction; last weigh-in age; no goals or verdicts |
 | Any metric card · freshness | Know when a reading is old | New (P5): flagged after 2 days (weight 7) |
 | Health · Your day duplicate | — | Cut (P3b) |
 | Sleep · Last night / Tonight tabs | Know last night; decide tonight's bedtime | Change (P3b): two tabs, Tonight is a plan |
@@ -1306,7 +1306,11 @@ others, with no goals or alerts.
 card: scale weigh-ins as points with the trend line through them, the trend's
 change over 1, 3, 7, 14, 30 and 90 days (losing, gaining or steady, with a
 weekly rate from 7 days), the last weigh-in's age, flagged when older than 7
-days. Every metric card now flags a newest reading older than 2 days instead of
+days. P6 gives the card one accent colour (the metric, not good or bad), scale weight
+as a faint line through weigh-ins (broken across gaps of more than two days,
+monotone so it never overshoots a reading), the trend as the bold line with a
+marker per weigh-in, the range's average and change, and a sparkline per change
+row. Every metric card now flags a newest reading older than 2 days instead of
 silently showing old data. Changes are neutral in colour: Raring has no weight
 goal or verdict (a direction the person wants is a decision for Dan).
 

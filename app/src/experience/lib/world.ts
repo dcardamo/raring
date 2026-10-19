@@ -329,7 +329,7 @@ export function hillFor(date: string): number | null {
 }
 /** Scale weigh-ins: most mornings, with day-to-day water swings and a slow loss lately. */
 export function weightFor(date: string): number | null {
-  if (date < HISTORY_START || date > '2026-11-22' || rand(date + 'wt') > .62) return null;
+  if (date < HISTORY_START || date > '2026-11-22' || rand(date + 'wt') > .74) return null;
   const days = daysBetween(HISTORY_START, date), recent = Math.max(0, daysBetween('2026-09-01', date));
   return round1(75.6 - days / 900 - recent * .018 + (rand(date + 'w') - .5) * 1.4 + (weekday(date) === 1 ? .35 : 0));
 }
