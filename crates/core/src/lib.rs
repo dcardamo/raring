@@ -191,9 +191,7 @@ impl Raring {
     pub fn set_plan(&self, today: &str, update: &view::PlanUpdate) -> Result<()> {
         let today = chrono::NaiveDate::parse_from_str(today, "%Y-%m-%d")
             .map_err(|_| Error::InvalidSetting)?;
-        plan::set(&self.store, today, update)?;
-        let start = plan::week_start(today, plan::week_starts_on(&self.store));
-        local::mirror_legacy_plan(&self.store, start, update)
+        plan::set(&self.store, today, update)
     }
     /// The plan week containing `date`, measured on the phone's calendar day.
     pub fn plan_board(&self, date: &str, now: DateTime<Local>) -> Result<view::PlanBoard> {

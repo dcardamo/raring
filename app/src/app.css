@@ -112,3 +112,4 @@ button:disabled{cursor:default}
 .untracked{font-size:13px;line-height:1.5}
 
 .threshold-list{margin-top:14px}.threshold-list>div{align-items:center;gap:12px;padding:5px 0;border-top:1px solid var(--line)}.threshold-list>div:first-child{border:0}.threshold-list span{min-width:0}.threshold-list small{display:block;margin-top:2px;color:var(--text3);font-size:11px}.threshold-list b{flex:none;white-space:nowrap}
+.week-cells{margin-top:12px}

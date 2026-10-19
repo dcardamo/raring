@@ -340,28 +340,12 @@ async fn trend(app: tauri::AppHandle, query: TrendQuery) -> Result<TrendView, St
     })
     .await
 }
-#[tauri::command]
-async fn plan(app: tauri::AppHandle, date: Option<String>) -> Result<PlanView, String> {
-    read_view(app, move |core| {
-        Ok(core.plan(&date.unwrap_or_else(|| core.current_date(Local::now()))))
-    })
-    .await
-}
 /// The plan week containing `date` (this week when absent), on the calendar day.
 #[tauri::command]
 async fn plan_board(app: tauri::AppHandle, date: Option<String>) -> Result<raring_core::view::PlanBoard, String> {
     read_view(app, move |core| {
         let now = Local::now();
         core.plan_board(&date.unwrap_or_else(|| now.date_naive().to_string()), now).map_err(|e| e.to_string())
-    })
-    .await
-}
-/// Saves to the week the plan screen shows.
-#[tauri::command]
-async fn set_plan(app: tauri::AppHandle, update: PlanUpdate) -> Result<(), String> {
-    read_view(app, move |core| {
-        core.set_plan(&core.current_date(Local::now()), &update)
-            .map_err(|e| e.to_string())
     })
     .await
 }
@@ -844,8 +828,6 @@ pub fn run() {
                     health,
                     checkin,
                     trend,
-                    plan,
-                    set_plan,
                     local_action,
                     plan_board,
                     sync_now,
@@ -872,8 +854,6 @@ pub fn run() {
                     health,
                     checkin,
                     trend,
-                    plan,
-                    set_plan,
                     local_action,
                     plan_board,
                     sync_now,

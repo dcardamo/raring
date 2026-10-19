@@ -43,15 +43,26 @@ try {
  const tab=async(name)=>{await page.getByRole('navigation').getByRole('button',{name,exact:true}).click();await waitRoute(name.toLowerCase())};
  const back=async(route)=>{adb('shell','input','keyevent','4');await waitRoute(route)};
  await waitRoute('today');
- await tab('Sleep');await tab('Training');await tab('Health');await back('today');
+ await tab('Plan');await tab('Training');await tab('Health');await tab('Progress');await back('today');
+ await page.locator('.dials .dial-button').first().click();await waitRoute('sleep');await back('today');
  await page.locator('.activity').first().click();await waitRoute(`workout/${workout}`);await back('today');
  await tab('Training');
  await page.locator('.activity').first().click();await waitRoute(`workout/${workout}`);await back('training');
- await page.getByRole('button',{name:'Settings',exact:true}).click();await waitRoute('settings');await back('training');await back('today');
+ await page.getByRole('button',{name:'Profile and settings'}).click();await waitRoute('profile');
+ await page.getByRole('button',{name:/^Settings/}).click();await waitRoute('settings');await back('profile');await back('training');await back('today');
  await page.getByRole('button',{name:/^Body Battery/}).click();await waitRoute('metric/bodyBattery');await back('today');
  await tab('Health');
  await page.getByRole('button',{name:'View HRV',exact:true}).click();await waitRoute('metric/hrv');await back('health');await back('today');
+ await tab('Plan');
+ await page.getByRole('button',{name:'Goals',exact:true}).click();await waitRoute('plan/commitments');await back('plan');await back('today');
  console.log('Android hardware Back: tab siblings, workouts, settings and metrics passed');
+ // Notification and widget targets (VaultPlugin loads them as fragments), including the
+ // earlier check-in route, open their current pages in the WebView.
+ for(const [target,route] of [['checkin','review/latest'],['sleep','sleep'],['readiness','readiness'],['metric/stress','metric/stress'],['metric/bodyBattery','metric/bodyBattery'],['health','health'],['training','training'],['today','today']]){
+  await page.goto(`http://tauri.localhost/?fixture=demo#${target}`);
+  await waitRoute(route);
+ }
+ console.log('Android native targets and the check-in alias: passed');
 
  await page.evaluate(()=>{
   window.__foldSentinel=true;

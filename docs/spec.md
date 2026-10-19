@@ -66,8 +66,13 @@ The visual reference is [design/mockup](../design/mockup/): open
 
 ## Screens
 
-Bottom tabs: **Today · Sleep · Training · Health**. Tapping a dial or card
-opens its detail.
+Bottom tabs: **Today · Plan · Training · Health · Progress**. Sleep opens
+from Today. Each root header has search (pages and Garmin metrics by name)
+and a profile button: Profile holds the Garmin history on the phone, gear,
+Settings and help. Tapping a dial or card opens its detail; Back returns to
+the page that opened it. Earlier links still open their current page:
+`#checkin` the latest weekly review, `#plan-setup` the weekly goals,
+`#explore` Training; an unknown link opens Today.
 
 ### Welcome & privacy
 
@@ -140,9 +145,9 @@ optional after sign-in.
 - Vitals as five compact readings with units, Garmin Health Status when
   available, a range-status indicator and a count of recorded and comparable
   readings. Missing or uncalibrated data is neutral, never an all-clear.
-- **This week**: the weekly plan's targets as compact bars with "N/target"
-  and the days left, opening the plan. Before targets are set, a small card
-  invites setting them up.
+- **This week**: the week's nested goal rings with one line per goal and
+  the seven day cells (Rules: Rings), opening Plan; without goals it shows
+  the days only. Hidden during wind-down and late night.
 - A read-only next-session card from Garmin's scheduled workout calendar,
   separate from readiness and effort advice. It is absent during wind-down
   and late night; missing or stale schedules are not empty schedules. Today's
@@ -366,38 +371,30 @@ acute load, Fitness Age and Sleep's history card) is the same interactive chart,
   level colors, and the current baseline band shows only on daily ranges.
   Averages, overlays and changes are ink, with no verdict and no new score.
 
-### Weekly plan
+### Plan
 
-Opened from Today's plan card. Phone, unfolded (two columns from 660 px) and
-desktop layouts follow `design/mockup/` screens `plan` and `plan-setup`.
+The plan week (Garmin's intensity week, see Plan week) at a glance, from the
+local goals and sessions (Rules: Local records to Backlog).
 
-- **This week**: the week's dates, how many targets are on track ("3 of 4"),
-  the days left and which targets are behind. One line per target: an icon,
-  "N of target" in Garmin's units, a bar (ink on track, amber behind pace,
-  green when done) and a few words: the days that counted or what is left.
-  Partial credit shows for measured targets; incomplete evidence says why
-  instead of showing a failure. The summary's denominator includes all enabled
-  targets, while only measured targets count as reached or on track.
-- **Last 8 weeks**: one bar per week, the share of targets reached; a week
-  reaching every target is green, a paused week shows a pause mark, and a
-  week without a plan or measurable evidence is a gap, never zero. An asterisk
-  marks completion across known targets only; even 100% there isn't green
-  "All reached" while another target is unknown.
-- **Targets** (setup): start from a preset (Strength, Endurance, Sleep,
-  Custom) that sets all four targets, then adjust any of them: strength
-  sessions a week, intensity minutes (Garmin's weekly goal unless changed),
-  Zone 2 minutes and nights asleep on time; zero turns a target off. Pick
-  rest days, pause this week (travel or illness, left out of history), and
-  see last week measured against the current targets. Changes save at once
-  and apply from the current week; earlier weeks keep the targets they had.
-  "Last week on these targets" is explicitly a retrospective setup comparison,
-  not an achievement record for a week before setup.
-- Targets are a local setting in the core's own database, so every platform
-  gets them; nothing is sent to Garmin or anywhere else.
+- **Week**: dates, a pause or illness note, the nested week ring and one line
+  per goal: recorded of target, placed, to review, left or reached; a change
+  during the week shows the starting target. Sleep Score is a Garmin reading
+  against its target. Missing evidence says so instead of a number.
+- **Goals** (`#plan/commitments`): steppers for strength sessions, Zone 2,
+  Zone 4–5 and intensity minutes (Garmin's weekly goal until changed), sleep
+  timing (asleep by or wind down at a chosen time) and an average Sleep Score.
+  Zero turns a goal off. Saves apply as the Local records rule says.
+- **Days**: day cells with rings; a day lists your sessions with one state word
+  (Done, Needs review, Planned, Not recorded, Awaiting data, Marked missed),
+  recordings not in your plan, and Garmin's scheduled workouts by name,
+  read-only and not counted.
+- **Left this week**: the backlog, or a paused note with nothing to catch up.
+- A migrated sleep-timing observation is explained once.
 
 ### Weekly check-in
 
-Opened from the Monday notification: a short stack of swipeable cards for the
+Opened from the Monday notification (or Progress → Last week, `#review/latest`;
+an explicit week is `#review/YYYY-MM-DD`): a short stack of swipeable cards for the
 week just ended. Readiness, sleep, training and health each get a gauge or
 chart with an arrow against the week before. VO2max and Fitness Age changes
 are called out. A timing card shows the week's bed and wake times, their
@@ -405,11 +402,12 @@ earliest and latest, how many nights Garmin rated aligned, ahead or behind,
 and one timing focus. It is descriptive: no adherence score, streaks or
 claims that timing changed a score. An intensity card shows Garmin's weekly
 intensity minutes as a ring against Garmin's goal, with the moderate and
-vigorous split. Once targets are set, a plan card (mockup `checkin`) lists
-each target's result for the plan week that just ended, a check or amber dot,
-the change against the week before, and next week's targets and rest days
-with Keep and Change. It ends with one win and one focus for the
-coming week, a line each. Past check-ins stay in a list.
+vigorous split. Once goals are set, a plan card (mockup `checkin`) lists
+each strength, intensity, Zone 2 and migrated sleep-timing goal's result for
+the plan week that just ended (read from the local goals), a check or amber
+dot, the change against the week before, and next week's targets and rest
+days with Keep and Change (Change opens the weekly goals and returns here).
+It ends with one win and one focus for the coming week, a line each.
 
 ## Android status surfaces
 
@@ -986,7 +984,7 @@ Sent by the phone itself.
   Emulator accelerated refresh measurements showed no usable battery-drain
   signal, so there is no evidence for increasing Garmin polling. Actual
   battery/radio cost and Doze delivery remain phone checks.
-- **View cache**: after the first view renders, the four tabs are
+- **View cache**: after the first view renders, the five tabs and Sleep are
   prefetched and cached by route for the current day. A completed sync, a
   changed sync timestamp or a local day rollover invalidates in-flight reads
   and the cache without clearing the visible view. Status is read on start,

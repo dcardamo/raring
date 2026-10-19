@@ -1,25 +1,41 @@
-export const tabs = ['today', 'sleep', 'training', 'health'] as const;
+export const tabs = ['today', 'plan', 'training', 'health', 'progress'] as const;
 
 const metrics = new Set([
   'bodyBattery', 'stress', 'heartRate', 'restingHr', 'hrv', 'respiration', 'spo2', 'skinTemp',
   'vo2max', 'endurance', 'hill', 'runningTolerance',
 ]);
-const routes = new Set([...tabs, 'readiness', 'checkin', 'plan', 'plan-setup', 'settings', 'onboarding', 'strength', 'help']);
+const routes = new Set([...tabs, 'sleep', 'readiness', 'settings', 'onboarding', 'strength', 'help',
+  'activities', 'profile', 'gear', 'plan/commitments', 'review/latest']);
+// Earlier routes keep working; each opens its current page, never a silent Today.
+export const aliases: Record<string, string> = {checkin: 'review/latest', 'plan-setup': 'plan/commitments', explore: 'training'};
 export const helpPages = ['strength-start', 'strength-sets', 'strength-muscles', 'strength-watches'] as const;
 const trainingMetrics = new Set(['vo2max', 'endurance', 'hill', 'runningTolerance']);
 
-export function normalizeRoute(hashOrRoute: string): string {
+/** A route this app has a page for; anything else is null. */
+export function knownRoute(hashOrRoute: string): string | null {
   let route = hashOrRoute.startsWith('#') ? hashOrRoute.slice(1) : hashOrRoute;
-  try { route = decodeURIComponent(route); } catch { return 'today'; }
+  try { route = decodeURIComponent(route); } catch { return null; }
+  route = aliases[route] ?? route;
   if (routes.has(route)) return route;
   if (/^workout\/[\w-]+$/.test(route)) return route;
+  if (/^review\/\d{4}-\d{2}-\d{2}$/.test(route)) return route;
   if (route.startsWith('metric/') && metrics.has(route.slice(7))) return route;
   if (route.startsWith('help/') && (helpPages as readonly string[]).includes(route.slice(5))) return route;
-  return 'today';
+  return null;
 }
 
+export function normalizeRoute(hashOrRoute: string): string {
+  return knownRoute(hashOrRoute) ?? 'today';
+}
+
+/** The tab a trail belongs to, ignoring Today. */
 function section(trail: string[]): string | undefined {
   return trail.findLast(route => (tabs as readonly string[]).includes(route) && route !== 'today');
+}
+/** Pages that open over whatever asked for them, without stacking twice. */
+function over(route: string, fromTrail: string[], skip: (page: string) => boolean): string[] {
+  const caller = fromTrail.filter(page => !skip(page) && page !== 'onboarding');
+  return [...(caller[0] === 'today' ? caller : ['today']), route];
 }
 
 /** The trail lists browser entries from root to the current page, not visits in chronological order. */
@@ -28,27 +44,36 @@ export function routeTrail(target: string, fromTrail: string[] = []): string[] {
   if (route === 'onboarding') return ['onboarding'];
   if (route === 'today') return ['today'];
   if ((tabs as readonly string[]).includes(route)) return ['today', route];
-  if (route === 'readiness' || route === 'checkin' || route === 'plan') return ['today', route];
-  if (route === 'plan-setup') return ['today', 'plan', route];
+  // Opening the page already shown keeps its trail.
+  if (fromTrail.length > 1 && fromTrail.at(-1) === route) return [...fromTrail];
+  if (route === 'readiness') return ['today', route];
+  if (route === 'sleep') return section(fromTrail) === 'health' ? ['today', 'health', route] : ['today', route];
+  if (route === 'plan/commitments') return fromTrail.at(-1)?.startsWith('review/') ? [...fromTrail, route] : ['today', 'plan', route];
+  if (route.startsWith('review/')) return ['today', 'progress', route];
+  if (route === 'strength' || route === 'activities') return ['today', 'training', route];
+  if (route === 'profile') return over(route, fromTrail, page => page === 'profile' || page === 'settings' || page === 'gear');
+  if (route === 'gear') return fromTrail.at(-1) === 'profile' ? [...fromTrail, route] : ['today', 'training', route];
   if (route === 'settings') {
+    if (fromTrail.at(-1) === 'profile') return [...fromTrail, route];
     const caller = fromTrail.at(-1) === 'settings' ? fromTrail.slice(0, -1) : fromTrail;
     return [...(caller[0] === 'today' ? caller : ['today']), route];
   }
-  if (route === 'strength') return ['today', 'training', 'strength'];
   if (route === 'help' || route.startsWith('help/')) {
     if (route !== 'help' && fromTrail.at(-1) === 'help') return [...fromTrail, route];
     // Help opens over the page that asked for it; reopening it does not stack.
-    const caller = fromTrail.filter(page => page !== 'help' && !page.startsWith('help/') && page !== 'onboarding');
-    return [...(caller[0] === 'today' ? caller : ['today']), route];
+    return over(route, fromTrail, page => page === 'help' || page.startsWith('help/'));
   }
   if (route.startsWith('workout/')) {
-    if (fromTrail.at(-1) === 'strength') return ['today', 'training', 'strength', route];
-    const parent = section(fromTrail) === 'training' ? 'training' :
-      fromTrail.some(page => page === 'today') ? 'today' : 'training';
-    return parent === 'today' ? ['today', route] : ['today', 'training', route];
+    const last = fromTrail.at(-1);
+    if (last === 'strength' || last === 'activities') return ['today', 'training', last, route];
+    const tab = section(fromTrail);
+    if (tab) return ['today', tab, route];
+    return fromTrail.some(page => page === 'today') ? ['today', route] : ['today', 'training', 'activities', route];
   }
   const metric = route.slice(7);
-  const parent = section(fromTrail) ?? (fromTrail[0] === 'today' || metric === 'bodyBattery' || metric === 'stress' ? 'today' :
+  const tab = section(fromTrail);
+  if (fromTrail.at(-1) === 'sleep') return [...fromTrail, route];
+  const parent = tab ?? (fromTrail[0] === 'today' || metric === 'bodyBattery' || metric === 'stress' ? 'today' :
     trainingMetrics.has(metric) ? 'training' : 'health');
   return parent === 'today' ? ['today', route] : ['today', parent, route];
 }

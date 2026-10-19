@@ -104,7 +104,12 @@ people) remain required before cutover is called validated. The five tabs (Today
 The stage 2–5 checkpoints are in the design's [implementation plan](docs/experience-design.md#17-implementation-plan-stages-25).
 
 **Stage 2 progress.** 2.1 local records and plan migration (`7e90c78`); 2.2
-matching, goal ledger, rings, backlog and the `PlanBoard` view (this change).
+matching, goal ledger, rings, backlog and the `PlanBoard` view (`b395dd8`); 2.3
+the five-tab shell (Today · Plan · Training · Health · Progress, Profile, search,
+aliases for every earlier route and native target) with the old plan screens
+retired. Interim gaps until stage 4: Progress shows trends and the latest review
+only (the 8-week plan history returns as goals over time in 4.2), and the review
+list is not built yet.
 Verified on the maintainer's stored data (key names only, read-only): activity
 `summaryDTO.averageHR` on all 30 stored activities, per-activity
 `moderate/vigorousIntensityMinutes` on 15 of 30 (absent ones stay unknown), and

@@ -34,11 +34,59 @@ pub(crate) fn legacy(json: &str) -> Option<(BTreeMap<String, PlanTargets>, BTree
         .map(|s| (s.versions, s.paused))
 }
 
-fn stored(store: &Store) -> Stored {
+fn stored_row(store: &Store) -> Stored {
     store
         .setting(KEY)
         .and_then(|s| serde_json::from_str(&s).ok())
         .unwrap_or_default()
+}
+
+/// Weekly results read the local goals (migrated from the plan row), so the
+/// check-in and the Plan tab agree. Goal kinds the earlier weekly plan never
+/// had are left out here.
+fn stored(store: &Store) -> Stored {
+    let local = crate::local::load(store);
+    if local.goals.versions.is_empty() && local.circumstances.pauses.is_empty() {
+        return stored_row(store);
+    }
+    let versions = local
+        .goals
+        .versions
+        .iter()
+        .map(|v| {
+            let t = &v.targets;
+            (v.from.clone(), PlanTargets {
+                preset: PlanPreset::Custom,
+                strength_sessions: t.strength_sessions,
+                intensity_min: (!t.intensity_garmin_goal).then_some(t.intensity_min),
+                zone2_min: t.zone2_min,
+                asleep_nights: if t.sleep_kind == SleepTimingKind::SavedPlan { t.sleep_nights } else { 0 },
+                rest_days: t.rest_days.clone(),
+            })
+        })
+        .collect();
+    let first = week_starts_on(store);
+    let paused = local
+        .circumstances
+        .pauses
+        .iter()
+        .filter_map(|p| {
+            let since = NaiveDate::parse_from_str(&p.since, "%Y-%m-%d").ok()?;
+            let until = NaiveDate::parse_from_str(p.until.as_deref()?, "%Y-%m-%d").ok()?;
+            Some((since, until))
+        })
+        .flat_map(|(since, until)| {
+            let mut weeks = vec![];
+            let mut monday = week_start(since, first);
+            while monday <= until {
+                weeks.push(monday);
+                monday += Duration::days(7);
+            }
+            weeks.into_iter().filter(move |w| *w >= since && *w + Duration::days(6) <= until)
+        })
+        .map(|w| w.to_string())
+        .collect();
+    Stored { versions, paused }
 }
 
 /// The first day of Garmin's intensity-minutes week, from the dates of its
@@ -76,22 +124,25 @@ fn targets_for(stored: &Stored, start: NaiveDate) -> Option<PlanTargets> {
 }
 
 /// Saves this week's targets and pause; later weeks keep them until changed.
-pub fn set(store: &Store, today: NaiveDate, update: &PlanUpdate) -> rusqlite::Result<()> {
-    let mut stored = stored(store);
-    let start = week_start(today, week_starts_on(store)).to_string();
+pub fn set(store: &Store, today: NaiveDate, update: &PlanUpdate) -> crate::Result<()> {
+    let mut stored = stored_row(store);
+    let first_day = week_start(today, week_starts_on(store));
+    let start = first_day.to_string();
     let mut targets = update.targets.clone();
     targets.rest_days.retain(|day| *day < 7);
     targets.rest_days.sort_unstable();
     targets.rest_days.dedup();
     stored.versions.insert(start.clone(), targets);
     if update.paused {
-        stored.paused.insert(start);
+        stored.paused.insert(start.clone());
     } else {
         stored.paused.remove(&start);
     }
     let json = serde_json::to_string(&stored)
         .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
-    store.set_setting(KEY, &json)
+    store.set_setting(KEY, &json)?;
+    // Goals migrated from this row follow later saves, so the two agree.
+    crate::local::mirror_legacy_plan(store, first_day, update)
 }
 
 fn number(v: &Value, key: &str) -> Option<f64> {

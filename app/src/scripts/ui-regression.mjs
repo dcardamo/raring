@@ -7,6 +7,9 @@ import {contrastFailures} from './contrast.mjs';
 
 const server=await createServer({configFile:resolve('vite.config.ts'),server:{host:'127.0.0.1',port:0}});
 const output=resolve('../.data/screens');
+// Sleep opens from Today; Settings sits in Profile, behind each root header's avatar.
+const openSleep=async page=>{if(!page.url().endsWith('#today')){await page.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();await page.waitForURL('**/#today');}await page.locator('.dials .dial-button').first().click();};
+const openSettings=async page=>{await page.getByRole('button',{name:'Profile and settings'}).first().click();await page.getByRole('button',{name:/^Settings/}).click();};
 await mkdir(output,{recursive:true});
 let browser;
 try {
@@ -35,7 +38,7 @@ try {
  await privatePage.getByRole('navigation').getByRole('button',{name:'Health'}).click();
  await privatePage.getByRole('button',{name:'Allow local journal reads'}).waitFor();
  assert.equal(await privatePage.getByText('Stretching',{exact:true}).count(),0,'journal entries hidden before opt-in');
- await privatePage.getByRole('button',{name:'Settings',exact:true}).click();
+ await openSettings(privatePage);
  await privatePage.getByText('Already downloaded logs remain on this device and in future exports until you erase local data.',{exact:false}).waitFor();
  assert.equal(await privatePage.locator('.card').filter({has:privatePage.getByRole('heading',{name:'Notifications',exact:true})}).locator('input[type=checkbox]').count(),6,'journal consent is not a notification switch');
  const consent=privatePage.locator('.card').filter({hasText:'Journal privacy'}).locator('input[type=checkbox]');
@@ -45,7 +48,7 @@ try {
  await privatePage.getByRole('button',{name:'Open journal'}).click();
  await privatePage.getByText('Stretching',{exact:true}).waitFor();
  await privatePage.screenshot({path:resolve(output,'journal-consented-390.png'),fullPage:true});
- await privatePage.getByRole('button',{name:'Settings',exact:true}).click();
+ await openSettings(privatePage);
  const enabled=privatePage.locator('.card').filter({hasText:'Journal privacy'}).locator('input[type=checkbox]');
  assert.equal(await enabled.isChecked(),true);
  await enabled.uncheck();
@@ -80,7 +83,7 @@ try {
   await enable.scrollIntoViewIfNeeded();
   await surface.screenshot({path:resolve(output,`status-offer-${width}.png`)});
   await surface.getByRole('button',{name:'Not now',exact:true}).click();
-  await surface.getByRole('button',{name:'Settings',exact:true}).click();
+  await openSettings(surface);
   const toggle=surface.getByRole('checkbox',{name:/Persistent status/});
   await toggle.waitFor();
   assert.equal(await toggle.isChecked(),false,'status is opt-in');
@@ -155,11 +158,11 @@ try {
  await page.goto(`${url}/#today`);
  await waitRoute('today');
  assert.equal(await page.title(),'Raring','browser uses the app name');
- await tab('Sleep');await tab('Training');await tab('Health');
+ await tab('Plan');await tab('Training');await tab('Health');await tab('Progress');
  await back('today');
  await tab('Training');
- await page.getByRole('button',{name:'Settings',exact:true}).click();await waitRoute('settings');
- await back('training');await back('today');
+ await openSettings(page);await waitRoute('settings');
+ await back('profile');await back('training');await back('today');
  await page.getByRole('button',{name:/^Body Battery/}).click();await waitRoute('metric/bodyBattery');
  await page.getByRole('button',{name:'Today',exact:true}).first().click();await waitRoute('today');
  await page.getByRole('button',{name:'View HRV',exact:true}).first().click();await waitRoute('metric/hrv');
@@ -188,7 +191,7 @@ try {
  await page.locator('.activity').first().click();await waitRoute('workout/9000000000001');
  await page.reload();await waitRoute('workout/9000000000001');
  await back('training');await back('today');
- await tab('Sleep');await tab('Sleep');await back('today');
+ await tab('Plan');await tab('Plan');await back('today');
  assert.equal(await page.evaluate(()=>window.__raringBack()),false,'Today lets Android leave the app');
  await tab('Training');
  assert.equal(await page.evaluate(()=>window.__raringBack()),true);
@@ -239,7 +242,7 @@ try {
  const chart=await history.locator('.chart-surface').boundingBox();
  await history.locator('.chart-surface').click({position:{x:chart.width*.55,y:chart.height*.5}});
  assert.notEqual(await slider.inputValue(),'29','chart taps select a reading');
- await page.goto(`${url}/#checkin`);await waitRoute('checkin');
+ await page.goto(`${url}/#checkin`);await waitRoute('review/latest');
  for(let i=0;i<4;i++)await page.getByRole('button',{name:'Next'}).click();
  const timing=page.locator('.timing-review');
  await timing.waitFor();
@@ -256,33 +259,39 @@ try {
  await planReview.getByRole('button',{name:'Keep'}).click();
  await page.getByText('THE FOCUS',{exact:true}).waitFor();
  await page.getByRole('button',{name:'Previous'}).click();
- await page.locator('.plan-checkin').getByRole('button',{name:'Change'}).click();await waitRoute('plan-setup');
- await back('plan');
+ await page.locator('.plan-checkin').getByRole('button',{name:'Change'}).click();await waitRoute('plan/commitments');
+ await back('review/latest');
  await page.goto(`${url}/#today`);await waitRoute('today');
- await page.locator('.plan-card').click();await waitRoute('plan');
- assert.equal(await page.locator('.plan-week .goal[data-state="behind"]').count(),1,'Zone 2 alone is behind pace');
- assert.equal(await page.locator('.plan-history .week').count(),8);
- await page.getByRole('button',{name:'Edit targets'}).click();await waitRoute('plan-setup');
- await page.getByRole('button',{name:'More strength sessions'}).click();
- assert.equal(await page.getByRole('radio',{name:'Custom'}).getAttribute('aria-checked'),'true','an edited target makes the plan custom');
- await page.getByRole('radio',{name:'Endurance'}).click();
- assert.equal(await page.locator('.plan-targets .stepper b').first().textContent(),'1');
- assert.equal(await page.getByRole('button',{name:'Mon',exact:true}).getAttribute('aria-pressed'),'true','presets keep rest days');
- await page.getByRole('button',{name:'More intensity minutes'}).click();
- await page.getByRole('button',{name:"Use Garmin's 150"}).click();
- await back('plan');await back('today');
- console.log('Weekly plan, setup, check-in plan and intensity pages: passed');
+ await page.locator('.week-card').click();await waitRoute('plan');
+ const week=await page.locator('.wk').textContent();
+ assert.ok(week.includes('Strength 3 of 4 sessions · 1 placed'),week);
+ assert.ok(week.includes('Zone 2 100 of 150 min · 40 placed · 10 left'),week);
+ assert.ok(week.includes('Intensity 124 of 150 min · 26 left'),week);
+ assert.equal(await page.locator('.day-cells .dc').count(),7);
+ await page.getByRole('button',{name:/^Friday 17 Oct/}).click();
+ await page.getByText('Garmin schedule · read-only',{exact:true}).waitFor();
+ assert.ok((await page.locator('.days').textContent()).includes('Easy ride'),'your session and Garmin\'s share the day');
+ await page.getByRole('button',{name:/^Monday 13 Oct/}).click();
+ assert.ok((await page.locator('.days').textContent()).includes('Done · matched by Raring'));
+ assert.ok((await page.locator('main').textContent()).includes('Left this week'));
+ await page.getByRole('button',{name:'Goals',exact:true}).click();await waitRoute('plan/commitments');
+ await page.getByRole('button',{name:'More Strength'}).click();
+ assert.equal(await page.locator('.eg').first().locator('output').textContent(),'5');
+ assert.equal(await page.locator('.eg').nth(3).locator('small').textContent(),'Garmin’s weekly goal');
+ await page.getByRole('button',{name:'Save weekly goals'}).click();await waitRoute('plan');
+ await back('today');
+ console.log('Plan week, goals, check-in plan and intensity pages: passed');
  for(const width of [390,700,1100]){
   for(const fixture of ['plan-partial','plan-unavailable']){
    const evidence=await browser.newPage({viewport:{width,height:1000}});
    evidence.on('pageerror',e=>errors.push(e.message));
-   for(const route of ['plan','checkin']){
+   for(const route of ['checkin']){
     await evidence.goto(`${url}/?fixture=${fixture}#${route}`);
     if(route==='checkin'){
      await evidence.locator('.checkin-controls').waitFor();
      for(let i=0;i<7 && !(await evidence.locator('.plan-checkin').count());i++)await evidence.getByRole('button',{name:'Next',exact:true}).click();
     }
-    const card=evidence.locator(route==='plan'?'.plan-week':'.plan-checkin');
+    const card=evidence.locator('.plan-checkin');
     await card.waitFor();
     const text=await card.textContent();
     assert.ok(text.includes(fixture==='plan-partial'?'Partial evidence':'Not enough evidence'));
@@ -306,7 +315,7 @@ try {
  await page.locator('label.setting',{hasText:'Bedtime'}).locator('input').check();
  await page.locator('.setting.lead select').selectOption('45');
  await tab('Today');
- await page.getByRole('button',{name:'Settings',exact:true}).click();await waitRoute('settings');
+ await openSettings(page);await waitRoute('settings');
  assert.equal(await page.locator('.setting.lead select').inputValue(),'45');
  console.log('Daily focus, sleep plan, rhythm, timing review, reminder lead and keyboard/touch history: passed');
 
@@ -395,7 +404,7 @@ try {
 
  for(const width of [344,360,390,660,707,840,1024]) {
   await page.setViewportSize({width,height:900});
-  for(const route of ['today','sleep','training','health','readiness','workout/9000000000001','workout/9000000000002','strength','help','help/strength-sets','metric/hrv','metric/restingHr','metric/bodyBattery','metric/stress','settings','checkin','plan','plan-setup','onboarding']) {
+  for(const route of ['today','sleep','training','health','readiness','workout/9000000000001','workout/9000000000002','strength','help','help/strength-sets','metric/hrv','metric/restingHr','metric/bodyBattery','metric/stress','settings','review/latest','plan','plan/commitments','progress','profile','onboarding']) {
    await page.goto(`${url}/#${route}`);await waitRoute(route);
    const layout=await page.evaluate(()=>{
     // Largest vertical gap between cards stacked in the same grid column.
@@ -419,12 +428,12 @@ try {
     assert.ok(await page.getByText('recorded weigh-ins only',{exact:false}).isVisible(),`${width}/health: sparse trend label`);
    }
    assert.ok(layout.holes<=18,`${width}/${route}: ${layout.holes}px hole between cards`);
-   if([390,840].includes(width) && ['today','sleep','training','workout/9000000000001','workout/9000000000002','strength','help/strength-sets','health','plan','plan-setup'].includes(route)) {
+   if([390,840].includes(width) && ['today','sleep','training','workout/9000000000001','workout/9000000000002','strength','help/strength-sets','health','plan','plan/commitments','progress','profile'].includes(route)) {
     await page.evaluate(()=>document.fonts.ready);
     const failures=await contrastFailures(page);
     assert.deepEqual(failures,[],`${width}/${route}: text contrast`);
    }
-   if(width===840 || (width===390 && ['today','sleep','training','workout/9000000000001','health','metric/restingHr','onboarding','settings','plan','plan-setup'].includes(route)) || (width===1024 && ['today','sleep','health','metric/restingHr','plan','plan-setup'].includes(route)) || (width===660 && ['health','metric/restingHr'].includes(route)))await page.screenshot({path:resolve(output,`${width}-${route.replace('/','-')}.png`)});
+   if(width===840 || (width===390 && ['today','sleep','training','workout/9000000000001','health','metric/restingHr','onboarding','settings','plan','plan/commitments'].includes(route)) || (width===1024 && ['today','sleep','health','metric/restingHr','plan','plan/commitments'].includes(route)) || (width===660 && ['health','metric/restingHr'].includes(route)))await page.screenshot({path:resolve(output,`${width}-${route.replace('/','-')}.png`)});
   }
  }
  console.log('Today, Sleep, Training, Workout, Health and plan text contrast at 390/840: passed');
@@ -560,8 +569,9 @@ try {
   assert.equal(await phasePage.locator('.daily-focus .segments').count(),focus.effort?1:0,`${name}: effort call ${focus.effort?'shown':'hidden'}`);
   assert.equal(await phasePage.locator('.planned-session').count(),['winddown','late'].includes(name)?0:1,`${name}: no planned exercise card during sleep phases`);
   const text=await phasePage.locator('.dashboard').textContent();
-  // The weekly plan's "N days left" counts the week, not the time to bed.
-  const advice=await phasePage.locator('.dashboard > :not(.plan-card)').allTextContents();
+  // The week card's "left" counts the week's goals, not the time to bed; it is hidden in sleep phases.
+  const advice=await phasePage.locator('.dashboard > :not(.week-card)').allTextContents();
+  assert.equal(await phasePage.locator('.week-card').count(),['winddown','late'].includes(name)?0:1,`${name}: no goal remainders during sleep phases`);
   assert.ok(!/\bin \d+ ?(min|h)\b|left\b/i.test(advice.join(' ')),`${name}: no countdown`);
   if(name==='evening')assert.equal(await phasePage.locator('.sleep-plan .strip-bar u').count(),1,'the strip marks now against the window');
   if(name==='late')assert.ok(text.includes("Tonight's window was"));
@@ -583,6 +593,7 @@ try {
 
  const samples={};
  for(const name of ['today','sleep','training','health','status','workout'])samples[name]=JSON.parse(await readFile(resolve(`src/lib/sample/${name}.json`),'utf8'));
+ samples.plan_board=JSON.parse(await readFile(resolve('src/lib/sample/board.json'),'utf8'));
  // The sample's phase ended long ago; phase expiry has its own check below.
  samples.today.focus.until=null;
  const statusDenied=await browser.newPage({viewport:{width:390,height:844}});
@@ -795,7 +806,7 @@ try {
  await onboarding.waitForURL('**/#today');await onboarding.locator('.dials').waitFor();
  assert.equal(await onboarding.evaluate(()=>window.testOnboarding.signIns),2,'sign-in button invokes the native command');
  assert.equal(await onboarding.evaluate(()=>window.testOnboarding.permissions),0,'notification permission is optional');
- await onboarding.getByRole('button',{name:'Settings',exact:true}).click();
+ await openSettings(onboarding);
  await onboarding.getByText('How Raring works',{exact:true}).waitFor();
  await onboarding.locator('summary').click();
  await onboarding.getByText(/This does not delete anything from your Garmin account/).waitFor();
@@ -905,7 +916,7 @@ function trendFixture(q){
  // A late Today response must not overwrite the newly opened Sleep page.
  await live.evaluate(()=>{window.testBackend.holdToday=true;window.dispatchEvent(new Event('raring:resume'))});
  await live.waitForFunction(()=>window.testBackend.pendingToday!==null);
- await live.getByRole('navigation').getByRole('button',{name:'Sleep',exact:true}).click();
+ await openSleep(live);
  await live.waitForURL('**/#sleep');await live.locator('.sleep-hero').waitFor();
  await live.evaluate(()=>{window.testBackend.pendingToday();window.testBackend.holdToday=false});
  await live.clock.fastForward(1_000);
@@ -971,7 +982,7 @@ function trendFixture(q){
  const fallback=await live.locator('.sleep-plan').textContent();
  assert.ok(fallback.includes('Usual wake') && fallback.includes('Raring estimate') && fallback.includes('Asleep by23:06'),'without Garmin\'s window the plan falls back to wake history');
  await live.evaluate(()=>{window.testBackend.samples.today.sleepPlan=null;window.testBackend.samples.sleep.sleepPlan=null});
- await live.getByRole('navigation').getByRole('button',{name:'Sleep',exact:true}).click();
+ await openSleep(live);
  await live.locator('.sleep-hero').waitFor();
  assert.equal(await live.locator('.sleep-plan').count(),0,'no inferred sleep plan without Garmin need');
  await live.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();
@@ -1017,7 +1028,7 @@ function trendFixture(q){
   const s=window.testBackend.samples.sleep;s.date='2026-10-16';s.startLocal='2026-10-16T01:35:00';
   s.consistency=[{date:'2026-10-14',bedHour:23,wakeHour:7},{date:'2026-10-16',bedHour:1.5,wakeHour:7}];
  });
- await live.getByRole('navigation').getByRole('button',{name:'Sleep',exact:true}).click();
+ await openSleep(live);
  await live.locator('.time-label').first().waitFor();
  assert.equal(await live.locator('.time-label').first().textContent(),'01:35','sleep chart starts at Garmin bedtime, not fixed 23:00');
  const nights=await live.locator('rect.night').evaluateAll(nodes=>nodes.map(n=>Number(n.getAttribute('x'))));
@@ -1088,7 +1099,7 @@ function trendFixture(q){
  const todayOffset=await cached.locator('.scroll').evaluate(el=>{el.scrollTop=350;return el.scrollTop});
  assert.ok(todayOffset>100,'Today can be scrolled for restoration');
  await hold('sleep');
- await tabCached('Sleep');
+ await cached.evaluate(()=>document.querySelector('.dials .dial-button').click());
  await pending('sleep');
  assert.equal(await cached.locator('.sleep-hero').isVisible(),true,'prefetched Sleep appears before navigation read finishes');
  assert.equal(await cached.locator('.empty').count(),0,'cached tab switches without loading state');
@@ -1127,7 +1138,7 @@ function trendFixture(q){
  // A cached Today whose phase has ended is read again rather than shown, so its leading card can't swap after appearing.
  await cached.evaluate(()=>{Object.assign(window.testViews.samples.today,{headline:'Old phase'});window.testViews.samples.today.focus.until='2000-01-01T00:00:00';window.dispatchEvent(new Event('raring:resume'))});
  await cached.getByRole('heading',{name:'Old phase'}).waitFor();
- await tabCached('Sleep');await cached.locator('.sleep-hero').waitFor();
+ await cached.evaluate(()=>document.querySelector('.dials .dial-button').click());await cached.locator('.sleep-hero').waitFor();
  await cached.evaluate(()=>{Object.assign(window.testViews.samples.today,{headline:'New phase'});window.testViews.samples.today.focus.until=null});
  await hold('today');await tabCached('Today');await pending('today');
  assert.equal(await cached.getByRole('heading',{name:'Old phase'}).count(),0,'an ended phase is not served from the cache');
@@ -1149,7 +1160,7 @@ function trendFixture(q){
  await cached.evaluate(()=>{const s=window.testViews.samples;s.today.headline='Background sync';s.sleep.score.value=51;s.status.lastSync='2026-10-16T14:02:00Z';window.dispatchEvent(new Event('raring:resume'))});
  await cached.getByRole('heading',{name:'Background sync'}).waitFor();
  await cached.waitForFunction(previous=>window.testViews.completed.sleep>previous,previousSleep);
- await hold('sleep');await tabCached('Sleep');await pending('sleep');
+ await hold('sleep');await cached.evaluate(()=>document.querySelector('.dials .dial-button').click());await pending('sleep');
  assert.equal(await cached.locator('.sleep-hero .gauge-center b').textContent(),'51','changed lastSync refreshes cached tabs');
  await release('sleep');await tabCached('Today');
  await cached.getByRole('heading',{name:'Background sync'}).waitFor();
@@ -1166,7 +1177,7 @@ function trendFixture(q){
  await release('today');
  await cached.waitForFunction(()=>window.testViews.pending.today?.length===0);
  assert.equal(await cached.locator('.headline h2').textContent(),'Next day','previous-day result cannot replace next day');
- await hold('sleep');await tabCached('Sleep');await pending('sleep');
+ await hold('sleep');await cached.evaluate(()=>document.querySelector('.dials .dial-button').click());await pending('sleep');
  assert.equal(await cached.locator('.sleep-hero .gauge-center b').textContent(),'42','next-day prefetch is visible before navigation read');
  await release('sleep');
  await tabCached('Today');
@@ -1185,7 +1196,7 @@ function trendFixture(q){
  await hold('app_status');
  await cached.evaluate(()=>window.dispatchEvent(new Event('raring:resume')));
  await pending('app_status');
- await tabCached('Sleep');
+ await cached.evaluate(()=>document.querySelector('.dials .dial-button').click());
  await cached.locator('.sleep-hero').waitFor();
  await release('app_status');
  await cached.waitForFunction(previous=>window.testViews.completed.health>previous,healthReads);

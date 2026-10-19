@@ -356,7 +356,8 @@ fn weeks_follow_garmins_intensity_week() {
     assert_eq!(view.week.items[0].value, 2.);
     // The saved Monday version belongs to this Sunday-to-Saturday week.
     assert!(view.configured);
-    assert_eq!(view.targets, targets());
+    // Weekly results read the migrated goals; the retired setup screen's preset isn't kept.
+    assert_eq!(view.targets, PlanTargets { preset: PlanPreset::Custom, ..targets() });
     assert_eq!(core.today(TODAY).plan.unwrap().items[0].target, 3.);
     assert_eq!(
         core.checkin("2025-03-17").plan.unwrap().week.start,

@@ -137,7 +137,30 @@ const heartRateDay={date:today.date,resting:54,minimum:Math.min(...recordedHeart
 today.heartRateDay=heartRateDay;
 health.heartRateDay=heartRateDay;
 
-for(const [name,obj] of Object.entries({today,sleep,training,workout,strengthWorkout,strength,health,checkin,status,plan})){writeFileSync(new URL(`${name}.json`,import.meta.url),JSON.stringify(obj,null,2)+'\n')}
+// Plan board: Mon 13 – Sun 19 Oct viewed Thu 16. Strength 4, Zone 2 150 min, intensity on Garmin's goal.
+const rec=(a,sport)=>{const z2=Math.floor(a.zoneSeconds[1]/60),hi=Math.floor((a.zoneSeconds[3]+a.zoneSeconds[4])/60);return {id:a.id,date:a.startLocal.slice(0,10),startLocal:a.startLocal,name:a.name,icon:a.icon,sport,typeKey:sport==='strength'?'strength_training':sport,durationMin:a.durationS/60,zone2Min:z2,highIntensityMin:hi,intensityMin:a.intensityMin}};
+const boardRecs=[rec(training.workouts.find(w=>w.id==='9000000000005')??{id:'9000000000005',name:'Strength',icon:'strength',startLocal:'2025-10-13T12:30:00',durationS:2400,zoneSeconds:[1500,800,100,0,0],intensityMin:null},'strength'),
+ rec({id:'9000000000004',name:'Upper B',icon:'strength',startLocal:'2025-10-14T07:10:00',durationS:3120,zoneSeconds:[700,1500,600,200,0],intensityMin:null},'strength'),
+ rec(lowerA,'strength'),rec(bike,'cycling'),rec(run,'running')];
+const zone2s={'2025-10-13':800,'2025-10-14':1500,'2025-10-15':1320+1800,'2025-10-16':585};
+const intention=(id,date,sport,allocation,extra={})=>({id,date,time:extra.time??null,sport,typeKey:null,name:extra.name??null,durationMin:extra.durationMin??null,allocation:{strengthSessions:0,zone2Min:0,highIntensityMin:0,intensityMin:0,sleepNights:0,...allocation},kind:'workout',garminId:null,status:'open',history:[{at:'2025-10-12T19:00:00',change:'added',from:null,to:date}]});
+const boardItems=[
+ {intention:intention('i1760380000000','2025-10-13','strength',{strengthSessions:1},{time:'12:30'}),state:'done',recording:'9000000000005',matchedBy:'automatic',candidates:[]},
+ {intention:intention('i1760380000001','2025-10-17','cycling',{zone2Min:40},{durationMin:60,name:'Easy ride'}),state:'planned',recording:null,matchedBy:null,candidates:[]},
+ {intention:intention('i1760380000002','2025-10-18','strength',{strengthSessions:1}),state:'planned',recording:null,matchedBy:null,candidates:[]}];
+const goalTargets={strengthSessions:4,zone2Min:150,highIntensityMin:0,intensityMin:0,intensityGarminGoal:true,sleepNights:0,sleepTime:null,sleepKind:'asleepBy',sleepScore:0,restDays:[]};
+const boardDays=Array.from({length:7},(_,i)=>{const date=`2025-10-${13+i}`,future=date>'2025-10-16',recs=boardRecs.filter(r=>r.date===date),items=boardItems.filter(p=>p.intention.date===date);
+ const plannedOf=k=>items.reduce((n,p)=>n+p.intention.allocation[k],0);
+ const ring=(kind,recorded,planned)=>({kind,recorded,planned,fill:recorded>0?recorded/Math.max(planned,recorded):0});
+ return {date,today:date==='2025-10-16',future,mark:null,rings:[ring('strength',future?0:recs.filter(r=>r.sport==='strength').length,plannedOf('strengthSessions')),ring('zone2',future?0:Math.floor((zone2s[date]??0)/60),plannedOf('zone2Min')),ring('intensity',future?0:({'2025-10-13':20,'2025-10-14':28,'2025-10-15':40,'2025-10-16':36})[date]??0,0)],
+  done:items.length>0&&items.every(p=>p.state==='done'),notRecorded:false,recordings:recs.map(r=>r.id),items:items.map(p=>p.intention.id),garmin:date==='2025-10-17'?1:0,sleepScore:future?null:({'2025-10-13':81,'2025-10-14':76,'2025-10-15':88,'2025-10-16':84})[date]}});
+const ledger=(kind,target,recorded,planned)=>({kind,target,original:null,revisedOn:null,recorded,planned,remaining:Math.max(0,target-recorded-planned),reached:recorded>=target,review:0,unavailable:null,observation:false});
+const boardLedger=[ledger('strength',4,3,1),ledger('zone2',150,100,40),ledger('intensity',150,124,0)];
+const board={today:'2025-10-16',start:'2025-10-13',end:'2025-10-19',goals:{from:'2025-10-06',targets:goalTargets,source:'setup',savedAt:'2025-10-06T08:00:00'},versions:[{from:'2025-10-06',targets:goalTargets,source:'setup',savedAt:'2025-10-06T08:00:00'}],garminIntensityGoal:150,
+ ledger:boardLedger,weekRings:boardLedger.map(l=>({kind:l.kind,recorded:l.recorded,planned:l.planned,fill:Math.min(1,l.recorded/l.target)})),sleepScore:null,days:boardDays,items:boardItems,recordings:boardRecs,
+ garmin:[{date:'2025-10-17',name:'Easy Run'}],garminState:'available',backlog:[{kind:'zone2',amount:10,sport:'cycling'},{kind:'intensity',amount:26,sport:'cycling'}],backlogPaused:false,pause:null,coverageComplete:true,explainObservation:false,readOnly:false};
+
+for(const [name,obj] of Object.entries({today,sleep,training,workout,strengthWorkout,strength,health,checkin,status,plan,board})){writeFileSync(new URL(`${name}.json`,import.meta.url),JSON.stringify(obj,null,2)+'\n')}
 // `satisfies` checks the exact fixtures against the generated Rust contract at build time.
-const types={today:'TodayView',sleep:'SleepView',training:'TrainingView',workout:'WorkoutView',strengthWorkout:'WorkoutView',strength:'StrengthView',health:'HealthView',checkin:'CheckinView',status:'AppStatus',plan:'PlanView'};
-writeFileSync(new URL('data.ts',import.meta.url),[...new Set(Object.values(types))].map(t=>`import type { ${t} } from '../generated/${t}';`).join('\n')+'\n'+Object.entries({today,sleep,training,workout,strengthWorkout,strength,health,checkin,status,plan}).map(([n,v])=>`export const ${n} = ${JSON.stringify(v)} satisfies ${types[n]};`).join('\n')+'\n'+`export const strengthWorkoutHistory = ${JSON.stringify(strengthWorkoutHistory)} satisfies Record<string,WorkoutView>;\n`);
+const types={today:'TodayView',sleep:'SleepView',training:'TrainingView',workout:'WorkoutView',strengthWorkout:'WorkoutView',strength:'StrengthView',health:'HealthView',checkin:'CheckinView',status:'AppStatus',plan:'PlanView',board:'PlanBoard'};
+writeFileSync(new URL('data.ts',import.meta.url),[...new Set(Object.values(types))].map(t=>`import type { ${t} } from '../generated/${t}';`).join('\n')+'\n'+Object.entries({today,sleep,training,workout,strengthWorkout,strength,health,checkin,status,plan,board}).map(([n,v])=>`export const ${n} = ${JSON.stringify(v)} satisfies ${types[n]};`).join('\n')+'\n'+`export const strengthWorkoutHistory = ${JSON.stringify(strengthWorkoutHistory)} satisfies Record<string,WorkoutView>;\n`);

@@ -12,7 +12,7 @@ import sampleHealth from './sample/health.json';
 import type {HeartRateDay} from './generated/HeartRateDay';
 import sampleCheckin from './sample/checkin.json';
 import sampleStatus from './sample/status.json';
-import samplePlan from './sample/plan.json';
+import sampleBoard from './sample/board.json';
 import type { AppStatus } from './generated/AppStatus';
 import type { TodayView } from './generated/TodayView';
 import type { SleepView } from './generated/SleepView';
@@ -25,9 +25,8 @@ import type { Settings } from './generated/Settings';
 import type { TrendQuery } from './generated/TrendQuery';
 import type { TrendView } from './generated/TrendView';
 import { sampleTrend } from './sample/trend';
-import type { PlanView } from './generated/PlanView';
-import type { PlanUpdate } from './generated/PlanUpdate';
 import type { LocalAction } from './generated/LocalAction';
+import type { PlanBoard } from './generated/PlanBoard';
 
 export type { Settings } from './generated/Settings';
 export type SettingsPatch = Partial<Settings>;
@@ -54,12 +53,18 @@ export const health = (date?:string):Promise<HealthView> => isTauri()?invoke<Hea
 export const heart_rate_day = (date:string):Promise<HeartRateDay> => isTauri()?invoke<HeartRateDay>('heart_rate_day',{date}):Promise.resolve({...((sampleHealth as unknown as HealthView).heartRateDay),date});
 export const checkin = (weekStart?:string):Promise<CheckinView> => call('checkin',{weekStart},sampleCheckin as unknown as CheckinView);
 export const trend = (query:TrendQuery):Promise<TrendView> => isTauri()?invoke<TrendView>('trend',{query}):Promise.resolve().then(()=>sampleTrend(query));
-// The preview keeps saved targets in memory; only the Rust core measures them.
-let previewPlan:PlanView = copy(samplePlan as unknown as PlanView);
-export const plan = (date?:string):Promise<PlanView> => call('plan',{date},previewPlan);
-export const set_plan = (update:PlanUpdate):Promise<void> => {if(!isTauri()){previewPlan={...previewPlan,configured:true,targets:copy(update.targets),week:{...previewPlan.week,paused:update.paused}};return Promise.resolve()}return invoke<void>('set_plan',{update})};
+// The preview keeps local changes in memory; only the Rust core applies the plan rules.
+let previewBoard:PlanBoard = copy(sampleBoard as unknown as PlanBoard);
+export const plan_board = (date?:string):Promise<PlanBoard> => call('plan_board',{date},previewBoard);
 // Every local change (goals, sessions, links, rest, pauses, limits) goes through one command.
-export const local_action = (action:LocalAction):Promise<void> => call('local_action',{action},undefined);
+export const local_action = (action:LocalAction):Promise<void> => {
+ if(!isTauri()){
+  if(action.action==='setGoals')previewBoard={...previewBoard,goals:{from:previewBoard.today,targets:copy(action.targets),source:'revision',savedAt:`${previewBoard.today}T12:00:00`}};
+  if(action.action==='observationExplained')previewBoard={...previewBoard,explainObservation:false};
+  return Promise.resolve();
+ }
+ return invoke<void>('local_action',{action});
+};
 export const sync_now = ():Promise<void> => call('sync_now',undefined,undefined);
 export const open_garmin_connect = ():Promise<boolean> => call('open_garmin_connect',undefined,false);
 export const begin_sign_in = ():Promise<void> => call('begin_sign_in',undefined,undefined);

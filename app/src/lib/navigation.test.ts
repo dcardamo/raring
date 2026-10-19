@@ -1,34 +1,56 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createNavigation, normalizeRoute, routeTrail, tabs } from './navigation';
+import { createNavigation, knownRoute, normalizeRoute, routeTrail, tabs } from './navigation';
 
 describe('routes', () => {
   it('accepts known routes and rejects invalid or malformed fragments', () => {
-    expect(tabs).toEqual(['today', 'sleep', 'training', 'health']);
-    for (const route of [...tabs, 'readiness', 'checkin', 'plan', 'plan-setup', 'settings', 'onboarding', 'strength', 'help', 'help/strength-sets',
+    expect(tabs).toEqual(['today', 'plan', 'training', 'health', 'progress']);
+    for (const route of [...tabs, 'sleep', 'readiness', 'settings', 'onboarding', 'strength', 'help', 'help/strength-sets',
+      'activities', 'profile', 'gear', 'plan/commitments', 'review/latest', 'review/2025-10-13',
       'workout/123_abc-2', ...['bodyBattery', 'stress', 'restingHr', 'hrv', 'respiration', 'spo2',
         'skinTemp', 'vo2max', 'endurance', 'hill', 'runningTolerance'].map(id => `metric/${id}`)]) {
       expect(normalizeRoute(`#${route}`)).toBe(route);
     }
-    for (const route of ['#metric/unknown', '#workout/', '#workout/a/b', '#%ZZ',
+    for (const route of ['#metric/unknown', '#workout/', '#workout/a/b', '#%ZZ', '#review/2025-1-1',
       '#sleep/other', '#https://bad.example', '#onboarding/next', '#help/unknown', '#strength/x']) {
       expect(normalizeRoute(route)).toBe('today');
+      expect(knownRoute(route)).toBeNull();
     }
+  });
+
+  it('keeps every earlier route as an alias for its current page', () => {
+    expect(normalizeRoute('#checkin')).toBe('review/latest');
+    expect(normalizeRoute('#plan-setup')).toBe('plan/commitments');
+    expect(normalizeRoute('#explore')).toBe('training');
+    for (const native of ['today', 'readiness', 'sleep', 'metric/bodyBattery', 'metric/stress', 'health', 'training']) {
+      expect(normalizeRoute(native)).toBe(native);
+    }
+    expect(routeTrail('checkin')).toEqual(['today', 'progress', 'review/latest']);
+    expect(routeTrail('plan-setup', ['today', 'health'])).toEqual(['today', 'plan', 'plan/commitments']);
+    expect(routeTrail('plan-setup', ['today', 'progress', 'review/latest'])).toEqual(['today', 'progress', 'review/latest', 'plan/commitments']);
   });
 
   it('builds logical parents rather than visit order', () => {
     expect(routeTrail('health', ['today', 'sleep'])).toEqual(['today', 'health']);
     expect(routeTrail('readiness', ['today', 'training'])).toEqual(['today', 'readiness']);
-    expect(routeTrail('checkin')).toEqual(['today', 'checkin']);
     expect(routeTrail('plan', ['today', 'health'])).toEqual(['today', 'plan']);
-    expect(routeTrail('plan-setup', ['today', 'checkin'])).toEqual(['today', 'plan', 'plan-setup']);
-    expect(routeTrail('workout/7')).toEqual(['today', 'training', 'workout/7']);
+    expect(routeTrail('sleep', ['today', 'health'])).toEqual(['today', 'health', 'sleep']);
+    expect(routeTrail('sleep', ['today', 'plan'])).toEqual(['today', 'sleep']);
+    expect(routeTrail('workout/7')).toEqual(['today', 'training', 'activities', 'workout/7']);
     expect(routeTrail('workout/7', ['today'])).toEqual(['today', 'workout/7']);
     expect(routeTrail('workout/7', ['today', 'training'])).toEqual(['today', 'training', 'workout/7']);
+    expect(routeTrail('workout/7', ['today', 'plan'])).toEqual(['today', 'plan', 'workout/7']);
+    expect(routeTrail('workout/7', ['today', 'training', 'activities'])).toEqual(['today', 'training', 'activities', 'workout/7']);
     expect(routeTrail('settings', ['today', 'training', 'workout/7'])).toEqual(['today', 'training', 'workout/7', 'settings']);
     expect(routeTrail('settings', ['today', 'settings'])).toEqual(['today', 'settings']);
     expect(routeTrail('settings')).toEqual(['today', 'settings']);
+    expect(routeTrail('profile', ['today', 'plan'])).toEqual(['today', 'plan', 'profile']);
+    expect(routeTrail('settings', ['today', 'plan', 'profile'])).toEqual(['today', 'plan', 'profile', 'settings']);
+    expect(routeTrail('gear', ['today', 'profile'])).toEqual(['today', 'profile', 'gear']);
+    expect(routeTrail('gear')).toEqual(['today', 'training', 'gear']);
+    expect(routeTrail('review/2025-10-13', ['today'])).toEqual(['today', 'progress', 'review/2025-10-13']);
     expect(routeTrail('metric/hrv')).toEqual(['today', 'health', 'metric/hrv']);
     expect(routeTrail('metric/hrv', ['today'])).toEqual(['today', 'metric/hrv']);
+    expect(routeTrail('metric/hrv', ['today', 'progress'])).toEqual(['today', 'progress', 'metric/hrv']);
     expect(routeTrail('metric/bodyBattery')).toEqual(['today', 'metric/bodyBattery']);
     expect(routeTrail('metric/stress')).toEqual(['today', 'metric/stress']);
     expect(routeTrail('metric/stress', ['today', 'health'])).toEqual(['today', 'health', 'metric/stress']);
@@ -131,15 +153,15 @@ describe('browser navigation', () => {
     vi.stubGlobal('window', browser);
     const first = createNavigation(() => {});
     first.start();
-    expect(browser.hashes()).toEqual(['#today', '#training', '#workout/42']);
+    expect(browser.hashes()).toEqual(['#today', '#training', '#activities', '#workout/42']);
     first.destroy();
     const changes: string[][] = [];
     const nav = createNavigation(trail => changes.push(trail));
     nav.start();
     nav.navigate('workout/42');
     await tick();
-    expect(browser.hashes()).toEqual(['#today', '#training', '#workout/42']);
-    expect(changes).toEqual([['today', 'training', 'workout/42']]);
+    expect(browser.hashes()).toEqual(['#today', '#training', '#activities', '#workout/42']);
+    expect(changes).toEqual([['today', 'training', 'activities', 'workout/42']]);
     nav.destroy();
   });
 

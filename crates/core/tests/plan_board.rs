@@ -361,3 +361,12 @@ fn a_future_week_shows_its_plan_and_nothing_recorded() {
     assert!(b.backlog.is_empty(), "only this week has a backlog");
     assert!(b.days.iter().all(|d| d.future && d.rings.iter().all(|r| r.fill == 0.)));
 }
+
+#[test]
+fn the_weekly_check_in_reads_the_same_goals_as_plan() {
+    let f = fx("checkin");
+    goals(&f, GoalTargets { strength_sessions: 2, zone2_min: 60, high_intensity_min: 30, ..Default::default() });
+    let week = f.core.checkin("2025-03-17").plan.unwrap().week;
+    let kinds: Vec<(PlanTargetKind, f64)> = week.items.iter().map(|i| (i.kind, i.target)).collect();
+    assert_eq!(kinds, [(PlanTargetKind::Strength, 2.), (PlanTargetKind::Zone2, 60.)], "kinds the check-in never had wait for the new review");
+}
