@@ -20,4 +20,8 @@ adaptiveToday: boolean,
 /**
  * Local consent for read-only lifestyle log downloads; never used in notifications.
  */
-journalEnabled: boolean, };
+journalEnabled: boolean, 
+/**
+ * Offer to plan the week at its start; off hides the prompt everywhere.
+ */
+planPrompt: boolean, };

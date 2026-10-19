@@ -28,7 +28,7 @@ import {addDays} from './lib/dates';
 export type {Settings} from '../lib/generated/Settings';
 export type SettingsPatch = Partial<Settings>;
 export const supportsStatusSurfaces = false;
-export const defaultSettings = {notifyMorningReadiness: true, notifyWeeklyCheckin: true, notifyMetricChanges: true, notifyVitals: true, notifyTrainingStatus: false, notifyBedtime: false, notifyStatus: false, statusOfferSeen: false, bedtimeLeadMin: 30, adaptiveToday: true, journalEnabled: false} satisfies Settings;
+export const defaultSettings = {notifyMorningReadiness: true, notifyWeeklyCheckin: true, notifyMetricChanges: true, notifyVitals: true, notifyTrainingStatus: false, notifyBedtime: false, notifyStatus: false, statusOfferSeen: false, bedtimeLeadMin: 30, adaptiveToday: true, journalEnabled: false, planPrompt: true} satisfies Settings;
 let settings: Settings = {...defaultSettings};
 
 const ctx = () => store.ctx;

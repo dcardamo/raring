@@ -27,11 +27,12 @@ import type { TrendView } from './generated/TrendView';
 import { sampleTrend } from './sample/trend';
 import type { PlanView } from './generated/PlanView';
 import type { PlanUpdate } from './generated/PlanUpdate';
+import type { LocalAction } from './generated/LocalAction';
 
 export type { Settings } from './generated/Settings';
 export type SettingsPatch = Partial<Settings>;
 export const supportsStatusSurfaces = (isTauri() && /Android/.test(navigator.userAgent)) || new URLSearchParams(location.search).get('fixture')==='status-offer';
-export const defaultSettings = {notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,notifyStatus:false,statusOfferSeen:false,bedtimeLeadMin:30,adaptiveToday:true,journalEnabled:false} satisfies Settings;
+export const defaultSettings = {notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,notifyStatus:false,statusOfferSeen:false,bedtimeLeadMin:30,adaptiveToday:true,journalEnabled:false,planPrompt:true} satisfies Settings;
 let previewSettings:Settings = {...defaultSettings};
 const copy = <T>(value:T):T => structuredClone(value);
 const call = <T>(name:string,args:Record<string,unknown>|undefined,fallback:T):Promise<T> => isTauri()?invoke<T>(name,args):Promise.resolve(copy(fallback));
@@ -57,6 +58,8 @@ export const trend = (query:TrendQuery):Promise<TrendView> => isTauri()?invoke<T
 let previewPlan:PlanView = copy(samplePlan as unknown as PlanView);
 export const plan = (date?:string):Promise<PlanView> => call('plan',{date},previewPlan);
 export const set_plan = (update:PlanUpdate):Promise<void> => {if(!isTauri()){previewPlan={...previewPlan,configured:true,targets:copy(update.targets),week:{...previewPlan.week,paused:update.paused}};return Promise.resolve()}return invoke<void>('set_plan',{update})};
+// Every local change (goals, sessions, links, rest, pauses, limits) goes through one command.
+export const local_action = (action:LocalAction):Promise<void> => call('local_action',{action},undefined);
 export const sync_now = ():Promise<void> => call('sync_now',undefined,undefined);
 export const open_garmin_connect = ():Promise<boolean> => call('open_garmin_connect',undefined,false);
 export const begin_sign_in = ():Promise<void> => call('begin_sign_in',undefined,undefined);

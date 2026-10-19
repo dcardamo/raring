@@ -26,6 +26,14 @@ struct Stored {
     paused: BTreeSet<String>,
 }
 
+/// The earlier plan row's saved versions and paused weeks, for migration.
+/// None when the row is malformed.
+pub(crate) fn legacy(json: &str) -> Option<(BTreeMap<String, PlanTargets>, BTreeSet<String>)> {
+    serde_json::from_str::<Stored>(json)
+        .ok()
+        .map(|s| (s.versions, s.paused))
+}
+
 fn stored(store: &Store) -> Stored {
     store
         .setting(KEY)

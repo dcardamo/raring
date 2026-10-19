@@ -19,6 +19,23 @@ struct AccountSession {
     active: bool,
 }
 
+pub(crate) struct SettingsTx<'a>(&'a rusqlite::Transaction<'a>);
+
+impl SettingsTx<'_> {
+    pub(crate) fn get(&self, key: &str) -> rusqlite::Result<Option<String>> {
+        self.0
+            .query_row("SELECT value FROM settings WHERE key=?1", [key], |r| r.get(0))
+            .optional()
+    }
+    pub(crate) fn set(&self, key: &str, value: &str) -> rusqlite::Result<()> {
+        self.0.execute("INSERT INTO settings VALUES (?1,?2) ON CONFLICT(key) DO UPDATE SET value=excluded.value", params![key, value])?;
+        Ok(())
+    }
+    pub(crate) fn activity_exists(&self, id: &str) -> rusqlite::Result<bool> {
+        self.0.query_row("SELECT EXISTS(SELECT 1 FROM activities WHERE id=?1)", [id], |r| r.get(0))
+    }
+}
+
 const SESSION_KEY: &str = "account_session";
 const PENDING_KEY: &str = "account_pending";
 impl Store {
@@ -368,6 +385,17 @@ impl Store {
         let json = serde_json::to_string(settings)
             .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
         self.set_setting("settings", &json)
+    }
+    /// Several settings rows read and written as one immediate transaction.
+    pub(crate) fn settings_tx<T, E: From<rusqlite::Error>>(
+        &self,
+        f: impl FnOnce(&SettingsTx) -> Result<T, E>,
+    ) -> Result<T, E> {
+        let mut db = self.db.lock().unwrap();
+        let tx = db.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let out = f(&SettingsTx(&tx))?;
+        tx.commit()?;
+        Ok(out)
     }
     /// Prospective evidence is immutable: a later sync must not move a night's target.
     pub fn insert_setting(&self, key: &str, value: &str) -> rusqlite::Result<()> {

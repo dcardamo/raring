@@ -733,6 +733,22 @@ async fn patch_settings(app: tauri::AppHandle, patch: raring_core::settings::Set
     Ok(())
 }
 
+#[tauri::command]
+async fn local_action(app: tauri::AppHandle, action: raring_core::view::LocalAction) -> Result<(), String> {
+    // Like settings saves: validated and applied inside the account barrier,
+    // refused if the account changed after the change was queued.
+    let expected = core(&app)?.bound_account_identity();
+    let handle = app.clone();
+    tauri::async_runtime::spawn_blocking(move || core(&handle)?.local_action_for_account(&action, Local::now(), expected).map_err(|e| e.to_string()))
+        .await.map_err(|e| e.to_string())??;
+    // The core already rewrote the snapshot offline; redraw surfaces from it.
+    #[cfg(target_os = "android")]
+    vault(&app).0.run_mobile_plugin_async::<serde_json::Value>(
+        "applyStatusSettings", serde_json::json!({})
+    ).await.map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[cfg(debug_assertions)]
 #[tauri::command]
 fn load_demo_data(app: tauri::AppHandle) -> Result<String, String> {
@@ -821,6 +837,7 @@ pub fn run() {
                     trend,
                     plan,
                     set_plan,
+                    local_action,
                     sync_now,
                     begin_sign_in,
                     sign_out,
@@ -847,6 +864,7 @@ pub fn run() {
                     trend,
                     plan,
                     set_plan,
+                    local_action,
                     sync_now,
                     begin_sign_in,
                     sign_out,

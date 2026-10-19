@@ -1268,12 +1268,18 @@ pub struct Settings {
     /// Local consent for read-only lifestyle log downloads; never used in notifications.
     #[serde(default)]
     pub journal_enabled: bool,
+    /// Offer to plan the week at its start; off hides the prompt everywhere.
+    #[serde(default = "default_plan_prompt")]
+    pub plan_prompt: bool,
 }
 
 fn default_bedtime_lead() -> u32 {
     30
 }
 fn default_adaptive_today() -> bool {
+    true
+}
+fn default_plan_prompt() -> bool {
     true
 }
 
@@ -1291,6 +1297,7 @@ impl Default for Settings {
             bedtime_lead_min: default_bedtime_lead(),
             adaptive_today: default_adaptive_today(),
             journal_enabled: false,
+            plan_prompt: default_plan_prompt(),
         }
     }
 }
@@ -1616,4 +1623,321 @@ pub struct IntensityCard {
     pub vigorous: f64,
     /// Garmin's weekly goal.
     pub goal: Option<f64>,
+}
+
+// ---------------------------------------------------------------------------
+// Local records: goals, your sessions and circumstances. Stored on the phone
+// only (docs/spec.md, Rules: Local records), never sent to Garmin.
+
+/// A sport family from Garmin's activity type key. Mixed and unfamiliar types
+/// stay `Other`, with Garmin's own key kept beside them.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum Sport {
+    Running,
+    Cycling,
+    Walking,
+    Hiking,
+    Swimming,
+    Strength,
+    Other,
+}
+
+/// Weekly goal kinds, in ring order from the outside. Sleep Score is a
+/// Garmin reading shown against its target, not a ring.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum GoalKind {
+    Strength,
+    Zone2,
+    /// Minutes in heart-rate zones 4 and 5.
+    HighIntensity,
+    Intensity,
+    SleepTiming,
+    SleepScore,
+}
+
+/// How a sleep-timing night is met.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum SleepTimingKind {
+    /// Garmin's recorded sleep start by the chosen time.
+    #[default]
+    AsleepBy,
+    /// A wind-down the person reports from the chosen time.
+    WindDown,
+    /// Migrated asleep-on-time target: observed against each night's saved
+    /// plan, shown neutrally, never a verdict.
+    SavedPlan,
+}
+
+/// One week's targets. Zero turns a target off.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase", default)]
+#[ts(export)]
+pub struct GoalTargets {
+    pub strength_sessions: u32,
+    pub zone2_min: u32,
+    /// Minutes in heart-rate zones 4 and 5.
+    pub high_intensity_min: u32,
+    pub intensity_min: u32,
+    /// Follow Garmin's weekly intensity goal instead of `intensity_min`.
+    pub intensity_garmin_goal: bool,
+    pub sleep_nights: u32,
+    /// HH:MM, for asleep-by and wind-down nights.
+    pub sleep_time: Option<String>,
+    pub sleep_kind: SleepTimingKind,
+    /// Average Garmin Sleep Score target for the week.
+    pub sleep_score: u32,
+    /// Usual rest weekdays, 0 = Monday … 6 = Sunday.
+    pub rest_days: Vec<u8>,
+}
+
+/// Why a goal version exists.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum GoalSource {
+    /// First targets, applying from the start of that week.
+    Setup,
+    /// Changed during a week, from that day.
+    Revision,
+    /// An accepted week-review proposal, from the next week.
+    Proposal,
+    /// Carried over from the earlier weekly plan.
+    Migrated,
+}
+
+/// Targets in effect from `from` (YYYY-MM-DD) until the next version.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct GoalVersion {
+    pub from: String,
+    pub targets: GoalTargets,
+    pub source: GoalSource,
+    /// Local time of the change, ISO 8601 without offset.
+    pub saved_at: String,
+}
+
+/// How much of each goal a planned session is meant to cover.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase", default)]
+#[ts(export)]
+pub struct Allocation {
+    pub strength_sessions: u32,
+    pub zone2_min: u32,
+    pub high_intensity_min: u32,
+    pub intensity_min: u32,
+    pub sleep_nights: u32,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum IntentionKind {
+    #[default]
+    Workout,
+    WindDown,
+}
+
+/// Open until the person lets it go or marks it missed. A passed open
+/// session without a recording is "Not recorded", never missed.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum IntentionStatus {
+    #[default]
+    Open,
+    LetGo,
+    Missed,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum IntentionChange {
+    Added,
+    Moved,
+    Edited,
+    LetGo,
+    Missed,
+    Reopened,
+    /// A date or sport change removed a link that no longer fits.
+    LinkCleared,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct IntentionEvent {
+    /// Local time, ISO 8601 without offset.
+    pub at: String,
+    pub change: IntentionChange,
+    pub from: Option<String>,
+    pub to: Option<String>,
+}
+
+/// A session the person placed on a day. Not proof of completion.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct Intention {
+    pub id: String,
+    /// Local calendar date, YYYY-MM-DD.
+    pub date: String,
+    /// HH:MM, optional.
+    pub time: Option<String>,
+    pub sport: Sport,
+    /// Garmin's type key when the person chose one of their recorded types.
+    pub type_key: Option<String>,
+    pub name: Option<String>,
+    pub duration_min: Option<u32>,
+    #[serde(default)]
+    pub allocation: Allocation,
+    #[serde(default)]
+    pub kind: IntentionKind,
+    /// The Garmin scheduled workout this session stands in for, if any.
+    pub garmin_id: Option<String>,
+    #[serde(default)]
+    pub status: IntentionStatus,
+    #[serde(default)]
+    pub history: Vec<IntentionEvent>,
+}
+
+/// A link the person made between a plan item and a recording, or an
+/// automatic pair they took apart.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PlanLink {
+    pub plan_id: String,
+    pub activity_id: String,
+    pub at: String,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum PauseReason {
+    #[default]
+    Pause,
+    Ill,
+}
+
+/// Training expectations paused from `since` through `until` (open until
+/// the person resumes). Never ends by itself.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct Pause {
+    pub id: String,
+    pub since: String,
+    pub until: Option<String>,
+    #[serde(default)]
+    pub reason: PauseReason,
+    /// A date to review the pause; it prompts a review, never a resume.
+    pub review: Option<String>,
+}
+
+/// Activities to avoid and a free-text movement note. The note is shown,
+/// never interpreted, and never leaves the app except in a user's export.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase", default)]
+#[ts(export)]
+pub struct Limits {
+    pub excluded: Vec<Sport>,
+    pub note: String,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct RestDay {
+    pub date: String,
+    pub at: String,
+}
+
+/// "Not today" for one suggestion on one local day.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct Dismissal {
+    pub id: String,
+    pub date: String,
+}
+
+/// A self-reported wind-down, keyed by the evening it began.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WindDownReport {
+    pub date: String,
+    pub at: String,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct LocalEvent {
+    pub id: String,
+    pub name: String,
+    pub date: String,
+    pub sport: Option<Sport>,
+}
+
+/// The person's answer to the plan-your-week prompt for one week.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum PromptChoice {
+    Planned,
+    Dismissed,
+}
+
+/// Every local change goes through one command, under the account barrier.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(tag = "action", rename_all = "camelCase", rename_all_fields = "camelCase")]
+#[ts(export)]
+pub enum LocalAction {
+    /// The first targets apply from this week's start; later changes from today.
+    SetGoals { targets: GoalTargets },
+    AddIntention {
+        date: String,
+        time: Option<String>,
+        sport: Sport,
+        type_key: Option<String>,
+        name: Option<String>,
+        duration_min: Option<u32>,
+        allocation: Allocation,
+        kind: IntentionKind,
+        garmin_id: Option<String>,
+    },
+    /// Time, name, duration and allocation; keeps its day and links.
+    EditIntention {
+        id: String,
+        time: Option<String>,
+        name: Option<String>,
+        duration_min: Option<u32>,
+        allocation: Allocation,
+    },
+    /// To today or a later day. Clears its link; no catch-up is added.
+    MoveIntention { id: String, date: String },
+    SetIntentionStatus { id: String, status: IntentionStatus },
+    RemoveIntention { id: String },
+    Link { plan_id: String, activity_id: String },
+    Unlink { plan_id: String, activity_id: String },
+    RestToday,
+    CancelRest,
+    Pause { reason: PauseReason, review: Option<String> },
+    Resume,
+    SetLimits { limits: Limits },
+    Dismiss { id: String },
+    ReportWindDown,
+    SetPromptWeek { week: String, choice: PromptChoice },
+    AddEvent { name: String, date: String, sport: Option<Sport> },
+    RemoveEvent { id: String },
 }

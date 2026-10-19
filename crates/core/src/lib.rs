@@ -4,6 +4,7 @@ pub mod demo;
 mod export;
 pub mod garmin;
 mod gear;
+pub mod local;
 pub mod notifications;
 mod naps_journal;
 pub mod phase;
@@ -36,6 +37,8 @@ pub enum Error {
     Garmin(#[from] garmin::Error),
     #[error("invalid setting name or value")]
     InvalidSetting,
+    #[error("local change refused: {0}")]
+    InvalidLocal(&'static str),
     #[error("status snapshot: {0}")]
     Snapshot(#[from] std::io::Error),
 }
@@ -188,6 +191,32 @@ impl Raring {
         let today = chrono::NaiveDate::parse_from_str(today, "%Y-%m-%d")
             .map_err(|_| Error::InvalidSetting)?;
         plan::set(&self.store, today, update)?;
+        let start = plan::week_start(today, plan::week_starts_on(&self.store));
+        local::mirror_legacy_plan(&self.store, start, update)
+    }
+    /// Goals, sessions, links, circumstances, prompts and events, migrated.
+    pub fn local_records(&self) -> local::LocalRecords {
+        local::load(&self.store)
+    }
+    /// One local change, for fixtures and the CLI.
+    pub fn local_action(&self, action: &view::LocalAction, now: DateTime<Local>) -> Result<()> {
+        self.save_local(None, action, now)
+    }
+    /// One local change from the UI, refused if the account changed since it was queued.
+    pub fn local_action_for_account(&self, action: &view::LocalAction, now: DateTime<Local>, expected: Option<String>) -> Result<()> {
+        self.save_local(Some(expected), action, now)
+    }
+    fn save_local(&self, expected: Option<Option<String>>, action: &view::LocalAction, now: DateTime<Local>) -> Result<()> {
+        let signed_out = self.snapshot_state.lock().unwrap();
+        let _write = status::WRITE_LOCK.lock().unwrap();
+        if expected.is_some_and(|id| id != self.bound_account_identity()) {
+            return Err(Error::InvalidLocal("the account changed"));
+        }
+        let first = plan::week_starts_on(&self.store);
+        local::apply(&self.store, action, now, first)?;
+        // Surfaces follow rest, pauses and limits without waiting for a sync;
+        // a failed publication is retried offline and never undoes the change.
+        let _ = self.write_status_snapshot(now, *signed_out);
         Ok(())
     }
     pub fn status(&self) -> view::AppStatus {

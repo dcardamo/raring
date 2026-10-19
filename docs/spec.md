@@ -480,6 +480,35 @@ Sent by the phone itself.
 
 ## Rules
 
+- **Local records**: goals, your sessions, plan links, circumstances (rest
+  days, pauses, limits, dismissals, wind-down reports), plan-week prompt
+  answers and local events are versioned JSON rows (`local:*`, each with
+  `schema`) in the local settings table, so the export, a verified account
+  switch and sign-out cover them like every other setting; nothing is sent to
+  Garmin. A row with a newer schema, or one that doesn't parse, is read as far
+  as it parses and never rewritten. Each change is one transaction under the
+  account barrier, refused if the account changed since it was queued, and
+  refreshes the status snapshot offline. Goals take effect by date: the first
+  targets from the start of that plan week, later changes from the day they
+  are made (keeping the week's original targets), and a manual change drops
+  accepted changes for later weeks. Sessions are added and moved only to today
+  or later; a passed open session stays until the person lets it go or marks
+  it missed, and moving one clears its link. One recording links to at most
+  one plan item; unlinking an automatic pair keeps it apart until linked
+  again. A pause has one open interval until the person resumes; resuming ends
+  it the day before (a pause begun the same day leaves none), and a review
+  date only prompts. A dismissal lasts its local day (kept 30 days). A wind-down
+  reported before noon belongs to the evening before.
+- **Plan migration**: the earlier weekly-plan row migrates once, on the first
+  local read or change. No saved version (`configured: false`) means no goals;
+  the preset preview is never adopted. Each saved version becomes a goal version
+  from the same week (no saved intensity follows Garmin's weekly goal; zero is
+  off; rest weekdays kept). Saved asleep-on-time nights become a sleep-timing
+  observation against each night's saved plan, shown without a verdict; it can
+  be kept or turned off, not restarted. Paused weeks become whole-week pauses.
+  The old row and saved sleep plans stay, so earlier weeks keep their original
+  results. An empty database writes nothing, so a first sign-in can bind.
+
 - **Gear snapshots**: `/gear-service/gear/v2/list` is a complete array;
   `distanceUsedMeters` and `maxUsageDistanceMeters` are metres. Check at most
   daily within sync's request budget and backoff. An empty valid list replaces
