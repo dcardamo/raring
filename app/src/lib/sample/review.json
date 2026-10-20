@@ -44,5 +44,7 @@
     }
   ],
   "nextStart": "2025-10-13",
+  "appliesFrom": "2025-10-16",
+  "decidable": true,
   "decision": null
 }

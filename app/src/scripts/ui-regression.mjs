@@ -4,6 +4,7 @@ import {resolve} from 'node:path';
 import {createServer} from 'vite';
 import {chromium} from 'playwright';
 import {contrastFailures} from './contrast.mjs';
+import {planProgressChecks} from './ui-plan-progress.mjs';
 
 const server=await createServer({configFile:resolve('vite.config.ts'),server:{host:'127.0.0.1',port:0}});
 const output=resolve('../.data/screens');
@@ -1300,6 +1301,7 @@ try {
   await np.close();
  }
  console.log('U57: declined notifications are remembered and not asked again: passed');
+ await planProgressChecks({browser,url,errors});
  // Plan edits and tonight's wind-down go to the core as local actions.
  {
   const ep=await browser.newPage({viewport:{width:390,height:844}});

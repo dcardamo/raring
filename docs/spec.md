@@ -412,7 +412,9 @@ Backlog, Garmin Coach).
   sessions with one state word (Done, Needs review, Planned, Not recorded,
   Awaiting data, Marked missed), Garmin Coach rest days, recordings not in
   your plan, and Garmin's scheduled workouts by name, read-only and not
-  counted. Add a session for today or later.
+  counted. Add a session for today or a later day of the plan week (Plan
+  shows one week; Move and Reschedule offer the same days), named on the
+  button ("Place on Sun 19 Oct").
 - **A session** opens a sheet: its recording when done, with "Not this
   session" to undo a match; "This was my session" for a candidate; Edit
   (time, name, minutes, goal shares), Move or Reschedule, Let it go, Mark as
@@ -766,9 +768,12 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   nights at most 7); two of the last three counted weeks under 70% (sessions
   and nights: under target) ease back by 10% rounded to 5 (at least 5) or one
   (at least one); otherwise keep. Each proposal shows its reason. Only the
-  person's acceptance changes goals, as a version from the next week; Keep all
-  and ignoring a review change nothing. The decision is kept with the
-  proposals it saw.
+  person's acceptance changes goals, as a version from the next week, or from
+  the day it is made once that week has begun (the week keeps its starting
+  targets, as for any later change); Keep all and ignoring a review change
+  nothing. Only the latest completed week's review offers the choice, until it
+  is decided; older and ongoing weeks show their outcomes, and a decided week
+  the proposals it saw and what was accepted.
 - **Workout detail**: from the stored activity only. Streams beyond heart
   rate (`directSpeed` in km/h, `directElevation`, `directDoubleCadence` or
   `directBikeCadence`, `directPower`, `directRespirationRate`,

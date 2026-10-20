@@ -2563,6 +2563,11 @@ pub struct WeekReview {
     /// For the week after this one; empty without goals.
     pub proposals: Vec<GoalProposal>,
     pub next_start: String,
+    /// When an accepted change would take effect: next week's start, or today
+    /// once that week has begun.
+    pub applies_from: String,
+    /// Only the latest completed week's review, while undecided, can change goals.
+    pub decidable: bool,
     pub decision: Option<ReviewDecision>,
 }
 

@@ -70,6 +70,8 @@ pub(crate) fn week(store: &Store, local: &LocalRecords, start: NaiveDate, today:
         })
         .collect();
     let next = start + Duration::days(7);
+    let decision = local.reviews.decisions.iter().find(|d| d.week == board.start).cloned();
+    let this_week = crate::plan::week_start(today, crate::plan::week_starts_on(store));
     Week {
         review: WeekReview {
             start: board.start.clone(),
@@ -83,11 +85,18 @@ pub(crate) fn week(store: &Store, local: &LocalRecords, start: NaiveDate, today:
             goals: goals.clone(),
             proposals: vec![],
             next_start: next.to_string(),
-            decision: local.reviews.decisions.iter().find(|d| d.week == board.start).cloned(),
+            applies_from: next.max(today).to_string(),
+            decidable: decision.is_none() && latest_completed(start, today, this_week),
+            decision,
         },
         goals,
         rings: board.week_rings,
     }
+}
+
+/// The week just ended (or ending today): the only review that can change goals.
+pub(crate) fn latest_completed(start: NaiveDate, today: NaiveDate, this_week: NaiveDate) -> bool {
+    start + Duration::days(6) <= today && start + Duration::days(7) >= this_week
 }
 
 fn round5(n: f64) -> f64 {

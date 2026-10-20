@@ -106,6 +106,9 @@ From item 11, in priority order.
 
 ### 7a. Weekly plan follow-ups
 
+- Planning next week ahead: Plan shows one week, so Add, Move and Reschedule
+  offer only this plan week's remaining days. Week navigation (‹ ›) could open
+  next week once day routes (opening a past day) land.
 - Check on a watch whose account starts the week on Sunday whether its own
   intensity-minutes widget resets on Monday like Garmin's weekly rows.
 - The mockup's "Next up" strength workout card on the plan screen waits for
@@ -332,6 +335,15 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Plan and Progress review fixes** (from the UX review in
+  `.data/ux-review/plan-progress.md`). Commit "Offer review decisions only
+  where they can apply": only the latest completed, undecided week's review
+  offers Keep all and Accept (`WeekReview.decidable`); a change accepted after
+  next week began applies from that day as a revision, keeping the week's
+  starting target (`appliesFrom`, "From today, Thu 22 Oct"); kept proposals
+  read "Kept (proposed 3)". Add a session, Move and Reschedule offer only this
+  plan week's days, with the day on the button and an optional name.
 
 - **21. Write rules** (commit "Add the Garmin write rules and a log of
   recent changes"). One core write path (`crates/core/src/writes.rs`): only

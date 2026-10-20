@@ -213,3 +213,38 @@ fn an_open_week_is_not_counted_and_old_reviews_cannot_rewrite_goal_history() {
     assert!(f.core.local_action(&LocalAction::DecideReview{week:"2025-03-10".into(),accepted:vec![GoalKind::Zone2]},at(3,31,9)).is_err());
     assert_eq!(f.core.local_records().goals.versions.len(),1);
 }
+
+#[test]
+fn only_the_latest_completed_undecided_week_offers_a_decision() {
+    let f = fx("decidable");
+    goals(&f, GoalTargets { zone2_min: 100, ..Default::default() });
+    for (i, day) in WEEKS.iter().enumerate() {
+        ride(&f.store, 900 + i as u64, day, 120);
+    }
+    let decidable = |week: &str, when| f.core.week_review(week, when).unwrap().decidable;
+    assert!(decidable("2025-03-10", at(3, 17, 9)), "the week just ended");
+    assert!(decidable("2025-03-10", at(3, 20, 9)), "still the latest completed week mid-week");
+    assert!(!decidable("2025-03-03", at(3, 17, 9)), "an older week is history");
+    assert!(!decidable("2025-03-10", at(3, 12, 9)), "the week in progress");
+    f.core.local_action(&LocalAction::DecideReview { week: "2025-03-10".into(), accepted: vec![] }, at(3, 17, 9)).unwrap();
+    assert!(!decidable("2025-03-10", at(3, 17, 9)), "a decided week shows its decision");
+}
+
+#[test]
+fn a_change_accepted_after_next_week_began_applies_from_today_and_keeps_the_starting_target() {
+    let f = fx("late-accept");
+    goals(&f, GoalTargets { zone2_min: 100, ..Default::default() });
+    for (i, (day, minutes)) in WEEKS.iter().zip([80, 90, 115, 115]).enumerate() {
+        ride(&f.store, 950 + i as u64, day, minutes);
+    }
+    let thursday = at(3, 20, 9);
+    let r = f.core.week_review("2025-03-10", thursday).unwrap();
+    assert_eq!((r.next_start.as_str(), r.applies_from.as_str()), ("2025-03-17", "2025-03-20"));
+    assert_eq!(proposal(&r, GoalKind::Zone2).proposed, 110.);
+    f.core.local_action(&LocalAction::DecideReview { week: "2025-03-10".into(), accepted: vec![GoalKind::Zone2] }, thursday).unwrap();
+    let v = f.core.local_records().goals.versions;
+    assert_eq!((v.last().unwrap().from.as_str(), v.last().unwrap().targets.zone2_min), ("2025-03-20", 110));
+    let board = f.core.plan_board("2025-03-20", thursday).unwrap();
+    let zone2 = board.ledger.iter().find(|l| l.kind == GoalKind::Zone2).unwrap();
+    assert_eq!((zone2.target, zone2.original, zone2.revised_on.as_deref()), (110., Some(100.), Some("2025-03-20")));
+}

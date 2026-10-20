@@ -21,7 +21,7 @@
  let i = $derived(item.intention);
  let passed = $derived(i.date < board.today);
  let open = $derived(i.status === 'open');
- let days = $derived(Array.from({length: 7}, (_, n) => { const d = new Date(board.today + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }).filter(d => d !== i.date));
+ let days = $derived(Array.from({length: 7}, (_, n) => { const d = new Date(board.today + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }).filter(d => d !== i.date && d <= board.end));
  let candidates = $derived(item.candidates.map(id => board.recordings.find(r => r.id === id)).filter(r => !!r));
  let recording = $derived(board.recordings.find(r => r.id === item.recording));
  $effect(() => sheetOpened(close));
@@ -50,7 +50,7 @@
  {:else if open && item.state !== 'done' && !item.coach}
   <button class="opt" onclick={startEdit}><Icon name="pencil" size={18}/><span><b>Edit</b><small>Time, name, minutes and goal shares</small></span></button>
   {#if moving}<div class="chips2" role="group" aria-label="Move to">{#each days as d}<button onclick={() => run({action: 'moveIntention', id: i.id, date: d})}>{d === board.today ? 'Today' : dateLabel(d)}</button>{/each}</div>
-  {:else}<button class="opt" onclick={() => moving = true}><Icon name="arrow-right" size={18}/><span><b>{passed ? 'Reschedule' : 'Move'}</b><small>To today or a later day · nothing to catch up</small></span></button>{/if}
+  {:else if days.length}<button class="opt" onclick={() => moving = true}><Icon name="arrow-right" size={18}/><span><b>{passed ? 'Reschedule' : 'Move'}</b><small>To today or a later day this week · nothing to catch up</small></span></button>{/if}
   <button class="opt" onclick={() => run({action: 'setIntentionStatus', id: i.id, status: 'letGo'})}><Icon name="close" size={18}/><span><b>Let it go</b><small>Not planned any more</small></span></button>
   {#if passed}<button class="opt" onclick={() => run({action: 'setIntentionStatus', id: i.id, status: 'missed'})}><Icon name="alert" size={18}/><span><b>Mark as missed</b><small>Only if you want it recorded that way</small></span></button>{/if}
   {#if !passed}<button class="opt" onclick={() => run({action: 'removeIntention', id: i.id})}><Icon name="close" size={18}/><span><b>Remove</b><small>Delete it from your plan</small></span></button>{/if}
