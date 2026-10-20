@@ -30,6 +30,26 @@ try {
   await exportPage.close();
  }
  console.log('Export settings at 390/700/1100 and preview handoff: passed');
+ for(const width of [390,1100]){
+  const changes=await browser.newPage({viewport:{width,height:844}});
+  await changes.goto(`${url}/#settings`);
+  await changes.getByText('Raring hasn’t changed anything in Garmin.',{exact:false}).waitFor();
+  await changes.goto(`${url}/?fixture=garmin-changes#settings`);
+  const log=changes.getByRole('list',{name:'Recent Garmin changes'});
+  await log.waitFor();
+  const rows=log.getByRole('listitem');
+  assert.equal(await rows.count(),5);
+  assert.match(await rows.nth(0).textContent(),/Alarm time: 06:30 → 07:00.*Saved in Garmin · Waiting for watch sync/);
+  assert.match(await rows.nth(1).textContent(),/Alarm time: sent 07:00, Garmin has 06:30/);
+  assert.match(await rows.nth(2).textContent(),/Garmin refused it.*Invalid alarm days/);
+  assert.match(await rows.nth(3).textContent(),/Not sent.*alarm time is now 06:40/);
+  assert.match(await rows.nth(4).textContent(),/Alarm removed: 05:45.*Not saved.*limiting requests/);
+  assert.equal(await changes.locator('.card').filter({hasText:'Recent Garmin changes'}).locator('button,input').count(),0,'the log only lists changes');
+  await log.scrollIntoViewIfNeeded();
+  await changes.screenshot({path:resolve(output,`garmin-changes-${width}.png`),fullPage:true});
+  await changes.close();
+ }
+ console.log('Recent Garmin changes at 390/1100, empty and with every result: passed');
  const privatePage=await browser.newPage({viewport:{width:390,height:844}});
  await privatePage.goto(`${url}/?fixture=private#sleep`);
  await privatePage.getByText('Wed 15 Oct 23:45 – Thu 16 Oct 00:15',{exact:true}).waitFor();

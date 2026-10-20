@@ -1339,6 +1339,61 @@ pub struct Settings {
     pub plan_prompt: bool,
 }
 
+/// How a Garmin write ended (Rules: Garmin writes).
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum WriteOutcome {
+    /// Garmin accepted it and the read-back matches.
+    Applied,
+    /// Garmin accepted it but the read-back shows other values.
+    Differs,
+    /// Garmin accepted it; the read-back failed, so it is unconfirmed.
+    Unconfirmed,
+    /// Not sent: Garmin's value changed since the person saw it.
+    Conflict,
+    /// Garmin refused it, with its message when it gave one.
+    Rejected,
+    /// Not saved: Garmin couldn't be reached, failed or was rate limiting.
+    Failed,
+    /// Not sent: Garmin needs a new sign-in.
+    NeedsSignIn,
+}
+
+/// One field of a Garmin write, as display text: the person's new value,
+/// or for a read-back difference what was sent and what Garmin returned.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ChangedField {
+    /// Stable key, such as `alarm:7.alarmTime`.
+    pub field: String,
+    pub label: String,
+    /// Absent for an added item.
+    pub before: Option<String>,
+    /// Absent for a removed item.
+    pub after: Option<String>,
+}
+
+/// One entry of Settings' recent Garmin changes, newest first.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct GarminChange {
+    /// When the person asked for it, RFC 3339 UTC.
+    pub at: String,
+    /// What was written, such as "Watch alarms".
+    pub resource: String,
+    pub fields: Vec<ChangedField>,
+    pub outcome: WriteOutcome,
+    /// Garmin's rejection message or the failure, when known.
+    pub message: Option<String>,
+    /// Fields that read back differently from what was sent.
+    pub mismatches: Vec<ChangedField>,
+    /// Garmin has it, but the watch hasn't downloaded since.
+    pub waiting_for_watch: bool,
+}
+
 fn default_bedtime_lead() -> u32 {
     30
 }

@@ -26,6 +26,7 @@ pub mod sync;
 pub mod trends;
 pub mod view;
 pub mod weight;
+pub mod writes;
 
 use chrono::{DateTime, Local, NaiveDateTime, Timelike, Utc};
 pub use garmin::Tokens;
@@ -337,6 +338,36 @@ impl Raring {
         // a failed publication is retried offline and never undoes the change.
         let _ = self.write_status_snapshot(now, *signed_out);
         Ok(())
+    }
+    /// Change a watch's alarms, only from the person's explicit action (Rules:
+    /// Garmin writes). The caller holds its credential gate as for sync; refreshed
+    /// tokens stay in `client`. Invalid edits and an unconfirmed delete are
+    /// refused before any request; every other attempt is logged.
+    pub async fn change_watch_alarms(
+        &self,
+        client: &garmin::Client,
+        device_id: &str,
+        edits: &[writes::AlarmEdit],
+        confirm_delete: bool,
+        now: DateTime<Utc>,
+    ) -> Result<view::GarminChange> {
+        let expected = self.session_identity().ok_or(Error::InvalidLocal("not signed in"))?;
+        let (resource, edits) = writes::alarms(device_id, edits, confirm_delete)?;
+        let entry = writes::write(&self.store, client, resource, edits, now).await;
+        {
+            let _write = status::WRITE_LOCK.lock().unwrap();
+            // A write that outlived its account is not logged for the next one.
+            if self.session_identity().as_deref() == Some(expected.as_str()) {
+                // The outcome matters more than its log entry; a failed log save
+                // still returns what Garmin did.
+                let _ = writes::record(&self.store, &entry);
+            }
+        }
+        Ok(writes::shown(&self.store, &entry))
+    }
+    /// Recent Garmin writes, newest first, from local data only.
+    pub fn garmin_changes(&self) -> Vec<view::GarminChange> {
+        writes::changes(&self.store)
     }
     pub fn status(&self) -> view::AppStatus {
         let (history_from, history_complete) =

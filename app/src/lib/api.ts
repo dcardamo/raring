@@ -44,6 +44,8 @@ import {weightFixtures} from './sample/weight';
 import type { ProgressView } from './generated/ProgressView';
 import type { Period } from './generated/Period';
 import sampleProgress from './sample/progress.json';
+import type { GarminChange } from './generated/GarminChange';
+import { sampleGarminChanges } from './sample/garminChanges';
 export const previewOnly = !isTauri();
 
 export type { Settings } from './generated/Settings';
@@ -114,6 +116,8 @@ export const local_action = (action:LocalAction):Promise<void> => {
  }
  return invoke<void>('local_action',{action});
 };
+// Recent Garmin writes; the preview has none unless the garmin-changes fixture asks.
+export const garmin_changes = ():Promise<GarminChange[]> => call('garmin_changes',undefined,new URLSearchParams(location.search).get('fixture')==='garmin-changes'?sampleGarminChanges:[]);
 export const sync_now = ():Promise<void> => call('sync_now',undefined,undefined);
 export const open_garmin_connect = ():Promise<boolean> => call('open_garmin_connect',undefined,false);
 export const begin_sign_in = ():Promise<void> => call('begin_sign_in',undefined,undefined);

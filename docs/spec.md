@@ -450,8 +450,8 @@ Follow-through and measured change stay apart; nothing is a grade.
   Adapt, My routines).
 - **Settings**: notifications, the wind-down lead, persistent status, Follow
   my day (and that Raring doesn't learn from how you use the app), the
-  plan-your-week prompt, journal consent, history, export, sign-out, help and
-  how Raring works.
+  plan-your-week prompt, journal consent, history, recent Garmin changes
+  (Rules: Recent Garmin changes), export, sign-out, help and how Raring works.
 
 ### Weekly check-in
 
@@ -590,6 +590,44 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   it the day before (a pause begun the same day leaves none), and a review
   date only prompts. A dismissal lasts its local day (kept 30 days). A wind-down
   reported before noon belongs to the evening before.
+- **Garmin writes**: every change to Garmin follows one path in the core,
+  and nothing ships a write until it has passed on a real watch (TODO item
+  20). A write runs only from the person's explicit action, never from sync
+  or another background job; a delete also needs an explicit confirmation.
+  It starts from a fresh read of the resource and applies a typed change to
+  the fields the person touched. Each change carries the value the person
+  saw: if Garmin's value differs, or a list item it names is gone, nothing is
+  sent ("changed in Garmin since you looked"). Other values, including ones
+  changed in Connect meanwhile, come from the fresh read; list items are
+  found by their ids, never their position. Only the touched top-level keys
+  (and the resource's id) are sent, so a stale whole object is never
+  written. The write uses the same session, pacing, one token refresh on 401,
+  and 429 backoff (`backoff_until`) as sync; during a backoff nothing is
+  sent. After Garmin accepts it, the resource is read back and every sent
+  value compared, with string lists as sets and numbers by value. The
+  outcome is one of: saved; saved but read back differently (with what
+  differs); sent but unconfirmed (the read-back failed, or the server or
+  connection failed after sending); not sent because it changed in Garmin;
+  refused, with Garmin's message (any 4xx but 401/429, at most 200
+  characters, never an HTML page); not saved (rate limit, not found,
+  network); or sign in again. Invalid changes are refused before any
+  request. Writes are serialized, so two saves never interleave.
+  The first resource is a watch's alarms
+  (`/device-service/deviceservice/device-info/settings/{deviceId}`: time in
+  minutes after midnight, `alarmMode` ON/OFF, `alarmDays`, removal), proven
+  against a local mock only; nothing in the app sends it yet.
+- **Recent Garmin changes**: every attempt that passes validation is logged
+  in a versioned settings row (`garmin:changes`, `schema` 1), newest first,
+  at most 50, with its time, what was written, each field's old and new value
+  as the person chose them, the outcome, Garmin's message and read-back
+  differences. A row with a newer schema or one that doesn't parse is shown
+  as far as it parses and never rewritten. Like other settings it is in the
+  export and erased by sign-out and a verified account switch; an attempt
+  that outlives its account isn't logged. A saved change to a watch is
+  "waiting for watch sync" until that watch's stored
+  `lastDownloadTimestamp` (from sync's device detail) is later than the one
+  read right after the write, or than the write time if that read failed.
+  Settings lists the log; it never sends anything.
 - **Plan migration**: the earlier weekly-plan row migrates once, on the first
   local read or change. No saved version (`configured: false`) means no goals;
   the preset preview is never adopted. Each saved version becomes a goal version

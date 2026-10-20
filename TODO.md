@@ -287,11 +287,18 @@ faces, screens, sensors and audio prompts stay in Connect.
       returned 204. Device `startOfWeek` (full object PUT) returned 200.
       `availableTrainingDays` with one rest day returned 204; two rest days
       in a row are rejected (400 "Cannot set consecutive rest days").
-21. **Write rules** (do these before any write ships): every write starts
-    from a fresh read, changes only the fields the user touched, reads the
-    value back and shows success or failure; nothing writes in the
-    background; deletes ask first; a local log lists recent changes. Spec:
-    a Garmin writes section.
+21a. **Write rules follow-ups** (before the first write ships):
+    - With Dan's approval, verify on the maintainer's watch that the device
+      settings PUT carrying only `deviceId` and `alarms` (built from a fresh
+      GET) leaves every other device setting unchanged; the verified alarm
+      write in item 20 sent the whole object. If Garmin clears omitted keys,
+      send the whole fresh object for this resource (`Resource::keep`).
+      Alarm removal through the same PUT is unverified.
+    - The first write command must hold the Android `SyncGate` / desktop
+      credential gate around the write, as sync does, and save refreshed
+      tokens; the core takes a caller-owned `Client`.
+    - "Waiting for watch sync" ends only after a normal sync stores a newer
+      device detail; the log doesn't fetch it on its own.
 22. **Strength workout builder**: after the write rules, start with a
     workout-push spike on the Forerunner 970: create and schedule a strength
     workout, confirm it reaches the watch, do it and read the sets back.
@@ -334,6 +341,23 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **21. Write rules** (commit "Add the Garmin write rules and a log of
+  recent changes"). One core write path (`crates/core/src/writes.rs`): only
+  from an explicit action (only `writes` can create the proof
+  `Client::put_json` needs, so sync can't write), deletes need a confirm
+  flag, a fresh read, a typed patch checked against the value the person saw
+  (a change in Connect to the same field is a conflict, other changes are
+  kept), only the touched top-level keys sent, the shared session, pacing,
+  401 refresh and 429 backoff, then a read-back of everything sent. Outcomes:
+  applied, read back differently, unconfirmed, conflict, rejected with
+  Garmin's message, failed, needs sign-in. A versioned, bounded (50) local
+  log, newest first, with "waiting for watch sync" from the watch's
+  `lastDownloadTimestamp`; exported, erased by sign-out and account switch.
+  Settings lists it (read-only). Proven with watch alarms against a local
+  mock only: concurrent change, read-back mismatch, 400 with message,
+  401/refresh, 429 and a confirmed delete. No Garmin request was made; no
+  app feature writes yet.
 
 - **26. A focused, adaptive Raring experience** (commits "Rebuild Raring
   around the weekly plan: Today, Plan, Training, Health, Progress", "Time

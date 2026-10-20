@@ -320,6 +320,48 @@ impl Client {
         }
         Err(Error::NeedsSignIn)
     }
+    /// Send one write. Only `writes` can create the `Explicit` proof, so sync
+    /// and other reads cannot reach this. Pacing, refresh and the 401 retry
+    /// match reads; a 4xx other than 401 and 429 is Garmin's rejection.
+    pub(crate) async fn put_json(
+        &self, _: &crate::writes::Explicit, path: &str, body: &Value,
+    ) -> Result<Reply> {
+        if !path.starts_with('/') || path.contains("..") || path.contains('?') || path.contains('#') || path.contains('\\') {
+            return Err(Error::Decode);
+        }
+        let mut guard = self.state.lock().await;
+        if guard.0.is_expiring(Utc::now(), Duration::minutes(5)) {
+            guard.0 = refresh_at(&self.http, &self.auth, &guard.0).await?;
+        }
+        for attempt in 0..2 {
+            if let Some(last) = guard.1 {
+                if let Some(wait) = self.interval.checked_sub(last.elapsed()) {
+                    tokio::time::sleep(wait).await;
+                }
+            }
+            guard.1 = Some(Instant::now());
+            let r = native(self.http.put(format!("{}{path}", self.api)))
+                .bearer_auth(&guard.0.access_token)
+                .json(body)
+                .send()
+                .await
+                .map_err(map_network)?;
+            let status = r.status();
+            if status == StatusCode::UNAUTHORIZED && attempt == 0 {
+                guard.0 = refresh_at(&self.http, &self.auth, &guard.0).await?;
+                continue;
+            }
+            if status.is_success() {
+                return Ok(Reply::Accepted);
+            }
+            if status.is_client_error() && !matches!(status, StatusCode::UNAUTHORIZED | StatusCode::TOO_MANY_REQUESTS) {
+                let text = r.text().await.unwrap_or_default();
+                return Ok(Reply::Rejected { status: status.as_u16(), message: rejection_message(&text) });
+            }
+            return Err(http_error(&r));
+        }
+        Err(Error::NeedsSignIn)
+    }
     /// Garmin's public exercise catalog: categories, exercises and their
     /// muscles. It needs no account, so no credentials are sent.
     pub async fn exercise_catalog(&self) -> Result<Value> {
@@ -644,6 +686,32 @@ impl Client {
     }
 }
 
+/// Garmin's answer to a write that reached it.
+#[derive(Debug, PartialEq)]
+pub(crate) enum Reply {
+    Accepted,
+    Rejected { status: u16, message: Option<String> },
+}
+
+/// Garmin's own words from a rejection body: a JSON message field or short
+/// plain text, never an HTML error page.
+fn rejection_message(body: &str) -> Option<String> {
+    let text = match serde_json::from_str::<Value>(body) {
+        Ok(v) => ["message", "errorMessage", "error", "detail"]
+            .iter()
+            .find_map(|k| v[k].as_str())
+            .or_else(|| v["errors"][0]["message"].as_str())
+            .or_else(|| v.as_str())
+            .map(str::to_owned)?,
+        Err(_) => body.to_owned(),
+    };
+    let text = text.trim();
+    if text.is_empty() || text.starts_with('<') {
+        return None;
+    }
+    Some(text.chars().take(200).collect())
+}
+
 fn device_detail_path(id: &str) -> Result<String> {
     // Device IDs may be alphanumeric. Reject route separators and traversal before encoding.
     if id.is_empty()
@@ -706,6 +774,17 @@ where
 #[cfg(test)]
 mod device_tests {
     use super::*;
+
+    #[test]
+    fn rejection_messages_are_garmins_text_only() {
+        assert_eq!(rejection_message(r#"{"message":"Cannot set consecutive rest days"}"#).as_deref(), Some("Cannot set consecutive rest days"));
+        assert_eq!(rejection_message(r#"{"errors":[{"message":"Bad alarm"}]}"#).as_deref(), Some("Bad alarm"));
+        assert_eq!(rejection_message(" Cannot set consecutive rest days \n").as_deref(), Some("Cannot set consecutive rest days"));
+        assert_eq!(rejection_message("<html><body>Bad Request</body></html>"), None);
+        assert_eq!(rejection_message("{}"), None);
+        assert_eq!(rejection_message(""), None);
+        assert_eq!(rejection_message(&"x".repeat(500)).map(|m| m.len()), Some(200));
+    }
 
     #[test]
     fn detail_ids_are_validated_and_encoded_as_one_path_segment() {

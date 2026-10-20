@@ -393,6 +393,11 @@ async fn milestone_archive(app: tauri::AppHandle) -> Result<Vec<raring_core::vie
 async fn profile(app: tauri::AppHandle) -> Result<raring_core::view::ProfileView, String> {
     read_view(app, move |core| Ok(core.profile(Local::now()))).await
 }
+/// Recent Garmin writes for Settings; local data only, never a request.
+#[tauri::command]
+async fn garmin_changes(app: tauri::AppHandle) -> Result<Vec<raring_core::view::GarminChange>, String> {
+    read_view(app, |core| Ok(core.garmin_changes())).await
+}
 #[tauri::command]
 async fn reviews(app: tauri::AppHandle) -> Result<Vec<raring_core::view::ReviewRow>, String> {
     read_view(app, move |core| Ok(core.reviews(Local::now()))).await
@@ -895,6 +900,7 @@ pub fn run() {
                     open_garmin_connect,
                     request_notification_permission,
                     get_settings,
+                    garmin_changes,
                     patch_settings,
                     heart_rate_day,
                     export_archive,
@@ -931,6 +937,7 @@ pub fn run() {
                     open_garmin_connect,
                     request_notification_permission,
                     get_settings,
+                    garmin_changes,
                     patch_settings,
                     heart_rate_day,
                     export_archive,
