@@ -1,4 +1,8 @@
 {
+  "detail": {
+    "missing": [],
+    "unavailable": []
+  },
   "date": "2025-10-16",
   "startLocal": "2025-10-15T22:31:00",
   "endLocal": "2025-10-16T06:39:00",
@@ -479,6 +483,7 @@
   ],
   "tonightFirst": false,
   "woundDown": false,
+  "windDownOpen": false,
   "napsState": "available",
   "naps": [
     {

@@ -43,7 +43,7 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
     }
     override fun onNewIntent(intent: Intent) { openTarget(intent) }
     private fun openTarget(intent: Intent?) {
-        val target = intent?.getStringExtra("target")?.takeIf { it in setOf("today", "checkin", "sleep", "sleep/tonight", "training", "health", "readiness", "metric/bodyBattery", "metric/stress") } ?: return
+        val target = intent?.getStringExtra("target")?.takeIf { it in setOf("today", "checkin", "sleep", "sleep/last", "sleep/tonight", "training", "health", "readiness", "metric/bodyBattery", "metric/stress") } ?: return
         webview?.post { webview?.loadUrl("http://tauri.localhost/#$target") }
         intent.removeExtra("target")
     }
@@ -167,6 +167,34 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
                 }
                 invoke.resolve(JSObject().apply { put("day", result) })
             } catch (e: Exception) { invoke.reject("Heart rate unavailable — try again later", e) }
+            finally { StatusSurfaces.refresh(activity) }
+        }
+    }
+    // One explicitly opened past day or older workout; never navigation prefetch.
+    @Command fun fetchDetail(invoke: Invoke) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val date = invoke.getArgs().optString("date", "")
+                val id = invoke.getArgs().optString("activityId", "")
+                val scope = invoke.getArgs().optString("scope", "day")
+                check(date.isNotEmpty() != id.isNotEmpty()) { "one day or workout" }
+                SyncGate.mutex.withLock {
+                    check(AccountSession.active(activity)) { "sign in again" }
+                    // A demo session has no Garmin credentials; a detail read must not suspend it.
+                    val tokens = AccountSession.loadLocked(activity) ?: ""
+                    check(tokens.isNotEmpty()) { "no Garmin session for a detail read" }
+                    val db = java.io.File(activity.filesDir, "raring.db").absolutePath
+                    val response = JSONObject(NativeBridge.fetchDetail(db, tokens, date, id, scope))
+                    if (response.optBoolean("authFailed")) {
+                        AccountSession.suspendLocked(activity)
+                        SyncScheduler.cancel(activity)
+                        throw IllegalStateException("sign in again")
+                    }
+                    response.optString("tokensJson").takeIf { it.isNotEmpty() }?.let { TokenVault.save(activity, it) }
+                    if (!response.isNull("error")) throw IllegalStateException(response.getString("error"))
+                }
+                invoke.resolve(JSObject())
+            } catch (e: Exception) { invoke.reject("This detail is unavailable — try again later", e) }
             finally { StatusSurfaces.refresh(activity) }
         }
     }

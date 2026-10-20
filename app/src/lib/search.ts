@@ -10,7 +10,7 @@ export const normalize = (text: string) => text.normalize('NFKD').replace(/\p{M}
 const PAGES: SearchEntry[] = [
   {name: 'Today', route: 'today'}, {name: 'Plan', route: 'plan'}, {name: 'Training', route: 'training'},
   {name: 'Health', route: 'health'}, {name: 'Progress', route: 'progress'},
-  {name: 'Last night’s sleep', route: 'sleep'}, {name: 'Readiness', route: 'readiness'},
+  {name: 'Last night’s sleep', route: 'sleep/last'}, {name: 'Readiness', route: 'readiness'},
   {name: 'Weekly goals', route: 'plan/commitments', also: ['targets']}, {name: 'Zone 2', route: 'plan'},
   {name: 'Intensity minutes', route: 'health', anchor: 'intensity', also: ['vigorous', 'moderate']},
   {name: 'Fitness Age', route: 'health', anchor: 'fitness-age'},

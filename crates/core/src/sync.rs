@@ -1,5 +1,6 @@
 use crate::{
     garmin::{self, Client, Tokens},
+    screens,
     store::Store,
     strength,
 };
@@ -443,8 +444,35 @@ fn sets_due(store: &Store, id: &str, item: &Value, now: DateTime<Utc>) -> bool {
     started.is_some_and(|t| now - t < Duration::hours(48))
         && fetched.is_ok_and(|f| now - f >= Duration::hours(1))
 }
+/// Whether Garmin's user settings are due: weekly once sets, weight or a
+/// recorded threshold need the display preferences; daily while Today's
+/// phases need Garmin's sleep schedule (too few recorded nights); and once,
+/// at most daily, for a row stored before the schedule was kept.
+pub fn settings_due(store: &Store, now: DateTime<Utc>) -> bool {
+    let due = |days: i64| {
+        store
+            .cursor("profile_settings_checked")
+            .and_then(|s| s.parse::<i64>().ok())
+            .is_none_or(|t| t > now.timestamp() || now.timestamp() - t >= days * 86400)
+    };
+    let preferences = !store.history("exercise_sets", "~", 1).is_empty()
+        || store
+            .get("weight_latest", "me")
+            .is_some_and(|v| !v.is_null())
+        || !store.history("weight", "~", 1).is_empty()
+        || ["lactate_threshold", "running_power_threshold", "cycling_ftp", "acclimation"]
+            .iter()
+            .any(|kind| store.get(kind, "latest").is_some_and(|v| !v.is_null()));
+    let today = now.with_timezone(&Local).date_naive().to_string();
+    let schedule = screens::few_recorded_wakes(store, &today)
+        || store
+            .get("profile_settings", "me")
+            .is_some_and(|v| v.get("userSleep").is_none());
+    (preferences && due(7)) || (schedule && due(1))
+}
 /// Garmin's exercise catalog (monthly) requires sets; reduced user settings
-/// provide display units for strength, weight and recorded Training metrics.
+/// provide display units for strength, weight and recorded Training metrics,
+/// and the sleep schedule for Today's phases.
 async fn strength_reference(
     store: &Store,
     client: &Client,
@@ -453,27 +481,18 @@ async fn strength_reference(
     now: DateTime<Utc>,
 ) {
     let has_sets = !store.history("exercise_sets", "~", 1).is_empty();
-    let has_weight = !store.history("weight", "~", 1).is_empty()
-        || store
-            .get("weight_latest", "me")
-            .is_some_and(|v| !v.is_null());
-    let has_threshold = ["lactate_threshold", "running_power_threshold", "cycling_ftp", "acclimation"]
-        .iter()
-        .any(|kind| store.get(kind, "latest").is_some_and(|v| !v.is_null()));
-    if !has_sets && !has_weight && !has_threshold {
-        return;
-    }
-    let due = |cursor: &str, days: i64| {
-        store
-            .cursor(cursor)
+    let catalog_due = has_sets
+        && store
+            .cursor("exercise_catalog_checked")
             .and_then(|s| s.parse::<i64>().ok())
-            .is_none_or(|t| t > now.timestamp() || now.timestamp() - t >= days * 86400)
-    };
-    for (kind, key, cursor, days) in [
-        ("profile_settings", "me", "profile_settings_checked", 7),
-        ("exercise_catalog", "garmin", "exercise_catalog_checked", 30),
+            .is_none_or(|t| t > now.timestamp() || now.timestamp() - t >= 30 * 86400);
+    let settings_due = settings_due(store, now);
+    for (kind, key, cursor) in [
+        ("profile_settings", "me", "profile_settings_checked"),
+        ("exercise_catalog", "garmin", "exercise_catalog_checked"),
     ] {
-        if !due(cursor, days) || (kind == "exercise_catalog" && !has_sets) {
+        let wanted = if kind == "profile_settings" { settings_due } else { catalog_due };
+        if !wanted {
             continue;
         }
         match request(store, client, report, kind, key, None, budget, now).await {
@@ -1466,6 +1485,89 @@ pub async fn heart_rate_on_demand(store: &Store, client: &Client, key: &str) -> 
             now,
         )
         .await;
+    }
+    report
+}
+
+/// An opened workout fetches its summary, splits, zones and charts.
+const WORKOUT_DETAIL_BUDGET: usize = 4;
+
+/// One explicitly opened past day. Fetches only the parts that page shows and
+/// only the reads this phone has never stored, in page order, and keeps every
+/// answer. It shares the request budget, per-endpoint retry wait and 429
+/// backoff with sync, and navigation never calls it: only a person opening a
+/// past day does.
+pub async fn day_detail_on_demand(
+    store: &Store,
+    client: &Client,
+    key: &str,
+    parts: &[crate::view::DayDetailPart],
+) -> SyncReport {
+    let mut report = SyncReport::default();
+    let now = Utc::now();
+    let valid = NaiveDate::parse_from_str(key, "%Y-%m-%d")
+        .ok()
+        .is_some_and(|d| d.to_string() == key && d < Local::now().date_naive());
+    if !valid {
+        return report;
+    }
+    if store
+        .cursor("backoff_until")
+        .and_then(|v| v.parse::<i64>().ok())
+        .is_some_and(|t| t > now.timestamp())
+    {
+        report.rate_limited = true;
+        return report;
+    }
+    let name = store
+        .get("profile", "me")
+        .and_then(|v| v["displayName"].as_str().map(str::to_owned));
+    let Some(name) = name else { return report };
+    let budget = parts
+        .iter()
+        .map(|part| crate::screens::detail_kinds(*part).len())
+        .sum();
+    for part in parts {
+        for kind in crate::screens::detail_kinds(*part) {
+            if store.get(kind, key).is_some() {
+                continue;
+            }
+            if !fetch(store, client, &mut report, kind, key, Some(&name), budget, now).await {
+                return report;
+            }
+        }
+    }
+    report
+}
+
+/// One explicitly opened activity whose charts, splits, zones and summary the
+/// history download listed but never stored. Older workouts already open with
+/// their stored summary; this is what fills in the rest, once, on request.
+pub async fn workout_detail_on_demand(store: &Store, client: &Client, key: &str) -> SyncReport {
+    let mut report = SyncReport::default();
+    let now = Utc::now();
+    let known = store.get("activity", key).is_some() || store.get("listed", key).is_some();
+    if key.is_empty()
+        || !key.bytes().all(|b| b.is_ascii_digit())
+        || !known
+    {
+        return report;
+    }
+    if store
+        .cursor("backoff_until")
+        .and_then(|v| v.parse::<i64>().ok())
+        .is_some_and(|t| t > now.timestamp())
+    {
+        report.rate_limited = true;
+        return report;
+    }
+    for kind in crate::screens::detail_kinds(crate::view::DayDetailPart::Workout) {
+        if store.get(kind, key).is_some() {
+            continue;
+        }
+        if !fetch(store, client, &mut report, kind, key, None, WORKOUT_DETAIL_BUDGET, now).await {
+            return report;
+        }
     }
     report
 }

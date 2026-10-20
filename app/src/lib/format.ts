@@ -32,6 +32,13 @@ export const yearDate=(date:string)=>{
  const day=calendarDay(date);
  return day?`${day.getDate()} ${months[day.getMonth()]} ${day.getFullYear()}`:'Date unavailable';
 };
+// When Raring read a value, with its weekday unless it was read today: an old reading never looks like today's.
+export const readAt=(iso:string,now=new Date())=>{
+ const date=new Date(iso);
+ if(Number.isNaN(date.getTime()))return '—';
+ const time=date.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+ return date.toDateString()===now.toDateString()?time:`${weekdays[(date.getDay()+6)%7]} ${time}`;
+};
 export const monthLabel=(date:string)=>{
  const day=calendarDay(date);
  return day?`${months[day.getMonth()]} ${day.getFullYear()}`:'Date unavailable';

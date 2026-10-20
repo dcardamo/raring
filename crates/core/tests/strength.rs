@@ -236,9 +236,13 @@ fn weeks_units_and_figure_follow_garmin_settings() {
             "profile_settings",
             "me",
             "now",
-            &json!({"userData": {"measurementSystem": "statute_us", "gender": "MALE",
+            &json!({"id": 1, "connectDate": null, "sourceType": null,
+                "userData": {"measurementSystem": "statute_us", "gender": "MALE",
                 "firstDayOfWeek": {"dayId": 2, "dayName": "sunday"}, "birthDate": "2000-01-01",
-                "timeFormat": "time_twelve_hr", "weight": 65000}}),
+                "timeFormat": "time_twelve_hr", "weight": 65000},
+                "userSleep": {"sleepTime": 82800, "wakeTime": 25200, "defaultSleepTime": false, "defaultWakeTime": false, "extra": 1},
+                "userSleepWindows": [{"sleepWindowFrequency": "DAILY", "startSleepTimeSecondsFromMidnight": 82800,
+                    "endSleepTimeSecondsFromMidnight": 25200, "extra": 1}]}),
         )
         .unwrap();
     let row = |reps| set("ROW", Some("ONE_ARM_DUMBBELL_ROW"), Some(reps), 22_679.6);
@@ -277,7 +281,9 @@ fn weeks_units_and_figure_follow_garmin_settings() {
     assert_eq!(history.workouts.len(), 3);
     assert_eq!(
         strength::reduce_settings(&store.get("profile_settings", "me").unwrap()),
-        json!({"measurementSystem": "statute_us", "timeFormat": "time_twelve_hr", "firstDayOfWeek": "sunday", "gender": "MALE"})
+        json!({"measurementSystem": "statute_us", "timeFormat": "time_twelve_hr", "firstDayOfWeek": "sunday", "gender": "MALE",
+            "userSleep": {"sleepTime": 82800, "wakeTime": 25200, "defaultSleepTime": false, "defaultWakeTime": false},
+            "userSleepWindows": [{"sleepWindowFrequency": "DAILY", "startSleepTimeSecondsFromMidnight": 82800, "endSleepTimeSecondsFromMidnight": 25200}]})
     );
     let safe = strength::reduce_settings(&store.get("profile_settings", "me").unwrap());
     assert_eq!(strength::reduce_settings(&safe), safe);
@@ -602,7 +608,7 @@ async fn sync_fetches_sets_for_strength_activities_then_the_catalog_and_settings
     );
     assert_eq!(
         store.get("profile_settings", "me"),
-        Some(json!({"measurementSystem": "metric", "timeFormat": null, "firstDayOfWeek": "monday", "gender": "FEMALE"}))
+        Some(json!({"measurementSystem": "metric", "timeFormat": null, "firstDayOfWeek": "monday", "gender": "FEMALE", "userSleep": null, "userSleepWindows": null}))
     );
 
     // Two days after a workout, sets are refetched at most hourly; older ones never.

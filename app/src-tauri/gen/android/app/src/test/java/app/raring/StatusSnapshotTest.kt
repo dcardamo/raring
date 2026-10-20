@@ -38,6 +38,7 @@ class StatusSnapshotTest {
         assertEquals("metric/bodyBattery", safeStatusTarget("metric/bodyBattery"))
         assertEquals("metric/stress", safeStatusTarget("metric/stress"))
         assertEquals("sleep", safeStatusTarget("sleep"))
+        assertEquals("sleep/last", safeStatusTarget("sleep/last"))
         assertEquals("today", safeStatusTarget("https://example.com"))
         assertFalse(shouldPostStatus(false, true))
         assertFalse(shouldPostStatus(true, false))

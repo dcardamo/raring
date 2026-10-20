@@ -38,7 +38,16 @@ fn recent_nights_tonight_first_and_wind_down() {
     assert_eq!(late.tonight_first, matches!(phase(23, 30), DayPhase::Evening | DayPhase::WindDown | DayPhase::LateNight), "Today's phase decides");
     assert!(late.tonight_first, "late evening opens Tonight ({:?})", phase(23, 30));
     assert!(!late.wound_down);
+    // In the morning Tonight shows the coming night, which can't be reported
+    // yet; tapping then mustn't record last night beside tonight's plan.
+    let morning = core.sleep_live(at(13, 9, 0));
+    assert_eq!(morning.sleep_plan.as_ref().unwrap().night, "2025-03-14");
+    assert!(!morning.wind_down_open && !morning.wound_down);
+    assert!(core.local_action(&LocalAction::ReportWindDown, at(13, 9, 0)).is_err());
+    assert!(core.local_records().circumstances.wind_downs.is_empty());
+    assert!(late.wind_down_open, "open from two hours before tonight's window");
     core.local_action(&LocalAction::ReportWindDown, at(13, 22, 40)).unwrap();
+    assert_eq!(core.local_records().circumstances.wind_downs[0].date, "2025-03-13", "the evening before the plan's night");
     assert!(core.sleep_live(at(13, 23, 30)).wound_down);
     assert!(core.sleep_live(at(14, 1, 0)).wound_down, "after midnight the report still belongs to last evening");
     assert!(!core.sleep_live(at(14, 21, 0)).wound_down, "the next evening starts unreported");

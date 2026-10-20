@@ -47,6 +47,7 @@ fn input<'a>(now: &str, plan: Option<&'a SleepPlan>, wakes: &'a [f64]) -> PhaseI
         date: NaiveDate::parse_from_str(DATE, "%Y-%m-%d").unwrap(),
         plan,
         wakes,
+        schedule_wake: None,
         last_night: Some(LastNight {
             asleep_min: Some(450.),
             need_min: Some(465.),
@@ -67,7 +68,7 @@ fn phases_follow_wake_and_tonights_plan() {
         ("2025-03-12T06:50", DayPhase::Wake, "2025-03-12T09:40:00", true),
         ("2025-03-12T09:39", DayPhase::Wake, "2025-03-12T09:40:00", true),
         ("2025-03-12T09:40", DayPhase::Day, "2025-03-12T20:30:00", true),
-        ("2025-03-12T20:30", DayPhase::Evening, "2025-03-12T22:00:00", true),
+        ("2025-03-12T20:30", DayPhase::Evening, "2025-03-12T22:00:00", false),
         ("2025-03-12T22:00", DayPhase::WindDown, "2025-03-12T23:10:00", false),
         ("2025-03-12T23:10", DayPhase::LateNight, "2025-03-13T07:00:00", false),
         // Crossing midnight keeps tonight's plan until the usual wake.
@@ -87,10 +88,12 @@ fn one_leading_card_per_phase_with_stable_metrics_after_it() {
     let plan = plan();
     let cards = |now| phase::focus(&input(now, Some(&plan), &WAKES)).cards;
     use TodayCard::*;
-    assert_eq!(cards("2025-03-12T07:00"), [Focus, SleepPlan]);
-    assert_eq!(cards("2025-03-12T13:00"), [Now, Focus, SleepPlan]);
-    assert_eq!(cards("2025-03-12T21:00"), [SleepPlan, Focus]);
-    assert_eq!(cards("2025-03-12T23:30"), [SleepPlan, Focus]);
+    assert_eq!(cards("2025-03-12T07:00"), [Focus, Day, SleepPlan]);
+    assert_eq!(cards("2025-03-12T13:00"), [Day, Now, Focus, SleepPlan]);
+    // From the evening on, tonight's plan comes before Your day.
+    assert_eq!(cards("2025-03-12T21:00"), [SleepPlan, Day, Focus]);
+    assert_eq!(cards("2025-03-12T22:20"), [SleepPlan, Day, Focus]);
+    assert_eq!(cards("2025-03-12T23:30"), [SleepPlan, Day, Focus]);
     // The plan is folded until it leads.
     let f = |now| phase::focus(&input(now, Some(&plan), &WAKES));
     assert!(!f("2025-03-12T13:00").plan_open);
@@ -98,7 +101,7 @@ fn one_leading_card_per_phase_with_stable_metrics_after_it() {
     // Two outside-range vitals go above everything.
     let mut i = input("2025-03-12T21:00", Some(&plan), &WAKES);
     i.vitals_off = 2;
-    assert_eq!(phase::focus(&i).cards, [Vitals, SleepPlan, Focus]);
+    assert_eq!(phase::focus(&i).cards, [Vitals, SleepPlan, Day, Focus]);
 }
 
 #[test]
@@ -108,7 +111,7 @@ fn unsynced_night_is_neutral_and_drops_yesterdays_effort() {
     let f = phase::focus(&input("2025-03-13T07:30", Some(&plan), &WAKES));
     assert_eq!(f.phase, DayPhase::Wake);
     assert!(f.sleep_missing && !f.effort && f.last_night.is_none());
-    assert_eq!(f.cards, [TodayCard::Focus]);
+    assert_eq!(f.cards, [TodayCard::Focus, TodayCard::Day]);
     // Three hours after the credible usual wake (07:00) the calendar day takes over.
     assert_eq!(f.until.as_deref(), Some("2025-03-13T10:00:00"));
     assert_eq!(
@@ -133,7 +136,7 @@ fn fixed_layout_without_a_credible_schedule() {
         assert_eq!(f.phase, DayPhase::Overview);
         assert_eq!(f.note.is_some(), note);
         assert!(f.plan_open && f.effort);
-        assert_eq!(f.cards, [TodayCard::Focus, TodayCard::SleepPlan]);
+        assert_eq!(f.cards, [TodayCard::Focus, TodayCard::Day, TodayCard::SleepPlan]);
     };
     let mut off = input("2025-03-12T21:00", Some(&plan), &WAKES);
     off.adaptive = false;
@@ -311,7 +314,7 @@ fn every_fallback_waits_neutrally_at_the_new_morning() {
         assert_eq!(view.call, Some(raring_core::view::Effort::Push), "{name}: Garmin's call is stored");
         let f = &view.focus;
         assert_eq!((f.phase, f.effort, f.sleep_missing), (DayPhase::Wake, false, true), "{name}");
-        assert!(f.last_night.is_none() && f.cards == [TodayCard::Focus], "{name}");
+        assert!(f.last_night.is_none() && f.cards == [TodayCard::Focus, TodayCard::Day], "{name}");
         assert_eq!(view.headline, "Waiting for last night's sleep", "{name}");
         assert_eq!(f.until.as_deref(), Some(handover), "{name}");
         // Today hands over to the calendar day exactly when the focus says.
@@ -515,4 +518,130 @@ fn stored_wake_clusters_ordinary_and_broad() {
     assert!(view.focus.note.unwrap().contains("vary too much"));
     drop(core);
     let _ = std::fs::remove_file(path);
+}
+
+/// A reported evening: Garmin's window 23:10–23:30, wind-down 22:40 and
+/// readiness present. From the evening on tonight's plan comes before Your
+/// day, with or without a run recorded today, and the run never leads.
+#[test]
+fn tonights_plan_leads_your_day_late_in_the_evening() {
+    let offset = local_offset("2026-10-19T12:00");
+    for run in [false, true] {
+        let (core, path) = raring_with(&format!("late-evening-{run}"), |store| {
+            for i in 1..14 {
+                put_night(store, &day("2026-10-19", i), "07:30", offset, json!(null));
+            }
+            put_night(
+                store,
+                "2026-10-19",
+                "07:30",
+                offset,
+                json!({"actual": 480, "recommendedBedtimeStartMins": 1390, "recommendedBedtimeEndMins": 1410}),
+            );
+            put_ready(store, "2026-10-19");
+            if run {
+                store.put("activity", "71", "synthetic", &json!({"activityId": 71, "activityName": "Evening Run",
+                    "activityTypeDTO": {"typeKey": "running"},
+                    "summaryDTO": {"startTimeLocal": "2026-10-19 18:00:00", "duration": 1800}})).unwrap();
+            }
+        });
+        let at = |t: &str| {
+            let now = local(t);
+            let date = core.current_date(now);
+            (date.clone(), core.today_live_at(&date, now))
+        };
+        use TodayCard::*;
+        for (t, phase, effort) in [
+            ("2026-10-19T21:30", DayPhase::Evening, false),
+            ("2026-10-19T22:50", DayPhase::WindDown, false),
+            ("2026-10-19T23:21", DayPhase::WindDown, false),
+            ("2026-10-20T01:30", DayPhase::LateNight, false),
+        ] {
+            let (date, view) = at(t);
+            assert_eq!(date, "2026-10-19", "{t}: the night isn't over");
+            assert_eq!((view.focus.phase, view.focus.effort), (phase, effort), "{t}");
+            assert_eq!(view.focus.cards, [SleepPlan, Day, Focus], "{t}");
+            let lead = view.lead.unwrap();
+            assert_eq!(lead.kind, raring_core::view::LeadKind::Sleep, "{t}: {run}");
+            assert!(lead.activity.is_none(), "{t}: the run stays in recorded today");
+            let plan = view.sleep_plan.unwrap();
+            assert_eq!((plan.wind_down.as_str(), plan.bedtime_start.as_deref(), plan.bedtime.as_str()), ("22:40", Some("23:10"), "23:30"));
+        }
+        let (_, view) = at("2026-10-19T23:21");
+        assert_eq!(view.lead.unwrap().headline, "Time to wind down");
+        assert!(view.day.is_some(), "Your day still follows the plan");
+        drop(core);
+        let _ = std::fs::remove_file(path);
+    }
+}
+
+/// The demo account's next morning before its night syncs, and its day
+/// after the morning run: no training call from an old night, and no
+/// effort scale once the day's workout is recorded.
+#[test]
+fn the_unsynced_morning_waits_and_a_finished_workout_drops_the_effort_call() {
+    let (core, path) = raring_with("demo-morning", |store| {
+        raring_core::demo::seed(store, NaiveDate::from_ymd_opt(2026, 10, 19).unwrap()).unwrap();
+    });
+    let at = |t: &str| {
+        let now = local(t);
+        core.today_live_at(&core.current_date(now), now)
+    };
+    let day = at("2026-10-19T14:20");
+    let lead = day.lead.unwrap();
+    assert_eq!(lead.kind, raring_core::view::LeadKind::Done, "{}", lead.headline);
+    assert!(!day.focus.effort);
+    let morning = at("2026-10-20T07:30");
+    assert_eq!(morning.date, "2026-10-19", "before the handover");
+    assert!(morning.focus.sleep_missing && !morning.focus.effort);
+    let lead = morning.lead.unwrap();
+    assert_eq!(lead.kind, raring_core::view::LeadKind::Waiting, "{}", lead.headline);
+    assert!(lead.action.is_none() && !lead.dismissable);
+    drop(core);
+    let _ = std::fs::remove_file(path);
+}
+
+/// Without enough recorded nights, Garmin's own sleep schedule anchors the
+/// phases instead of the fixed layout, labelled as such; recorded wake times
+/// take over once there are enough of them.
+#[test]
+fn garmins_sleep_schedule_anchors_the_phases_until_nights_are_recorded() {
+    let plan = plan();
+    let few = [6.9, 7.1];
+    let mut i = input("2025-03-12T21:00", Some(&plan), &few);
+    assert_eq!(phase::focus(&i).phase, DayPhase::Overview, "no schedule: fixed layout");
+    i.schedule_wake = Some(7.0);
+    let f = phase::focus(&i);
+    assert_eq!((f.phase, f.schedule.as_deref(), f.note.as_deref()), (DayPhase::Evening, Some("Garmin sleep schedule"), None));
+    let mut late = input("2025-03-12T23:30", Some(&plan), &few);
+    late.schedule_wake = Some(7.5);
+    assert_eq!(phase::focus(&late).until.as_deref(), Some("2025-03-13T07:30:00"), "late night lasts to the scheduled wake");
+    // Enough recorded nights: they win, and nothing is labelled.
+    let mut recorded = input("2025-03-12T23:30", Some(&plan), &WAKES);
+    recorded.schedule_wake = Some(9.0);
+    let f = phase::focus(&recorded);
+    assert_eq!((f.until.as_deref(), f.schedule), (Some("2025-03-13T07:00:00"), None));
+
+    let store = Store::open(":memory:").unwrap();
+    for date in [DATE, "2025-03-11"] {
+        put_night(&store, date, "07:00", -5, WINDOW());
+    }
+    let home = FixedOffset::west_opt(5 * 3600).unwrap();
+    let evening = home.from_local_datetime(&at("2025-03-12T21:00")).unwrap();
+    assert_eq!(screens::today_at(&store, DATE, evening).focus.phase, DayPhase::Overview);
+    let settings = |default: bool| json!({"measurementSystem": "metric",
+        "userSleep": {"sleepTime": 82800, "wakeTime": 28800, "defaultSleepTime": default, "defaultWakeTime": default},
+        // 2025-03-12 is a Wednesday: its own window comes before the daily one.
+        "userSleepWindows": [
+            {"sleepWindowFrequency": "DAILY", "startSleepTimeSecondsFromMidnight": 82800, "endSleepTimeSecondsFromMidnight": 28800},
+            {"sleepWindowFrequency": "WEDNESDAY", "startSleepTimeSecondsFromMidnight": 79200, "endSleepTimeSecondsFromMidnight": 21600}]});
+    // Garmin's untouched defaults are no schedule.
+    store.put("profile_settings", "me", "synthetic", &settings(true)).unwrap();
+    assert_eq!(screens::today_at(&store, DATE, evening).focus.phase, DayPhase::Overview);
+    store.put("profile_settings", "me", "synthetic", &settings(false)).unwrap();
+    let view = screens::today_at(&store, DATE, evening);
+    assert_eq!((view.focus.phase, view.focus.schedule.as_deref()), (DayPhase::Evening, Some("Garmin sleep schedule")));
+    // The handover follows the scheduled 06:00 wake (three hours on), not noon.
+    assert_eq!(screens::current_date(&store, at("2025-03-13T08:30")).to_string(), DATE);
+    assert_eq!(screens::current_date(&store, at("2025-03-13T09:30")).to_string(), "2025-03-13");
 }

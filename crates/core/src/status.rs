@@ -1,8 +1,8 @@
 //! Private, platform-neutral status snapshot for native surfaces.
 use crate::{
-    rules, screens,
+    screens,
     store::Store,
-    view::{DayPhase, Effort, Tone},
+    view::{DayPhase, Effort, LeadKind, Tone},
 };
 use chrono::{DateTime, Local, Utc};
 use serde::Serialize;
@@ -43,54 +43,58 @@ pub struct StatusSnapshot {
 
 pub fn snapshot(store: &Store, now: DateTime<Local>) -> StatusSnapshot {
     let date = screens::current_date(store, now.naive_local()).to_string();
-    let mut today = screens::today_at(store, &date, now.fixed_offset());
-    let phase = today.focus.phase;
-    let night = matches!(
-        phase,
-        DayPhase::Evening | DayPhase::WindDown | DayPhase::LateNight
-    );
-    // The same circumstances as Today: no effort word while resting, ill,
-    // paused, limited or after "Not today"; never the limits text itself.
+    // The live Today's own lead decides, so a surface never disagrees with it.
+    let mut today = screens::today_at_calendar(store, &date, now.fixed_offset(), now.date_naive());
+    // Rest, illness, a pause, limits and "Not today" get a short private
+    // line; never the limits text or a session's name. Read from the view
+    // before the lead changes it.
     let local = crate::local::load(store);
-    let (state, dismissed) = crate::lead::hold_back(&local, &mut today, now.date_naive());
-    let held = (!night)
-        .then(|| crate::lead::circumstance_line(&state).or(dismissed.then_some("No training suggestion today")))
-        .flatten();
-    let waiting = held.is_some() || !today.focus.effort || today.call.is_none() || today.readiness.is_none();
-    let focus_line = if let Some(line) = held {
-        line.into()
-    } else if night || !today.focus.effort {
-        today.headline.clone()
-    } else if waiting {
-        "Waiting for readiness".into()
-    } else {
-        match today.call {
-            Some(Effort::Rest) => "Rest",
-            Some(Effort::Easy) => "Easy",
-            Some(Effort::Steady) => "Steady",
-            Some(Effort::Push) => "Push",
-            None => "Waiting for readiness",
-        }
-        .into()
+    let (state, dismissed) = crate::lead::hold_back(&local, &mut today.clone(), now.date_naive());
+    crate::lead::apply(store, &mut today, now.date_naive(), now.fixed_offset());
+    let phase = today.focus.phase;
+    let held = || {
+        crate::lead::circumstance_line(&state)
+            .or(dismissed.then_some("No training suggestion today"))
     };
-    let focus_reason = if night {
-        today
-            .sleep_plan
-            .as_ref()
-            .and_then(|plan| plan.reason.clone())
-    } else if waiting {
-        None
-    } else {
-        rules::limiting_factor(&today.factors)
-            .map(|factor| format!("{} is your biggest drag today.", factor.name))
-    };
-    let focus_target = if night {
-        "sleep"
-    } else if waiting {
-        "today"
-    } else {
-        "readiness"
-    };
+    let effort = today
+        .call
+        .filter(|_| today.focus.effort && today.readiness.is_some());
+    let lead = today.lead.as_ref();
+    let (focus_line, focus_reason, focus_target): (String, Option<String>, &'static str) =
+        match lead.map(|l| l.kind) {
+            Some(LeadKind::Sleep) => (
+                lead.map(|l| l.headline.clone()).unwrap_or_default(),
+                today.sleep_plan.as_ref().and_then(|plan| plan.reason.clone()),
+                "sleep",
+            ),
+            Some(LeadKind::Waiting) | None => ("Waiting for last night's sleep".into(), None, "today"),
+            // The day can finish: no effort call, and never the activity's name.
+            Some(LeadKind::Done) => ("Activity recorded today".into(), None, "today"),
+            Some(
+                LeadKind::Ill | LeadKind::Paused | LeadKind::Rest | LeadKind::Limits | LeadKind::Review | LeadKind::Quiet,
+            ) => (
+                held().unwrap_or("Training suggestions limited").into(),
+                None,
+                "today",
+            ),
+            // Wherever Today shows Garmin's effort call: the word and Today's
+            // reason line from Garmin's inputs.
+            Some(_) => match (held(), effort) {
+                (Some(line), _) => (line.into(), None, "today"),
+                (None, Some(effort)) => (
+                    match effort {
+                        Effort::Rest => "Rest",
+                        Effort::Easy => "Easy",
+                        Effort::Steady => "Steady",
+                        Effort::Push => "Push",
+                    }
+                    .into(),
+                    today.readiness_why.as_ref().map(|why| why.summary.clone()),
+                    "readiness",
+                ),
+                (None, None) => ("Waiting for readiness".into(), None, "today"),
+            },
+        };
     // Overnight handover may keep yesterday's readiness on Today, but it must
     // not present yesterday's daytime readings as today's latest values.
     let calendar_date = now.date_naive().to_string();

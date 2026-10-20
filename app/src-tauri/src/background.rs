@@ -334,6 +334,86 @@ pub extern "system" fn Java_app_raring_NativeBridge_heartRateDay(
     }
 }
 
+/// An explicitly opened past day or older workout, under Android's SyncGate.
+fn detail_on_demand(
+    db: &str,
+    tokens_json: &str,
+    date: &str,
+    activity_id: &str,
+    scope: &str,
+) -> serde_json::Value {
+    let core = match Raring::open(db) {
+        Ok(core) => core,
+        Err(e) => return serde_json::json!({"error": e.to_string()}),
+    };
+    if core.session_identity().is_none() {
+        return serde_json::json!({"authFailed": true});
+    }
+    let tokens: Tokens = match serde_json::from_str(tokens_json) {
+        Ok(tokens) => tokens,
+        Err(_) => return serde_json::json!({"authFailed": true}),
+    };
+    let rt = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
+        Ok(rt) => rt,
+        Err(e) => return serde_json::json!({"error": e.to_string()}),
+    };
+    let result = if !activity_id.is_empty() {
+        rt.block_on(core.fetch_workout_detail(tokens, activity_id))
+    } else {
+        let parts: Vec<raring_core::view::DayDetailPart> = match scope {
+            "sleep" => vec![raring_core::view::DayDetailPart::Sleep],
+            "day" => vec![
+                raring_core::view::DayDetailPart::Stress,
+                raring_core::view::DayDetailPart::Vitals,
+            ],
+            _ => return serde_json::json!({"error": "unknown day detail scope"}),
+        };
+        rt.block_on(core.fetch_day_detail(tokens, date, &parts))
+    };
+    match result {
+        Ok((tokens, report)) => serde_json::json!({
+            "tokensJson": serde_json::to_string(&tokens).unwrap_or_default(),
+            "authFailed": report.auth_failed,
+            "error": report.error,
+        }),
+        Err(raring_core::Error::Garmin(raring_core::garmin::Error::NeedsSignIn)) => {
+            serde_json::json!({"authFailed": true})
+        }
+        Err(e) => serde_json::json!({"error": e.to_string()}),
+    }
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_app_raring_NativeBridge_fetchDetail(
+    mut env: JNIEnv<'_>,
+    _class: JClass<'_>,
+    db_path: JString<'_>,
+    tokens_json: JString<'_>,
+    date: JString<'_>,
+    activity_id: JString<'_>,
+    scope: JString<'_>,
+) -> jni::sys::jstring {
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(
+        || -> Result<String, String> {
+            let db = env.get_string(&db_path).map_err(|e| e.to_string())?.to_string_lossy().into_owned();
+            let tokens = env.get_string(&tokens_json).map_err(|e| e.to_string())?.to_string_lossy().into_owned();
+            let date = env.get_string(&date).map_err(|e| e.to_string())?.to_string_lossy().into_owned();
+            let id = env.get_string(&activity_id).map_err(|e| e.to_string())?.to_string_lossy().into_owned();
+            let scope = env.get_string(&scope).map_err(|e| e.to_string())?.to_string_lossy().into_owned();
+            Ok(detail_on_demand(&db, &tokens, &date, &id, &scope).to_string())
+        },
+    ));
+    let json = result
+        .ok()
+        .and_then(Result::ok)
+        .unwrap_or_else(|| "{\"error\":\"detail read failed\"}".into());
+    match env.new_string(json) {
+        Ok(v) => v.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "system" fn Java_app_raring_NativeBridge_refreshStrength(
@@ -586,6 +666,13 @@ mod tests {
         assert!(r.auth_failed);
         assert!(r.notifications.is_empty());
         assert_eq!(notification_target("weekly"), "checkin");
+    }
+    #[test]
+    fn detail_without_a_session_asks_to_sign_in() {
+        // No session means no token refresh and no Garmin request.
+        let value = detail_on_demand(":memory:", "{}", "2025-01-01", "", "sleep");
+        assert_eq!(value["authFailed"], true);
+        assert!(value.get("tokensJson").is_none());
     }
     #[test]
     fn bedtime_without_a_plan_schedules_nothing() {

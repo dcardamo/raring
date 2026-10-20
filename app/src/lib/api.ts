@@ -54,13 +54,16 @@ export type { Settings } from './generated/Settings';
 export type { ImportPreview } from './generated/ImportPreview';
 export type SettingsPatch = Partial<Settings>;
 export const supportsStatusSurfaces = (isTauri() && /Android/.test(navigator.userAgent)) || new URLSearchParams(location.search).get('fixture')==='status-offer';
+// Desktop delivers reminders itself while the app runs; Android schedules them natively.
+export const desktopReminders = isTauri() && !/Android/.test(navigator.userAgent);
+export type ReminderStatus = {supported:boolean;granted:boolean;error:string|null;nextAt:string|null};
 export const defaultSettings = {notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,notifyStatus:false,statusOfferSeen:false,bedtimeLeadMin:30,adaptiveToday:true,journalEnabled:false,planPrompt:true,bodyFigure:'profile'} satisfies Settings;
 let previewSettings:Settings = {...defaultSettings};
 const copy = <T>(value:T):T => structuredClone(value);
 const call = <T>(name:string,args:Record<string,unknown>|undefined,fallback:T):Promise<T> => isTauri()?invoke<T>(name,args):Promise.resolve(copy(fallback));
 export const app_status = ():Promise<AppStatus> => call('app_status',undefined,sampleStatus as AppStatus);
 export const today = (date?:string):Promise<TodayView> => call('today',{date},sampleToday as unknown as TodayView);
-export const sleep = (date?:string):Promise<SleepView> => call('sleep',{date},sampleSleep as unknown as SleepView);
+export const sleep = (date?:string):Promise<SleepView> => call('sleep',{date},date?{...copy(sampleSleep as unknown as SleepView),date}:sampleSleep as unknown as SleepView);
 // The browser preview uses the sample's week or four weeks; the app asks the core.
 export const muscles = (range:TrendRange):Promise<MuscleRange|null> => {
  if(isTauri())return invoke<MuscleRange|null>('muscles',{range});
@@ -96,8 +99,11 @@ export const workout = (id:string):Promise<WorkoutView> => {
 export const strength = (date?:string):Promise<StrengthView|null> => call('strength',{date},sampleStrength as unknown as StrengthView);
 // One explicit Garmin read of a workout's sets; navigation never calls it.
 export const refresh_strength = (id:string):Promise<StrengthSession|null> => isTauri()?invoke<StrengthSession|null>('refresh_strength',{id}):Promise.reject(new Error('Refreshing sets needs the Raring app'));
-export const health = (date?:string):Promise<HealthView> => isTauri()?invoke<HealthView>('health',{date}):Promise.resolve({...copy(sampleHealth as unknown as HealthView),journalEnabled:previewSettings.journalEnabled});
+export const health = (date?:string):Promise<HealthView> => isTauri()?invoke<HealthView>('health',{date}):Promise.resolve({...copy(sampleHealth as unknown as HealthView),...(date?{date}:{}),journalEnabled:previewSettings.journalEnabled});
 export const heart_rate_day = (date:string):Promise<HeartRateDay> => isTauri()?invoke<HeartRateDay>('heart_rate_day',{date}):Promise.resolve({...((sampleHealth as unknown as HealthView).heartRateDay),date});
+// An explicit open of a past day or an older workout; navigation prefetch never calls these.
+export const fetch_day_detail = (date:string,scope:'sleep'|'day'):Promise<void> => isTauri()?invoke<void>('fetch_day_detail',{date,scope}):Promise.resolve();
+export const fetch_workout_detail = (id:string):Promise<void> => isTauri()?invoke<void>('fetch_workout_detail',{id}):Promise.resolve();
 export const checkin = (weekStart?:string):Promise<CheckinView> => call('checkin',{weekStart},sampleCheckin as unknown as CheckinView);
 export const trend = (query:TrendQuery):Promise<TrendView> => isTauri()?invoke<TrendView>('trend',{query}):Promise.resolve().then(()=>sampleTrend(query));
 // The preview keeps local changes in memory; only the Rust core applies the plan rules.
@@ -147,6 +153,9 @@ export const choose_import = ():Promise<ImportPreview> => call('choose_import',u
 export const apply_import = ():Promise<ImportPreview> => call('apply_import',undefined,sampleImport);
 export const request_notification_permission = ():Promise<boolean> => call('request_notification_permission',undefined,true);
 export const notification_permission = ():Promise<boolean|null> => call('notification_permission',undefined,new URLSearchParams(location.search).get('fixture')!=='notifications-blocked');
+// Desktop re-reads due reminders on resume and after a settings change.
+export const check_reminders = ():Promise<void> => call('check_reminders',undefined,undefined);
+export const reminders_status = ():Promise<ReminderStatus|null> => call('reminders_status',undefined,null);
 export const get_settings = ():Promise<Settings> => call('get_settings',undefined,previewSettings);
 export const patch_settings = (patch:SettingsPatch):Promise<void> => {if(!isTauri()){previewSettings={...previewSettings,...copy(patch)};return Promise.resolve()}return invoke<void>('patch_settings',{patch})};
 export const onStatusChanged = (callback:()=>void):Promise<()=>void> => isTauri()?listen('status-changed',callback):Promise.resolve(()=>{});

@@ -16,9 +16,9 @@
  // Without `metric` the chart shows the screen's own 7 or 30 days, ending on `endDate`. With it, longer ranges and comparisons
  // come from the core, which averages long ranges into weeks or months.
  // `compact` is a summary card's chart: its own metric, four ranges, tap to read a day; `more` opens the full tool.
- let {values,endDate='',label,unit='',decimals=0,band=null,bandLabel='Your usual range',readiness=false,nights=false,color=colors.ink,metric,initialRange='days7',compact=false,ranges:compactRanges=['days7','days30','days90','year'],more,moreLabel='Compare and all history'}:{
+ let {values,endDate='',label,unit='',decimals=0,band=null,bandLabel='Your usual range',readiness=false,nights=false,color=colors.ink,metric,initialRange='days7',compact=false,ranges:compactRanges=['days7','days30','days90','year'],more,moreLabel='Compare and all history',openDay=null}:{
   values:(number|null)[];endDate?:string;label:string;unit?:string;decimals?:number;band?:[number,number]|null;
-  bandLabel?:string;readiness?:boolean;nights?:boolean;color?:string;metric?:TrendMetric;initialRange?:TrendRange;compact?:boolean;ranges?:TrendRange[];more?:()=>void;moreLabel?:string;
+  bandLabel?:string;readiness?:boolean;nights?:boolean;color?:string;metric?:TrendMetric;initialRange?:TrendRange;compact?:boolean;ranges?:TrendRange[];more?:()=>void;moreLabel?:string;openDay?:((date:string)=>void)|null;
  }=$props();
  const id=$props.id();
  // A caller can retain controls when its canonical detail is reopened by Back.
@@ -81,6 +81,7 @@
  const show=(v:number|null|undefined)=>trendValue(v,activeUnit,activeDecimals);
  // "/ 100" describes one reading, not an average or a change.
  let tileUnit=$derived(activeUnit.startsWith('/') || activeUnit==='min'?'':activeUnit);
+ let canOpenDay=$derived(!!openDay && !!selected && bucket==='day' && selected.value!=null && selected.start<latestDay);
  let selectedDate=$derived(selected?bucket==='day'?dateLabel(selected.start)+(range==='custom'||range==='all'?' '+selected.start.slice(0,4):''):pointLabel(selected,bucket):'');
  let selectedText=$derived(selected?`${selectedDate}: ${selected.value==null?'Not recorded':show(selected.value)+' '+(activeUnit==='min'?'h:mm':activeUnit)}`:'');
  let barWidth=$derived(Math.max(1.5,Math.min(22,(R-L)/Math.max(count,1)*.62)));
@@ -123,6 +124,7 @@
   </div>
   <span>{selectedDate}{#if bucket!=='day' && selected}<small>{selected.days} of {bucketDays(selected)} days recorded</small>{:else if offset===0 && selected}<small>{range==='custom'?'Block end':nights?'Latest night':'Latest day'}</small>{/if}</span>
  </div>
+ {#if canOpenDay && selected && openDay}<button class="open-day" onclick={()=>openDay(selected.start)}>Open {dateLabel(selected.start)}<Icon name="chevron" size={15}/></button>{/if}
  <button class="chart-surface" tabindex={compact?0:-1} aria-hidden={compact?undefined:true} aria-label={compact?`${activeLabel} chart. ${selectedText}. Left and right arrows choose a day.`:undefined} onclick={selectFromChart} onkeydown={compact?(e)=>{if(e.key==='ArrowLeft'&&index>0){e.preventDefault();offset++}else if(e.key==='ArrowRight'&&index<count-1){e.preventDefault();offset--}}:undefined}>
   <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${activeLabel}, ${count} ${bucketName}. ${present} recorded. Missing readings are gaps.`}>
    {#if shownBand}
@@ -218,6 +220,7 @@
  .chart-surface{display:block;width:100%;padding:0;border:0;background:none;touch-action:pan-y}
  svg{display:block;width:100%;height:auto;overflow:visible;font-family:Inter,sans-serif}
  .history-axis{display:flex;justify-content:space-between;padding-left:38px;font-size:10px;color:var(--text2)}
+ .open-day{display:inline-flex;align-items:center;gap:4px;margin:0 0 8px;padding:0;border:0;background:none;color:var(--ink);font:600 13px Inter;min-height:40px}
  .history-controls{display:flex;align-items:center;gap:12px;margin-top:6px}
  .history-controls button{display:grid;place-items:center;flex:none;background:var(--card);border:1px solid var(--line);border-radius:12px;width:44px;height:44px}
  input{width:100%;min-width:0;height:44px;margin:0;accent-color:var(--ink);cursor:ew-resize}
