@@ -38,7 +38,7 @@
 <section class="morning" aria-label="Last night and readiness" data-chart="morning stats">
  <div class="stats" class:two={!showVitals}>
   <button class="stat sleep-fact" onclick={() => navigate('sleep/last')} aria-label={`Last night’s sleep ${asleep != null ? duration(asleep) : 'not recorded'}, ${sleepLine}`}>
-   <span class="dial">{#if asleep != null && need}<Gauge value={asleep} max={need} display={duration(asleep)} size={64} stroke={6} sweep={360} color="#A9C8FF"/>{:else}<b class="n big-n">{asleep != null ? duration(asleep) : '—'}</b>{/if}</span>
+   <span class="dial">{#if asleep != null && need}<Gauge value={asleep} max={need} display={duration(asleep)} size={64} stroke={6} sweep={360} color="var(--goal-sleep)"/>{:else}<b class="n big-n">{asleep != null ? duration(asleep) : '—'}</b>{/if}</span>
    <b class="label">Sleep</b><small style:color={score && ['poor', 'fair'].includes(score.tone) ? toneColor(score.tone) : null}>{sleepLine}</small>
   </button>
   <button class="stat ready-fact" onclick={() => navigate('readiness')} aria-label={`Readiness ${readiness?.value ?? (waiting ? 'waiting for last night' : 'unavailable')}`}>
@@ -58,12 +58,12 @@
  </div>
 </section>
 <style>
- .morning{margin:4px 0 6px;max-width:620px;container-type:inline-size}
+ .morning{margin:8px 0 16px;max-width:620px;container-type:inline-size}
  .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
  .stats.two{grid-template-columns:repeat(2,minmax(0,1fr))}
- .stat{display:grid;justify-items:center;align-content:start;gap:2px;min-width:0;min-height:44px;padding:10px 4px 9px;border-radius:18px;background:var(--card);border:1px solid var(--line);color:var(--text);text-align:center}
- .dial{display:grid;place-items:center;align-content:center;width:4.6em;height:4.6em;max-width:100%;margin-bottom:4px}
- .big-n{font-size:22px;font-weight:600;line-height:1}.unit{font:500 12px Inter;color:var(--text2);margin-top:3px}
+ .stat{display:grid;justify-items:center;align-content:start;gap:2px;min-width:0;min-height:44px;padding:10px 4px 9px;border-radius:var(--radius-control);background:var(--card);border:1px solid var(--line);color:var(--text);text-align:center}
+ .dial{display:grid;place-items:center;align-content:center;color:var(--text);width:4.6em;height:4.6em;max-width:100%;margin-bottom:4px}
+ .big-n{font-size:22px;font-weight:500;line-height:1;letter-spacing:-.035em}.unit{font:500 12px Inter;color:var(--text2);margin-top:3px}
  .label{font:600 12px Inter;color:var(--text)}
  small{display:block;font:500 12px/1.25 Inter;color:var(--text2);overflow-wrap:anywhere}
  small i{font-style:normal}

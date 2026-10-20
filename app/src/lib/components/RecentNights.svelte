@@ -37,15 +37,15 @@
  .recent{display:grid;grid-template-columns:auto 1fr;grid-template-rows:200px auto;column-gap:6px;row-gap:4px;margin-top:4px}
  .yl{position:relative;min-width:1.6em;font:500 11px Inter;color:var(--text2)}.yl i{position:absolute;right:0;transform:translateY(-50%);font-style:normal;white-space:nowrap}
  .plot{position:relative}
- .grid{position:absolute;left:0;right:0;border-top:1px solid rgba(255,255,255,.06)}
- .band{position:absolute;left:0;right:0;background:rgba(169,200,255,.16);border-top:1px solid rgba(169,200,255,.5);border-bottom:1px solid rgba(169,200,255,.5)}
- .wake{position:absolute;left:0;right:0;border-top:2px dashed rgba(238,241,247,.7)}
+ .grid{position:absolute;left:0;right:0;border-top:1px solid var(--chart-grid)}
+ .band{position:absolute;left:0;right:0;background:var(--chart-band);border-top:1px solid var(--line-strong);border-bottom:1px solid var(--line-strong)}
+ .wake{position:absolute;left:0;right:0;border-top:2px dashed var(--ink);opacity:.7}
  .cols{position:absolute;inset:0;display:grid;grid-template-columns:repeat(14,minmax(0,1fr))}
  .col{position:relative;height:100%;border:0;padding:0;background:none;cursor:pointer}
- .col b{position:absolute;left:22%;right:22%;border-radius:4px;background:#5C9BFF}
+ .col b{position:absolute;left:22%;right:22%;border-radius:4px;background:var(--light)}
  .col .gap{position:absolute;left:22%;right:22%;height:18px;border:1.5px dotted var(--text3);border-radius:4px}
  .days{display:grid;grid-template-columns:repeat(14,minmax(0,1fr));font:500 11px Inter;color:var(--text2);text-align:center}
  .key{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--text2);margin:8px 0 0}.key span{display:inline-flex;gap:5px;align-items:center}
  .key i{display:inline-block;width:10px;height:8px;border-radius:2px}
- .k-bar{background:#5C9BFF}.k-band{background:rgba(169,200,255,.3);border:1px solid rgba(169,200,255,.6)}.k-wake{width:12px!important;height:0!important;border-top:2px dashed #EEF1F7}.k-gap{border:1.5px dotted var(--text3)}
+ .k-bar{background:var(--light)}.k-band{background:var(--chart-band);border:1px solid var(--line-strong)}.k-wake{width:12px!important;height:0!important;border-top:2px dashed var(--ink)}.k-gap{border:1.5px dotted var(--text3)}
 </style>

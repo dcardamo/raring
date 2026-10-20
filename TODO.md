@@ -48,9 +48,9 @@ In priority order; the redesign shipped (Done, item 26) without them.
 - Check the new surfaces and contrast on the maintainer's phone with TalkBack
   and the largest system text. Browser chart checks cover 360–1100 px and
   1/1.3/2× text, not physical WebView text zoom.
-- After integration with the parallel Today/Sleep work, recapture the compact
-  morning facts, session card and Tonight clock with these same tokens. This
-  branch changes their styling only, not their structure or data.
+- Review the refined tokens on main's new Today/Sleep components: the four
+  morning stats, separate session card, 24-hour clock and recent-nights chart.
+  They are integrated in the prototype; their layout and data remain main's.
 
 ### Time-of-day follow-ups
 
@@ -497,6 +497,13 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Visual language on the current Today/Sleep layouts** (commit "Apply the
+  refined language to the current Today and Sleep components"). Main's four
+  morning stats, session card, Sleep HR detail, sleep clock and recent-nights
+  chart are integrated into the prototype. Their new facts and rules remain
+  main's; cards, readings and plots use the refined tokens. TonightLine stays
+  removed. Approval of this prototype still does not authorize release.
 
 - **Visual language refinement** (commit "Strengthen data accents and repair
   the effort bar"). Data colors regain saturation while surfaces stay neutral;

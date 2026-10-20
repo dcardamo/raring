@@ -17,9 +17,9 @@
  {#if children}<div class="acts">{@render children()}</div>{/if}
 </section>
 <style>
- .session{margin:14px 0 4px;padding:14px 16px;border-radius:22px;background:var(--card);border:1px solid var(--line);max-width:620px}
- .kicker{font:600 11px Inter;letter-spacing:.14em;text-transform:uppercase;color:var(--text3)}
- h3{font:600 19px/1.2 Outfit,Inter;margin:6px 0 2px;overflow-wrap:anywhere}.time{color:var(--text2);font-weight:500}
+ .session{margin:16px 0 4px;padding:16px;border-radius:var(--radius-card);background:var(--card);border:1px solid var(--line);max-width:620px}
+ .kicker{font:500 11px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)}
+ h3{font:600 19px/1.25 var(--font-body);letter-spacing:-.025em;margin:8px 0 4px;overflow-wrap:anywhere}.time{color:var(--text2);font-weight:500}
  .src{font-size:12px;color:var(--text2)}
  .what{margin-top:8px;font:500 14px Inter;color:var(--text)}
  .effect{margin-top:4px;font-size:13px;color:var(--text)}.effect small{font-size:12px;color:var(--text2)}
