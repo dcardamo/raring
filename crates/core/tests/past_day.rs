@@ -9,7 +9,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-fn client(url: &str) -> Client {
+fn test_client(url: &str) -> Client {
     let token = format!(
         "e30.{}.sig",
         base64::Engine::encode(
@@ -120,55 +120,81 @@ fn server(count: usize, answer: impl Fn(&str) -> String + Send + 'static) -> (St
 }
 
 #[tokio::test]
-async fn opened_past_day_fetches_missing_detail_once_and_keeps_it() {
+async fn opened_past_day_fetches_only_the_page_it_opens_once_and_keeps_it() {
     let store = Store::open(":memory:").unwrap();
     profile(&store);
-    let (url, seen, thread) = server(5, |line| {
-        if line.contains("/graphql-gateway/graphql") {
-            health_status_body().to_string()
-        } else if line.contains("dailySleepData") {
+    // A past night reads the night and its HRV, never the day's stress.
+    let (url, seen, thread) = server(2, |line| {
+        if line.contains("dailySleepData") {
             sleep_body().to_string()
-        } else if line.contains("/hrv-service/hrv/") {
-            hrv_body().to_string()
-        } else if line.contains("dailyStress") {
-            stress_body().to_string()
         } else {
-            summary_body().to_string()
+            hrv_body().to_string()
         }
     });
-    let client = client(&url);
-    let report = sync::day_detail_on_demand(&store, &client, "2025-06-03").await;
+    let client = test_client(&url);
+    let report = sync::day_detail_on_demand(&store, &client, "2025-06-03", &[DayDetailPart::Sleep]).await;
     thread.join().unwrap();
-    assert_eq!(report.requests, 5);
-    assert_eq!(report.stored, 5);
+    assert_eq!(report.requests, 2);
+    assert_eq!(report.stored, 2);
     assert!(report.error.is_none());
     {
         let lines = seen.lock().unwrap();
         assert!(lines[0].starts_with("GET /wellness-service/wellness/dailySleepData/Synthetic?"));
         assert!(lines[0].contains("date=2025-06-03"));
         assert!(lines[1].starts_with("GET /hrv-service/hrv/2025-06-03"));
-        assert!(lines[2].starts_with("GET /wellness-service/wellness/dailyStress/2025-06-03"));
-        assert!(lines[3].starts_with("GET /usersummary-service/usersummary/daily/Synthetic?"));
-        assert!(lines[3].contains("calendarDate=2025-06-03"));
-        assert!(lines[4].starts_with("POST /graphql-gateway/graphql"));
     }
-    for kind in ["sleep", "hrv", "stress", "summary", "health_status"] {
-        assert!(store.get(kind, "2025-06-03").is_some(), "{kind} kept");
-    }
-    // The night and the day now read in full from local data.
+    assert!(store.get("stress", "2025-06-03").is_none(), "a night does not read the day");
     let sleep = screens::sleep_view(&store, "2025-06-03");
     assert_eq!(sleep.stages.len(), 3);
     assert_eq!(sleep.asleep_min, Some(450.));
     assert!(sleep.detail.missing.is_empty() && sleep.detail.unavailable.is_empty());
+    assert_eq!(
+        sync::day_detail_on_demand(&store, &client, "2025-06-03", &[DayDetailPart::Sleep])
+            .await
+            .requests,
+        0
+    );
+    // A past Health day reads its stress and Health Status, never the night.
+    let (url, seen, thread) = server(3, |line| {
+        if line.contains("/graphql-gateway/graphql") {
+            health_status_body().to_string()
+        } else if line.contains("dailyStress") {
+            stress_body().to_string()
+        } else {
+            summary_body().to_string()
+        }
+    });
+    let day_client = test_client(&url);
+    let report = sync::day_detail_on_demand(
+        &store,
+        &day_client,
+        "2025-06-03",
+        &[DayDetailPart::Stress, DayDetailPart::Vitals],
+    )
+    .await;
+    thread.join().unwrap();
+    assert_eq!(report.requests, 3);
+    assert_eq!(report.stored, 3);
+    {
+        let lines = seen.lock().unwrap();
+        assert!(lines[0].starts_with("GET /wellness-service/wellness/dailyStress/2025-06-03"));
+        assert!(lines[1].starts_with("GET /usersummary-service/usersummary/daily/Synthetic?"));
+        assert!(lines[1].contains("calendarDate=2025-06-03"));
+        assert!(lines[2].starts_with("POST /graphql-gateway/graphql"));
+    }
     let health = screens::health(&store, "2025-06-03");
     assert!(!health.stress.timeline.is_empty());
     assert_eq!(health.stress.average, Some(34.));
     assert!(health.detail.missing.is_empty());
-    // A second open reads nothing again.
     assert_eq!(
-        sync::day_detail_on_demand(&store, &client, "2025-06-03")
-            .await
-            .requests,
+        sync::day_detail_on_demand(
+            &store,
+            &day_client,
+            "2025-06-03",
+            &[DayDetailPart::Stress, DayDetailPart::Vitals]
+        )
+        .await
+        .requests,
         0
     );
 }
@@ -189,10 +215,18 @@ async fn opened_past_day_keeps_garmin_empty_answers() {
                 .unwrap();
         }
     });
-    let client = client(&url);
-    let report = sync::day_detail_on_demand(&store, &client, "2025-06-03").await;
+    let client = test_client(&url);
+    let report = sync::day_detail_on_demand(&store, &client, "2025-06-03", &[DayDetailPart::Sleep]).await;
+    assert_eq!(report.requests, 2);
+    let report = sync::day_detail_on_demand(
+        &store,
+        &client,
+        "2025-06-03",
+        &[DayDetailPart::Stress, DayDetailPart::Vitals],
+    )
+    .await;
     thread.join().unwrap();
-    assert_eq!(report.requests, 5);
+    assert_eq!(report.requests, 3);
     for kind in ["sleep", "hrv", "stress", "summary", "health_status"] {
         assert_eq!(store.get(kind, "2025-06-03"), Some(serde_json::Value::Null));
     }
@@ -205,9 +239,20 @@ async fn opened_past_day_keeps_garmin_empty_answers() {
     );
     // Empty answers are kept, as for an opened all-day heart-rate read.
     assert_eq!(
-        sync::day_detail_on_demand(&store, &client, "2025-06-03")
+        sync::day_detail_on_demand(&store, &client, "2025-06-03", &[DayDetailPart::Sleep])
             .await
             .requests,
+        0
+    );
+    assert_eq!(
+        sync::day_detail_on_demand(
+            &store,
+            &client,
+            "2025-06-03",
+            &[DayDetailPart::Stress, DayDetailPart::Vitals]
+        )
+        .await
+        .requests,
         0
     );
 }
@@ -216,12 +261,14 @@ async fn opened_past_day_keeps_garmin_empty_answers() {
 async fn only_an_opened_past_day_is_fetched() {
     let store = Store::open(":memory:").unwrap();
     profile(&store);
-    let client = client("http://127.0.0.1:1");
+    let client = test_client("http://127.0.0.1:1");
     let today = Local::now().date_naive().to_string();
     let future = (Local::now().date_naive() + Duration::days(1)).to_string();
     for date in [today.as_str(), future.as_str(), "2025-06-31", "", "2025-6-3"] {
         assert_eq!(
-            sync::day_detail_on_demand(&store, &client, date).await.requests,
+            sync::day_detail_on_demand(&store, &client, date, &[DayDetailPart::Sleep])
+                .await
+                .requests,
             0,
             "{date}"
         );
@@ -247,12 +294,12 @@ async fn rate_limit_stops_opened_day_reads_until_backoff_expires() {
             .write_all(b"HTTP/1.1 429 Too Many Requests\r\nRetry-After: 600\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}")
             .unwrap();
     });
-    let client = client(&url);
-    let first = sync::day_detail_on_demand(&store, &client, "2025-06-03").await;
+    let client = test_client(&url);
+    let first = sync::day_detail_on_demand(&store, &client, "2025-06-03", &[DayDetailPart::Sleep]).await;
     thread.join().unwrap();
     assert_eq!(first.requests, 1);
     assert!(first.rate_limited);
-    let second = sync::day_detail_on_demand(&store, &client, "2025-06-04").await;
+    let second = sync::day_detail_on_demand(&store, &client, "2025-06-04", &[DayDetailPart::Sleep]).await;
     assert_eq!(second.requests, 0);
     assert!(second.rate_limited);
 }
@@ -338,7 +385,7 @@ async fn opened_older_workout_fetches_its_detail_once_and_keeps_it() {
             activity_body().to_string()
         }
     });
-    let client = client(&url);
+    let client = test_client(&url);
     let report = sync::workout_detail_on_demand(&store, &client, "9000000000042").await;
     thread.join().unwrap();
     assert_eq!(report.requests, 4);

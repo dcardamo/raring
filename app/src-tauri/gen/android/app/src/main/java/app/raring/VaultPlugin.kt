@@ -175,6 +175,7 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
             try {
                 val date = invoke.getArgs().optString("date", "")
                 val id = invoke.getArgs().optString("activityId", "")
+                val scope = invoke.getArgs().optString("scope", "day")
                 check(date.isNotEmpty() != id.isNotEmpty()) { "one day or workout" }
                 SyncGate.mutex.withLock {
                     check(AccountSession.active(activity)) { "sign in again" }
@@ -182,7 +183,7 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
                     val tokens = AccountSession.loadLocked(activity) ?: ""
                     check(tokens.isNotEmpty()) { "no Garmin session for a detail read" }
                     val db = java.io.File(activity.filesDir, "raring.db").absolutePath
-                    val response = JSONObject(NativeBridge.fetchDetail(db, tokens, date, id))
+                    val response = JSONObject(NativeBridge.fetchDetail(db, tokens, date, id, scope))
                     if (response.optBoolean("authFailed")) {
                         AccountSession.suspendLocked(activity)
                         SyncScheduler.cancel(activity)

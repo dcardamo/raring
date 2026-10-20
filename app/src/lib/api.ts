@@ -99,7 +99,7 @@ export const refresh_strength = (id:string):Promise<StrengthSession|null> => isT
 export const health = (date?:string):Promise<HealthView> => isTauri()?invoke<HealthView>('health',{date}):Promise.resolve({...copy(sampleHealth as unknown as HealthView),...(date?{date}:{}),journalEnabled:previewSettings.journalEnabled});
 export const heart_rate_day = (date:string):Promise<HeartRateDay> => isTauri()?invoke<HeartRateDay>('heart_rate_day',{date}):Promise.resolve({...((sampleHealth as unknown as HealthView).heartRateDay),date});
 // An explicit open of a past day or an older workout; navigation prefetch never calls these.
-export const fetch_day_detail = (date:string):Promise<void> => isTauri()?invoke<void>('fetch_day_detail',{date}):Promise.resolve();
+export const fetch_day_detail = (date:string,scope:'sleep'|'day'):Promise<void> => isTauri()?invoke<void>('fetch_day_detail',{date,scope}):Promise.resolve();
 export const fetch_workout_detail = (id:string):Promise<void> => isTauri()?invoke<void>('fetch_workout_detail',{id}):Promise.resolve();
 export const checkin = (weekStart?:string):Promise<CheckinView> => call('checkin',{weekStart},sampleCheckin as unknown as CheckinView);
 export const trend = (query:TrendQuery):Promise<TrendView> => isTauri()?invoke<TrendView>('trend',{query}):Promise.resolve().then(()=>sampleTrend(query));

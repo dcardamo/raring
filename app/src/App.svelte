@@ -216,16 +216,20 @@
  function navigate(to:string){navigation.navigate(to)}
  function back(){return closeSheet() || navigation.back()}
  function openedDetail(current:string){return datedDetail(current) ?? (/^workout\/\d+$/.test(current)?{page:'workout',date:current.slice(8)}:null)}
+ function detailKey(opened:{page:string,date:string}){return (opened.page==='workout'?'workout:':'day:')+opened.date}
  function detailMissing(view:PageData){return 'detail' in view && view.detail.missing.length>0}
  // Only a page whose route names its own day or workout fetches. Prefetched tabs never do.
  async function fetchOpenedDetail(current:string){
   const opened=openedDetail(current);
-  if(!opened || openedAttempts.has(current))return;
-  openedAttempts.add(current);
+  // The dated heart-rate page reads only its heart-rate day, inside MetricDetail.
+  if(!opened || opened.page==='heartRate')return;
+  const key=detailKey(opened);
+  if(openedAttempts.has(key))return;
+  openedAttempts.add(key);
   detailState={kind:'loading',message:''};
   try{
    if(opened.page==='workout')await api.fetch_workout_detail(opened.date);
-   else await api.fetch_day_detail(opened.date);
+   else await api.fetch_day_detail(opened.date,opened.page==='sleep'?'sleep':'day');
    const next=await loadView(current);
    if(route===current){data=next;views.set(current,next);pendingSwap=null}
    if(detailMissing(next))detailState={kind:'failed',message:'Garmin didn’t return this detail. Try again later.'};
@@ -233,7 +237,7 @@
   }catch(e){detailState={kind:'failed',message:String(e)}}
   if(route!==current)detailState=null;
  }
- function retryOpenedDetail(){if(openedDetail(route)){openedAttempts.delete(route);detailState=null;void fetchOpenedDetail(route)}}
+ function retryOpenedDetail(){const opened=openedDetail(route);if(opened){openedAttempts.delete(detailKey(opened));detailState=null;void fetchOpenedDetail(route)}}
  async function loadView(current:string):Promise<PageData>{
   const opened=datedDetail(current);
   // A dated page reads only its own day; a metric's dated page reads the day's Health view.

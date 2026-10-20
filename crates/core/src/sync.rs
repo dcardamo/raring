@@ -1470,16 +1470,20 @@ pub async fn heart_rate_on_demand(store: &Store, client: &Client, key: &str) -> 
     report
 }
 
-/// An opened day fetches sleep, stress and vitals in one run; an opened
-/// workout fetches its summary, splits, zones and charts.
-const DAY_DETAIL_BUDGET: usize = 5;
+/// An opened workout fetches its summary, splits, zones and charts.
 const WORKOUT_DETAIL_BUDGET: usize = 4;
 
-/// One explicitly opened past day. Fetches only the per-day reads this phone
-/// has never stored for it, in page order, and keeps every answer. It shares
-/// the request budget, per-endpoint retry wait and 429 backoff with sync, and
-/// navigation never calls it: only a person opening a past day does.
-pub async fn day_detail_on_demand(store: &Store, client: &Client, key: &str) -> SyncReport {
+/// One explicitly opened past day. Fetches only the parts that page shows and
+/// only the reads this phone has never stored, in page order, and keeps every
+/// answer. It shares the request budget, per-endpoint retry wait and 429
+/// backoff with sync, and navigation never calls it: only a person opening a
+/// past day does.
+pub async fn day_detail_on_demand(
+    store: &Store,
+    client: &Client,
+    key: &str,
+    parts: &[crate::view::DayDetailPart],
+) -> SyncReport {
     let mut report = SyncReport::default();
     let now = Utc::now();
     let valid = NaiveDate::parse_from_str(key, "%Y-%m-%d")
@@ -1500,18 +1504,16 @@ pub async fn day_detail_on_demand(store: &Store, client: &Client, key: &str) -> 
         .get("profile", "me")
         .and_then(|v| v["displayName"].as_str().map(str::to_owned));
     let Some(name) = name else { return report };
-    for part in [
-        crate::view::DayDetailPart::Sleep,
-        crate::view::DayDetailPart::Stress,
-        crate::view::DayDetailPart::Vitals,
-    ] {
-        for kind in crate::screens::detail_kinds(part) {
+    let budget = parts
+        .iter()
+        .map(|part| crate::screens::detail_kinds(*part).len())
+        .sum();
+    for part in parts {
+        for kind in crate::screens::detail_kinds(*part) {
             if store.get(kind, key).is_some() {
                 continue;
             }
-            if !fetch(store, client, &mut report, kind, key, Some(&name), DAY_DETAIL_BUDGET, now)
-                .await
-            {
+            if !fetch(store, client, &mut report, kind, key, Some(&name), budget, now).await {
                 return report;
             }
         }

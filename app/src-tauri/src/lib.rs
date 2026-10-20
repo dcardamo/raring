@@ -339,8 +339,17 @@ async fn heart_rate_day(app: tauri::AppHandle, date: String) -> Result<HeartRate
     }
 }
 
+fn day_detail_parts(scope: &str) -> Result<Vec<DayDetailPart>, String> {
+    match scope {
+        "sleep" => Ok(vec![DayDetailPart::Sleep]),
+        "day" => Ok(vec![DayDetailPart::Stress, DayDetailPart::Vitals]),
+        _ => Err("unknown day detail scope".into()),
+    }
+}
+
 #[tauri::command]
-async fn fetch_day_detail(app: tauri::AppHandle, date: String) -> Result<(), String> {
+async fn fetch_day_detail(app: tauri::AppHandle, date: String, scope: String) -> Result<(), String> {
+    let parts = day_detail_parts(&scope)?;
     #[cfg(target_os = "android")]
     {
         if !session_ready(&app)? { return Err("Account verification required".into()); }
@@ -349,7 +358,7 @@ async fn fetch_day_detail(app: tauri::AppHandle, date: String) -> Result<(), Str
             .0
             .run_mobile_plugin_async::<serde_json::Value>(
                 "fetchDetail",
-                serde_json::json!({"date":date,"activityId":""}),
+                serde_json::json!({"date":date,"activityId":"","scope":scope}),
             )
             .await
             .map_err(|e| e.to_string())?;
@@ -363,7 +372,7 @@ async fn fetch_day_detail(app: tauri::AppHandle, date: String) -> Result<(), Str
         let core = core(&app)?;
         let report = with_desktop_tokens(&app, |tokens| async move {
             let (tokens, report) = core
-                .fetch_day_detail(tokens, &date)
+                .fetch_day_detail(tokens, &date, &parts)
                 .await
                 .map_err(|e| e.to_string())?;
             Ok((report, tokens))

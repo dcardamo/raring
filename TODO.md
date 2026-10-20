@@ -102,9 +102,6 @@ From item 11, in priority order.
 - Naps for an opened older day stay unfetched (naps sync only the last two
   days), so the nap card reads unavailable. Decide whether the open should
   read `sleep-service/sleep/naps/{date}` too.
-- One opened day reads up to five rows (sleep, HRV, stress, summary, Health
-  Status) even when only one page's part is missing. Consider fetching just
-  that page's parts, at the cost of a second visit reading more.
 - An opened older strength workout's sets still arrive from history sync's
   `strength_without_sets` queue, not from the open; confirm that happens
   before a person opens the workout, or leave sets to Refresh from Garmin.
@@ -359,8 +356,9 @@ faces, screens, sensors and audio prompts stay in Connect.
   chart; Back returns to the page or section that opened each, and the plain
   `sleep`, `sleep/last`, `sleep/tonight`, `health` and `metric/stress` links
   keep their meaning. A route whose day or workout has never been read fetches
-  only the missing rows once (`sleep`, `hrv`, `stress`, `summary`,
-  `health_status`, or an old activity's summary/splits/zones/charts) through
+  only the missing rows its page shows once (a night's sleep and HRV; a
+  Health day's stress, summary and Health Status; an old activity's
+  summary/splits/zones/charts) through
   the existing on-demand shape: Android's `SyncGate` and token vault or
   desktop's `with_desktop_tokens`, a small budget, the shared per-endpoint
   retry wait and 429 backoff, never from navigation prefetch, and every

@@ -978,10 +978,10 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
 - **Opened past days and workouts**: only an explicit open of a page whose
   route names its own date or activity reads Garmin for that detail;
   navigation prefetch, cached tabs and ordinary sync never do. One open reads
-  only rows this phone has never stored—absent, not Garmin's empty
-  answer—in a fixed page order, inside a small budget and the shared
-  per-endpoint retry wait and 429 backoff, and keeps every answer, including
-  empty ones. Today's data is never substituted for an older date; a part
+  only the parts its page shows and only rows this phone has never
+  stored—absent, not Garmin's empty answer—in a fixed page order, inside a
+  small budget and the shared per-endpoint retry wait and 429 backoff, and
+  keeps every answer, including empty ones. Today's data is never substituted for an older date; a part
   Garmin has nothing for says so. The route keeps the date, Back returns to
   the page or section that opened it, and the plain `sleep`, `sleep/last`,
   `sleep/tonight`, `health`, `metric/stress` and workout links keep their
@@ -1398,9 +1398,9 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   in the web GraphQL inventory or probes; older nights' vitals come from the
   nightly records, without extra per-day requests. Respiration can differ
   slightly between Health Status and the nightly record. An explicitly opened
-  past day may read that day's daily summary, sleep, HRV, stress and Health
-  Status; an opened older workout may read its activity, splits, heart-rate
-  zones and chart details. Both are one budgeted pass for rows this phone has
+  past night may read that day's sleep and HRV; an opened Health day its
+  stress, daily summary and Health Status; an opened older workout its
+  activity, splits, heart-rate zones and chart details. Both are one budgeted pass for rows this phone has
   never stored, share the retry wait and 429 backoff, and are never
   prefetched (Rules: Opened past days and workouts).
 - Garmin Connect stays installed on the phone because it uploads the watch's

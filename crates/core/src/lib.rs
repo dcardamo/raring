@@ -249,9 +249,10 @@ impl Raring {
         &self,
         tokens: Tokens,
         date: &str,
+        parts: &[view::DayDetailPart],
     ) -> Result<(Tokens, SyncReport)> {
         let client = garmin::Client::new(tokens)?;
-        let mut report = sync::day_detail_on_demand(&self.store, &client, date).await;
+        let mut report = sync::day_detail_on_demand(&self.store, &client, date, parts).await;
         if report.rate_limited {
             report.error = Some("Garmin is rate limiting reads; try again later".into());
         }
