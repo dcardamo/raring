@@ -76,9 +76,12 @@ From item 3, in priority order.
 - Sleep alignment on other watches and while Garmin calibrates is unverified;
   Raring treats status codes containing CALIBRAT, NOT_ENOUGH, INSUFFICIENT or
   LEARNING as calibrating. Record real codes when seen.
-- Desktop has no bedtime reminder: its sync marks notifications as sent
-  without showing them. Deliver them (or stop marking them) before calling
-  reminders cross-platform.
+- Check desktop reminders in a real session: Linux without a notification
+  daemon and with Do Not Disturb, plus macOS and Windows. The plugin reports
+  that a notification was accepted, not that it was displayed, so a Linux
+  session without a server may still record one as sent.
+- A desktop notification opens no screen when clicked; Android's tap targets
+  (Today, the review, Sleep · Tonight) have no desktop twin yet.
 - Garmin's average bedtime before midnight: confirm whether
   `averageLocalSleepStartTime` comes back negative or wrapped (Raring accepts
   both).
@@ -332,6 +335,21 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Desktop reminders** (commit "Show desktop reminders while the app runs").
+  A desktop sync used to mark every notification as sent without showing it.
+  The desktop build now shows the same notifications Android posts through
+  the Tauri notification plugin, with the same wording, settings,
+  rest/illness/limits suppression and night identity. Only an accepted
+  delivery is recorded; a refusal or failure leaves the reminder unmarked and
+  Settings says why, with the next pending wind-down. Desktop has no
+  WorkManager: while the app runs it re-reads the cached plan on its own wall
+  clock, wakes at the pending wind-down and at least every five minutes, and
+  checks again on resume, after a sync and after a notification setting
+  changes, so a reminder whose window passed while the machine slept is
+  dropped rather than fired late. Rust tests cover per-notification marking,
+  wake targets and a night already sent; the desktop layout and a real
+  notification session remain to check (see follow-ups).
 
 - **21. Write rules** (commit "Add the Garmin write rules and a log of
   recent changes"). One core write path (`crates/core/src/writes.rs`): only

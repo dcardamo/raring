@@ -578,6 +578,13 @@ The morning readiness notification opens Today, the weekly check-in the
 latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
 (`#sleep/tonight`) and widget readings their details.
 
+On desktop the app shows the same notifications itself while it runs, with
+the same wording, settings, rest/illness/limits suppression and night
+identity. A desktop build records a notification only after the Tauri
+notification plugin accepted it; a refusal or failure leaves it unmarked and
+Settings says why. Settings also states the next pending wind-down while
+signed in.
+
 ## Rules
 
 - **Local records**: goals, your sessions, plan links, circumstances (rest
@@ -1048,7 +1055,11 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   the night ends, between the wind-down and asleep-by times; it is skipped
   when no recorded sleep (a duration, start or end) has synced for the
   current day. Times are local wall-clock times, so the platform reschedules
-  when the timezone changes.
+  when the timezone changes. A desktop build has no WorkManager: while it
+  runs it reads the cached plan on its own wall clock, wakes at the pending
+  wind-down, checks again on resume, after a sync and after a notification
+  setting changes, and drops a reminder whose asleep-by time passed while the
+  machine was asleep.
 - **Usual wake**: recorded wake times of the last 14 nights read as clock
   times on a 24-hour circle: each is unwrapped to within 12 hours of their
   circular mean, then the median and the middle half's spread are taken, so
@@ -1473,8 +1484,12 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   every sync, on app start, on settings changes, after a reboot or update and
   when the timezone or clock changes, all from the cached plan without the
   network, and asks the core again when it fires. One lock covers checking,
-  posting and recording the reminder. Android only for now: the desktop app
-  has no notification delivery, so it shows the plan but sends no reminder.
+  posting and recording the reminder. Desktop has no alarm service: while the
+  app runs, a single check delivers due notifications through the Tauri
+  notification plugin, waking at the pending wind-down and at least every five
+  minutes, again on resume, after a sync and after a notification setting
+  changes. Only accepted deliveries are recorded, so one that could not be
+  shown stays pending and is retried.
 - **Platform code**: keep each platform's native layer a thin shim over the
   core. Background scheduling is inherently native (WorkManager on Android,
   background refresh on iOS, syncing while the app runs on desktop); secure
