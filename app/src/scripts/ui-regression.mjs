@@ -806,7 +806,7 @@ try {
   assert.equal(await yd.getByRole('button',{name:/^Heart rate through the day, resting 54/}).count(),1);
   assert.equal(await yd.getByRole('button',{name:'Morning Run 06:12, 52 min'}).count(),1);
   assert.equal(await dayPage.locator('.dashboard').getByRole('button',{name:/^Body Battery/}).count(),0,'Your day replaces the separate Body Battery card');
-  const recorded=dayPage.locator('.card').filter({hasText:'Recorded today'});
+  const recorded=dayPage.locator('.card.recorded');
   assert.ok((await recorded.textContent()).includes('Body Battery +6'),'the nap row shows its Body Battery change');
   const card=dayPage.getByRole('region',{name:/^Hill run/});
   assert.equal(await card.getByRole('button',{name:'Keep',exact:true}).count(),1,'Keep sits inside the session card');
@@ -849,7 +849,7 @@ try {
   manyTraining.workouts=[...extra,...manyTraining.workouts];
   await many.route(u=>u.pathname==='/src/lib/sample/training.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(manyTraining)}`}));
   await many.goto(`${url}/#today`);
-  const recordedMany=many.locator('.card').filter({hasText:'Recorded today'});
+  const recordedMany=many.locator('.card.recorded');
   await recordedMany.waitFor();
   assert.equal(await recordedMany.locator('.activity').count(),4,'one list of up to four recordings, workouts and naps together');
   assert.equal(await many.locator('.hero .activity').count(),0,'the headline lists nothing; everything recorded is in one list');
@@ -881,7 +881,7 @@ try {
   await blank.goto(`${url}/#today`);
   await blank.getByText('That’s today.',{exact:true}).waitFor();
   assert.equal(await blank.locator('.your-day').count(),0,'an empty Your day is hidden');
-  assert.equal(await blank.locator('.card').filter({hasText:'Recorded today'}).count(),0);
+  assert.equal(await blank.locator('.card.recorded').count(),0);
   // Without intraday levels the row still shows the day's latest Body Battery, so cutting Right now loses nothing.
   const latest={...sample,day:{...sample.day,bodyBattery:[],bodyBatteryNow:78}};
   await blank.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(latest)}`}));
@@ -1191,7 +1191,14 @@ try {
   sp.on('pageerror',e=>errors.push(e.message));
   const sample=JSON.parse(await readFile(resolve('src/lib/sample/today.json'),'utf8'));
   await sp.goto(`${url}/#today`);
-  assert.ok((await sp.locator('.card').filter({hasText:'Recorded today'}).textContent()).includes('avg HR 152'),'U05');
+  assert.ok((await sp.locator('.card.recorded').textContent()).includes('avg HR 152'),'U05');
+  assert.equal(await sp.locator('.card.recorded h3',{hasText:'Recorded today'}).count(),1,'titled when the headline isn’t Done today');
+  const dp=await browser.newPage({viewport:{width:390,height:844}});
+  await dp.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify({...sample,lead:{id:'done:1',kind:'done',headline:'Done today',line:null,action:null,dismissable:false,kept:false,garmin:null,activity:null,intention:null,reasons:[],session:null}})}`}));
+  await dp.goto(`${url}/#today`);
+  await dp.getByText('Done today',{exact:true}).waitFor();
+  assert.equal(await dp.locator('.card.recorded h3').count(),0,'Done today already heads the list');
+  await dp.close();
   const rp=await browser.newPage({viewport:{width:390,height:844}});
   await rp.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify({...sample,readiness:null,missingMetricReasons:{readiness:'This watch can’t record Training Readiness.'}})}`}));
   await rp.goto(`${url}/#readiness`);
@@ -1578,7 +1585,7 @@ try {
    assert.equal(await night.locator('.page-hero .your-day').count(),0,`${time}: Your day isn't above tonight's plan`);
    const top=async sel=>night.locator(sel).first().evaluate(el=>el.getBoundingClientRect().top);
    const main=await night.locator('main').textContent();
-   const recorded=night.locator('.dashboard .card',{hasText:'Recorded today'});
+   const recorded=night.locator('.dashboard .card.recorded');
    assert.ok(await top('.sleep-plan')<await top('.dashboard .your-day.compact'),`${time}: plan, then Your day`);
    assert.equal(await night.locator('.your-day .row',{hasText:'Heart rate'}).count(),0,`${time}: Your day is compact`);
    if(next)assert.equal(await recorded.count(),0,`${time}: yesterday's run isn't recorded today`);

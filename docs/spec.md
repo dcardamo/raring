@@ -206,7 +206,7 @@ A briefing with an ending, in this order:
   under the day's headline while the day leads. Workouts carry Garmin's benefit
   and training effect (one decimal); naps their Body Battery change. Up to four
   rows, then a link to all of today's activities. The headline never repeats a
-  workout from this list. Compact after tonight's plan: without the effect
+  workout from this list. Under a "Done today" headline the list goes untitled. Compact after tonight's plan: without the effect
   labels.
 - **This week**: the week's rings and one line per goal beside **Left this
   week** with Do it today (not from the evening on: a weekly gap is context,
