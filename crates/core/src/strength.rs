@@ -507,7 +507,10 @@ pub fn session(store: &Store, id: &str) -> Option<StrengthSession> {
     Some(StrengthSession {
         unit: prefs.unit,
         figure: prefs.figure,
-        checked_at: store.fetched_at("exercise_sets", id),
+        // Synthetic demo/test markers are not a real Garmin check time.
+        checked_at: store
+            .fetched_at("exercise_sets", id)
+            .filter(|t| chrono::DateTime::parse_from_rfc3339(t).is_ok()),
         sets: active.len() as u32,
         reps: active
             .iter()

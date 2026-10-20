@@ -517,6 +517,11 @@ async fn an_explicit_refresh_reads_one_workout_and_obeys_the_backoff() {
     let session = screens::workout(&store, "123456").unwrap().strength.unwrap();
     assert_eq!(session.sets, 6);
     assert!(session.checked_at.is_some(), "the detail says when Garmin's sets were read");
+    // A demo's synthetic marker is not a real check time.
+    store
+        .put("exercise_sets", "123456", "synthetic", &fixture("exercise_sets.json"))
+        .unwrap();
+    assert_eq!(screens::workout(&store, "123456").unwrap().strength.unwrap().checked_at, None);
 
     // Garmin's rate-limit backoff blocks every explicit read too.
     store
