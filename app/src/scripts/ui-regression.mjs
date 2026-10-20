@@ -2435,7 +2435,7 @@ function trendFixture(q){
   await history.getByText('Weekly average of recorded days',{exact:true}).waitFor();
   assert.equal(await history.locator('.history-bar').count()+await history.locator('.history-gap').count(),52,'a year is 52 weeks');
   const fills=new Set(await history.locator('.history-bar').evaluateAll(bars=>bars.map(b=>b.getAttribute('fill'))));
-  assert.deepEqual([...fills],['#E4E8F0'],'weekly averages are ink, not Garmin levels');
+  assert.deepEqual([...fills],['#F4F1EA'],'weekly averages are ink, not Garmin levels');
   assert.ok((await history.getByRole('slider').getAttribute('aria-valuetext')).startsWith('Week of '));
   assert.match(await history.locator('.history-reading small').textContent(),/^\d of \d days recorded$/);
   await history.getByRole('button',{name:'Previous',exact:true}).click();
@@ -2614,7 +2614,7 @@ function trendFixture(q){
  assert.equal(await hrSlider.getAttribute('aria-valuenow'),'118');
  assert.match(await hrSlider.getAttribute('aria-valuetext'),/no reading/,'known gap stays a gap');
  const trace=hrSwitch.locator('[role="slider"] path[fill]');
- assert.equal(await trace.first().getAttribute('fill'),'#E4E8F0','ungraded HR uses neutral ink');
+ assert.equal(await trace.first().getAttribute('fill'),'#F4F1EA','ungraded HR uses neutral ink');
  await hrSwitch.close();
  console.log('Heart-rate date change resets selection; gaps and ungraded palette: passed');
 

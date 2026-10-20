@@ -131,7 +131,7 @@
   </section>
  {/each}
  <section class="card dom" aria-label="VO₂ max, same weeks"><h3><span>VO₂ max, same weeks</span><button class="link" onclick={() => navigate('metric/vo2max')}>Details</button></h3>
-  <AxisChart points={weekPoints(w => w.vo2max)} kind="dots" unit="ml/kg/min" color="#E4E8F0" height={120} every={3} label={`Garmin's VO₂ max estimates by week: ${weekPoints(w => w.vo2max).map(p => `${p.x}${p.current ? ' (so far)' : ''} ${p.v ?? 'none'}`).join(', ')}`}/>
+  <AxisChart points={weekPoints(w => w.vo2max)} kind="dots" unit="ml/kg/min" color="var(--ink)" height={120} every={3} label={`Garmin's VO₂ max estimates by week: ${weekPoints(w => w.vo2max).map(p => `${p.x}${p.current ? ' (so far)' : ''} ${p.v ?? 'none'}`).join(', ')}`}/>
  </section>
 {:else if section === 'strength'}
  {@const now = latestGoal(w => w.strengthGoal)}
@@ -141,13 +141,13 @@
  <button class="card link-row" onclick={() => navigate('strength')}><span><b>Bests and lifts</b><small>Training · Strength: every exercise, its sets and its history</small></span><Icon name="chevron" size={16}/></button>
 {:else}
  <section class="card dom" aria-label="Training per month"><h3><span>Training per month</span><button class="link" onclick={() => navigate('training')}>Details</button></h3>
-  <AxisChart points={monthPoints(m => m.minutes == null ? null : m.minutes / 60)} unit="h" color="#36C9C6" height={120} fmt={v => num(v, 1)} label={`Hours recorded per month: ${monthPoints(m => m.minutes).map(p => `${p.x}${p.current ? ' (so far)' : ''} ${p.v == null ? 'unknown' : num(p.v / 60, 1)}`).join(', ')}`}/>
+  <AxisChart points={monthPoints(m => m.minutes == null ? null : m.minutes / 60)} unit="h" color="var(--goal-intensity)" height={120} fmt={v => num(v, 1)} label={`Hours recorded per month: ${monthPoints(m => m.minutes).map(p => `${p.x}${p.current ? ' (so far)' : ''} ${p.v == null ? 'unknown' : num(p.v / 60, 1)}`).join(', ')}`}/>
  </section>
  <section class="card dom" aria-label="Resting heart rate by month"><h3><span>Resting heart rate</span><button class="link" onclick={() => navigate('metric/restingHr')}>Details</button></h3><AxisChart points={monthPoints(m => m.restingHr)} kind="line" unit="bpm" color="#FF8A8A" height={120} label={`Resting heart rate monthly averages: ${monthPoints(m => m.restingHr).map(p => `${p.x}${p.current ? ' (so far)' : ''} ${p.v == null ? 'none' : num(p.v, 1)}`).join(', ')}`}/><p class="small">Monthly average of Garmin's daily readings.</p></section>
  <section class="card dom" aria-label="Overnight HRV by month"><h3><span>Overnight HRV</span><button class="link" onclick={() => navigate('metric/hrv')}>Details</button></h3><AxisChart points={monthPoints(m => m.hrv)} kind="line" unit="ms" color="#A48BFF" height={120} label={`HRV monthly averages: ${monthPoints(m => m.hrv).map(p => `${p.x}${p.current ? ' (so far)' : ''} ${p.v == null ? 'none' : num(p.v, 1)}`).join(', ')}`}/><p class="small">Monthly average of Garmin's overnight readings.</p></section>
  <section class="card dom" aria-label="VO₂ max and Fitness Age by month"><h3><span>VO₂ max and Fitness Age</span><button class="link" onclick={() => navigate('health')}>Details</button></h3>
-  <AxisChart points={monthPoints(m => m.vo2max)} kind="dots" unit="VO₂ max" color="#E4E8F0" height={110} label={`VO₂ max by month: ${monthPoints(m => m.vo2max).map(p => `${p.x}${p.current ? ' (so far)' : ''} ${p.v ?? 'none'}`).join(', ')}`}/>
-  <AxisChart points={monthPoints(m => m.fitnessAge)} kind="dots" unit="years" color="#3DDC97" height={110} label={`Fitness Age by month: ${monthPoints(m => m.fitnessAge).map(p => `${p.x}${p.current ? ' (so far)' : ''} ${p.v ?? 'none'}`).join(', ')}`}/>
+  <AxisChart points={monthPoints(m => m.vo2max)} kind="dots" unit="VO₂ max" color="var(--ink)" height={110} label={`VO₂ max by month: ${monthPoints(m => m.vo2max).map(p => `${p.x}${p.current ? ' (so far)' : ''} ${p.v ?? 'none'}`).join(', ')}`}/>
+  <AxisChart points={monthPoints(m => m.fitnessAge)} kind="dots" unit="years" color="var(--good)" height={110} label={`Fitness Age by month: ${monthPoints(m => m.fitnessAge).map(p => `${p.x}${p.current ? ' (so far)' : ''} ${p.v ?? 'none'}`).join(', ')}`}/>
   <p class="small">Garmin’s latest estimate each month; months without one stay empty.</p>
  </section>
 {/if}

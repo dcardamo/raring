@@ -41,9 +41,9 @@
   <div class="tn">
    <TonightLine {plan} {now} {garmin}/>
    <dl class="facts">
-    <div><dt><i style:background="#FFB547"></i>Wind down</dt><dd class="n">{ownTime && goals?.sleepKind === 'windDown' ? ownTime : plan.windDown}<small>{ownTime && goals?.sleepKind === 'windDown' ? 'your goal' : 'suggested'}</small></dd></div>
-    <div><dt><i style:background="#A9C8FF"></i>{garmin ? 'Bedtime' : 'Asleep by'}</dt><dd class="n">{ownTime && goals?.sleepKind === 'asleepBy' ? ownTime : plan.bedtimeStart ? `${plan.bedtimeStart}–${plan.bedtime}` : plan.bedtime}<small>{ownTime && goals?.sleepKind === 'asleepBy' ? 'your goal' : garmin ? 'Garmin window' : 'need before wake'}</small></dd></div>
-    {#if plan.wakeTime}<div><dt><i style:background="#EEF1F7"></i>Wake</dt><dd class="n">{plan.wakeTime}<small>{wakeLabel(plan.wakeNights)}</small></dd></div>{/if}
+    <div><dt><i style:background="var(--fair)"></i>Wind down</dt><dd class="n">{ownTime && goals?.sleepKind === 'windDown' ? ownTime : plan.windDown}<small>{ownTime && goals?.sleepKind === 'windDown' ? 'your goal' : 'suggested'}</small></dd></div>
+    <div><dt><i style:background="var(--goal-sleep)"></i>{garmin ? 'Bedtime' : 'Asleep by'}</dt><dd class="n">{ownTime && goals?.sleepKind === 'asleepBy' ? ownTime : plan.bedtimeStart ? `${plan.bedtimeStart}–${plan.bedtime}` : plan.bedtime}<small>{ownTime && goals?.sleepKind === 'asleepBy' ? 'your goal' : garmin ? 'Garmin window' : 'need before wake'}</small></dd></div>
+    {#if plan.wakeTime}<div><dt><i style:background="var(--text)"></i>Wake</dt><dd class="n">{plan.wakeTime}<small>{wakeLabel(plan.wakeNights)}</small></dd></div>{/if}
     <div><dt>Need</dt><dd class="n">{duration(plan.needMin)}<small>Garmin{plan.needReadAt ? ` · read ${readAt(plan.needReadAt, now)}` : ''}</small></dd></div>
    </dl>
   </div>
@@ -101,10 +101,10 @@
  .yl{position:relative;height:100%;min-width:2.6em;font:500 11px Inter;color:var(--text2)}.yl i{position:absolute;right:2px;transform:translateY(50%);font-style:normal;white-space:nowrap}
  .col{position:relative;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;border:0;padding:0;background:none;color:inherit;font:inherit;cursor:pointer}
  .bar-area{position:relative;width:100%;height:100%;display:flex;align-items:flex-end;justify-content:center;border-bottom:1px solid var(--line);background:repeating-linear-gradient(to top,transparent 0 calc(var(--step) - 1px),rgba(255,255,255,.07) calc(var(--step) - 1px) var(--step))}
- .night-bar{position:relative;display:block;width:70%;max-width:30px;border-radius:5px 5px 0 0;background:#5C9BFF}.night-bar.below{background:#3E6FC2}
- .bar-area u{position:absolute;left:8%;right:8%;height:0;border-top:2px dashed #EEF1F7;opacity:.8}
+ .night-bar{position:relative;display:block;width:70%;max-width:30px;border-radius:5px 5px 0 0;background:var(--light)}.night-bar.below{background:#3E6FC2}
+ .bar-area u{position:absolute;left:8%;right:8%;height:0;border-top:2px dashed var(--text);opacity:.8}
  .gap,.k-gap{display:block;border:1.5px dotted var(--text3);border-radius:4px}.gap{width:70%;max-width:30px;height:24px}
  .col small{position:absolute;top:100%;margin-top:3px;display:grid;justify-items:center;line-height:1.3;font:500 11px Inter;color:var(--text2)}.col small .n{font:600 12px Outfit,Inter;color:var(--text)}
  .key{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--text2);margin:8px 0 0}.key span{display:inline-flex;gap:5px;align-items:center}
- .k-bar{width:10px;height:8px;border-radius:2px;background:#5C9BFF}.k-bar.below{background:#3E6FC2}.k-gap{width:10px;height:8px}.k-need{width:12px;border-top:2px dashed #EEF1F7}
+ .k-bar{width:10px;height:8px;border-radius:2px;background:var(--light)}.k-bar.below{background:#3E6FC2}.k-gap{width:10px;height:8px}.k-need{width:12px;border-top:2px dashed var(--text)}
 </style>

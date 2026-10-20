@@ -43,20 +43,20 @@
 <style>
  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
  .nowrap{white-space:nowrap}
- .source{font-size:10px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--text2)}
+ .source{font-size:12px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--text2)}
  .monitor-heading{display:flex;align-items:center;gap:10px;margin-bottom:18px}
  .monitor-icon{display:grid;place-items:center;flex:none;width:36px;height:36px;border:1px solid color-mix(in srgb,var(--signal) 35%,transparent);border-radius:12px;color:var(--signal);background:color-mix(in srgb,var(--signal) 8%,transparent)}
  strong{font:500 18px/1.25 Outfit;color:var(--signal)}
  .monitor-heading p{font-size:11px;color:var(--text2);margin-top:4px}
  .signal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
- .signal-tile{background:rgba(255,255,255,.025);border:1px solid var(--line);border-radius:16px;padding:13px;min-width:0;text-align:left;display:flex;flex-direction:column}
+ .signal-tile{background:var(--surface2);border:1px solid transparent;border-radius:var(--radius-control);padding:13px;min-width:0;text-align:left;display:flex;flex-direction:column}
  .signal-tile:active{background:rgba(255,255,255,.08)}
  .signal-name{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);min-height:16px}
  .signal-name>span{flex:1}
  .signal-value{display:block;font-size:32px;font-weight:500;margin:8px 0 4px;white-space:nowrap}
  .signal-value small{font:400 11px Inter;color:var(--text2);margin-left:3px}
  .signal-state{color:var(--signal);font-size:11px;margin-bottom:14px}
- .signal-range{display:block;font-size:10px;color:var(--text2);margin-top:10px;line-height:1.5}
+ .signal-range{display:block;font-size:12px;color:var(--text2);margin-top:10px;line-height:1.5}
  .signal-tile:last-child:nth-child(odd){grid-column:1/-1}
  .signal-tile:last-child:nth-child(odd) .signal-value{margin-top:4px}
  .signal-grid.compact{grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}

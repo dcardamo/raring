@@ -73,7 +73,7 @@ import StrengthRefresh from './StrengthRefresh.svelte';
  .sbar{flex:1;max-width:58px;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}
  .sbar>b{font:600 15px Outfit}
  .sbar-t{position:relative;width:100%;height:56px;display:flex;align-items:flex-end;justify-content:center}
- .sbar-t i{position:relative;display:grid;place-items:start center;width:100%;border-radius:7px 7px 4px 4px;background:rgba(228,232,240,.78);color:#0B0F1A}
+ .sbar-t i{position:relative;display:grid;place-items:start center;width:100%;border-radius:7px 7px 4px 4px;background:rgba(228,232,240,.78);color:var(--bg)}
  .sbar-t i :global(svg){margin-top:4px}
  .sbar-t u{position:absolute;left:-3px;right:-3px;bottom:0;border:1.5px dashed rgba(255,255,255,.2);border-radius:9px 9px 6px 6px}
  .sbar>span{font:500 12px Outfit;color:var(--text2);white-space:nowrap}.sbar .delta{display:block;font:500 11px Outfit;color:var(--text)}

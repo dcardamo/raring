@@ -63,12 +63,12 @@
 {/if}
 {#snippet plot()}
  {#each sleep as [a,b]}<rect x={x(a)} y={top-(compact?2:8)} width={Math.max(0,x(b)-x(a))} height={h+(compact?4:8)} rx="6" fill={colors.ink} opacity=".09"/>{#if !compact}<text x={x(a)>W-60?x(a)-50:x(a)+4} y={top-12} fill={colors.ink} font-size="12">Asleep</text>{/if}{/each}
- {#if !compact}{#each heartRate?[60,100,140]:[25,50,75] as level}<line x1={left} x2={W} y1={y(level)} y2={y(level)} stroke="currentColor" opacity=".07"/><text data-thin="2" x="0" y={y(level)+4} fill="#8E98AC" font-size="11">{level}</text>{/each}{/if}
+ {#if !compact}{#each heartRate?[60,100,140]:[25,50,75] as level}<line x1={left} x2={W} y1={y(level)} y2={y(level)} stroke="currentColor" opacity=".07"/><text data-thin="2" x="0" y={y(level)+4} fill="var(--text3)" font-size="11">{level}</text>{/each}{/if}
  {#each ranges as [a,b]}<rect x={x(a)} y={top+h-(compact?4:6)} width={Math.max(1.5,x(b)-x(a))} height={compact?4:6} rx="2" fill={colors.secondary} opacity=".85"/>{/each}
  {#if compact}<line x1="0" x2={W} y1={top+h+.5} y2={top+h+.5} stroke="currentColor" opacity=".12"/>{/if}
  {#each Object.entries(paths) as [level,d]}{#if d}<path {d} fill={heartRate?colors.ink:stressColors[level]} opacity=".9"/>{/if}{/each}
  {#if !compact && slot>=0}<line x1={x(slot*step+step/2)} x2={x(slot*step+step/2)} y1={top-8} y2={top+h} stroke="currentColor" opacity=".4" stroke-dasharray="2 3"/>{/if}
- {#if !compact}{#each [0,1,2,3,4] as i}{@const m=heartRate?dayMinutes*i/4:i*360}<text data-thin={i===0||i===4?1:''} x={x(m)} y={top+h+16} fill="#8E98AC" font-size="11" text-anchor={i===0?'start':i===4?'end':'middle'}>{heartRate?`${Math.round(m/60)} h`:i===4?'24:00':time(m)}</text>{/each}{/if}
+ {#if !compact}{#each [0,1,2,3,4] as i}{@const m=heartRate?dayMinutes*i/4:i*360}<text data-thin={i===0||i===4?1:''} x={x(m)} y={top+h+16} fill="var(--text3)" font-size="11" text-anchor={i===0?'start':i===4?'end':'middle'}>{heartRate?`${Math.round(m/60)} h`:i===4?'24:00':time(m)}</text>{/each}{/if}
 {/snippet}
 {#if !compact}
  {#if heartRate && dayMinutes!==1440}<p class="axis-note">A {num(dayMinutes/60,1)}-hour day: hours count from its start</p>{/if}

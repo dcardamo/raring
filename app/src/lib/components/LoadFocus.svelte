@@ -13,7 +13,7 @@
 <style>
  .lf{margin-top:14px}.lf:first-child{margin-top:0}
  .top{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--text2);margin-bottom:8px}.top b{font:600 15px Outfit;color:var(--text)}
- em{font:600 11px Inter;color:var(--amber);background:rgba(255,181,71,.15);padding:4px 8px;border-radius:20px;font-style:normal}
+ em{font:600 11px Inter;color:var(--fair);background:rgba(255,181,71,.15);padding:4px 8px;border-radius:20px;font-style:normal}
  .bar{position:relative;height:10px;border-radius:5px;background:rgba(255,255,255,.06)}
  u{position:absolute;top:-3px;bottom:-3px;background:rgba(228,232,240,.22);border-radius:6px}
  i{position:absolute;left:0;top:2px;bottom:2px;border-radius:4px}

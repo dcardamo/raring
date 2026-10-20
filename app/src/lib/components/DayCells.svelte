@@ -27,8 +27,8 @@
 </div>
 <style>
  .day-cells{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
- .dc{position:relative;min-width:0;padding:6px 0 7px;border:1px solid transparent;border-radius:14px;background:rgba(255,255,255,.03);color:var(--text);display:flex;flex-direction:column;align-items:center;gap:4px;min-height:44px}
- .dc.current{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.24)}.dc.selected{border-color:var(--ink)}
+ .dc{position:relative;min-width:0;padding:6px 0 7px;border:1px solid transparent;border-radius:var(--radius-control);background:var(--card);color:var(--text);display:flex;flex-direction:column;align-items:center;gap:4px;min-height:44px}
+ .dc.current{background:var(--surface2);border-color:var(--line-strong)}.dc.selected{border-color:var(--ink)}
  .dc.outside{background:none}.dc.outside b{color:var(--text2)}.dc.outside :global(svg){opacity:.35}
  .dc.future{background:none}.dc.future b{color:var(--text3)}
  .top{display:flex;flex-direction:column;align-items:center;line-height:1.1}.dow{font:600 11px Inter;color:var(--text2)}.top b{font-size:14px;font-weight:600}

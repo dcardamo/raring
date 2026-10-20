@@ -39,6 +39,18 @@ In priority order; the redesign shipped (Done, item 26) without them.
    read-only by name and date until a populated response verifies their
    sport, duration and completion fields.
 
+### Visual language follow-ups
+
+- Maintainer review of the warm-graphite prototype: typography, softer status
+  colors, flatter surfaces, chart strokes and selected navigation. The page
+  order and all metrics are unchanged; the prototype is not release approval.
+- Check the new surfaces and contrast on the maintainer's phone with TalkBack
+  and the largest system text. Browser chart checks cover 360–1100 px and
+  1/1.3/2× text, not physical WebView text zoom.
+- After integration with the parallel Today/Sleep work, recapture the compact
+  morning facts, session card and Tonight clock with these same tokens. This
+  branch changes their styling only, not their structure or data.
+
 ### Time-of-day follow-ups
 
 From item 4, in priority order.
@@ -465,6 +477,17 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Warm-graphite visual language prototype** (commit "Prototype Raring's
+  warm graphite visual language"). Opaque neutral surfaces, warmer ink,
+  softer semantic colors, shared card/control radii, Inter structural headings,
+  tabular Outfit readings, quieter owned icons and consistent chart strokes.
+  Root navigation gains a neutral selected-icon backing; card headings become
+  sentence case, gaps between cards grow to 16 px, and the lead gets more
+  breathing room. Data, page order, chart domains, goal rules and actions are
+  unchanged. A token parity/contrast test prevents the CSS and chart palettes
+  from drifting. Private research and synthetic before/after captures stay
+  ignored. Review and phone checks remain above; no release in this lane.
 
 - **Today and Sleep minors** (commit "Drop disclaimers and key Tonight's
   missing nights"), from the Today and Sleep review (m1–m6, plus a

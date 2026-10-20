@@ -25,7 +25,7 @@
 </script>
 <div class="consistency" bind:clientWidth={width} data-chart="consistency" {@attach declutter}>
  <svg width={W} height={H} class="plot" role="img" aria-label={`${days===14?'Bed and wake times over two weeks':'Bed and wake times this week'}${bedWindow?`; usual bedtime ${clock(bedWindow[0])}–${clock(bedWindow[1])}`:''}${wakeWindow?`; usual wake ${clock(wakeWindow[0])}–${clock(wakeWindow[1])}`:''}`}>
-  {#if bedWindow}<rect class="usual" x={L} y={y(bedWindow[0])} width={W-L} height={Math.max(2,y(bedWindow[1])-y(bedWindow[0]))} rx="3" fill="#A9C8FF" opacity=".24"/>{/if}
+  {#if bedWindow}<rect class="usual" x={L} y={y(bedWindow[0])} width={W-L} height={Math.max(2,y(bedWindow[1])-y(bedWindow[0]))} rx="3" fill="var(--goal-sleep)" opacity=".24"/>{/if}
   {#if wakeWindow}<rect class="usual" x={L} y={y(wakeWindow[0])} width={W-L} height={Math.max(2,y(wakeWindow[1])-y(wakeWindow[0]))} rx="3" fill="#FFD666" opacity=".22"/>{/if}
   {#each [22,0,2,4,6,8].filter(h=>hour(h)>=low && hour(h)<=high) as h}<text data-thin={h%4===2?2:''} x="0" y={y(h)+4} fill="#A3ACBE" font-size="11">{clock(h)}</text><line x1={L} x2={W} y1={y(h)} y2={y(h)} stroke="rgba(255,255,255,.06)"/>{/each}
   {#each marks as m}<line x1={x(m.i)-col/2} x2={x(m.i)-col/2} y1={T} y2={H-B} stroke="rgba(255,255,255,.1)" stroke-dasharray="2 3"/>{/each}

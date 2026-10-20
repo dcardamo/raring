@@ -3,7 +3,7 @@
  export type IconName = GarminIcon | 'pulse' | 'check' | 'lift' | 'gauge' | 'vo2' | 'back' | 'arrow-right' | 'arrow-left' | 'trend-up' | 'trend-down' | 'sparkle' | 'scale' | 'info' | 'close' | 'chevron-down' | 'pause' | 'pencil' | 'help' | 'star' | 'alert' | 'chevron';
  let {name,size=20}:{name:IconName,size?:number}=$props();
 </script>
-<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="var(--stroke-icon)" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
  {#if name==='moon'}<path d="M20.5 13.5A8.5 8.5 0 1 1 10.5 3.5a6.6 6.6 0 0 0 10 10z"/>
  {:else if name==='pulse'}<path d="M3 12h4l2.5-5 4 10 2.5-5H21"/>
  {:else if name==='hrv'}<path d="M3 15c2 0 2-6 4-6s2 9 4 9 2-12 4-12 2 9 4 9h2"/>

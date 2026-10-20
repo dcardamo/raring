@@ -49,24 +49,34 @@ synthetic data. `design/mockup/index.html` shows the app before the redesign.
 
 ## Look
 
-- Dark ink background, with a faint glow behind a screen's main gauge in that
-  gauge's status color.
+- Warm graphite background (`#111317`), opaque charcoal cards (`#1B1E24`)
+  and raised controls (`#242830`, selected `#303641`). No decorative status
+  glow. Warm-white ink (`#F4F1EA`), supporting text (`#C2C8D1`) and muted
+  text (`#A1ABB9`) give readings priority over chrome. Tokens live in
+  `app/src/app.css`; the chart palette in `charts.ts` is checked against it.
 - Color means something or it isn't used. Icons and titles say where you
   are; color says how it's going:
-  - **Status**: green good, amber fair, red poor. Missing data is a gap,
-    never a zero.
+  - **Status**: sage green good (`#91CFA6`), ochre fair (`#E7BC78`), coral
+    poor (`#EE958D`), always with a word, symbol or labelled key. Missing data
+    is a gap, never a zero.
   - **Effort**: heart-rate zones run gray, blue, yellow, orange, red. Red
     means hard.
-  - **Amount**: one blue, faint to strong, for counts without a judgement,
-    such as sets per muscle.
-  - **Ink**: everything else, including charts without a verdict, selected
-    controls and primary buttons (white on ink).
-- Text is at least 4.5:1 against its surface (3:1 for large text). Text on a
+  - **Amount**: one muted blue (`#93B6E1`), faint to strong, for counts
+    without a judgement, such as sets per muscle.
+  - **Ink**: everything else, including charts without a verdict. Primary
+    buttons use warm-white ink as their fill with dark text; selected controls
+    use a raised neutral surface. The selected bottom tab has an icon backing,
+    a stronger label and an accessible current-page state, not color alone.
+- Text is at least 4.5:1 against its surface, including large text. Text on a
   colored fill is black or white, whichever reads better.
 - Gauges are solid arcs open at the bottom, colored by status. Load gauges
   mark Garmin's optimal range as a neutral band, with a dot for the current
   value.
-- Rounded cards, Outfit for numbers and headings, Inter for text.
+- A small radius vocabulary: 16 px cards, 10 px inner controls, 6 px small
+  marks. Spacing follows 4/8/12/16/24/32 px, with 16 px card insets. Inter for
+  root and card headings and body text; Outfit for tabular readings and compact
+  domain headings. Root headings are 30 px, card headings 14 px sentence case,
+  metadata 11–12 px. The lead remains larger than its evidence.
 - **Goal rings**: one ring per weekly goal, nested in a fixed order with a
   fixed colour each (strength pink, Zone 2 blue, Zone 4–5 orange, intensity
   teal, sleep timing pale blue). A ring draws only recorded work, with no
@@ -84,7 +94,9 @@ synthetic data. `design/mockup/index.html` shows the app before the redesign.
 - Weight uses one neutral accent; its changes are directions, never good or
   bad colours.
 - Every chart has axes, units and labelled values; a usual range is a band,
-  a goal a dashed line. Gaps are drawn as gaps.
+  a goal a dashed line. Gaps are drawn as gaps. Shared single-metric charts use
+  2 px main traces, quiet 1 px gridlines and neutral range bands; goal lanes
+  keep their labelled goal color. Owned line icons use a 1.75-unit stroke.
 - Chart text is at least 11 px for axis ticks and 12 px for other labels on a
   390 px phone, never overlaps other text or a marker, and stays inside the
   screen at 360–1100 px and at larger system text. Collisions are resolved by

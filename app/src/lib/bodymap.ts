@@ -1,6 +1,7 @@
 // Raring's own body-map figures. Each figure is drawn as its left half in a
 // 100×220 box (centre line x=50) and mirrored; muscle groups are separate
 // shapes so each can be shaded by its set count.
+import {colors} from './charts';
 import type {Figure} from './generated/Figure';
 import type {Muscle} from './generated/Muscle';
 
@@ -89,7 +90,7 @@ export function figureArt(figure: Figure): FigureArt {
  };
 }
 
-const AMOUNT = '#5CA8FF', FAINT = '#1F3557', NONE = '#353C4C';
+const AMOUNT = colors.amount, FAINT = '#263C59', NONE = '#343A43';
 const mix = (a: string, b: string, t: number) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('');
 /** One blue, faint to strong; no sets is a neutral gray, not a faint blue. */
 export const amountColor = (sets: number, max: number) => sets > 0 ? mix(FAINT, AMOUNT, Math.min(sets / Math.max(max, 1), 1)) : NONE;

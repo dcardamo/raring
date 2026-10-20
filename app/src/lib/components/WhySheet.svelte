@@ -36,7 +36,7 @@
  .why-button{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line);font:500 13px Inter;color:var(--text)}
  .why-button :global(svg){color:var(--text2)}
  .why-scrim{position:fixed;inset:0;z-index:20;background:rgba(4,6,11,.62)}
- .why-sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;max-height:85dvh;overflow-y:auto;overscroll-behavior:contain;background:#151A26;border-top:1px solid var(--line);border-radius:26px 26px 0 0;padding:10px 20px calc(24px + env(safe-area-inset-bottom));text-align:left}
+ .why-sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;max-height:85dvh;overflow-y:auto;overscroll-behavior:contain;background:var(--card);border-top:1px solid var(--line);border-radius:26px 26px 0 0;padding:10px 20px calc(24px + env(safe-area-inset-bottom));text-align:left}
  .why-sheet:focus{outline:none}
  .grab{display:block;width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.18);margin:0 auto 14px}
  .why-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}

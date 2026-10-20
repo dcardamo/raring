@@ -11,7 +11,7 @@
  // `compact` follows tonight's plan from the evening on: sleep, Body Battery and recordings only.
  let {day,navigate,compact=false}:{day:DayTimeline,navigate:(route:string)=>void,compact?:boolean}=$props();
  const pct=(m:number)=>Math.max(0,Math.min(100,m/1440*100));
- const STAGE:Record<string,string>={deep:'#2F6FE0',light:'#5C9BFF',rem:'#A9C8FF',awake:'#E4E8F0'};
+ const STAGE:Record<string,string>={deep:'var(--deep)',light:'var(--light)',rem:'var(--rem)',awake:'var(--ink)'};
  // The core already blanks slots past the upload or now; this only places the last reading.
  let limit=$derived(Math.min(day.uploadMin??day.nowMin,day.nowMin));
  let now=$derived(day.nowMin<1440?day.nowMin:null);
@@ -39,7 +39,7 @@
  </button>
  <button class="row" onclick={()=>navigate('metric/bodyBattery')} aria-label={`Body Battery ${bbNow??'not recorded'}${day.uploadMin!=null?' at '+hm(day.uploadMin):''}${naps.filter(n=>n.bodyBatteryChange!=null).map(n=>`, nap ${n.bodyBatteryChange!>=0?'+':''}${n.bodyBatteryChange}`).join('')}`}>
   <span class="lab"><Icon name="bolt" size={15}/><b>Body Battery</b></span>
-  <span class="track chart">{#if bb}<svg viewBox="0 0 1440 50" preserveAspectRatio="none" aria-hidden="true">{#each naps as n}<rect x={n.startMin} y="0" width={n.endMin!-n.startMin!} height="50" fill="rgba(169,200,255,.22)"/>{/each}<path d={bb} fill="none" stroke="#3DDC97" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>{#if now!=null}<u data-mark="now" style:left={pct(now)+'%'}></u>{/if}{:else}<em class="none">{day.clockChange?'Clock change today · open the detail':bbNow!=null?'Latest level only':'Awaiting upload'}</em>{/if}</span>
+  <span class="track chart">{#if bb}<svg viewBox="0 0 1440 50" preserveAspectRatio="none" aria-hidden="true">{#each naps as n}<rect x={n.startMin} y="0" width={n.endMin!-n.startMin!} height="50" fill="rgba(169,200,255,.22)"/>{/each}<path d={bb} fill="none" stroke="var(--good)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>{#if now!=null}<u data-mark="now" style:left={pct(now)+'%'}></u>{/if}{:else}<em class="none">{day.clockChange?'Clock change today · open the detail':bbNow!=null?'Latest level only':'Awaiting upload'}</em>{/if}</span>
   <span class="val n">{bbNow??'—'}{#if napChange!=null}<small>nap {napChange>=0?'+':''}{napChange}</small>{/if}</span>
  </button>
  {#if !compact}
@@ -50,7 +50,7 @@
  </button>
  <button class="row" onclick={()=>navigate('metric/heartRate')} aria-label={day.heartRate.length?`Heart rate through the day, resting ${day.restingHr??'not recorded'} bpm${hrRange?`, readings ${hrRange[0]}–${hrRange[1]}`:''}`:'Heart rate: see the heart-rate detail'}>
   <span class="lab"><Icon name="heart" size={15}/><b>Heart rate</b></span>
-  <span class="track chart">{#if hr}<svg viewBox="0 0 1440 50" preserveAspectRatio="none" aria-hidden="true"><path d={hr} fill="none" stroke="#FF6B8A" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>{#if now!=null}<u data-mark="now" style:left={pct(now)+'%'}></u>{/if}{:else}<em class="none">{day.clockChange?'Clock change today · open the detail':'Awaiting upload'}</em>{/if}</span>
+  <span class="track chart">{#if hr}<svg viewBox="0 0 1440 50" preserveAspectRatio="none" aria-hidden="true"><path d={hr} fill="none" stroke="var(--ink)" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>{#if now!=null}<u data-mark="now" style:left={pct(now)+'%'}></u>{/if}{:else}<em class="none">{day.clockChange?'Clock change today · open the detail':'Awaiting upload'}</em>{/if}</span>
   <span class="val n">{day.restingHr??'—'}<small>rest bpm</small></span>
  </button>
  {/if}
@@ -65,20 +65,20 @@
 </section>
 <style>
  .your-day.compact{margin-top:0}
- .your-day{margin-top:12px;border:1px solid var(--line);border-radius:22px;background:var(--card);padding:14px 14px 10px}
- .yd-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}.yd-h h2{display:flex;align-items:center;gap:8px;font:600 11px Inter;letter-spacing:.13em;text-transform:uppercase;color:var(--text2)}
+ .your-day{margin-top:16px;border:1px solid var(--line);border-radius:var(--radius-card);background:var(--card);padding:16px 14px 12px}
+ .yd-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}.yd-h h2{display:flex;align-items:center;gap:8px;font:600 var(--type-section)/1.35 var(--font-body);letter-spacing:-.015em;color:var(--text)}
  .row{display:grid;grid-template-columns:96px minmax(0,1fr) 56px;gap:8px;align-items:center;width:100%;padding:6px 0;background:none;border:0;color:var(--text);text-align:left;min-height:44px}
  .lab{display:flex;align-items:center;gap:6px;min-width:0}.lab :global(svg){color:var(--text2);flex:none}.lab b{font:600 12.5px/1.15 Inter;overflow-wrap:anywhere}
- .track{position:relative;display:block;height:34px;border-radius:6px;background:rgba(255,255,255,.035)}
+ .track{position:relative;display:block;height:34px;border-radius:var(--radius-small);background:var(--surface2)}
  .track.sleep{height:16px}.track.sleep i{position:absolute;top:0;bottom:0}
  .track.chart svg{position:absolute;inset:0;width:100%;height:100%}
  .track.events{background:none;border-bottom:1px solid var(--line);border-radius:0}
  .evb::after{content:'';position:absolute;inset:-6px -11px}
- .evb{position:absolute;top:1px;height:32px;border:0;border-radius:6px;display:grid;place-items:center;color:#0B0F1A;background:#3DDC97;padding:0;min-width:22px}.evb.nap{background:#A9C8FF}
+ .evb{position:absolute;top:1px;height:32px;border:0;border-radius:6px;display:grid;place-items:center;color:var(--bg);background:var(--good);padding:0;min-width:22px}.evb.nap{background:var(--goal-sleep)}
  .track u{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--ink);border-radius:1px;opacity:.85;pointer-events:none}
  .none{position:absolute;inset:0;display:grid;place-items:center;font:500 12px Inter;text-align:center;line-height:1.1;color:var(--text2);font-style:normal}
  .val{text-align:right;font-size:17px;font-weight:600}.val small{display:block;font:500 12px Inter;color:var(--text2)}
- .axis{padding:0;min-height:22px}.ticks{height:1.7em;background:none;font:500 11px Inter}.ticks i{position:absolute;top:2px;transform:translateX(-50%);color:var(--text2);font-style:normal}.ticks i:first-child{transform:none}.ticks i:nth-child(5){transform:translateX(-100%)}.ticks b{position:absolute;top:0;font:600 12px/1.2 Inter;color:var(--text);background:#141a27;padding:1px 4px;border-radius:4px;white-space:nowrap}
+ .axis{padding:0;min-height:22px}.ticks{height:1.7em;background:none;font:500 11px Inter}.ticks i{position:absolute;top:2px;transform:translateX(-50%);color:var(--text2);font-style:normal}.ticks i:first-child{transform:none}.ticks i:nth-child(5){transform:translateX(-100%)}.ticks b{position:absolute;top:0;font:600 12px/1.2 Inter;color:var(--text);background:var(--card);padding:1px 4px;border-radius:4px;white-space:nowrap}
  .clock{margin:0 0 6px;font-size:12px;color:var(--text2)}
  .key{display:flex;flex-wrap:wrap;gap:4px 12px;margin:6px 0 0;font-size:12px;color:var(--text2)}.key span{display:inline-flex;gap:5px;align-items:center}.key i{width:8px;height:8px;border-radius:2px}
  @container(max-width:300px){.row{grid-template-columns:72px minmax(0,1fr) 52px}.lab b{font-size:12px}}

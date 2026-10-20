@@ -27,12 +27,12 @@
    {#each stops as floor,i}{@const offset=Math.max(0,Math.min(1,y(floor)/H))}<stop {offset} stop-color={colors.z[4-i]}/><stop {offset} stop-color={colors.z[3-i]}/>{/each}
   </linearGradient>
  </defs>
- {#each ticks as t}<line x1={L} x2={w-R} y1={y(t)} y2={y(t)} stroke="rgba(255,255,255,.06)"/><text class="t" data-thin="2" x={L-5} y={y(t)+4} text-anchor="end">{t}</text>{/each}
+ {#each ticks as t}<line x1={L} x2={w-R} y1={y(t)} y2={y(t)} stroke="var(--chart-grid)" stroke-width="var(--stroke-grid)"/><text class="t" data-thin="2" x={L-5} y={y(t)+4} text-anchor="end">{t}</text>{/each}
  <text class="u" x="2" y="12">bpm</text>
  {#each shownFloors as z}<line x1={L} x2={w-R} y1={y(z.f)} y2={y(z.f)} stroke={colors.z[z.zone-1]} stroke-opacity=".55" stroke-dasharray="3 4"/><text class="z" data-thin="1" x={w-R-2} y={y(z.f)-3} text-anchor="end" fill={colors.z[z.zone-1]}>Z{z.zone} {z.f}</text>{/each}
  {#if avg!=null && avg>lo && avg<hi}<line x1={L} x2={w-R} y1={y(avg)} y2={y(avg)} stroke={colors.ink} stroke-opacity=".7" stroke-dasharray="6 3"/><text class="z" data-thin="3" x={L+4} y={y(avg)-3} fill={colors.ink}>avg {Math.round(avg)}</text>{/if}
- {#if d}<path class="hr-trace" {d} fill="none" stroke={zoned?'url(#hr-zones)':colors.ink} stroke-width="2.2" stroke-linejoin="round"/>{/if}
+ {#if d}<path class="hr-trace" {d} fill="none" stroke={zoned?'url(#hr-zones)':colors.ink} stroke-width="var(--stroke-chart)" stroke-linejoin="round"/>{/if}
  {#if axis}{#each minutes as m,i}<text class="t" data-thin={i===0?undefined:'1'} x={x(m*60)} y={H-4} text-anchor={i===0?'start':'middle'}>{m}{i===minutes.length-1?' min':''}</text>{/each}{/if}
 </svg>
 </div>
-<style>.hr{width:100%}svg{display:block}.t{font:500 11px Inter;fill:#8E98AC}.u{font:500 12px Inter;fill:#8E98AC}.z{font:600 12px Inter;paint-order:stroke;stroke:#0B0F1A;stroke-width:3px}</style>
+<style>.hr{width:100%}svg{display:block}.t{font:500 11px Inter;fill:var(--text3)}.u{font:500 12px Inter;fill:var(--text3)}.z{font:600 12px Inter;paint-order:stroke;stroke:var(--bg);stroke-width:3px}</style>

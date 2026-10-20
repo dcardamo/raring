@@ -38,10 +38,10 @@
  .track{position:relative;height:12px;border-radius:6px;background:rgba(255,255,255,.06)}
  .track i{position:absolute;top:0;bottom:0;border-radius:3px}
  .track.lane2{height:6px;margin-top:5px;background:none}
- .track.lane2 b{position:absolute;top:-3px;width:3px;height:12px;margin-left:-3px;border-radius:2px;background:#EEF1F7}
- .wd{background:#FFB547}
- .bw{background:#A9C8FF}
- .sl,.track.lane2 i{background:#2F6FE0}
+ .track.lane2 b{position:absolute;top:-3px;width:3px;height:12px;margin-left:-3px;border-radius:2px;background:var(--text)}
+ .wd{background:var(--fair)}
+ .bw{background:var(--goal-sleep)}
+ .sl,.track.lane2 i{background:var(--deep)}
  u{position:absolute;top:-6px;bottom:-6px;width:3px;margin-left:-1.5px;border-radius:2px;background:var(--text);box-shadow:0 0 0 2px var(--card)}
  .ticks{position:relative;height:1.4em;margin-top:8px;font:500 11px Inter;color:var(--text2)}
  .ticks span{position:absolute;transform:translateX(-50%);white-space:nowrap}

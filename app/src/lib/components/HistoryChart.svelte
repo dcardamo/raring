@@ -134,18 +134,18 @@
  <button class="chart-surface" tabindex={compact?0:-1} aria-hidden={compact?undefined:true} aria-label={compact?`${activeLabel} chart. ${selectedText}. Left and right arrows choose a day.`:undefined} onclick={selectFromChart} onkeydown={compact?(e)=>{if(e.key==='ArrowLeft'&&index>0){e.preventDefault();offset++}else if(e.key==='ArrowRight'&&index<count-1){e.preventDefault();offset--}}:undefined}>
   <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${activeLabel}, ${count} ${bucketName}. ${present} recorded. Missing readings are gaps.`}>
    {#if shownBand}
-    <rect x={L} y={y(shownBand[1])} width={R-L} height={Math.max(1,y(shownBand[0])-y(shownBand[1]))} fill="#fff" opacity=".13"/>
+    <rect x={L} y={y(shownBand[1])} width={R-L} height={Math.max(1,y(shownBand[0])-y(shownBand[1]))} fill="var(--chart-band)"/>
     <line x1={L} x2={R} y1={y(shownBand[0])} y2={y(shownBand[0])} stroke="#fff" opacity=".2" stroke-dasharray="3 4"/>
     <line x1={L} x2={R} y1={y(shownBand[1])} y2={y(shownBand[1])} stroke="#fff" opacity=".2" stroke-dasharray="3 4"/>
    {/if}
    {#each axis.ticks as tick}
-    <text x="0" y={y(tick)+3} fill="#8E98AC" font-size="11">{show(tick)}</text>
-    <line x1={L} x2={R} y1={y(tick)} y2={y(tick)} stroke="currentColor" opacity=".08"/>
+    <text x="0" y={y(tick)+3} fill="var(--text3)" font-size="11">{show(tick)}</text>
+    <line x1={L} x2={R} y1={y(tick)} y2={y(tick)} stroke="var(--chart-grid)" stroke-width="var(--stroke-grid)"/>
    {/each}
-   {#if overlay}{#each axis2.ticks as tick}<text x={W} y={y(tick,scale2)+3} fill="#8E98AC" font-size="11" text-anchor="end">{trendValue(tick,overlay.unit,overlayDecimals)}</text>{/each}{/if}
+   {#if overlay}{#each axis2.ticks as tick}<text x={W} y={y(tick,scale2)+3} fill="var(--text3)" font-size="11" text-anchor="end">{trendValue(tick,overlay.unit,overlayDecimals)}</text>{/each}{/if}
    {#if count}<line x1={x(index)} x2={x(index)} y1="8" y2={H-12} stroke="currentColor" opacity=".35" stroke-dasharray="2 3"/>{/if}
    {#if previous}<path class="history-previous" d={path(previous.points,scale)} fill="none" stroke={colors.ink} stroke-opacity=".45" stroke-width="1.6" stroke-dasharray="4 4" stroke-linecap="round"/>{/if}
-   {#if !activeReadiness}<path d={path(points,scale)} fill="none" stroke={color} stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>{/if}
+   {#if !activeReadiness}<path d={path(points,scale)} fill="none" stroke={color} stroke-width="var(--stroke-chart)" stroke-linecap="round" stroke-linejoin="round"/>{/if}
    {#each points as p,i}
     {#if p.value!=null}
      {#if activeReadiness}
@@ -219,7 +219,7 @@
  .history-label{color:var(--text2);font-size:12px}
  .history-reading{display:flex;justify-content:space-between;align-items:center;margin:20px 0 14px;gap:12px}
  .reading-values{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
- .history-reading b{font-size:38px;font-weight:500}
+ .history-reading b{font-size:var(--type-reading);font-weight:500;letter-spacing:-.03em}
  .history-reading .overlay-reading b{font-size:24px;color:var(--text2)}
  .history-reading .reading-values span{color:var(--text2);font-size:12px;margin-left:5px}
  .history-reading>span{font-size:12px;text-align:right;flex:none;max-width:130px}
@@ -242,13 +242,13 @@
  .compare-label{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--text2)}
  .periods{display:flex;gap:3px;border:1px solid var(--line);border-radius:13px;padding:3px;flex:none;flex-wrap:wrap}
  .periods button{border:0;border-radius:10px;background:none;color:var(--text2);min-height:38px;padding:0 10px;font-size:12px}
- .periods .active{background:rgba(255,255,255,.1);color:var(--text)}
+ .periods .active{background:var(--surface3);color:var(--text)}
  .periods button:disabled{opacity:.4}
  .compare-options{flex:1}
  .compare-options button{flex:1}
  select{width:100%;min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);padding:0 12px;font:600 14px Inter,sans-serif}
  .period-averages{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}
- .period-averages div{background:rgba(255,255,255,.035);border-radius:14px;padding:10px 12px;min-width:0}
+ .period-averages div{background:rgba(255,255,255,.035);border-radius:var(--radius-control);padding:12px;min-width:0}
  .period-averages span,.period-averages em{display:block;font-size:12px;color:var(--text2);font-style:normal}
  .period-averages b{display:block;font-size:22px;font-weight:600;margin:4px 0 2px}
  .period-averages b.muted{color:var(--text2)}

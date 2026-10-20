@@ -7,7 +7,7 @@
  // goal as a dashed line, and the usual week as a band (middle half) with its
  // median. All values come from the core.
  let {lane: core, today, start}: {lane: WeekLane, today: number, start: string} = $props();
- const INFO = {cardio: {name: 'Cardio', unit: 'min', color: '#36C9C6'}, zone2: {name: GOALS.zone2.name, unit: 'min', color: GOALS.zone2.color},
+ const INFO = {cardio: {name: 'Cardio', unit: 'min', color: 'var(--goal-intensity)'}, zone2: {name: GOALS.zone2.name, unit: 'min', color: GOALS.zone2.color},
   highIntensity: {name: GOALS.highIntensity.name, unit: 'min', color: GOALS.highIntensity.color}, intensity: {name: GOALS.intensity.name, unit: 'min', color: GOALS.intensity.color},
   strength: {name: 'Strength', unit: 'sessions', color: GOALS.strength.color}} as const;
  let lane = $derived({...INFO[core.kind], goal: core.goal, cum: core.cumulative, usual: core.usual ? {lo: core.usual.low, mid: core.usual.median, hi: core.usual.high} : null});
@@ -32,8 +32,8 @@
  {#if unknown}<p class="unk">Awaiting data: an activity has no Garmin zones or a day hasn't synced.</p>{/if}
  <svg width={w} height={H} role="img" aria-label={`${lane.name}: ${now != null ? `${fmt(now)} ${lane.unit}` : 'unknown'} so far${lane.goal ? ` of a ${lane.goal} goal` : ''}${usualNow != null ? `; usual week by now ${usualNow}` : ''}`}>
   {#if band}<path d={band} fill={lane.color} opacity=".13"/><path d={mid} fill="none" stroke={lane.color} stroke-opacity=".5" stroke-dasharray="1.5 3"/>{/if}
-  {#if lane.goal}<line x1={L} x2={w - R} y1={y(lane.goal)} y2={y(lane.goal)} stroke="#E4E8F0" stroke-dasharray="4 3"/><text class="gl" x={w - R + 4} y={y(lane.goal) + 4}>goal</text>{/if}
-  <path d={line} fill="none" stroke={lane.color} stroke-width="2.4" stroke-linejoin="round"/>
+  {#if lane.goal}<line x1={L} x2={w - R} y1={y(lane.goal)} y2={y(lane.goal)} stroke="var(--ink)" stroke-dasharray="4 3"/><text class="gl" x={w - R + 4} y={y(lane.goal) + 4}>goal</text>{/if}
+  <path d={line} fill="none" stroke={lane.color} stroke-width="var(--stroke-chart)" stroke-linejoin="round"/>
   {#each lane.cum as v, i}{#if v != null}<circle cx={x(i)} cy={y(v)} r={i === today ? 4 : 2.5} fill={lane.color}/>{/if}{/each}
   {#if now != null}<text class="vl" data-thin="3" x={x(today)} y={y(now) - 8} text-anchor="middle">{fmt(now)}</text>{/if}
   <text class="yt" data-thin="2" x={L - 5} y={y(0) + 4} text-anchor="end">0</text><text class="yt" data-thin="2" x={L - 5} y={y(max / 1.08) + 4} text-anchor="end">{fmt(max / 1.08)}</text>

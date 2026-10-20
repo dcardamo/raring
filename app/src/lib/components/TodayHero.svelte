@@ -64,16 +64,16 @@
  {/if}
 </section>
 <style>
- .morning{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:12px;padding:11px 14px;margin:4px 0 6px;border-radius:22px;background:linear-gradient(115deg,rgba(92,155,255,.1),var(--card));border:1px solid var(--line);max-width:620px}
+ .morning{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:12px;padding:16px;margin:8px 0 16px;border-radius:var(--radius-card);background:var(--card);border:1px solid var(--line);max-width:620px}
  .morning button{padding:0;background:none;border:0;color:var(--text);text-align:left;min-width:0;min-height:44px}
- .ml{display:flex;gap:6px;align-items:center;font:600 11px Inter;color:#A9C8FF}
- .sleep-fact b{display:block;font-size:30px;font-weight:600;margin:4px 0 2px}.sleep-fact small,.ready-fact small{display:block;font-size:12px;color:var(--text2)}
- .need-bar{display:block;height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin:4px 0}.need-bar i{display:block;height:100%;background:#A9C8FF}
- .ready-fact{display:flex;flex-wrap:wrap;align-items:center;gap:10px;border-left:1px solid var(--line)!important;padding-left:12px!important}.ready-fact span{min-width:0}.ready-fact b{display:block;font:600 15px Outfit}
- .hero{margin:6px 0 4px;max-width:620px}.hero h2{font:600 23px/1.15 Outfit;margin:8px 4px 2px}
+ .ml{display:flex;gap:6px;align-items:center;font:500 12px Inter;color:var(--text2)}
+ .sleep-fact b{display:block;font-size:34px;font-weight:500;letter-spacing:-.035em;margin:8px 0 6px}.sleep-fact small,.ready-fact small{display:block;font-size:12px;color:var(--text2)}
+ .need-bar{display:block;height:4px;border-radius:2px;background:var(--chart-track);overflow:hidden;margin:6px 0}.need-bar i{display:block;height:100%;background:var(--ink)}
+ .ready-fact{display:flex;flex-wrap:wrap;align-items:center;gap:10px;border-left:1px solid var(--line)!important;padding-left:12px!important}.ready-fact span{min-width:0}.ready-fact b{display:block;font:600 14px Inter}
+ .hero{margin:6px 0 4px;max-width:620px}.hero h2{font:600 26px/1.2 var(--font-body);letter-spacing:-.035em;margin:16px 4px 6px}
  .line{margin:2px 4px;font-size:14px;color:var(--text)}.reason{margin:2px 4px 6px;font-size:13px;color:var(--text2)}
  .still{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;min-height:44px;margin:6px 0 0;padding:6px 4px;border:0;border-top:1px solid var(--line);background:none;color:var(--text2);font:500 13px Inter;text-align:left}
- .recognised{margin:10px 0 4px;padding:12px;border:1px solid rgba(61,220,151,.3);border-radius:18px;background:rgba(61,220,151,.06)}
+ .recognised{margin:12px 0 4px;padding:14px;border:1px solid var(--line);border-radius:var(--radius-control);background:var(--card)}
  .acts{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0}.acts button{width:auto;flex:1 1 140px;margin-top:0}
  /* In em, so larger system text stacks the halves before they overflow. */
  @container(max-width:22em){.morning{grid-template-columns:1fr}.ready-fact{border-left:0!important;padding-left:0!important}}

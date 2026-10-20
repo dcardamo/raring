@@ -91,7 +91,7 @@
   {#if trainingData.loadFocus.length}<h4>Load focus · last 4 weeks</h4><LoadFocus bars={trainingData.loadFocus}/>{/if}
  </Card>
  {#if loadDays.some(p => p.value != null)}<Card title="Acute load, last 30 days" extra="q-load-history">
-  <AxisChart points={loadDays.map((p, i) => ({x: (loadDays.length - 1 - i) % 7 === 0 ? dateLabel(p.start).replace(/^\S+ /, '') : '', v: p.value}))} kind="line" every={1} {...loadScale} band={acute?.band ?? null} bandLabel="optimal" color="#E4E8F0" height={130} label={`Garmin's acute load each day for 30 days${acute?.band ? `, optimal range ${acute.band[0]}–${acute.band[1]}` : ''}`}/>
+  <AxisChart points={loadDays.map((p, i) => ({x: (loadDays.length - 1 - i) % 7 === 0 ? dateLabel(p.start).replace(/^\S+ /, '') : '', v: p.value}))} kind="line" every={1} {...loadScale} band={acute?.band ?? null} bandLabel="optimal" color="var(--ink)" height={130} label={`Garmin's acute load each day for 30 days${acute?.band ? `, optimal range ${acute.band[0]}–${acute.band[1]}` : ''}`}/>
   <button class="go-row" onclick={() => navigate('metric/acuteLoad')}>History<Icon name="chevron" size={14}/></button>
  </Card>{/if}
  <Card title="Is my fitness improving?" extra="q-fitness" help="vo2max">
@@ -140,12 +140,12 @@
 {/if}
 </div>
 <style>
- .train-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;margin:10px 0;border:1px solid var(--line);border-radius:14px;background:var(--card);max-width:520px}
- .train-tabs button{min-height:40px;border-radius:10px;border:0;background:none;color:var(--text2);font:600 13px Inter}
- .train-tabs button[aria-selected=true]{background:rgba(255,255,255,.1);color:var(--text)}
+ .train-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;margin:16px 0;border:1px solid var(--line);border-radius:var(--radius-control);background:var(--bg);max-width:520px}
+ .train-tabs button{min-height:44px;border-radius:var(--radius-small);border:0;background:none;color:var(--text2);font:600 13px Inter}
+ .train-tabs button[aria-selected=true]{background:var(--surface3);color:var(--text)}
  .metrics :global(.metric-link span){display:inline-flex;align-items:center;gap:2px}
  .key{display:flex;flex-wrap:wrap;gap:4px 14px;margin:8px 0 0;font-size:12px;color:var(--text2)}.key span{display:inline-flex;align-items:center;gap:6px}
- .key i{display:inline-block;width:16px}.k-line{height:2.4px;background:var(--ink)}.k-band{height:10px;background:rgba(228,232,240,.18);border-radius:2px}.k-goal{border-top:1.5px dashed #E4E8F0}
+ .key i{display:inline-block;width:16px}.k-line{height:2.4px;background:var(--ink)}.k-band{height:10px;background:rgba(228,232,240,.18);border-radius:2px}.k-goal{border-top:1.5px dashed var(--ink)}
  .mix{display:flex;flex-wrap:wrap;gap:6px 14px;margin:8px 0 0;font-size:12.5px;color:var(--text2)}.mix span{display:inline-flex;gap:5px;align-items:center}.mix b{color:var(--text)}
  h4{font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);margin:14px 0 6px}
  .load{display:grid;gap:6px}.load>div:first-child{display:flex;gap:10px;align-items:baseline}.load small{font-size:12px;color:var(--text2)}.load b{font-size:24px}.load span{font:600 13px Inter}

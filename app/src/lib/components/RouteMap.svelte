@@ -21,5 +21,5 @@
  }
  let path=$derived(pathFor(points));
 </script>
-<svg class="map" viewBox="0 0 358 176" role="img" aria-label="Workout route">{#if route.length>1}<path d={path} stroke="#E4E8F0" stroke-opacity=".12" stroke-width="13" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d={path} stroke="#E4E8F0" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx={points[0][0]} cy={points[0][1]} r="7" fill="#E4E8F0" stroke="#0E1424" stroke-width="3"/>{:else}<text x="179" y="91" fill="#8E98AC" text-anchor="middle">No route recorded</text>{/if}</svg>
-<style>.map{width:100%;display:block;background:#0E1424;border-radius:16px}</style>
+<svg class="map" viewBox="0 0 358 176" role="img" aria-label="Workout route">{#if route.length>1}<path d={path} stroke="var(--ink)" stroke-opacity=".12" stroke-width="13" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d={path} stroke="var(--ink)" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx={points[0][0]} cy={points[0][1]} r="7" fill="var(--ink)" stroke="var(--card)" stroke-width="3"/>{:else}<text x="179" y="91" fill="var(--text3)" text-anchor="middle">No route recorded</text>{/if}</svg>
+<style>.map{width:100%;display:block;background:var(--card);border-radius:16px}</style>

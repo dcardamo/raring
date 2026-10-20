@@ -10,7 +10,7 @@
  // point is outlined; a measured zero is labelled at the baseline. The band's
  // label sits at the left, away from the last value's label at the right.
 
- let {points, kind = 'bars', unit = '', goal = null, goalLabel = 'goal', band = null, bandLabel = 'usual', height = 150, color = '#5CA8FF', fmt = (v: number) => String(Math.round(v)), values = kind === 'bars', yMin, yMax, label, every = 0, line = null, lineColor = '#E4E8F0', cap, goals = null, integer = false}: {
+ let {points, kind = 'bars', unit = '', goal = null, goalLabel = 'goal', band = null, bandLabel = 'usual', height = 150, color = 'var(--amount)', fmt = (v: number) => String(Math.round(v)), values = kind === 'bars', yMin, yMax, label, every = 0, line = null, lineColor = 'var(--ink)', cap, goals = null, integer = false}: {
   points: Point[], kind?: 'bars' | 'line' | 'dots', unit?: string, goal?: number | null, goalLabel?: string, band?: [number, number] | null, bandLabel?: string,
   height?: number, color?: string, fmt?: (v: number) => string, values?: boolean, yMin?: number, yMax?: number, label: string, every?: number, line?: (number | null)[] | null, lineColor?: string, cap?: number, goals?: (number | null)[] | null, integer?: boolean,
  } = $props();
@@ -39,9 +39,9 @@
 <div class="ax" bind:clientWidth={w} data-chart="axis" {@attach declutter}>
  {#if unit}<span class="yu">{unit}</span>{/if}
  <svg width={w} {height} role="img" aria-label={label}>
-  <defs><pattern id="axh" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="1.5" height="5" fill="#A9C8FF" opacity=".35"/></pattern></defs>
-  {#each ticks as t}<line x1={L} x2={w - R} y1={y(t)} y2={y(t)} stroke="rgba(255,255,255,.07)"/><text class="yt" data-thin="2" x={L - 5} y={y(t) + 3.5} text-anchor="end">{fmt(t)}</text>{/each}
-  {#if band}<rect x={L} width={w - L - R} y={y(band[1])} height={Math.max(1, y(band[0]) - y(band[1]))} fill="rgba(61,220,151,.09)"/><text class="bl" x={L + 4} y={y(band[1]) + 10}>{bandLabel} {fmt(band[0])}–{fmt(band[1])}</text>{/if}
+  <defs><pattern id="axh" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="1.5" height="5" fill="var(--goal-sleep)" opacity=".35"/></pattern></defs>
+  {#each ticks as t}<line x1={L} x2={w - R} y1={y(t)} y2={y(t)} stroke="var(--chart-grid)" stroke-width="var(--stroke-grid)"/><text class="yt" data-thin="2" x={L - 5} y={y(t) + 3.5} text-anchor="end">{fmt(t)}</text>{/each}
+  {#if band}<rect x={L} width={w - L - R} y={y(band[1])} height={Math.max(1, y(band[0]) - y(band[1]))} fill="var(--chart-band)"/><text class="bl" x={L + 4} y={y(band[1]) + 10}>{bandLabel} {fmt(band[0])}–{fmt(band[1])}</text>{/if}
   {#each points as p, i}
    {#if p.mark === 'ill' || p.mark === 'paused'}<rect x={x(i) - step / 2 + 1} y={T} width={step - 2} height={height - T - B} fill="url(#axh)"/>{/if}
    {#if p.mark === 'unknown'}<rect x={x(i) - step / 2 + 1} y={T} width={step - 2} height={height - T - B} fill="none" stroke="#6B7689" stroke-dasharray="2 3"/>{/if}
@@ -53,16 +53,16 @@
    {#if kind === 'dots' && p.v != null}<circle cx={x(i)} cy={y(p.v)} r={line ? 2.6 : 3.5} fill={color} opacity={line ? .55 : 1}/>{/if}
    {#if (points.length - 1 - i) % n === 0}<text class="xt" data-thin="1" x={i === points.length - 1 && x(i) > w - R - 22 ? w - 1 : x(i)} y={height - 5} text-anchor={i === points.length - 1 && x(i) > w - R - 22 ? 'end' : 'middle'}>{p.x}</text>{/if}
   {/each}
-  {#if kind === 'line'}<path d={path} fill="none" stroke={color} stroke-width="2"/>{#if last >= 0}<circle cx={x(last)} cy={y(points[last].v!)} r="3.5" fill={color}/>{/if}{/if}
+  {#if kind === 'line'}<path d={path} fill="none" stroke={color} stroke-width="var(--stroke-chart)"/>{#if last >= 0}<circle cx={x(last)} cy={y(points[last].v!)} r="3.5" fill={color}/>{/if}{/if}
   {#if (kind !== 'bars') && last >= 0 && !line}<text class="vl" x={Math.min(w - R - 2, x(last))} y={y(points[last].v!) - 7} text-anchor={x(last) > w - 40 ? 'end' : 'middle'}>{fmt(points[last].v!)}</text>{/if}
-  {#if line2}<path d={line2} fill="none" stroke={lineColor} stroke-width="2.4" stroke-linejoin="round"/>{/if}
-  {#if goalPath}<path d={goalPath} fill="none" stroke="#E4E8F0" stroke-dasharray="4 3" stroke-width="1.2"/>{/if}
-  {#if goal != null}<line x1={L} x2={w - R} y1={y(goal)} y2={y(goal)} stroke="#E4E8F0" stroke-dasharray="4 3" stroke-width="1.2"/><text class="gl" x={w - R - 2} y={y(goal) - 4} text-anchor="end" paint-order="stroke" stroke="#0E1424" stroke-width="3">{goalLabel} {fmt(goal)}</text>{/if}
+  {#if line2}<path d={line2} fill="none" stroke={lineColor} stroke-width="var(--stroke-chart)" stroke-linejoin="round"/>{/if}
+  {#if goalPath}<path d={goalPath} fill="none" stroke="var(--ink)" stroke-dasharray="4 3" stroke-width="1.2"/>{/if}
+  {#if goal != null}<line x1={L} x2={w - R} y1={y(goal)} y2={y(goal)} stroke="var(--ink)" stroke-dasharray="4 3" stroke-width="1.2"/><text class="gl" x={w - R - 2} y={y(goal) - 4} text-anchor="end" paint-order="stroke" stroke="var(--card)" stroke-width="3">{goalLabel} {fmt(goal)}</text>{/if}
  </svg>
 </div>
 <style>
  .ax{width:100%;min-width:0}.ax svg{display:block}
  text{font-family:Inter,sans-serif}
  .yt,.xt{font-size:11px;fill:var(--text2)}.yu{display:block;margin-bottom:2px;font-size:12px;color:var(--text2)}
- .vl{font:600 11px Outfit,Inter;fill:var(--text)}.gl{font:600 12px Inter;fill:var(--text2)}.bl{font:500 12px Inter;fill:#3DDC97}
+ .vl{font:500 12px Outfit,Inter;fill:var(--text)}.gl{font:600 12px Inter;fill:var(--text2)}.bl{font:500 12px Inter;fill:var(--text2)}
 </style>

@@ -28,7 +28,7 @@
   <NestedRings rings={board.weekRings} size={compact ? 76 : 92} stroke={compact ? 5.5 : 6.5} gap={2} label={`This week: ${lines.map(x => `${GOALS[x.l.kind].name} ${x.text}`).join('; ')}`}/>
   <ul>
    {#each lines as {l, text, was}}<li style:--c={GOALS[l.kind].color}><i class:o={l.observation}></i><span><b>{GOALS[l.kind].name}</b> {text}{#if was}<small class="was">{was}</small>{/if}</span></li>{/each}
-   {#if board.sleepScore}<li style:--c="#A9C8FF"><i class="o"></i><span><b>Sleep Score</b> avg <span class="n">{board.sleepScore.average ?? '—'}</span> · target {board.sleepScore.target} <small>Garmin reading</small></span></li>{/if}
+   {#if board.sleepScore}<li style:--c="var(--goal-sleep)"><i class="o"></i><span><b>Sleep Score</b> avg <span class="n">{board.sleepScore.average ?? '—'}</span> · target {board.sleepScore.target} <small>Garmin reading</small></span></li>{/if}
   </ul>
  </div>
 {:else}

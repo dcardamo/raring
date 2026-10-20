@@ -2,7 +2,7 @@
  // Navigation glyphs beside the metric icon set.
  let {name, size = 22}: {name: 'today' | 'plan' | 'progress' | 'training' | 'health' | 'settings' | 'adapt' | 'search' | 'lock' | 'offline' | 'calendar' | 'flag' | 'diamond', size?: number} = $props();
 </script>
-<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="var(--stroke-icon)" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
  {#if name === 'training'}<path d="M13 2L4 14h7l-1 8 10-12h-8l1-8z"/>
  {:else if name === 'health'}<path d="M12 21S3 15 3 8.5a4.5 4.5 0 0 1 9-1 4.5 4.5 0 0 1 9 1C21 15 12 21 12 21z"/>
  {:else if name === 'today'}<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4L6 18M18 6l1.4-1.4"/>

@@ -11,7 +11,7 @@
  // the fields this sport and watch recorded. Values come from the core.
  let {workout, navigate}: {workout: WorkoutView, navigate: (route: string) => void} = $props();
  const NAME: Record<StreamKind, string> = {speed: 'Speed', elevation: 'Elevation', cadence: 'Cadence', power: 'Power', respiration: 'Breathing rate', stamina: 'Stamina', performanceCondition: 'Performance condition', temperature: 'Watch temperature'};
- const COLOR: Record<StreamKind, string> = {speed: '#36C9C6', elevation: '#D9C089', cadence: '#A48BFF', power: '#FFB547', respiration: '#A9C8FF', stamina: '#3DDC97', performanceCondition: '#E4E8F0', temperature: '#FF8A5C'};
+ const COLOR: Record<StreamKind, string> = {speed: 'var(--goal-intensity)', elevation: '#D9C089', cadence: '#A48BFF', power: 'var(--fair)', respiration: 'var(--goal-sleep)', stamina: 'var(--good)', performanceCondition: 'var(--ink)', temperature: 'var(--goal-high)'};
  let along = $derived(workout.along);
  let ride = $derived(workout.summary.icon === 'bike');
  let unit = $derived(workout.summary.distanceUnit);

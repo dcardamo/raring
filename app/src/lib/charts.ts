@@ -1,4 +1,6 @@
-export const colors = {good:'#3DDC97',fair:'#FFB547',poor:'#FF6B6B',amount:'#5CA8FF',ink:'#E4E8F0',secondary:'#B4BCCB',deep:'#2F6FE0',light:'#5C9BFF',rem:'#A9C8FF',awake:'#E4E8F0',z:['#7D879C','#5CA8FF','#FFD666','#FF9F43','#FF6B6B']} as const;
+// Semantic palette, mirrored in app.css and checked by design-tokens.test.ts.
+export const colors = {good:'#91CFA6',fair:'#E7BC78',poor:'#EE958D',amount:'#93B6E1',ink:'#F4F1EA',secondary:'#C2C8D1',deep:'#6C92C2',light:'#A4BFDF',rem:'#CCD9EB',awake:'#F4F1EA',z:['#A1ABB9','#93B6E1','#E7CD84','#E5A16D','#EE958D']} as const;
+export const goalColors = {strength:'#DCA5C7',zone2:colors.amount,highIntensity:'#E5A16D',intensity:'#8ECAC2',sleep:'#BDCBE7'} as const;
 export const toneColor=(tone:string)=>tone==='poor'?colors.poor:tone==='fair'?colors.fair:tone==='neutral'?colors.secondary:colors.good;
 // Body Battery has no tone in the view contract; only its display color is bucketed.
 export const batteryColor=(value:number)=>value>=70?colors.good:value>=30?colors.fair:colors.poor;
