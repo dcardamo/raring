@@ -58,12 +58,11 @@ pub fn timeline(store: &Store, view: &TodayView, today: NaiveDate, now: DateTime
     let clock_change = (day_minutes - 1440.).abs() >= 1.;
     let clip = |a: f64, b: f64| (b > 0. && a < limit).then_some((a.max(0.), b.min(limit)));
     // Garmin files a night under the morning it ends.
-    let night = screens::sleep_view(store, &date);
-    let start = night.start_local.as_deref().and_then(|s| minute_of(s, midnight));
+    let night = screens::sleep_row(store, &date).unwrap_or(serde_json::Value::Null);
+    let start = screens::local_time(screens::sleep(&night), &["sleepStartTimestampLocal"]).and_then(|s| minute_of(&s, midnight));
     let sleep = start
         .map(|start| {
-            night
-                .stages
+            screens::stages(&night)
                 .iter()
                 .filter_map(|s| {
                     let (a, b) = clip(start + s.start_min, start + s.start_min + s.minutes)?;
@@ -125,7 +124,7 @@ pub fn timeline(store: &Store, view: &TodayView, today: NaiveDate, now: DateTime
         now_min,
         upload_min,
         sleep,
-        asleep_min: night.asleep_min,
+        asleep_min: screens::asleep_min(&night),
         body_battery,
         body_battery_now,
         stress_average: stress.average,

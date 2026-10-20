@@ -273,7 +273,7 @@ pub(crate) fn night_met(store: &Store, local: &LocalRecords, t: &GoalTargets, da
             if morning > today {
                 return None;
             }
-            let raw = store.get("sleep", &morning.to_string())?;
+            let raw = screens::sleep_row(store, &morning.to_string())?;
             let asleep = screens::local_time(screens::sleep(&raw), &["sleepStartTimestampLocal"]).and_then(|t| parse_local(&t))?;
             let at = chrono::NaiveTime::parse_from_str(t.sleep_time.as_deref()?, "%H:%M").ok()?;
             // A chosen time before noon falls after midnight.
@@ -528,7 +528,7 @@ pub fn board_with(store: &Store, local: &LocalRecords, anchor: NaiveDate, today:
                 recordings: day_recs.iter().map(|c| c.rec.id.clone()).collect(),
                 items: day_items.iter().map(|p| p.intention.id.clone()).collect(),
                 garmin: (garmin.iter().filter(|g| g.date == ds).count() + coach_sessions.iter().filter(|c| c.date == ds).count()) as u32,
-                sleep_score: (!future).then(|| store.get("sleep", &ds)).flatten().and_then(|raw| screens::sscore(&raw)),
+                sleep_score: (!future).then(|| screens::sleep_row(store, &ds)).flatten().and_then(|raw| screens::sscore(&raw)),
             }
         })
         .collect();

@@ -198,11 +198,61 @@ fn iso(t: NaiveDateTime) -> String {
 fn midnight(date: NaiveDate) -> NaiveDateTime {
     date.and_hms_opt(0, 0, 0).unwrap_or_default()
 }
+/// A night's per-sample arrays: nearly all of its row. Only the shown
+/// night's overnight charts (`overnight_samples`) read any of them.
+const NIGHT_SAMPLES: &[&str] = &[
+    "hrvData",
+    "sleepHeartRate",
+    "wellnessEpochRespirationDataDTOList",
+    "wellnessEpochSPO2DataDTOList",
+    "overnightSeries",
+    "sleepMovement",
+    "sleepStress",
+    "sleepBodyBattery",
+    "sleepRestlessMoments",
+    "wellnessEpochRespirationAveragesList",
+    "breathingDisruptionData",
+];
+/// A night's sleep row without its samples. Views read up to 30 nights each,
+/// so parsing whole rows would dominate their read time.
+pub(crate) fn sleep_row(store: &Store, date: &str) -> Option<Value> {
+    store.get_without("sleep", date, NIGHT_SAMPLES)
+}
 /// A sleep record with no data counts as no record.
 fn sleep_record(store: &Store, date: &str) -> Option<Value> {
-    store
-        .get("sleep", date)
-        .filter(|v| !v.is_null() && !sleep(v).is_null())
+    sleep_row(store, date).filter(|v| !v.is_null() && !sleep(v).is_null())
+}
+pub(crate) fn asleep_min(raw: &Value) -> Option<f64> {
+    num(sleep(raw), &[&["sleepTimeSeconds"]]).map(|s| s / 60.)
+}
+/// The night's stages from Garmin's sleep levels, timed from the first.
+pub(crate) fn stages(raw: &Value) -> Vec<StageSegment> {
+    raw["sleepLevels"]
+        .as_array()
+        .map(|levels| {
+            levels
+                .iter()
+                .filter_map(|item| {
+                    let stage = match item["activityLevel"].as_f64()? as u32 {
+                        0 => Stage::Deep,
+                        1 => Stage::Light,
+                        2 => Stage::Rem,
+                        3 => Stage::Awake,
+                        _ => return None,
+                    };
+                    let start = sleep_stage_time(item, "startGMT", "startTimestamp")?;
+                    let end = sleep_stage_time(item, "endGMT", "endTimestamp")?;
+                    let first = sleep_stage_time(levels.first()?, "startGMT", "startTimestamp")?;
+                    let divisor = 60_000.;
+                    Some(StageSegment {
+                        stage,
+                        start_min: (start - first) / divisor,
+                        minutes: (end - start) / divisor,
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default()
 }
 /// Garmin answers with an empty or all-null record before the watch has
 /// uploaded a night, so only a duration or a recorded start or end counts.
@@ -313,7 +363,7 @@ fn usual_wake(store: &Store, date: &str) -> Option<rules::WakeClock> {
 }
 fn recent_nights(store: &Store, date: &str) -> Vec<Value> {
     (0..14)
-        .filter_map(|i| store.get("sleep", &date_sub(date, i)))
+        .filter_map(|i| sleep_row(store, &date_sub(date, i)))
         .collect()
 }
 /// Minutes between the phone's UTC offset now and the latest recorded night's.
@@ -897,12 +947,15 @@ impl ActivityPayload {
         .to_ascii_lowercase()
     }
 }
-fn activity_payload(store: &Store, id: &str) -> Option<ActivityPayload> {
-    let detail = store.get("activity", id).unwrap_or(Value::Null);
-    let listed = store
+fn listed(store: &Store, id: &str) -> Value {
+    store
         .listed_activity(id)
         .or_else(|| store.get("listed", id))
-        .unwrap_or(Value::Null);
+        .unwrap_or(Value::Null)
+}
+fn activity_payload(store: &Store, id: &str) -> Option<ActivityPayload> {
+    let detail = store.get("activity", id).unwrap_or(Value::Null);
+    let listed = listed(store, id);
     (!detail.is_null() || !listed.is_null()).then_some(ActivityPayload { detail, listed })
 }
 /// Type key, minutes and kilometres. The stored detail answers first, as in
@@ -922,8 +975,13 @@ pub(crate) fn activity_brief(store: &Store, id: &str) -> Option<(String, f64, Op
     Some((payload.kind(), payload.number(&["duration"]).unwrap_or(0.) / 60., km))
 }
 pub(crate) fn activity_kind(store: &Store, id: &str) -> Option<String> {
-    activity_payload(store, id)
-        .map(|p| p.kind())
+    let detail = store.get("activity", id).unwrap_or(Value::Null);
+    // The stored detail's type wins in `ActivityPayload::kind`; the list
+    // pages are read only without one.
+    let typed = string(&detail, &[&["activityTypeDTO", "typeKey"], &["activityType", "typeKey"]]).is_some();
+    let listed = if typed { Value::Null } else { listed(store, id) };
+    (!detail.is_null() || !listed.is_null())
+        .then(|| ActivityPayload { detail, listed }.kind())
         .filter(|k| !k.is_empty())
 }
 
@@ -1080,9 +1138,7 @@ fn vital_value(store: &Store, kind: VitalKind, date: &str) -> Option<f64> {
         ),
         VitalKind::Spo2 => ("spo2", &[&["averageSpO2"], &["sleepSpO2"]]),
         VitalKind::SkinTemp => {
-            return store
-                .get("sleep", date)
-                .and_then(|v| night_value(&v, Night::SkinTemp))
+            return sleep_row(store, date).and_then(|v| night_value(&v, Night::SkinTemp))
         }
     };
     store.get(source, date).and_then(|v| num(&v, paths))
@@ -1148,7 +1204,7 @@ fn night_vitals(store: &Store, date: &str, vitals: &VitalsCard) -> NightVitals {
         let calibrating = m["status"].as_str() == Some("ONBOARDING");
         night_reading(finite_number(&m["value"]), "bpm", garmin_range(&m), VitalRangeSource::Garmin, calibrating, true)
     } else {
-        let night = |d: &str| store.get("sleep", d).and_then(|v| night_value(&v, Night::HeartRate));
+        let night = |d: &str| sleep_row(store, d).and_then(|v| night_value(&v, Night::HeartRate));
         let history: Vec<f64> = (0..30).filter_map(|i| night(&date_sub(date, i))).collect();
         night_reading(night(date), "bpm", rules::normal(&history), VitalRangeSource::Raring, false, true)
     };
@@ -1476,7 +1532,7 @@ pub fn heart_rate_day(store: &Store, date: &str) -> HeartRateDay {
     let mut activities = Vec::new();
     if let Some(start) = start {
         for wake_day in [date.to_owned(), date_sub(date, -1)] {
-            let Some(record) = store.get("sleep", &wake_day) else { continue };
+            let Some(record) = sleep_row(store, &wake_day) else { continue };
             let night = sleep(&record);
             let field = |kind: &str| utc_millis(&night[format!("sleep{kind}TimestampGMT")])
                 .or_else(|| offset.and_then(|zone| local_millis(night, &format!("sleep{kind}TimestampLocal")).map(|t| t-zone)));
@@ -1533,7 +1589,7 @@ pub fn stress(store: &Store, date: &str) -> StressCard {
         .ok()
         .and_then(|d| d.and_hms_opt(0, 0, 0));
     let minute = |field: &str| {
-        let time = local_time(sleep(&store.get("sleep", date)?), &[field])?;
+        let time = local_time(sleep(&sleep_row(store, date)?), &[field])?;
         let time = NaiveDateTime::parse_from_str(&time, "%Y-%m-%dT%H:%M:%S%.f").ok()?;
         Some((time - midnight?).num_minutes() as f64)
     };
@@ -1580,7 +1636,7 @@ fn has_night(store: &Store, date: &str) -> bool {
     store
         .get("readiness", date)
         .is_some_and(|r| current_rscore(&r).is_some())
-        || store.get("sleep", date).is_some_and(|s| recorded_sleep(&s))
+        || sleep_row(store, date).is_some_and(|s| recorded_sleep(&s))
 }
 /// The day the screens show. Garmin files a night under the day you wake, so
 /// the calendar day is empty until you wake and the watch syncs; until then
@@ -1677,8 +1733,7 @@ fn sleep_upload_stale(
 ) -> bool {
     if date != now.date_naive().to_string()
         || now.hour() < 10
-        || store
-            .get("sleep", date)
+        || sleep_row(store, date)
             .is_some_and(|s| num(sleep(&s), &[&["sleepTimeSeconds"]]).is_some_and(|n| n > 0.))
     {
         return false;
@@ -1686,9 +1741,7 @@ fn sleep_upload_stale(
     let Some(uploaded) = uploaded else {
         return false;
     };
-    let yesterday = store
-        .get("sleep", &date_sub(date, 1))
-        .unwrap_or(Value::Null);
+    let yesterday = sleep_row(store, &date_sub(date, 1)).unwrap_or(Value::Null);
     let Some(wake) = local_time(sleep(&yesterday), &["sleepEndTimestampLocal"])
         .and_then(|s| NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%.f").ok())
     else {
@@ -1765,7 +1818,7 @@ pub fn today_at(store: &Store, date: &str, now: DateTime<FixedOffset>) -> TodayV
 /// Explicit historical reads use `today_at`, which anchors both to `date`.
 pub fn today_at_calendar(store: &Store, date: &str, now: DateTime<FixedOffset>, calendar: NaiveDate) -> TodayView {
     let r = store.get("readiness", date).unwrap_or(Value::Null);
-    let s = store.get("sleep", date).unwrap_or(Value::Null);
+    let s = sleep_row(store, date).unwrap_or(Value::Null);
     let t = store.get("training", date).unwrap_or(Value::Null);
     let h = store.get("hrv", date).unwrap_or(Value::Null);
     let hs = hrv(&h);
@@ -2083,20 +2136,21 @@ pub(crate) fn workout_detail(store: &Store, id: &str) -> DayDetail {
     detail_state(store, id, &[DayDetailPart::Workout])
 }
 pub fn sleep_view(store: &Store, date: &str) -> SleepView {
+    // Only the shown night is read whole: its overnight charts draw its samples.
     let raw = store.get("sleep", date).unwrap_or(Value::Null);
     let v = sleep(&raw);
     let score = sscore(&raw);
-    let asleep = num(v, &[&["sleepTimeSeconds"]]).map(|s| s / 60.);
+    let asleep = asleep_min(&raw);
     let need = sleep_need(&raw);
     let (naps, naps_state) = crate::naps_journal::naps(store, date);
     let stage_history: Vec<Value> = (0..30)
-        .filter_map(|i| store.get("sleep", &date_sub(date, i)))
+        .filter_map(|i| sleep_row(store, &date_sub(date, i)))
         .collect();
     let nights: Vec<(String, Value)> = (0..14)
         .rev()
         .filter_map(|i| {
             let day = date_sub(date, i);
-            store.get("sleep", &day).map(|v| (day, v))
+            sleep_row(store, &day).map(|v| (day, v))
         })
         .collect();
     let windows: Vec<NightWindow> = nights
@@ -2140,33 +2194,7 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
         asleep_min: asleep,
         need_min: need,
         headline,
-        stages: raw["sleepLevels"]
-            .as_array()
-            .map(|levels| {
-                levels
-                    .iter()
-                    .filter_map(|item| {
-                        let stage = match item["activityLevel"].as_f64()? as u32 {
-                            0 => Stage::Deep,
-                            1 => Stage::Light,
-                            2 => Stage::Rem,
-                            3 => Stage::Awake,
-                            _ => return None,
-                        };
-                        let start = sleep_stage_time(item, "startGMT", "startTimestamp")?;
-                        let end = sleep_stage_time(item, "endGMT", "endTimestamp")?;
-                        let first =
-                            sleep_stage_time(levels.first()?, "startGMT", "startTimestamp")?;
-                        let divisor = 60_000.;
-                        Some(StageSegment {
-                            stage,
-                            start_min: (start - first) / divisor,
-                            minutes: (end - start) / divisor,
-                        })
-                    })
-                    .collect()
-            })
-            .unwrap_or_default(),
+        stages: stages(&raw),
         totals: [
             (Stage::Awake, "awakeSleepSeconds"),
             (Stage::Rem, "remSleepSeconds"),
@@ -2261,9 +2289,9 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
             .rev()
             .map(|i| {
                 let day = date_sub(date, i);
-                let raw = store.get("sleep", &day);
+                let raw = sleep_row(store, &day);
                 NightNeed {
-                    asleep_min: raw.as_ref().and_then(|r| num(sleep(r), &[&["sleepTimeSeconds"]])).map(|s| s / 60.),
+                    asleep_min: raw.as_ref().and_then(asleep_min),
                     need_min: raw.as_ref().and_then(sleep_need),
                     date: day,
                 }
@@ -3070,8 +3098,8 @@ pub fn checkin(store: &Store, monday: &str) -> CheckinView {
     let last = date_sub(monday, 1);
     let nights: Vec<(f64, f64)> = (1..=7)
         .filter_map(|i| {
-            let s = sleep_view(store, &date_sub(monday, i));
-            s.asleep_min.zip(s.need_min).filter(|(_, n)| *n > 0.)
+            let raw = sleep_row(store, &date_sub(monday, i))?;
+            asleep_min(&raw).zip(sleep_need(&raw)).filter(|(_, n)| *n > 0.)
         })
         .collect();
     let mean = |v: Vec<f64>| (!v.is_empty()).then(|| v.iter().sum::<f64>() / v.len() as f64);

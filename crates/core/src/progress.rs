@@ -165,7 +165,7 @@ fn sleep_need(store: &Store, from: NaiveDate, end: NaiveDate) -> Option<SleepNee
     let mut nights = 0;
     let mut below = 0;
     for d in days(from, end) {
-        let Some(raw) = store.get("sleep", &d.to_string()) else { continue };
+        let Some(raw) = screens::sleep_row(store, &d.to_string()) else { continue };
         let s = screens::sleep(&raw);
         let asleep = number(s, "sleepTimeSeconds").map(|v| v / 60.);
         let need = screens::sleep_need(&raw);

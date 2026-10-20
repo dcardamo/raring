@@ -36,6 +36,26 @@ impl SettingsTx<'_> {
     }
 }
 
+/// Builds a JSON object without the named top-level fields.
+struct Without<'a>(&'a [&'a str]);
+impl<'de> serde::de::Visitor<'de> for Without<'_> {
+    type Value = Value;
+    fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.write_str("a JSON object")
+    }
+    fn visit_map<A: serde::de::MapAccess<'de>>(self, mut map: A) -> Result<Value, A::Error> {
+        let mut object = serde_json::Map::new();
+        while let Some(key) = map.next_key::<String>()? {
+            if self.0.contains(&key.as_str()) {
+                map.next_value::<serde::de::IgnoredAny>()?;
+            } else {
+                object.insert(key, map.next_value()?);
+            }
+        }
+        Ok(Value::Object(object))
+    }
+}
+
 const SESSION_KEY: &str = "account_session";
 const PENDING_KEY: &str = "account_pending";
 impl Store {
@@ -113,7 +133,7 @@ impl Store {
         )?;
         Ok(changed != 0)
     }
-    pub fn get(&self, endpoint: &str, key: &str) -> Option<Value> {
+    fn json(&self, endpoint: &str, key: &str) -> Option<String> {
         let db = self.db.lock().unwrap();
         db.query_row(
             "SELECT json FROM raw WHERE endpoint=?1 AND key=?2",
@@ -123,7 +143,19 @@ impl Store {
         .optional()
         .ok()
         .flatten()
-        .and_then(|s| serde_json::from_str(&s).ok())
+    }
+    pub fn get(&self, endpoint: &str, key: &str) -> Option<Value> {
+        self.json(endpoint, key).and_then(|s| serde_json::from_str(&s).ok())
+    }
+    /// `get` without the named top-level fields, which are skipped unparsed.
+    /// A row that isn't an object is returned whole.
+    pub fn get_without(&self, endpoint: &str, key: &str, skip: &[&str]) -> Option<Value> {
+        let json = self.json(endpoint, key)?;
+        let mut de = serde_json::Deserializer::from_str(&json);
+        serde::Deserializer::deserialize_map(&mut de, Without(skip))
+            .and_then(|v| de.end().map(|()| v))
+            .ok()
+            .or_else(|| serde_json::from_str(&json).ok())
     }
     pub fn history(&self, endpoint: &str, through: &str, limit: usize) -> Vec<(String, Value)> {
         let db = self.db.lock().unwrap();
@@ -671,5 +703,29 @@ impl Store {
     }
     pub fn forget_account(&self) -> rusqlite::Result<()> {
         self.db.lock().unwrap().execute_batch("DELETE FROM raw; DELETE FROM activities; DELETE FROM notifications; DELETE FROM cursors; DELETE FROM settings;")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn get_without_skips_only_the_named_top_level_fields() {
+        let store = Store::open(":memory:").unwrap();
+        let night = json!({"dailySleepDTO": {"hrvData": 1, "sleepTimeSeconds": 60}, "hrvData": [{"value": 50}], "sleepLevels": [1]});
+        store.put("sleep", "d", "now", &night).unwrap();
+        assert_eq!(
+            store.get_without("sleep", "d", &["hrvData"]),
+            Some(json!({"dailySleepDTO": {"hrvData": 1, "sleepTimeSeconds": 60}, "sleepLevels": [1]}))
+        );
+        assert_eq!(store.get_without("sleep", "d", &[]), store.get("sleep", "d"));
+        // Rows that aren't objects come back whole.
+        store.put("sleep", "null", "now", &Value::Null).unwrap();
+        assert_eq!(store.get_without("sleep", "null", &["hrvData"]), Some(Value::Null));
+        store.put("sleep", "list", "now", &json!([{"hrvData": 1}])).unwrap();
+        assert_eq!(store.get_without("sleep", "list", &["hrvData"]), Some(json!([{"hrvData": 1}])));
+        assert_eq!(store.get_without("sleep", "absent", &["hrvData"]), None);
     }
 }

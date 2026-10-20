@@ -1,7 +1,7 @@
 //! The weekly plan: local targets measured with Garmin's numbers, plus
 //! Raring's pace, timing and completion math (docs/spec.md, Rules).
 use crate::{
-    screens::{activity_kind, local_time, recorded_sleep, sleep, sleep_plan},
+    screens::{activity_kind, local_time, recorded_sleep, sleep, sleep_plan, sleep_row},
     store::Store,
     sync::activities_listed,
     view::*,
@@ -265,7 +265,7 @@ pub fn capture_sleep_plan(store: &Store, now: DateTime<Local>) -> rusqlite::Resu
 /// Missing prospective evidence is excluded, never a miss. The capture must
 /// precede the actual sleep start too (a later upload can reveal early sleep).
 pub(crate) fn asleep_on_time(store: &Store, morning: NaiveDate) -> Option<bool> {
-    let raw = store.get("sleep", &morning.to_string())?;
+    let raw = sleep_row(store, &morning.to_string())?;
     let parse = |t: &str| NaiveDateTime::parse_from_str(t, "%Y-%m-%dT%H:%M:%S%.f").ok();
     let asleep = local_time(sleep(&raw), &["sleepStartTimestampLocal"]).and_then(|t| parse(&t))?;
     let saved: SavedNight =

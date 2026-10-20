@@ -48,3 +48,14 @@ fn the_focus_names_garmins_metric() {
     store.put("load_focus", &day(1), "now", &json!({"lowAerobic": {"value": 100, "optimalMin": 300, "optimalMax": 600}})).unwrap();
     assert_eq!(screens::checkin(&store, MONDAY).focus.as_deref(), Some("Garmin's load focus: low aerobic was furthest below its range"));
 }
+
+#[test]
+fn the_sleep_focus_compares_each_night_with_its_need() {
+    let store = Store::open(":memory:").unwrap();
+    let night = json!({"dailySleepDTO": {"sleepTimeSeconds": 6 * 3600, "sleepNeed": {"actual": 480}},
+        "sleepMovement": [{"activityLevel": 1.0}], "hrvData": [{"value": 50}]});
+    for i in 1..=7 {
+        store.put("sleep", &day(i), "now", &night).unwrap();
+    }
+    assert_eq!(screens::checkin(&store, MONDAY).focus.as_deref(), Some("Sleep: about 120 min a night under Garmin's sleep need"));
+}
