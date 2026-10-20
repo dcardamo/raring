@@ -10,10 +10,12 @@
  import type {StrengthView} from '../generated/StrengthView';
  import type {LiftSeries} from '../generated/LiftSeries';
  import type {TrendRange} from '../generated/TrendRange';
+import type {FigureChoice} from '../generated/FigureChoice';
  import type {MuscleRange} from '../generated/MuscleRange';
  import RangePicker from './RangePicker.svelte';
  // `liftSeries` reads one exercise over a range and `muscles` sets per muscle over a range, both from the core.
- let {view,navigate,liftSeries,muscles}:{view:StrengthView,navigate:(route:string)=>void,liftSeries:(key:string,range:TrendRange)=>Promise<LiftSeries|null>,muscles:(range:TrendRange)=>Promise<MuscleRange|null>}=$props();
+ let {view,navigate,liftSeries,muscles,figureChoice,setFigure}:{view:StrengthView,navigate:(route:string)=>void,liftSeries:(key:string,range:TrendRange)=>Promise<LiftSeries|null>,muscles:(range:TrendRange)=>Promise<MuscleRange|null>,figureChoice:FigureChoice,setFigure:(figure:FigureChoice)=>void}=$props();
+const figures:[FigureChoice,string][]=[['profile','Profile'],['female','Female'],['male','Male']];
  let muscleRange=$state<TrendRange>('days30'),muscleView=$state<MuscleRange|null>(null),muscleRequest=0;
  $effect(()=>{const r=muscleRange,id=++muscleRequest;void muscles(r).then(v=>{if(id===muscleRequest)muscleView=v}).catch(()=>{if(id===muscleRequest)muscleView=null})});
  let picked=$state<string|null>(null);
@@ -64,7 +66,7 @@
   </section>
  </div>
  <div class="col">
-  <section class="card"><h3><span>Muscles</span></h3><RangePicker value={muscleRange} label="Muscle range" onchange={r=>muscleRange=r}/>
+  <section class="card"><h3><span>Muscles</span></h3><RangePicker value={muscleRange} label="Muscle range" onchange={r=>muscleRange=r}/><div class="fig-row"><span class="fig-label">Figure</span><span class="segc" role="group" aria-label="Body map figure">{#each figures as [value,label]}<button class:on={figureChoice===value} aria-pressed={figureChoice===value} onclick={()=>setFigure(value)}>{label}</button>{/each}</span></div>
    {#if muscleView}<BodyMap figure={muscleView.figure} muscles={muscleView.muscles} max={Math.max(8,Math.round(muscleView.days/2))}/>{#if muscleView.gaps.length}<p class="dim">Few or no sets since {dateLabel(muscleView.from)}: {muscleView.gaps.map(m=>muscleNames[m]).join(', ')}</p>{/if}{/if}</section>
   {#if exercise}
    <div class="exchips" role="group" aria-label="Exercise">{#each view.exercises as e}<button class:on={e.key===exercise.key} aria-pressed={e.key===exercise.key} onclick={()=>pick(e.key)}>{e.name}</button>{/each}</div>
@@ -103,6 +105,8 @@
  .segc{display:inline-flex;background:rgba(255,255,255,.05);border-radius:10px;padding:2px;letter-spacing:0;text-transform:none}
  .segc button{border:0;background:none;color:var(--text2);font:600 12px Inter;padding:6px 10px;border-radius:8px;min-height:32px}
  .segc button.on{background:rgba(255,255,255,.12);color:var(--text)}
+ .fig-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px}
+ .fig-label{font:600 12px Inter;color:var(--text3)}
  .exchips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:12px 0 0}
  .exchips::-webkit-scrollbar{display:none}
  .exchips button{flex:none;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid var(--line);font:600 13px Inter;color:var(--text2);min-height:44px}

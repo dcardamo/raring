@@ -399,45 +399,12 @@ function strengthCard() {
     <div class="st-sum"><div><div class="big n">29</div><div class="small" style="color:#B4BCCB">sets · 2 sessions</div></div>${bodyMap("female", WEEK, {w: 150})}</div></div>`;
 }
 
-/* ---------- Strength intro ---------- */
-function introArt(step) {
-  if (step === 1) return `<svg width="220" height="190" viewBox="0 0 220 190"><rect x="80" y="2" width="60" height="34" rx="10" fill="#1A2030"/><rect x="80" y="154" width="60" height="34" rx="10" fill="#1A2030"/>
-    <circle cx="110" cy="95" r="70" fill="#121826" stroke="#2A3142" stroke-width="6"/><rect x="178" y="118" width="8" height="22" rx="3" fill="${C.ink}"/><rect x="178" y="58" width="8" height="18" rx="3" fill="#2A3142"/><rect x="34" y="70" width="8" height="18" rx="3" fill="#2A3142"/>
-    <circle cx="182" cy="129" r="17" fill="none" stroke="${C.ink}" stroke-opacity=".35" stroke-width="2"/><text x="205" y="160" fill="${C.ink}" font-family="Inter" font-size="12" font-weight="600" text-anchor="middle">Lap</text>
-    <text x="110" y="70" fill="#8E98AC" font-family="Inter" font-size="11" font-weight="600" letter-spacing="1.5" text-anchor="middle">SET 2</text><text x="110" y="112" fill="${C.ink}" font-family="Outfit" font-size="44" font-weight="600" text-anchor="middle">10</text><text x="110" y="132" fill="#B4BCCB" font-family="Inter" font-size="12" text-anchor="middle">reps · 60 kg</text></svg>`;
-  if (step === 2) return `<svg width="240" height="170" viewBox="0 0 240 170">${[[8, 1], [8, 1], [0, 2], [8, 1]].map(([r, k], i) => `<rect x="${30 + i * 50}" y="${120 - (r ? r * 11 : 4)}" width="34" height="${r ? r * 11 : 4}" rx="7" fill="${k === 2 ? C.fair : "rgba(228,232,240,.75)"}"/><text x="${47 + i * 50}" y="${112 - (r ? r * 11 : 4)}" fill="${k === 2 ? C.fair : C.ink}" font-family="Outfit" font-size="15" font-weight="600" text-anchor="middle">${r}</text>`).join("")}
-    <line x1="20" x2="220" y1="122" y2="122" stroke="rgba(255,255,255,.1)"/><circle cx="147" cy="150" r="13" fill="${C.fair}"/><path d="M147 143v8M147 155h.01" stroke="#0B0F1A" stroke-width="2.4" stroke-linecap="round"/></svg>`;
-  return `<svg width="250" height="150" viewBox="0 0 250 150"><rect x="14" y="30" width="54" height="94" rx="12" fill="#121826" stroke="#2A3142" stroke-width="3"/><rect x="24" y="48" width="34" height="6" rx="3" fill="${C.ink}"/><rect x="24" y="60" width="26" height="6" rx="3" fill="#2A3142"/><rect x="24" y="72" width="30" height="6" rx="3" fill="#2A3142"/>
-    <path d="M78 77h22" stroke="#8E98AC" stroke-width="2" stroke-dasharray="3 4"/><rect x="104" y="44" width="62" height="62" rx="14" fill="#121826" stroke="#2A3142" stroke-width="3"/><text x="135" y="68" fill="#8E98AC" font-family="Inter" font-size="10" font-weight="600" text-anchor="middle">SAT</text><text x="135" y="94" fill="${C.ink}" font-family="Outfit" font-size="26" font-weight="600" text-anchor="middle">18</text>
-    <path d="M172 77h22" stroke="#8E98AC" stroke-width="2" stroke-dasharray="3 4"/><circle cx="220" cy="77" r="24" fill="#121826" stroke="#2A3142" stroke-width="4"/><path d="M211 77h18M214 72v10M226 72v10" stroke="${C.ink}" stroke-width="2.4" stroke-linecap="round"/></svg>`;
-}
-const INTRO = [
-  ["Lift with your watch", "Start a Strength activity. Press lap at the end of each set. Your watch counts the reps."],
-  ["Fix it in a minute", "Watches miss and double reps. Raring flags the odd sets so you can fix them after your workout."],
-  ["Plan workouts here", "Build a workout and pick a day. Your watch gets it on its next sync, weights filled in."],
-];
-function intro(step) {
-  const dots = `<div class="ci-dots">${[1, 2, 3, 4].map(i => `<span class="${i <= step ? "on" : ""}"></span>`).join("")}</div>`;
-  if (step === 4) return shell(`
-    <header class="top"><div><div class="eyebrow">Strength · 4 of 4</div><h1>Set up</h1></div><button class="ibtn" aria-label="Close">${ico.close}</button></header>${dots}
-    <div class="card"><h3>Your watch</h3><div class="trow"><span class="g-i">${ico.watch}</span><div><b class="t">Forerunner 970</b><span>Records sets and gets workouts</span></div><span class="pill ok">${ico.check}Tested</span></div></div>
-    <div class="card"><h3>Body map</h3><div class="sexpick"><div class="on">${bodyMap("female", {Quads: 6, Glutes: 8, Back: 5, Chest: 3, Shoulders: 4}, {w: 130})}<span>${ico.check}Female</span></div><div>${bodyMap("male", {Quads: 6, Glutes: 8, Back: 5, Chest: 3, Shoulders: 4}, {w: 130})}<span>Male</span></div></div></div>
-    <div class="card"><h3>Weights</h3><div class="eqs"><div><span>Smallest plates</span>${stepper(1.25, "kg", "sm")}</div><div><span>Dumbbell steps</span>${stepper(2, "kg", "sm")}</div></div><div class="hintline">Kilograms, from your Garmin settings.</div></div>
-    <div class="card"><div class="trow"><span class="g-i">${ico.up}</span><div><b class="t">Suggest weights</b><span>Turn off per exercise any time</span></div>${sw(true)}</div></div>
-    <div class="intro-btns"><button class="btn primary block tap" data-go="strength-history">Done</button></div>`, "training", {modal: true});
-  const [t, p] = INTRO[step - 1];
-  return shell(`
-    <header class="top"><div><div class="eyebrow">Strength · ${step} of 4</div></div><button class="ibtn" aria-label="Close">${ico.close}</button></header>${dots}
-    <div class="intro"><div class="intro-art">${introArt(step)}</div><h1>${t}</h1><p>${p}</p></div>
-    <div class="intro-btns"><button class="btn primary block tap" data-go="intro-${step + 1}">Next</button><button class="btn ghost block">Skip</button></div>`, "training", {modal: true});
-}
-
 /* ---------- Help ---------- */
 const HELP = [
   ["Start here", [[ico.book, "How Raring reads Garmin"], [ico.sync, "Keep Garmin Connect syncing"]]],
   ["Your day", [[ico.gauge, "Readiness and today's call"], [ico.moon, "Tonight's asleep-by time"]]],
   ["Weekly plan", [[ico.target, "How targets count"], [ico.pause, "Rest days and paused weeks"]]],
-  ["Strength", [[ico.lift, "Getting started", "intro-1"], [ico.watch, "How sets are counted", "help-sheet"], [ico.pencil, "Fixing sets", "fix"], [ico.up, "Suggested weights"], [ico.lock, "Readiness brake"]]],
+  ["Strength", [[ico.watch, "Lift with your watch", "help-sheet"], [ico.watch, "How sets are counted", "help-sheet"], [ico.pencil, "Fixing sets", "fix"], [ico.up, "Suggested weights"], [ico.lock, "Readiness brake"]]],
   ["Watches and data", [[ico.watch, "Does my watch work?", "", true], [ico.shield, "Privacy"], [ico.save, "Backup and export"]]],
 ];
 function help() {
@@ -490,10 +457,6 @@ SCREENS.push(
   ["checkin", "Monday check-in", checkin, "phone", "Weekly plan"],
   ["plan", "Weekly plan", plan, "fold", "Weekly plan"],
   ["plan-setup", "Plan targets", planSetup, "desk", "Weekly plan"],
-  ["intro-1", "Strength intro 1", () => intro(1), "phone", "Strength"],
-  ["intro-2", "Strength intro 2", () => intro(2), "phone", "Strength"],
-  ["intro-3", "Strength intro 3", () => intro(3), "phone", "Strength"],
-  ["intro-4", "Strength intro 4", () => intro(4), "phone", "Strength"],
   ["strength-workout", "Strength workout", strengthWorkout, "phone", "Strength"],
   ["fix", "Fix sets", fixSets, "phone", "Strength"],
   ["strength-history", "Strength history", strengthHistory, "phone", "Strength"],

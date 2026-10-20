@@ -1,6 +1,6 @@
 //! Field patches must not replay another control's stale consent.
 use chrono::Local;
-use raring_core::{settings::SettingsPatch, store::Store, Raring};
+use raring_core::{settings::SettingsPatch, store::Store, view::FigureChoice, Raring};
 use serde_json::{json, Value};
 use std::{fs, path::PathBuf, sync::{mpsc, Arc}, thread};
 
@@ -16,6 +16,20 @@ fn fixture(name: &str) -> (PathBuf, Arc<Raring>) {
 }
 fn save(core: &Raring, value: Value) -> raring_core::Result<()> {
     core.patch_settings_for_account(patch(value), Some("101".into()))
+}
+
+#[test]
+fn the_body_map_figure_is_a_three_way_setting() {
+    let (dir, core) = fixture("figure");
+    assert_eq!(core.settings().body_figure, FigureChoice::Profile);
+    save(&core, json!({"bodyFigure": "male"})).unwrap();
+    assert_eq!(core.settings().body_figure, FigureChoice::Male);
+    save(&core, json!({"bodyFigure": "female"})).unwrap();
+    assert_eq!(core.settings().body_figure, FigureChoice::Female);
+    assert!(save(&core, json!({"bodyFigure": "boy"})).is_err(), "only Profile, Female or Male");
+    assert!(save(&core, json!({"bodyFigure": true})).is_err());
+    assert_eq!(core.settings().body_figure, FigureChoice::Female);
+    drop(core); fs::remove_dir_all(dir).unwrap();
 }
 
 #[test]

@@ -23,7 +23,7 @@ export const help:Record<typeof helpPages[number],HelpPage>={
   'One blue, faint to strong: more sets, stronger blue. It says how much, not how well.',
   'Gray means no sets for that muscle.',
   'Back includes lats, traps and lower back; arms include biceps, triceps and forearms; core is abs and obliques; hips are abductors and adductors.',
-  'The figure follows your Garmin profile.',
+  'The figure follows your Garmin profile until you pick Female or Male on Strength. Profile returns to Garmin\'s choice.',
  ]},
  'strength-watches':{title:'Does my watch work?',icon:'clock',intro:'Raring reads sets from your Garmin account, not from the watch.',steps:[
   'Forerunner 970: partly tested. Sets, rests, reps and miscount flags read back. A session with named exercises and weights recorded on the watch hasn\'t been checked yet.',

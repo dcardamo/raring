@@ -4,7 +4,7 @@ use raring_core::{
     screens,
     store::Store,
     strength, sync,
-    view::{Figure, Muscle, SetFlag, WeightUnit},
+    view::{Figure, FigureChoice, Muscle, SetFlag, WeightUnit},
 };
 use serde_json::{json, Value};
 use std::{
@@ -281,6 +281,27 @@ fn weeks_units_and_figure_follow_garmin_settings() {
     );
     let safe = strength::reduce_settings(&store.get("profile_settings", "me").unwrap());
     assert_eq!(strength::reduce_settings(&safe), safe);
+}
+
+#[test]
+fn strength_s_figure_picker_overrides_the_garmin_profile() {
+    let store = with_catalog();
+    store
+        .put("profile_settings", "me", "now", &json!({"userData": {"gender": "FEMALE"}}))
+        .unwrap();
+    session(&store, "1", "2025-03-04T18:00:00", vec![set("SQUAT", Some("GOBLET_SQUAT"), Some(8), 20_000.)]);
+    let figure = |store: &Store| screens::strength(store, "2025-03-04").unwrap().figure;
+    assert_eq!(figure(&store), Figure::Female, "the profile's figure until someone picks");
+    let mut settings = store.settings();
+    settings.body_figure = FigureChoice::Male;
+    store.set_settings(&settings).unwrap();
+    assert_eq!(figure(&store), Figure::Male);
+    settings.body_figure = FigureChoice::Female;
+    store.set_settings(&settings).unwrap();
+    assert_eq!(figure(&store), Figure::Female);
+    settings.body_figure = FigureChoice::Profile;
+    store.set_settings(&settings).unwrap();
+    assert_eq!(figure(&store), Figure::Female, "Profile returns to Garmin's figure");
 }
 
 #[test]

@@ -63,6 +63,7 @@
  import HealthDetail from './lib/screens/HealthDetail.svelte';
  import {help as helpContent,helpSections,GITHUB_QUESTIONS} from './lib/help';
  import type {StrengthView} from './lib/generated/StrengthView';
+ import type {FigureChoice} from './lib/generated/FigureChoice';
  import WhySheet from './lib/components/WhySheet.svelte';
  import Reconcile from './lib/components/Reconcile.svelte';
  import {closeSheet} from './lib/sheet';
@@ -368,6 +369,10 @@
   finally{exporting=false}
  }
 
+ // Strength's figure picker is a saved preference; the core applies it to every body map.
+ async function saveFigure(figure:FigureChoice){
+  if(await patchSettings({bodyFigure:figure})){clearViews();void refresh(true)}
+ }
  // An explicit Garmin read of one strength workout's sets, never on navigation.
  async function refreshStrength(id:string){
   const session=await api.refresh_strength(id);
@@ -440,7 +445,7 @@
 {:else if workoutData}
  {@const sets=workoutData.strength}<Header title={workoutData.summary.name} eyebrow={(sets?'Strength · ':'')+dateLabel(workoutData.summary.startLocal.slice(0,10))+' · '+clock(workoutData.summary.startLocal)} back={back} backLabel={parentLabel} onHelp={sets?()=>sheet=true:undefined}/><WorkoutDetail {workoutData} {navigate} help={()=>sheet=true} refresh={refreshStrength}/>
 {:else if strengthData}
- <Header title="Strength" eyebrow="Lifts and muscles" back={back} backLabel={parentLabel} onHelp={()=>navigate('help')}/>{#if strengthData.strengthPage}<StrengthHistory view={strengthData.strengthPage} {navigate} liftSeries={api.lift_series} muscles={api.muscles}/>{:else}<Card title="No sets yet"><p class="small untracked">Start a Strength activity on your watch and press lap after each set. Your sets appear here after Garmin Connect syncs.</p><button class="watch-open" onclick={()=>navigate('help/strength-start')}>Lift with your watch <Icon name="arrow-right" size={16}/></button></Card>{/if}
+ <Header title="Strength" eyebrow="Lifts and muscles" back={back} backLabel={parentLabel} onHelp={()=>navigate('help')}/>{#if strengthData.strengthPage}<StrengthHistory view={strengthData.strengthPage} {navigate} liftSeries={api.lift_series} muscles={api.muscles} figureChoice={settings.bodyFigure} setFigure={saveFigure}/>{:else}<Card title="No sets yet"><p class="small untracked">Start a Strength activity on your watch and press lap after each set. Your sets appear here after Garmin Connect syncs.</p><button class="watch-open" onclick={()=>navigate('help/strength-start')}>Lift with your watch <Icon name="arrow-right" size={16}/></button></Card>{/if}
 {:else if healthData}
  <Header title="Health" eyebrow={dateLabel(healthData.date)} {...rootControls}/><HealthDetail {healthData} {navigate} {toggleJournal} journalBusy={settingsBusy.journalEnabled} bind:journalOpen bind:journalDayOpen>{#snippet weightContent()}<WeightCard bind:range={weightRange} {navigate}/>{/snippet}</HealthDetail>
 {:else if boardData && route==='plan'}

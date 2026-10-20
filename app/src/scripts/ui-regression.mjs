@@ -390,6 +390,10 @@ try {
  const muscleRange=page.getByRole('group',{name:'Muscle range'});
  await muscleRange.getByRole('button',{name:'7 days'}).click();
  assert.equal(await muscleRange.getByRole('button',{name:'7 days'}).getAttribute('aria-pressed'),'true');
+ const figureChoice=page.getByRole('group',{name:'Body map figure'});
+ assert.equal(await figureChoice.getByRole('button',{name:'Profile',exact:true}).getAttribute('aria-pressed'),'true','the figure follows the profile by default');
+ await figureChoice.getByRole('button',{name:'Male',exact:true}).click();
+ assert.equal(await figureChoice.getByRole('button',{name:'Male',exact:true}).getAttribute('aria-pressed'),'true','the Strength picker overrides the profile');
  await page.getByRole('button',{name:/^Wed 15 Oct/}).click();await waitRoute('workout/9000000000111');
  await back('strength');
  await page.getByRole('button',{name:'Help',exact:true}).click();await waitRoute('help');

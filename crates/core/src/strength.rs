@@ -5,7 +5,7 @@
 use crate::{
     store::Store,
     view::{
-        ActivityCard, ExerciseHistory, LiftPoint, LiftSeries, MuscleRange, TrendRange, ExerciseSession, Figure, Lift, Muscle, MuscleSets,
+        ActivityCard, ExerciseHistory, LiftPoint, LiftSeries, MuscleRange, TrendRange, ExerciseSession, Figure, FigureChoice, Lift, Muscle, MuscleSets,
         RepBest, RepCountBest, SetFlag, StrengthActivity, StrengthExercise, StrengthSession, StrengthSet,
         StrengthView, StrengthWeek, WeekMuscles, WeightUnit,
     },
@@ -276,9 +276,14 @@ fn prefs(store: &Store) -> Prefs {
             .as_str()
             .and_then(|d| d.parse().ok())
             .unwrap_or(Weekday::Mon),
-        figure: match v["gender"].as_str() {
-            Some("MALE") => Figure::Male,
-            _ => Figure::Female,
+        // Strength's own figure picker overrides Garmin's profile gender.
+        figure: match store.settings().body_figure {
+            FigureChoice::Female => Figure::Female,
+            FigureChoice::Male => Figure::Male,
+            FigureChoice::Profile => match v["gender"].as_str() {
+                Some("MALE") => Figure::Male,
+                _ => Figure::Female,
+            },
         },
     }
 }

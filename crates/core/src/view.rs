@@ -978,6 +978,17 @@ pub enum Figure {
     Male,
 }
 
+/// Strength's optional body-map figure override; `Profile` follows Garmin.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum FigureChoice {
+    #[default]
+    Profile,
+    Female,
+    Male,
+}
+
 /// Raring's muscle groups: Garmin's catalog muscles, grouped for the body map.
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[serde(rename_all = "camelCase")]
@@ -1351,6 +1362,9 @@ pub struct Settings {
     /// Offer to plan the week at its start; off hides the prompt everywhere.
     #[serde(default = "default_plan_prompt")]
     pub plan_prompt: bool,
+    /// Strength's body-map figure; Profile follows Garmin's profile gender.
+    #[serde(default)]
+    pub body_figure: FigureChoice,
 }
 
 fn default_bedtime_lead() -> u32 {
@@ -1378,6 +1392,7 @@ impl Default for Settings {
             adaptive_today: default_adaptive_today(),
             journal_enabled: false,
             plan_prompt: default_plan_prompt(),
+            body_figure: FigureChoice::Profile,
         }
     }
 }

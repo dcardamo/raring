@@ -273,14 +273,16 @@ Opened from Training → Strength: lifts and muscles.
   pagination limit; newer workouts in other sports cannot hide strength
   activities.
 - Sets per muscle this week with a tick at the previous four weeks' weekly
-  average, and the strength workouts.
+  average, the strength workouts, and a Figure control (Profile, Female,
+  Male) that overrides the profile's figure for every body map (Rules:
+  Body-map figure).
 - Phone: one column. Unfolded (660 px+): two columns. Desktop (1000 px+):
   exercise list, exercise detail, muscles.
 
 ### Body map
 
-Raring's own front and back figures, female or male from the Garmin profile,
-with muscle groups as separate shapes: chest, back, shoulders, arms, core,
+Raring's own front and back figures, female or male from the Garmin profile
+unless Strength's figure picker overrides it, with muscle groups as separate shapes: chest, back, shoulders, arms, core,
 hips, quads, hamstrings, glutes and calves. Each is shaded in the amount blue
 by sets, gray when none.
 
@@ -1184,6 +1186,11 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   time. A set's exercise is Garmin's most probable guess; an `UNKNOWN`
   category is unnamed. Weights are Garmin's grams shown in kilograms or
   pounds by Garmin's measurement setting, to 0.1.
+- **Body-map figure**: every body map uses Strength's saved figure choice:
+  Profile follows Garmin's profile gender; Female or Male overrides it. The
+  choice is a setting, exported with the rest, and every body map (workout,
+  Strength, Training) follows it. Unknown or missing profile gender falls back
+  to Female, as before.
 - **Sets per muscle**: each named set counts once for each primary-muscle
   group of its exercise in Garmin's catalog: the exercise's own entry, else
   its category's, else Raring's small category mapping. Garmin's muscles

@@ -124,11 +124,6 @@ From item 11, in priority order.
   a lap press after each set and weights entered, compare Raring's workout
   screen with Connect, then decide whether the compatibility page can move
   from partial to Tested.
-- **Strength introduction and figure choice**: now that item 26's
-  progressive disclosure has shipped, Replace the mandatory-seeming four-step
-  `intro-1` to `intro-4` concept in `design/mockup/` with help at the point of
-  use; keep the optional female/male figure override discoverable in Strength.
-  The figure follows the Garmin profile until then.
 - **Exercise display names**: Raring title-cases Garmin's keys
   ("One Arm Dumbbell Row"). Look for Garmin's own localized names before
   adding a table.
@@ -327,6 +322,17 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **8a strength introduction and figure choice** (commit "Replace the strength
+  intro with help at the point of use"). The mandatory-seeming `intro-1` to
+  `intro-4` walkthrough is gone from the mockup, its gallery entries, notes and
+  screenshots; Strength's ? and empty states carry the help instead, as item
+  26's progressive disclosure already did. The body-map figure is now a
+  visible Profile / Female / Male control on Strength's muscles card, saved as
+  the `bodyFigure` setting (Profile by default, following Garmin's profile
+  gender) and applied to every body map; core tests cover the override and the
+  three-way setting, and the browser UI test covers the picker. Settings export
+  includes it with the other preferences.
 
 - **8a explicit strength refresh** (commit "Refresh a strength workout's sets
   only when asked"). A workout's detail now says when Garmin's sets were last
