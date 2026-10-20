@@ -1,6 +1,6 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical"
  android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="4dp" android:background="@drawable/status_card">
- <TextView android:id="@+id/status_asof" android:layout_width="match_parent" android:layout_height="wrap_content" android:maxLines="1" android:textSize="11sp" android:textColor="#B2C2D3"/>
+ <TextView android:id="@+id/status_asof" android:layout_width="match_parent" android:layout_height="wrap_content" android:maxLines="1" android:textSize="10sp" android:textColor="#B2C2D3"/>
  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
   <ImageView android:layout_width="20dp" android:layout_height="18dp" android:src="@drawable/status_battery" android:contentDescription="Body Battery"/>
   <TextView android:id="@+id/status_battery" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:textSize="14sp" android:textColor="#FFFFFF"/>

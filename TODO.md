@@ -177,8 +177,11 @@ From the Today and Sleep review's remainder, in priority order.
 - The bottom tab labels run together at 2× text ("PlanTrainingHealthProgress"
   at 390 px); stack icon and label tighter or drop to icons with names for
   assistive tech.
-- Check the 11 sp widget and notification labels on a phone: the medium
-  widget's tile labels may truncate at large system text.
+- Widget and notification labels are 10 sp, under the 11 minimum (review
+  m13). 11 sp fails `StatusWidgetLayoutTest` at the provider minimum size
+  with large fonts ("Readiness" 108 > 100 px on emulator-5560); the 10 sp
+  layouts pass at font scales 1.0/1.3/1.5. Reaching 11 sp needs a different
+  minimum-size layout (fewer labels or a larger minimum), proven by that test.
 
 ## Next
 
@@ -464,7 +467,7 @@ faces, screens, sensors and audio prompts stay in Connect.
 ## Done
 
 - **Today and Sleep minors** (commit "Drop disclaimers and key Tonight's
-  missing nights"), from the Today and Sleep review (m1–m6, m13, plus a
+  missing nights"), from the Today and Sleep review (m1–m6, plus a
   2× overflow in Sleep's hero). Guardrail sentences are gone from the plan
   cards, Why this plan, the 7-night chart, the nap rows, Adapt's limits and
   routines, the readiness Why sheet and the status offer; alignment keys
@@ -473,8 +476,8 @@ faces, screens, sensors and audio prompts stay in Connect.
   recorded wakes ("usual · 9 nights"), not only at 14. The 7-night chart
   draws a missing night as a dotted gap, keys it and the darker below-need
   bars, and hides when nothing is recorded. The wind-down reminder is a
-  switch row. Widget and notification labels are 11 sp (was 10; not checked
-  on a device). Sleep's hero and This week's "Left this week" rows wrap at
+  switch row. Widget and notification labels stay 10 sp (m13 is open, see
+  the follow-up). Sleep's hero and This week's "Left this week" rows wrap at
   large text instead of running off the screen. Not changed: m19's "84" over
   "Score" is line-box overlap only (glyphs clear at 2×); m21 (tab labels at
   2×) is outside this lane.

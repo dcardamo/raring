@@ -11,7 +11,7 @@
  <TextView android:id="@+id/status_focus" android:layout_width="match_parent" android:layout_height="wrap_content"
   android:gravity="center" android:textColor="#EAF0F5" android:textSize="12sp"/>
  <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Readiness"
-  android:textColor="#B2C2D3" android:textSize="11sp"/>
+  android:textColor="#B2C2D3" android:textSize="10sp"/>
  <TextView android:id="@+id/status_asof" android:layout_width="match_parent" android:layout_height="wrap_content"
-  android:gravity="center" android:textColor="#B2C2D3" android:textSize="11sp"/>
+  android:gravity="center" android:textColor="#B2C2D3" android:textSize="10sp"/>
 </LinearLayout>
