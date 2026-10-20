@@ -143,20 +143,27 @@ A briefing with an ending, in this order:
   Tonight.
 - **Your day**: sleep stages, Body Battery, stress, heart rate and recorded
   activities and naps on one 00–24 axis with a now marker (Rules: Your day).
-  Each row's value sits at its right, with a nap's Body Battery change under
-  it; heart rate is drawn against the day's own lowest and highest readings
+  Each row's value sits at its right (Body Battery's is the latest level,
+  the day's daily-stats value when Garmin sent no intraday levels), with a
+  nap's Body Battery change under it; heart rate is drawn against the day's own lowest and highest readings
   and never clipped, with no scale on the plot.
   Each row opens its detail. From the evening on it follows tonight's plan,
-  compact: sleep, Body Battery and recordings.
+  compact: sleep, Body Battery and recordings. A calendar day with nothing
+  recorded yet (after midnight, or before the night syncs) hides it. The
+  upload time is said once, in the header, never repeated in a card.
 - **Recorded today**: the calendar day's (Your day's) activities, up to two,
   with Garmin's benefit and training effect, naps with their Body Battery change, and a link to all of today's
   activities. Compact after tonight's plan: without the effect labels.
 - **This week**: the week's rings and one line per goal beside **Left this
-  week** with Do it today, over the day cells; hidden during wind-down and
-  late night, with the weekly check-in link and the plan-your-week prompt.
+  week** with Do it today (not from the evening on: a weekly gap is context,
+  not a command to catch up tonight), over the day cells; hidden during
+  wind-down and late night, with the weekly check-in link and the
+  plan-your-week prompt. Without weekly goals it says so.
 - While older history is still downloading, the upload line adds "History
   since" its first month.
-- Watch-upload and missing-reading notices sit above the lead. The ending
+- Watch-upload and missing-reading notices sit above last night and
+  readiness; Today explains only the readings it shows (readiness and the
+  sleep score). The ending
   says "That's today." The plan-your-week prompt appears on root pages when
   due (Rules: Plan prompt). Settings → Today → "Follow my day" keeps a fixed
   order for irregular schedules (Rules: Time of day).
@@ -967,8 +974,9 @@ next pending wind-down while signed in.
   evening, wind-down and late night lead with tonight's sleep (no exercise;
   a session still planned today stays as a quiet "still in your plan" line);
   illness or a pause (resume from Adapt); rest; the fixed layout's recorded
-  day; a recording today (the latest, skipping walks once goals exist), with
-  its strength count against the goal or Garmin's intensity minutes; Garmin's
+  day; a recording today (the latest, skipping walks once goals exist),
+  headed "Done today" above the recording, with its strength count against
+  the goal or Garmin's intensity minutes; Garmin's
   scheduled workout today unless dismissed (limits make it "Review needed",
   since its sport and movements are unknown; Garmin's easy or rest call makes
   it "An easier day may fit"); your planned session today (a movement note
@@ -984,7 +992,10 @@ next pending wind-down while signed in.
   choice; it leads over the day's other sessions in the same gate and lasts
   its local day. Choose another lists today's Garmin schedule and your sessions,
   your open sessions later this week (moved to today and kept), what's left in
-  the backlog, a new session and Rest today. Nothing is sent to Garmin.
+  the backlog, a new session and Rest today. A backlog item suggests the
+  endurance sport recorded most in eight weeks that the limits allow,
+  otherwise running or walking; one the limits exclude is labelled
+  "Excluded by your limits" in Choose and on This week. Nothing is sent to Garmin.
 - **Profile**: from local data only, no request: Garmin's age (sent with
   Fitness Age), measurement setting, the latest weigh-in with its date (flagged
   after 7 days), the primary watch's last upload, history on the phone, gear,
@@ -1154,7 +1165,7 @@ next pending wind-down while signed in.
   Today waits neutrally for the night: no effort call, no previous plan and
   no verdict. After the handover the calendar day shows with its missing
   night stated. Advice order: after waking, this morning then the one-line
-  plan; during the day, right now, today's focus, the one-line plan; from
+  plan; during the day, today's focus, the one-line plan; from
   the evening on, the plan, then Your day and recorded today (compact), then
   today's focus. Before the evening Your day stays under the lead. Two or
   more outside-range vitals go first in every phase. The fixed layout (today's focus, then the

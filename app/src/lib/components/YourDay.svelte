@@ -17,7 +17,7 @@
  let now=$derived(day.nowMin<1440?day.nowMin:null);
  const path=(slots:(number|null)[],step:number,lo:number,hi:number)=>{let d='',pen=false;slots.forEach((v,i)=>{const m=i*step;if(v==null||m>limit){pen=false;return}d+=`${pen?'L':'M'}${m},${(50-(Math.min(hi,Math.max(lo,v))-lo)/(hi-lo)*48).toFixed(1)}`;pen=true});return d};
  let bb=$derived(path(day.bodyBattery,3,0,100));
- let bbNow=$derived(day.bodyBattery.filter((_,i)=>i*3<=limit).findLast(v=>v!=null)??null);
+ let bbNow=$derived(day.bodyBatteryNow);
  // Heart rate is scaled to the day's own readings (padded to tens), so no peak or low is clipped.
  let hrRange=$derived.by(()=>{const v=day.heartRate.filter((x,i):x is number=>x!=null&&i*2<=limit);return v.length?[Math.min(...v),Math.max(...v)]:null});
  let hr=$derived(hrRange?path(day.heartRate,2,Math.floor((hrRange[0]-5)/10)*10,Math.ceil((hrRange[1]+5)/10)*10):'');
@@ -29,7 +29,7 @@
  let napChange=$derived(naps.findLast(n=>n.bodyBatteryChange!=null)?.bodyBatteryChange??null);
 </script>
 <section class="your-day" class:compact aria-label="Your day on one timeline">
- <div class="yd-h"><h2>Your day <HelpButton topic="today"/></h2>{#if day.uploadMin!=null}<span>Watch upload {hm(day.uploadMin)}</span>{:else}<span>No watch upload today</span>{/if}</div>
+ <div class="yd-h"><h2>Your day <HelpButton topic="today"/></h2></div>
  {#if day.clockChange}<p class="clock" role="note">Clocks changed by an hour today, so Body Battery, stress and heart rate are in their details.</p>{/if}
  <div data-chart="your-day" {@attach declutter}>
  <button class="row" onclick={()=>navigate('sleep/last')} aria-label={day.sleep.length?`Sleep until ${hm(Math.max(...day.sleep.map(s=>s.endMin)))}, ${duration(day.asleepMin)} asleep`:'Sleep: no recorded night yet'}>
@@ -39,7 +39,7 @@
  </button>
  <button class="row" onclick={()=>navigate('metric/bodyBattery')} aria-label={`Body Battery ${bbNow??'not recorded'}${day.uploadMin!=null?' at '+hm(day.uploadMin):''}${naps.filter(n=>n.bodyBatteryChange!=null).map(n=>`, nap ${n.bodyBatteryChange!>=0?'+':''}${n.bodyBatteryChange}`).join('')}`}>
   <span class="lab"><Icon name="bolt" size={15}/><b>Body Battery</b></span>
-  <span class="track chart">{#if bb}<svg viewBox="0 0 1440 50" preserveAspectRatio="none" aria-hidden="true">{#each naps as n}<rect x={n.startMin} y="0" width={n.endMin!-n.startMin!} height="50" fill="rgba(169,200,255,.22)"/>{/each}<path d={bb} fill="none" stroke="#3DDC97" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>{#if now!=null}<u data-mark="now" style:left={pct(now)+'%'}></u>{/if}{:else}<em class="none">{day.clockChange?'Clock change today · open the detail':'Awaiting upload'}</em>{/if}</span>
+  <span class="track chart">{#if bb}<svg viewBox="0 0 1440 50" preserveAspectRatio="none" aria-hidden="true">{#each naps as n}<rect x={n.startMin} y="0" width={n.endMin!-n.startMin!} height="50" fill="rgba(169,200,255,.22)"/>{/each}<path d={bb} fill="none" stroke="#3DDC97" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>{#if now!=null}<u data-mark="now" style:left={pct(now)+'%'}></u>{/if}{:else}<em class="none">{day.clockChange?'Clock change today · open the detail':bbNow!=null?'Latest level only':'Awaiting upload'}</em>{/if}</span>
   <span class="val n">{bbNow??'—'}{#if napChange!=null}<small>nap {napChange>=0?'+':''}{napChange}</small>{/if}</span>
  </button>
  {#if !compact}
@@ -57,22 +57,23 @@
  <div class="row ev" role="group" aria-label="Recorded activities and naps">
   <span class="lab"><Icon name="run" size={15}/><b>Recorded</b></span>
   <span class="track events">{#each placed as e}<button class="evb" class:nap={e.kind==='nap'} style:left={pct(e.startMin!)+'%'} style:width={`max(26px, ${pct(e.endMin??e.startMin!)-pct(e.startMin!)}%)`} aria-label={`${e.name} ${hm(e.startMin!)}${e.durationMin!=null?`, ${Math.round(e.durationMin)} min`:''}${e.bodyBatteryChange!=null?`, Body Battery ${e.bodyBatteryChange>=0?'+':''}${e.bodyBatteryChange}`:''}`} onclick={()=>navigate(e.id?'workout/'+e.id:'sleep')}><Icon name={e.icon} size={12}/></button>{/each}{#if !placed.length}<em class="none">Nothing recorded yet</em>{:else if now!=null}<u data-mark="now" style:left={pct(now)+'%'}></u>{/if}</span>
-  <span class="val n">{day.events.filter(e=>e.kind==='activity').length||''}</span>
+  <span class="val"></span>
  </div>
  <div class="row axis" aria-hidden="true"><span></span><span class="track ticks">{#each [0,6,12,18,24] as h}<i data-thin style:left={h/24*100+'%'}>{String(h).padStart(2,'0')}</i>{/each}{#if now!=null}<b style:left={pct(now)+'%'} style:translate={pct(now)<12?'0':pct(now)>88?'-100%':'-50%'}>Now {hm(now)}</b>{/if}</span><span></span></div>
- {#if !compact}<p class="key">{#each ['rest','low','medium','high'] as l}<span><i style:background={stressColors[l as 'rest']}></i>{stressNames[l as 'rest']}</span>{/each}</p>{/if}
+ {#if !compact && bars.length}<p class="key">{#each ['rest','low','medium','high'] as l}<span><i style:background={stressColors[l as 'rest']}></i>{stressNames[l as 'rest']}</span>{/each}</p>{/if}
  </div>
 </section>
 <style>
  .your-day.compact{margin-top:0}
  .your-day{margin-top:12px;border:1px solid var(--line);border-radius:22px;background:var(--card);padding:14px 14px 10px}
- .yd-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}.yd-h h2{display:flex;align-items:center;gap:8px;font:600 11px Inter;letter-spacing:.13em;text-transform:uppercase;color:var(--text2)}.yd-h span{font-size:12px;color:var(--text2)}
+ .yd-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}.yd-h h2{display:flex;align-items:center;gap:8px;font:600 11px Inter;letter-spacing:.13em;text-transform:uppercase;color:var(--text2)}
  .row{display:grid;grid-template-columns:96px minmax(0,1fr) 56px;gap:8px;align-items:center;width:100%;padding:6px 0;background:none;border:0;color:var(--text);text-align:left;min-height:44px}
  .lab{display:flex;align-items:center;gap:6px;min-width:0}.lab :global(svg){color:var(--text2);flex:none}.lab b{font:600 12.5px/1.15 Inter;overflow-wrap:anywhere}
  .track{position:relative;display:block;height:34px;border-radius:6px;background:rgba(255,255,255,.035)}
  .track.sleep{height:16px}.track.sleep i{position:absolute;top:0;bottom:0}
  .track.chart svg{position:absolute;inset:0;width:100%;height:100%}
  .track.events{background:none;border-bottom:1px solid var(--line);border-radius:0}
+ .evb::after{content:'';position:absolute;inset:-6px -11px}
  .evb{position:absolute;top:1px;height:32px;border:0;border-radius:6px;display:grid;place-items:center;color:#0B0F1A;background:#3DDC97;padding:0;min-width:22px}.evb.nap{background:#A9C8FF}
  .track u{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--ink);border-radius:1px;opacity:.85;pointer-events:none}
  .none{position:absolute;inset:0;display:grid;place-items:center;font:500 12px Inter;text-align:center;line-height:1.1;color:var(--text2);font-style:normal}

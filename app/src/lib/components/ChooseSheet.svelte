@@ -10,7 +10,7 @@
  // Choose another: today's Garmin schedule and your sessions, one taken from
  // later in the week or from what's left, a new session, or rest. Keeping one
  // only changes what Today leads with; nothing is sent to Garmin.
- let {board, kept, excluded = [], close, act, add}: {board: PlanBoard, kept: string | null, excluded?: Sport[], close: () => void, act: (a: LocalAction) => void, add: (d: Draft) => void} = $props();
+ let {board, kept, excluded = [], limited = false, close, act, add}: {board: PlanBoard, kept: string | null, excluded?: Sport[], limited?: boolean, close: () => void, act: (a: LocalAction) => void, add: (d: Draft) => void} = $props();
  $effect(() => sheetOpened(close));
  let day = $derived(board.today);
  let garmin = $derived(board.garmin.filter(g => g.date === day).map(g => ({id: `garmin:${day}:${g.name}`, name: g.name})));
@@ -26,10 +26,10 @@
 <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="choose-title">
  <span class="grab"></span>
  <div class="sheet-h"><h2 id="choose-title">Choose today’s session</h2><button class="close" aria-label="Close" onclick={close}><Icon name="close" size={20}/></button></div>
- {#if garmin.length}<h3>Garmin schedule</h3><div class="opts">{#each garmin as g}<button aria-pressed={kept === g.id} onclick={() => keep(g.id)}><Icon name="clock" size={20}/><span><b>{g.name}</b><small>{kept === g.id ? 'Kept for today' : 'Read-only · contents not shown to Raring'}</small></span></button>{/each}</div>{/if}
+ {#if garmin.length}<h3>Garmin schedule</h3><div class="opts">{#each garmin as g}<button aria-pressed={kept === g.id} onclick={() => keep(g.id)}><span class="gm" aria-hidden="true">◇</span><span><b>{g.name}</b><small>{kept === g.id ? 'Kept for today' : `Garmin · read-only${limited ? ' · Review needed' : ''}`}</small></span></button>{/each}</div>{/if}
  {#if todays.length}<h3>Planned today</h3><div class="opts">{#each todays as p}<button aria-pressed={kept === p.intention.id} disabled={excluded.includes(p.intention.sport)} onclick={() => keep(p.intention.id)}><Icon name={SPORT_ICONS[p.intention.sport]} size={20}/><span><b>{name(p)}{p.intention.time ? ` · ${p.intention.time}` : ''}</b><small>{excluded.includes(p.intention.sport) ? 'Excluded by your limits' : kept === p.intention.id ? 'Kept for today' : `${p.coach ? 'Garmin Coach · ' : ''}${p.intention.durationMin ? `${p.intention.durationMin} min` : 'Any duration'}`}</small></span></button>{/each}</div>{/if}
  {#if later.length}<h3>Later this week</h3><div class="opts">{#each later as p}<button disabled={excluded.includes(p.intention.sport)} onclick={() => bring(p.intention.id)}><Icon name={SPORT_ICONS[p.intention.sport]} size={20}/><span><b>{name(p)}</b><small>{excluded.includes(p.intention.sport) ? 'Excluded by your limits' : `Planned ${dateLabel(p.intention.date)} · move to today`}</small></span></button>{/each}</div>{/if}
- {#if !board.backlogPaused && board.backlog.some(b => b.kind !== 'sleepTiming')}<h3>Left this week</h3><div class="opts">{#each board.backlog.filter(b => b.kind !== 'sleepTiming') as b}{@const d = backlogDraft(b, day)}<button disabled={excluded.includes(d.sport)} onclick={() => { close(); add(d); }}><Icon name={GOALS[b.kind].icon} size={20}/><span><b>{b.kind === 'strength' ? 'Strength session' : `${amount(b.kind, b.amount)} ${GOALS[b.kind].name}`}</b><small>Do it today</small></span></button>{/each}</div>{/if}
+ {#if !board.backlogPaused && board.backlog.some(b => b.kind !== 'sleepTiming')}<h3>Left this week</h3><div class="opts">{#each board.backlog.filter(b => b.kind !== 'sleepTiming') as b}{@const d = backlogDraft(b, day)}<button disabled={excluded.includes(d.sport)} onclick={() => { close(); add(d); }}><Icon name={GOALS[b.kind].icon} size={20}/><span><b>{b.kind === 'strength' ? 'Strength session' : `${amount(b.kind, b.amount)} ${GOALS[b.kind].name}`}</b><small>{excluded.includes(d.sport) ? 'Excluded by your limits' : 'Do it today'}</small></span></button>{/each}</div>{/if}
  <h3>Something else</h3>
  <div class="opts">
   <button onclick={() => { close(); add({date: day}); }}><Icon name="pencil" size={20}/><span><b>Add a session</b><small>Pick a sport and time for today</small></span></button>
@@ -44,6 +44,7 @@
  .close{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:none;display:grid;place-items:center;color:var(--text2)}
  h3{font:600 11px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin:16px 0 0}
  .opts{display:grid;gap:8px;margin-top:8px}.opts button{display:grid;grid-template-columns:24px 1fr;gap:12px;align-items:center;text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.04);color:var(--text);min-height:56px}
+ .gm{display:grid;place-items:center;width:24px;font-size:18px;color:var(--text2)}
  .opts button[aria-pressed=true]{border-color:var(--ink)}
  .opts button:disabled{color:var(--text3);cursor:default}.opts b{display:block;font:600 15px Inter}.opts small{display:block;font-size:12px;color:var(--text2);margin-top:2px}
 </style>

@@ -107,7 +107,10 @@ try {
   await watch.clock.setFixedTime(new Date('2025-10-16T14:00:00'));
   await watch.goto(`${url}/?fixture=stale#today`);
   await watch.getByText('Open Garmin Connect to sync your watch',{exact:true}).waitFor();
-  await watch.getByText("Your watch doesn't record skin temperature",{exact:true}).waitFor();
+  await watch.getByText("Your watch doesn't record training readiness",{exact:true}).waitFor();
+  assert.equal(await watch.getByText("Your watch doesn't record skin temperature",{exact:true}).count(),0,'Today explains only the readings it shows');
+  // Notices sit above the lead, before last night and readiness.
+  assert.deepEqual(await watch.evaluate(()=>[...document.querySelectorAll('.watch-notice, .morning, .hero')].map(e=>e.className.split(' ').find(c=>['watch-notice','morning','hero'].includes(c)))),['watch-notice','watch-notice','morning','hero']);
   await watch.screenshot({path:resolve(output,`watch-stale-${width}.png`)});
   await watch.getByRole('button',{name:'Open Garmin Connect'}).click();
   await watch.getByText('Open Garmin Connect on your phone, then sync your watch there.',{exact:true}).waitFor();
@@ -204,9 +207,6 @@ try {
  await back('profile');await back('training');await back('today');
  await page.getByRole('button',{name:/^Body Battery/}).click();await waitRoute('metric/bodyBattery');
  await page.getByRole('button',{name:'Today',exact:true}).first().click();await waitRoute('today');
- await page.getByRole('button',{name:'View HRV',exact:true}).first().click();await waitRoute('metric/hrv');
- await page.getByText('Garmin baseline',{exact:true}).waitFor();
- await back('today');
  await page.getByRole('button',{name:/^Stress/}).click();await waitRoute('metric/stress');
  const timeline=page.getByRole('slider',{name:/^Stress through the day/});
  assert.equal(await timeline.getAttribute('aria-valuetext'),'13:27: '+await page.locator('.readout b').textContent()+', '+await page.locator('.readout em').textContent());
@@ -282,6 +282,7 @@ try {
  assert.equal(await page.locator('.over-time .history').count(),4,'daily metrics over a range');
  assert.equal(await page.locator('.signal-tile').count(),5);
  await page.getByRole('button',{name:'View HRV',exact:true}).click();await waitRoute('metric/hrv');
+ await page.getByText('Garmin baseline',{exact:true}).waitFor();
  const history=page.locator('.history'),slider=history.getByRole('slider');
  assert.equal(await slider.getAttribute('aria-valuetext'),'Thu 16 Oct: 58 ms');
  await slider.focus();await slider.press('ArrowLeft');
@@ -685,6 +686,8 @@ try {
   const board=JSON.parse(await readFile(resolve('src/lib/sample/board.json'),'utf8'));
   const own={...board.items[1],intention:{...board.items[1].intention,id:'i-today',date:'2025-10-16',time:'18:00',name:'Hill run',sport:'running'}};
   board.items.push(own);board.garmin.push({date:'2025-10-16',name:'Tempo'});
+  // B7: limits exclude cycling, so a backlog item that still names it says why it can't be taken.
+  board.backlog=[{kind:'zone2',amount:10,sport:'running'},{kind:'intensity',amount:26,sport:'cycling'}];
   const nap=sample.day.events.find(e=>e.kind==='nap');nap.bodyBatteryChange=6;
   const session={...sample,lead:{id:'session:i-today',kind:'session',headline:'Hill run at 18:00',line:'Your plan',action:{label:'Your plan',route:'plan',adapt:false},dismissable:false,kept:false,garmin:null,activity:null,intention:'i-today',reasons:[]},
    adapt:{rest:false,pause:null,limits:{excluded:['cycling'],note:''},label:'Limits on',reviewDue:false,blocked:false,routines:[]}};
@@ -693,7 +696,7 @@ try {
   await dayPage.goto(`${url}/#today`);
   const yd=dayPage.getByRole('region',{name:'Your day on one timeline'});
   await yd.waitFor();
-  assert.equal(await yd.getByText('Watch upload 13:30').count(),1);
+  assert.equal(await yd.getByText('Watch upload 13:30').count(),0,'the upload time is in the header only');
   assert.equal(await yd.getByText('Now 14:05').count(),1,'the now marker is labelled');
   assert.equal(await yd.locator('.track.sleep i').count(),sample.day.sleep.length,'every stage after midnight is drawn');
   const bbPath=await yd.locator('.track.chart path').first().getAttribute('d');
@@ -708,7 +711,8 @@ try {
   assert.equal(await dayPage.getByRole('button',{name:'Keep',exact:true}).count(),1);
   const week=dayPage.locator('.week-card');
   const left=week.getByRole('group',{name:'Left this week'});
-  assert.equal(await left.getByRole('button',{name:'Do it today'}).count(),board.backlog.filter(b=>b.kind!=='sleepTiming').length,'This week and what is left share one card');
+  assert.equal(await left.getByRole('button',{name:'Do it today'}).count(),1,'This week and what is left share one card');
+  assert.equal(await left.getByText('Excluded by your limits').count(),1,'an excluded backlog item says why, as in Choose');
   await dayPage.getByText('That’s today.',{exact:true}).waitFor();
   const length=await dayPage.evaluate(()=>{const el=document.querySelector('main.scroll');return el.scrollHeight/el.clientHeight});
   console.log(`Today at 390×844 is ${length.toFixed(2)} viewports`);
@@ -723,7 +727,10 @@ try {
   assert.equal(await choose.getByRole('button',{name:/^Hill run · 18:00/}).count(),1);
   assert.ok(await choose.getByRole('button',{name:/^Easy ride/}).isDisabled(),'an excluded sport cannot be chosen');
   assert.equal(await choose.getByRole('button',{name:/^Strength.*move to today/}).count(),1,'a later session can be moved to today');
-  assert.equal(await choose.getByRole('button',{name:/Do it today$/}).count(),board.backlog.length);
+  assert.equal(await choose.getByRole('button',{name:/Do it today$/}).count(),1);
+  const excludedLeft=choose.getByRole('button',{name:/Intensity.*Excluded by your limits$/});
+  assert.ok(await excludedLeft.isDisabled(),'a backlog item the limits exclude is disabled and labelled');
+  assert.equal(await choose.getByRole('button',{name:/^Tempo.*Garmin · read-only · Review needed/}).count(),1,"Garmin's session asks for review under limits");
   assert.deepEqual(await contrastFailures(dayPage),[],'Choose sheet contrast');
   await choose.getByRole('button',{name:/^Add a session/}).click();
   assert.equal(await choose.count(),0,'Add a session closes Choose');
@@ -749,6 +756,22 @@ try {
   assert.equal(await shifted.getByText('Clock change today · open the detail').count(),3,'a clock-change day sends intraday rows to their details');
   assert.equal(await shifted.getByRole('note').filter({hasText:'Clocks changed by an hour today'}).count(),1,'U39: the clock change is said once');
   await shifted.close();
+  // M5: after midnight, or before the night syncs, the calendar day has nothing recorded: no card of blanks.
+  const blank=await browser.newPage({viewport:{width:390,height:844}});
+  const empty={...sample,activities:[],day:{...sample.day,sleep:[],asleepMin:null,bodyBattery:[],bodyBatteryNow:null,stress:[],stressAverage:null,heartRate:[],restingHr:null,events:[],uploadMin:null}};
+  await blank.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(empty)}`}));
+  await blank.goto(`${url}/#today`);
+  await blank.getByText('That’s today.',{exact:true}).waitFor();
+  assert.equal(await blank.locator('.your-day').count(),0,'an empty Your day is hidden');
+  assert.equal(await blank.locator('.card').filter({hasText:'Recorded today'}).count(),0);
+  // Without intraday levels the row still shows the day's latest Body Battery, so cutting Right now loses nothing.
+  const latest={...sample,day:{...sample.day,bodyBattery:[],bodyBatteryNow:78}};
+  await blank.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(latest)}`}));
+  await blank.goto(`${url}/?latest#today`);
+  const row=blank.getByRole('button',{name:/^Body Battery 78/});
+  await row.waitFor();
+  assert.ok((await row.textContent()).includes('Latest level only'));
+  await blank.close();
  }
  console.log('Your day timeline, nap Body Battery and Keep / Choose another: passed');
  // Sleep: a plain #sleep opens the closer tab; Tonight is a plan with a self-report, at every width.
@@ -1125,7 +1148,7 @@ try {
  const night={asleepMin:468,needMin:450,woke:'06:39'};
  const phases=[
   ['wake','07:10',{phase:'wake',cards:['focus','day','sleepPlan'],until:'2025-10-16T09:39:00',effort:true,planOpen:false},'Ready to push','.plan-line'],
-  ['day','14:20',{phase:'day',cards:['day','now','focus','sleepPlan'],until:'2025-10-16T20:30:00',effort:true,planOpen:false},'Ready to push','.now-card'],
+  ['day','14:20',{phase:'day',cards:['day','focus','sleepPlan'],until:'2025-10-16T20:30:00',effort:true,planOpen:false},'Ready to push','.plan-line'],
   ['evening','20:45',{phase:'evening',cards:['sleepPlan','day','focus'],until:'2025-10-16T22:00:00',effort:false,planOpen:true},'Wind down at 22:00','.sleep-plan'],
   ['winddown','22:10',{phase:'windDown',cards:['sleepPlan','day','focus'],until:'2025-10-16T23:06:00',effort:false,planOpen:true},'Time to wind down','.sleep-plan'],
   ['late','23:40',{phase:'lateNight',cards:['sleepPlan','day','focus'],until:'2025-10-17T06:36:00',effort:false,planOpen:true},"Rest when you're ready",'.sleep-plan'],
@@ -1172,7 +1195,9 @@ try {
    const morning=await phasePage.locator('.morning').textContent();
    assert.ok(!/\b84\b|\b82\b|High/.test(morning) && morning.includes('Waiting'),`no previous readings as current: ${morning}`);
   }
-  if(name==='day')assert.ok(text.includes('As of watch sync') && text.includes('Done today'),'the day card is labeled as synced data');
+  // M1: the upload time is said once, in the header; no separate Right now card or chips repeat the hero.
+  if(name==='day')assert.ok(!text.includes('As of watch sync') && !text.includes('Right now') && await phasePage.locator('.hero .chips').count()===0,'the day phase repeats nothing from the hero');
+  assert.equal(await phasePage.locator('.your-day').getByText(/Watch upload|No watch upload/).count(),0,`${name}: Your day doesn't repeat the upload time`);
   if(name==='overview')await phasePage.getByText(focus.note).waitFor();
   if(['wake','day'].includes(name))await phasePage.locator('.plan-line').waitFor();
   assert.equal(await phasePage.locator('.page-hero .your-day').count(),['evening','winddown','late'].includes(name)?0:1,`${name}: Your day ${['evening','winddown','late'].includes(name)?'follows tonight\'s plan':'stays with the hero'}`);
@@ -1234,7 +1259,9 @@ try {
    assert.equal(await night.locator('.hero .effort').count(),effort&&base.call?1:0,`${time}: effort only before wind-down`);
    const calm=phase!=='evening';
    assert.equal(await night.locator('.week-card').count(),calm?0:1,`${time}: This week`);
-   for(const text of ['Left this week','Do it today','Weekly check-in','Plan your week'])assert.equal(main.includes(text),!calm,`${time}: ${text} ${calm?'hidden':'shown'}`);
+   for(const text of ['Left this week','Weekly check-in','Plan your week'])assert.equal(main.includes(text),!calm,`${time}: ${text} ${calm?'hidden':'shown'}`);
+   // m20: in the evening a weekly gap is context, not a command to catch up tonight.
+   assert.equal(main.includes('Do it today'),false,`${time}: no Do it today from the evening on`);
    if(calm)assert.ok(!/holds it back|Ready to push|Training is an option/.test(await night.locator('.hero').textContent()),`${time}: the hero's reason is about sleep`);
    if(time==='23:21')await night.screenshot({path:resolve(output,'390-today-night-2321.png'),fullPage:true});
    assert.equal((await night.locator('.hero').textContent()).includes('Timed by your Garmin sleep schedule'),time==='21:30',`${time}: the schedule's source is named when it anchors the day`);
@@ -2243,7 +2270,7 @@ function trendFixture(q){
   const stored={notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,bedtimeLeadMin:30,adaptiveToday:true};
   const state=window.testLayout={stored,saves:[],patches:[],failNext:false};
   const focus=()=>stored.adaptiveToday
-   ?{...samples.today.focus,phase:'day',cards:['day','now','focus','sleepPlan'],planOpen:false}
+   ?{...samples.today.focus,phase:'day',cards:['day','focus','sleepPlan'],planOpen:false}
    :{...samples.today.focus,phase:'overview',cards:['focus','day','sleepPlan'],planOpen:true};
   window.isTauri=true;
   window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
@@ -2267,7 +2294,7 @@ function trendFixture(q){
  const followSwitch=()=>layout.locator('label.setting',{hasText:'Follow my day'}).locator('input');
  const saved=()=>layout.evaluate(()=>window.testLayout.saves.shift()());
  await layout.goto(`${url}/#today`);
- await layout.locator('.now-card').waitFor();
+ await layout.locator('.plan-line').waitFor();
  await layout.evaluate(()=>{location.hash='#settings'});
  await followSwitch().waitFor();
  await followSwitch().uncheck();
@@ -2278,11 +2305,11 @@ function trendFixture(q){
  assert.equal(await followSwitch().isChecked(),false);
  assert.equal(await layout.evaluate(()=>window.testLayout.saves.length),1,'only one layout save is in flight');
  await layout.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();
- await layout.locator('.now-card').waitFor();
- assert.ok((await leader()).includes('now-card'),'before the save lands, Today still has the stored layout');
+ await layout.locator('.plan-line').waitFor();
+ assert.ok((await leader()).includes('plan-line'),'before the save lands, Today still has the stored layout');
  await saved();
  // Well inside the 30-second cache poll, so the save itself must bring the new layout.
- await layout.waitForFunction(()=>!document.querySelector('.now-card') && document.querySelector('.dashboard > *')?.className.includes('sleep-plan'),null,{timeout:5000});
+ await layout.waitForFunction(()=>!document.querySelector('.plan-line') && document.querySelector('.dashboard > *')?.className.includes('sleep-plan'),null,{timeout:5000});
  assert.equal(await layout.evaluate(()=>location.hash),'#today','the user stays where they went');
  // A failed save is reported and the switch returns to the stored choice.
  await layout.evaluate(()=>{location.hash='#settings'});
@@ -2297,7 +2324,7 @@ function trendFixture(q){
  assert.equal(await followSwitch().isEnabled(),true,'a failed save unlocks the switch');
  await layout.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();
  await layout.locator('.dashboard > *').first().waitFor();
- assert.ok((await leader()).includes('sleep-plan') && await layout.locator('.now-card').count()===0,'Today keeps the stored fixed layout');
+ assert.ok((await leader()).includes('sleep-plan') && await layout.locator('.plan-line').count()===0,'Today keeps the stored fixed layout');
  // A later change is accepted after the pending save has finished.
  await layout.evaluate(()=>{location.hash='#settings'});
  await followSwitch().waitFor();

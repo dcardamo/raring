@@ -89,7 +89,7 @@ fn one_leading_card_per_phase_with_stable_metrics_after_it() {
     let cards = |now| phase::focus(&input(now, Some(&plan), &WAKES)).cards;
     use TodayCard::*;
     assert_eq!(cards("2025-03-12T07:00"), [Focus, Day, SleepPlan]);
-    assert_eq!(cards("2025-03-12T13:00"), [Day, Now, Focus, SleepPlan]);
+    assert_eq!(cards("2025-03-12T13:00"), [Day, Focus, SleepPlan]);
     // From the evening on, tonight's plan comes before Your day.
     assert_eq!(cards("2025-03-12T21:00"), [SleepPlan, Day, Focus]);
     assert_eq!(cards("2025-03-12T22:20"), [SleepPlan, Day, Focus]);

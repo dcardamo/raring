@@ -54,10 +54,6 @@ fn demo_seeds_current_day_and_screen_details() {
     assert_eq!(today.readiness.as_ref().unwrap().value, 82.);
     assert_eq!(today.sleep.as_ref().unwrap().value, 84.);
     assert_eq!(today.load.as_ref().unwrap().value, 612.);
-    assert_eq!(today.chips[0].value.as_deref(), Some("7:48"));
-    assert_eq!(today.chips[1].value.as_deref(), Some("58"));
-    assert_eq!(today.chips[1].text.as_deref(), Some("ms"));
-    assert_eq!(today.chips[2].text.as_deref(), Some("On track"));
     assert_eq!(today.factors.len(), 6);
     assert_eq!(today.body_battery.now, Some(78.));
     assert!(today.body_battery_why.as_ref().unwrap().summary.starts_with(
@@ -149,26 +145,6 @@ fn readiness_factor_colours_come_only_from_garmins_rating() {
         view.call_note.as_deref(),
         Some("Sleep is your biggest drag today.")
     );
-}
-#[test]
-fn load_chip_uses_garmin_optimal_range() {
-    let store = Store::open(":memory:").unwrap();
-    for (amount, expected) in [
-        (350, "Room to build"),
-        (612, "On track"),
-        (810, "Load high"),
-    ] {
-        store
-            .put(
-                "training",
-                "2025-01-02",
-                "now",
-                &json!({"acuteTrainingLoad":amount,"optimalRangeMin":420,"optimalRangeMax":760}),
-            )
-            .unwrap();
-        let view = raring_core::screens::today(&store, "2025-01-02");
-        assert_eq!(view.chips[0].text.as_deref(), Some(expected));
-    }
 }
 #[test]
 fn training_load_label_requires_garmin_range() {

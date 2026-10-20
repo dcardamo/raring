@@ -86,26 +86,6 @@
     ]
   },
   "headline": "Ready to push",
-  "chips": [
-    {
-      "icon": "moon",
-      "value": "7:48",
-      "text": null,
-      "tone": "good"
-    },
-    {
-      "icon": "hrv",
-      "value": "58",
-      "text": "ms",
-      "tone": "good"
-    },
-    {
-      "icon": "flame",
-      "value": null,
-      "text": "Room to build",
-      "tone": "fair"
-    }
-  ],
   "factors": [
     {
       "key": "sleep",
@@ -2369,6 +2349,7 @@
       78,
       78
     ],
+    "bodyBatteryNow": 78,
     "stress": [
       13,
       14,

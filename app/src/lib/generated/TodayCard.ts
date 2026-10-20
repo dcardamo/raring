@@ -4,4 +4,4 @@
  * Today's advice cards and where Your day sits among them. Metric cards
  * follow them in a fixed order.
  */
-export type TodayCard = "focus" | "now" | "sleepPlan" | "vitals" | "day";
+export type TodayCard = "focus" | "sleepPlan" | "vitals" | "day";

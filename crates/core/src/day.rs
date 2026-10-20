@@ -115,13 +115,19 @@ pub fn timeline(store: &Store, view: &TodayView, today: NaiveDate, now: DateTime
         });
     }
     events.sort_by(|a, b| a.start_min.unwrap_or(f64::MAX).total_cmp(&b.start_min.unwrap_or(f64::MAX)));
+    let body_battery = if clock_change { vec![] } else { until(body_battery, 3., limit) };
+    let body_battery_now = body_battery.iter().rev().find_map(|v| *v).or_else(|| {
+        let summary = store.get("summary", &date)?;
+        summary["bodyBatteryMostRecentValue"].as_f64()
+    });
     DayTimeline {
         date,
         now_min,
         upload_min,
         sleep,
         asleep_min: night.asleep_min,
-        body_battery: if clock_change { vec![] } else { until(body_battery, 3., limit) },
+        body_battery,
+        body_battery_now,
         stress_average: stress.average,
         stress: if clock_change { vec![] } else { until(stress.timeline, 3., limit) },
         heart_rate: if clock_change || (hr.duration_min - 1440.).abs() >= 1. { vec![] } else { until(hr.timeline, 2., limit) },

@@ -278,6 +278,24 @@ fn the_backlog_lists_what_is_left_after_recordings_and_placed_sessions() {
 }
 
 #[test]
+fn the_backlog_suggests_a_sport_the_limits_allow() {
+    let f = fx("backlog-limits");
+    goals(&f, GoalTargets { zone2_min: 90, ..Default::default() });
+    rec(&f.store, 2, "2025-03-12 07:00:00", "cycling", 30., Some([0, 1800, 0, 0, 0]));
+    rec(&f.store, 3, "2025-03-05 07:00:00", "cycling", 60., Some([0, 1800, 0, 0, 0]));
+    rec(&f.store, 4, "2025-03-04 07:00:00", "walking", 40., Some([0; 5]));
+    let sport = |f: &Fx| board(f).backlog.iter().find(|i| i.kind == GoalKind::Zone2).and_then(|i| i.sport);
+    assert_eq!(sport(&f), Some(Sport::Cycling));
+    let limit = |excluded: Vec<Sport>| LocalAction::SetLimits { limits: Limits { excluded, note: String::new() } };
+    f.core.local_action(&limit(vec![Sport::Cycling]), at(THU, 9)).unwrap();
+    assert_eq!(sport(&f), Some(Sport::Walking), "the most-recorded sport the limits allow");
+    f.core.local_action(&limit(vec![Sport::Cycling, Sport::Walking]), at(THU, 9)).unwrap();
+    assert_eq!(sport(&f), Some(Sport::Running), "falls back to running");
+    f.core.local_action(&limit(vec![Sport::Cycling, Sport::Walking, Sport::Running]), at(THU, 9)).unwrap();
+    assert_eq!(sport(&f), None, "no allowed default");
+}
+
+#[test]
 fn a_mid_week_change_keeps_the_original_target() {
     let f = fx("revision");
     goals(&f, strength(3));

@@ -1762,42 +1762,7 @@ pub fn today_at_calendar(store: &Store, date: &str, now: DateTime<FixedOffset>, 
     // The factor Garmin rates worst, its percentage breaking ties; unrated
     // factors never count.
     let biggest_drag = rules::limiting_factor(&factors).map(|f| f.name.clone());
-    let mut chips = vec![];
-    if let Some(v) = num(sleep(&s), &[&["sleepTimeSeconds"]]) {
-        chips.push(Chip {
-            icon: Icon::Moon,
-            value: Some(format!(
-                "{}:{:02}",
-                (v / 3600.).floor() as u32,
-                (v as u32 % 3600) / 60
-            )),
-            text: None,
-            tone: sscore(&s).map(rules::score).unwrap_or(Tone::Neutral),
-        });
-    }
-    if let Some(v) = num(hs, &[&["lastNightAvg"]]) {
-        chips.push(Chip {
-            icon: Icon::Hrv,
-            value: Some(format!("{v:.0}")),
-            text: Some("ms".into()),
-            tone: rules::level(hs["status"].as_str().unwrap_or("")),
-        });
-    }
     let load = acute(&t);
-    if let Some(v) = load {
-        let (text, tone) = match band(&t) {
-            Some([lo, _]) if v < lo => ("Room to build", Tone::Fair),
-            Some([_, hi]) if v > hi => ("Load high", Tone::Poor),
-            Some(_) => ("On track", Tone::Good),
-            None => ("Load", Tone::Neutral),
-        };
-        chips.push(Chip {
-            icon: Icon::Flame,
-            value: None,
-            text: Some(text.into()),
-            tone,
-        });
-    }
     let b = store.get("battery", date).unwrap_or(Value::Null);
     let b = b.as_array().and_then(|a| a.first()).unwrap_or(&b);
     let summary = store.get("summary", date).unwrap_or(Value::Null);
@@ -1840,13 +1805,6 @@ pub fn today_at_calendar(store: &Store, date: &str, now: DateTime<FixedOffset>, 
     };
     let stress = stress(store, date);
     let activities = activities(store, date);
-    // "Right now" needs something synced today to show.
-    if body_battery.now.is_none()
-        && stress.average.is_none()
-        && !activities.iter().any(|a| a.start_local.starts_with(date))
-    {
-        focus.cards.retain(|c| *c != TodayCard::Now);
-    }
     focus.recovery_hours = num(readiness(&r), &[&["recoveryTime"]])
         .filter(|m| m.is_finite() && *m > 0.)
         .map(|m| m / 60.);
@@ -1917,7 +1875,6 @@ pub fn today_at_calendar(store: &Store, date: &str, now: DateTime<FixedOffset>, 
             )
         }),
         headline,
-        chips,
         factors,
         readiness_why: None,
         body_battery_why: None,

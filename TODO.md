@@ -132,6 +132,14 @@ From the chart legibility pass, in priority order.
 - The check compares text with other text and with `data-mark` markers, not
   with bars, points or bands; mark more shapes as charts change.
 
+### Today and Sleep review follow-ups
+
+From the Today and Sleep review's remainder, in priority order.
+
+- Health doesn't say when the watch can't record skin temperature or HRV
+  status; Today now explains only readiness and the sleep score. Show the
+  other missing-metric reasons on Health's vitals.
+
 ## Next
 
 ### 7a. Weekly plan follow-ups
@@ -367,6 +375,22 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Today says each fact once; Choose and This week explain limits**
+  (commit "Cut Today's repeats and say why limits block a backlog item"),
+  from the Today and Sleep review (B7, M1, M2, M4, M5, m7, m10–m12, m14,
+  m17, m20). The Right now card (`TodayCard::Now`) and the chips row are
+  gone; Your day's Body Battery value falls back to the day's daily-stats
+  level (`bodyBatteryNow`) so nothing is lost. The upload time is only in
+  the header. A recording leads as "Done today" above the activity, not its
+  name twice. Notices sit above last night and readiness and list only
+  readiness and sleep-score reasons. Your day hides when the calendar day
+  has nothing recorded. The backlog suggests the most-recorded endurance
+  sport the limits allow (else running or walking); an excluded item reads
+  "Excluded by your limits" in Choose and on This week, whose Do it today
+  is gone from the evening. Choose marks Garmin's session ◇ "Garmin ·
+  read-only", "Review needed" under limits. The "?" and event chips have
+  44 px targets.
 
 - **Chart and label legibility** (commit "Make every chart's text legible at
   phone widths and large text"). Sleep · Tonight's dial is a timeline from an

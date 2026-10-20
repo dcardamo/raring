@@ -296,16 +296,20 @@ fn pause_on<'a>(local: &'a LocalRecords, date: &str) -> Option<&'a Pause> {
         .find(|p| p.since.as_str() <= date && p.until.as_deref().is_none_or(|u| date <= u))
 }
 
-/// The cardio sport recorded most in the last eight weeks.
-fn usual_cardio(store: &Store, today: NaiveDate) -> Option<Sport> {
+/// The cardio sport recorded most in the last eight weeks that the person's
+/// limits allow, otherwise running or walking; None when limits exclude both.
+fn usual_cardio(store: &Store, today: NaiveDate, excluded: &[Sport]) -> Option<Sport> {
     let mut n: BTreeMap<Sport, u32> = BTreeMap::new();
     for (id, _) in store.activities_between(&(today - Duration::days(56)).to_string(), &today.to_string()) {
         let sport = local::sport_of(&screens::activity_kind(store, &id).unwrap_or_default());
-        if [Sport::Running, Sport::Cycling, Sport::Walking, Sport::Swimming, Sport::Hiking].contains(&sport) {
+        if [Sport::Running, Sport::Cycling, Sport::Walking, Sport::Swimming, Sport::Hiking].contains(&sport) && !excluded.contains(&sport) {
             *n.entry(sport).or_default() += 1;
         }
     }
-    n.into_iter().max_by_key(|(_, c)| *c).map(|(s, _)| s)
+    n.into_iter()
+        .max_by_key(|(_, c)| *c)
+        .map(|(s, _)| s)
+        .or_else(|| [Sport::Running, Sport::Walking].into_iter().find(|s| !excluded.contains(s)))
 }
 
 /// The plan week containing `anchor`, measured on `today`.
@@ -542,7 +546,7 @@ pub fn board_with(store: &Store, local: &LocalRecords, anchor: NaiveDate, today:
     let current = (start..=end).contains(&today);
     let today_s = today.to_string();
     let backlog_paused = current && pause_on(local, &today_s).is_some();
-    let cardio = if current { usual_cardio(store, today) } else { None };
+    let cardio = if current { usual_cardio(store, today, &local.circumstances.limits.excluded) } else { None };
     let backlog = if !current || backlog_paused {
         vec![]
     } else {

@@ -362,8 +362,6 @@ pub enum DayPhase {
 pub enum TodayCard {
     /// Today's focus: effort and the limiting readiness factor.
     Focus,
-    /// The latest synced Body Battery and stress, and the day's activity.
-    Now,
     SleepPlan,
     /// Vitals, moved up when two or more are outside their range.
     Vitals,
@@ -436,7 +434,6 @@ pub struct TodayView {
     pub load: Option<Gauge>,
     /// A few words: "Ready to push", "Take it easy".
     pub headline: String,
-    pub chips: Vec<Chip>,
     pub factors: Vec<Factor>,
     pub readiness_why: Option<Why>,
     pub body_battery_why: Option<Why>,
@@ -2949,6 +2946,9 @@ pub struct DayTimeline {
     /// Three-minute slots from midnight, blank after the upload or now; gaps
     /// are not zero.
     pub body_battery: Vec<Option<f64>>,
+    /// The row's value: the last drawn level, otherwise the calendar day's
+    /// daily-stats latest when Garmin sent no intraday levels.
+    pub body_battery_now: Option<f64>,
     pub stress: Vec<Option<f64>>,
     pub stress_average: Option<f64>,
     /// Two-minute slots.

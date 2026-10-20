@@ -181,9 +181,10 @@ where they are.
   the lowest readiness factor, then the effort. Before last night syncs,
   the card says so neutrally with the watch's last upload, without a
   verdict or yesterday's effort.
-- **During the day:** "Right now": the latest synced Body Battery and
-  stress, labeled with the watch's upload time, and today's activity or
-  Garmin's recovery time. The readiness focus follows it.
+- **During the day:** Your day stays under the lead; its rows carry the
+  latest synced Body Battery and stress, and the header carries the upload
+  time. (`time-of-day.js` still draws the retired "Right now" card and the
+  chips, which repeated the hero and Your day.)
 - **Tonight's plan rises** two hours before Garmin's window: wind-down,
   window and need, with a strip placing now against them. A position, never
   a countdown. Earlier in the day the plan is one line.

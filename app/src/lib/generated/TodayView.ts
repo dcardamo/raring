@@ -2,7 +2,6 @@
 import type { ActivityCard } from "./ActivityCard";
 import type { AdaptState } from "./AdaptState";
 import type { BodyBatteryCard } from "./BodyBatteryCard";
-import type { Chip } from "./Chip";
 import type { DayTimeline } from "./DayTimeline";
 import type { Effort } from "./Effort";
 import type { Factor } from "./Factor";
@@ -46,7 +45,7 @@ readinessTrend: Array<number | null>, sleep: Gauge | null, sleepPlan: SleepPlan 
 /**
  * A few words: "Ready to push", "Take it easy".
  */
-headline: string, chips: Array<Chip>, factors: Array<Factor>, readinessWhy: Why | null, bodyBatteryWhy: Why | null, 
+headline: string, factors: Array<Factor>, readinessWhy: Why | null, bodyBatteryWhy: Why | null, 
 /**
  * Shown on Today behind a tap when two scores point different ways.
  */

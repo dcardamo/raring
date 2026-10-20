@@ -221,7 +221,7 @@ pub fn focus(input: &PhaseInput) -> TodayFocus {
     if now < wake_end {
         focus(DayPhase::Wake, &[Focus, Day, SleepPlan], Some(wake_end))
     } else if now < night.promote {
-        focus(DayPhase::Day, &[TodayCard::Day, Now, Focus, SleepPlan], Some(night.promote))
+        focus(DayPhase::Day, &[TodayCard::Day, Focus, SleepPlan], Some(night.promote))
     } else if now < night.wind_down {
         // From the evening on nothing should invite a workout.
         TodayFocus {

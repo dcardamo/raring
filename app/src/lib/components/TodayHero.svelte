@@ -1,7 +1,6 @@
 <script lang="ts">
  import Gauge from './Gauge.svelte';
  import Icon from './Icon.svelte';
- import Chip from './Chip.svelte';
  import Reconcile from './Reconcile.svelte';
  import ActivityRow from './ActivityRow.svelte';
  import type {TodayView} from '../generated/TodayView';
@@ -46,7 +45,7 @@
  </button>
 </section>
 <section class="hero" aria-labelledby="lead-h">
- <h2 id="lead-h">{lead?.headline ?? today.headline ?? 'Your day is taking shape'}</h2>
+ <h2 id="lead-h">{lead?.headline || today.headline || 'Your day is taking shape'}</h2>
  {#if lead?.line && !planCard}<p class="line">{lead.line}</p>{/if}
  {#if today.focus.note && lead?.kind !== 'fixed'}<p class="reason"><Icon name="clock" size={13}/> {today.focus.note}</p>{/if}
  {#if today.focus.schedule}<p class="reason"><Icon name="clock" size={13}/> Timed by your {today.focus.schedule} until a few more nights are recorded.</p>{/if}
@@ -57,7 +56,6 @@
  {/if}
  {#if lead?.kind === 'sleep'}{#each stillPlanned as s}<button class="still" onclick={() => navigate('plan')}>{s.name}{s.time ? ` ${s.time}` : ''} · still in your plan<Icon name="chevron" size={14}/></button>{/each}{/if}
  {#if recognised}<div class="recognised"><ActivityRow activity={recognised} open={() => navigate('workout/' + recognised!.id)}/></div>{/if}
- {#if today.chips.length && !['sleep', 'waiting'].includes(lead?.kind ?? '')}<div class="chips">{#each today.chips as chip}<Chip {chip} label={chip.icon === 'moon' ? 'View sleep' : chip.icon === 'hrv' ? 'View HRV' : 'View training'} onclick={() => navigate(chip.icon === 'moon' ? 'sleep/last' : chip.icon === 'hrv' ? 'metric/hrv' : 'training')}/>{/each}</div>{/if}
  {#if today.reconcile && !waiting}<Reconcile reconcile={today.reconcile}/>{/if}
  {#if lead && !planCard && (lead.action || lead.dismissable || ['session', 'garmin', 'review'].includes(lead.kind))}
   <div class="acts">
@@ -85,7 +83,6 @@
  .sw em{font:600 12px Inter;font-style:normal;text-transform:capitalize;color:var(--text2)}.sw.on .seg{opacity:1;height:21px;box-shadow:0 0 0 2px var(--ink)}.sw.on em{color:var(--text);font-weight:700}.sw.on em::before{content:'▲ ';font-size:9px;color:var(--ink)}
  .still{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;min-height:44px;margin:6px 0 0;padding:6px 4px;border:0;border-top:1px solid var(--line);background:none;color:var(--text2);font:500 13px Inter;text-align:left}
  .recognised{margin:10px 0 4px;padding:12px;border:1px solid rgba(61,220,151,.3);border-radius:18px;background:rgba(61,220,151,.06)}
- .chips{justify-content:flex-start;margin:10px 4px 0}
  .acts{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0}.acts button{width:auto;flex:1 1 140px;margin-top:0}
  /* In em, so larger system text stacks the halves before they overflow. */
  @container(max-width:22em){.morning{grid-template-columns:1fr}.ready-fact{border-left:0!important;padding-left:0!important}}

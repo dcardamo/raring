@@ -162,6 +162,24 @@ fn a_nap_change_needs_measured_levels_before_the_upload() {
 }
 
 #[test]
+fn the_body_battery_value_is_the_last_drawn_level_or_the_days_latest() {
+    let (dir, store, core) = fx("bb-now");
+    store.put("summary", DAY, "now", &json!({"bodyBatteryMostRecentValue": 64})).unwrap();
+    let d = timeline(&store, &core, at(13, 15, 0), Some(at(13, 14, 0)), 1440.);
+    assert!(d.body_battery.is_empty());
+    assert_eq!(d.body_battery_now, Some(64.), "daily stats when there are no intraday levels");
+    battery(&store, &[(100, "MEASURED", 50.), (200, "MEASURED", 55.), (290, "MEASURED", 70.)]);
+    let d = timeline(&store, &core, at(13, 15, 0), Some(at(13, 12, 0)), 1440.);
+    assert_eq!(d.body_battery_now, Some(55.), "the last level drawn before the upload");
+    store.put("summary", "2025-03-12", "now", &json!({"bodyBatteryMostRecentValue": 30})).unwrap();
+    store.put("summary", DAY, "now", &json!({})).unwrap();
+    store.put("stress", DAY, "now", &json!({})).unwrap();
+    let d = timeline(&store, &core, at(13, 15, 0), Some(at(13, 14, 0)), 1440.);
+    assert_eq!(d.body_battery_now, None, "never yesterday's level");
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
 fn a_clock_change_day_leaves_intraday_series_to_their_details() {
     let (dir, store, core) = fx("dst");
     battery(&store, &[(10, "MEASURED", 50.), (20, "MEASURED", 55.)]);

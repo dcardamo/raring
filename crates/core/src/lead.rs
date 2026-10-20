@@ -254,7 +254,7 @@ fn choose(
         } else {
             None
         };
-        let mut lead = l.done(format!("done:{}", r.id), LeadKind::Done, r.name.clone(), line, Some(("Open workout", route(&format!("workout/{}", r.id)), false)), false);
+        let mut lead = l.done(format!("done:{}", r.id), LeadKind::Done, "Done today", line, Some(("Open workout", route(&format!("workout/{}", r.id)), false)), false);
         lead.activity = Some(r.id.clone());
         return lead;
     }
@@ -473,6 +473,7 @@ mod tests {
         recording(&store, 7, "strength_training", 7);
         let (_, l) = lead(&store, DayPhase::Day);
         assert_eq!((l.kind, l.activity.as_deref(), l.line.as_deref()), (LeadKind::Done, Some("7"), Some("1 of 2 strength this week")));
+        assert_eq!(l.headline, "Done today", "the recording below names it");
         assert_eq!(l.action.unwrap().route.as_deref(), Some("workout/7"));
     }
 

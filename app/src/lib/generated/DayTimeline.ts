@@ -23,7 +23,12 @@ sleep: Array<StageSpan>, asleepMin: number | null,
  * Three-minute slots from midnight, blank after the upload or now; gaps
  * are not zero.
  */
-bodyBattery: Array<number | null>, stress: Array<number | null>, stressAverage: number | null, 
+bodyBattery: Array<number | null>, 
+/**
+ * The row's value: the last drawn level, otherwise the calendar day's
+ * daily-stats latest when Garmin sent no intraday levels.
+ */
+bodyBatteryNow: number | null, stress: Array<number | null>, stressAverage: number | null, 
 /**
  * Two-minute slots.
  */
