@@ -1897,7 +1897,8 @@
         "anaerobicLabel": null,
         "benefit": null,
         "avgHr": 118,
-        "intensityMin": 24
+        "intensityMin": 24,
+        "distanceUnit": "km"
       },
       "setsRecorded": true
     },
@@ -1923,7 +1924,8 @@
         "anaerobicLabel": null,
         "benefit": null,
         "avgHr": null,
-        "intensityMin": null
+        "intensityMin": null,
+        "distanceUnit": "km"
       },
       "setsRecorded": true
     },
@@ -1949,7 +1951,8 @@
         "anaerobicLabel": null,
         "benefit": null,
         "avgHr": null,
-        "intensityMin": null
+        "intensityMin": null,
+        "distanceUnit": "km"
       },
       "setsRecorded": false
     },
@@ -1975,7 +1978,8 @@
         "anaerobicLabel": null,
         "benefit": null,
         "avgHr": null,
-        "intensityMin": null
+        "intensityMin": null,
+        "distanceUnit": "km"
       },
       "setsRecorded": true
     },
@@ -2001,7 +2005,8 @@
         "anaerobicLabel": null,
         "benefit": null,
         "avgHr": null,
-        "intensityMin": null
+        "intensityMin": null,
+        "distanceUnit": "km"
       },
       "setsRecorded": true
     },
@@ -2027,7 +2032,8 @@
         "anaerobicLabel": null,
         "benefit": null,
         "avgHr": null,
-        "intensityMin": null
+        "intensityMin": null,
+        "distanceUnit": "km"
       },
       "setsRecorded": true
     },
@@ -2053,7 +2059,8 @@
         "anaerobicLabel": null,
         "benefit": null,
         "avgHr": null,
-        "intensityMin": null
+        "intensityMin": null,
+        "distanceUnit": "km"
       },
       "setsRecorded": true
     },
@@ -2079,7 +2086,8 @@
         "anaerobicLabel": null,
         "benefit": null,
         "avgHr": null,
-        "intensityMin": null
+        "intensityMin": null,
+        "distanceUnit": "km"
       },
       "setsRecorded": true
     },
@@ -2105,7 +2113,8 @@
         "anaerobicLabel": null,
         "benefit": null,
         "avgHr": null,
-        "intensityMin": null
+        "intensityMin": null,
+        "distanceUnit": "km"
       },
       "setsRecorded": true
     },
@@ -2131,7 +2140,8 @@
         "anaerobicLabel": null,
         "benefit": null,
         "avgHr": null,
-        "intensityMin": null
+        "intensityMin": null,
+        "distanceUnit": "km"
       },
       "setsRecorded": true
     },
@@ -2157,7 +2167,8 @@
         "anaerobicLabel": null,
         "benefit": null,
         "avgHr": null,
-        "intensityMin": null
+        "intensityMin": null,
+        "distanceUnit": "km"
       },
       "setsRecorded": true
     }

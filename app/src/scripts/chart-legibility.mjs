@@ -30,6 +30,8 @@ const pages=[
  ['training','#training'],
  ['workout-run','#workout/9000000000001'],
  ['workout-strength','#workout/9000000000002'],
+ ['workout-swim','#workout/9000000000007'],
+ ['workout-walk','#workout/9000000000008'],
  ['strength','#strength'],
  ['health','#health'],
  ['health-heart-rate','?fixture=heart-rate#health'],
@@ -39,7 +41,7 @@ const pages=[
  ['plan','#plan'],
  ['review','#review/latest'],
  ...['Cardio','Strength','Long-term'].map(tab=>[`progress-${tab.toLowerCase()}`,'#progress',undefined,undefined,tab]),
- ...['bodyBattery','stress','heartRate','restingHr','hrv','respiration','spo2','skinTemp','vo2max','endurance','hill','runningTolerance'].map(m=>[`metric-${m}`,`#metric/${m}`]),
+ ...['bodyBattery','stress','heartRate','restingHr','hrv','respiration','spo2','skinTemp','vo2max','endurance','hill','runningTolerance','acuteLoad'].map(m=>[`metric-${m}`,`#metric/${m}`]),
 ];
 const widths=[360,390,720,1100];
 const scales=[1,1.3,2];

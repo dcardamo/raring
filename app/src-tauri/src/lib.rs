@@ -547,6 +547,10 @@ async fn muscles(app: tauri::AppHandle, range: TrendRange) -> Result<Option<rari
     read_view(app, move |core| Ok(core.muscles(range, Local::now()))).await
 }
 #[tauri::command]
+async fn activity_page(app: tauri::AppHandle, before_start: String, before_id: String, icon: Option<raring_core::view::Icon>) -> Result<raring_core::view::ActivityPage, String> {
+    read_view(app, move |core| Ok(core.activity_page(&before_start, &before_id, icon))).await
+}
+#[tauri::command]
 async fn lift_series(app: tauri::AppHandle, key: String, range: TrendRange) -> Result<Option<raring_core::view::LiftSeries>, String> {
     read_view(app, move |core| Ok(core.lift_series(&key, range, Local::now()))).await
 }
@@ -735,6 +739,29 @@ fn request_notification_permission(app: tauri::AppHandle) -> Result<bool, String
         // Desktop needs no permission prompt; Settings reads what the platform
         // allows through `reminders_status`.
         Ok(true)
+    }
+}
+
+/// Whether Android lets Raring post notifications now; `None` where the
+/// platform has no such permission.
+#[tauri::command]
+fn notification_permission(app: tauri::AppHandle) -> Result<Option<bool>, String> {
+    #[cfg(target_os = "android")]
+    {
+        #[derive(Deserialize)]
+        struct Response {
+            granted: bool,
+        }
+        return vault(&app)
+            .0
+            .run_mobile_plugin::<Response>("notificationPermission", serde_json::json!({}))
+            .map(|r| Some(r.granted))
+            .map_err(|e| e.to_string());
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = app;
+        Ok(None)
     }
 }
 
@@ -1227,6 +1254,7 @@ pub fn run() {
                     sign_out,
                     open_garmin_connect,
                     request_notification_permission,
+                    notification_permission,
                     get_settings,
                     garmin_changes,
                     patch_settings,
@@ -1242,6 +1270,7 @@ pub fn run() {
                     progress_domains,
                     milestone_archive,
                     lift_series,
+                    activity_page,
                     muscles,
                     check_reminders,
                     reminders_status,
@@ -1271,6 +1300,7 @@ pub fn run() {
                     sign_out,
                     open_garmin_connect,
                     request_notification_permission,
+                    notification_permission,
                     get_settings,
                     garmin_changes,
                     patch_settings,
@@ -1286,6 +1316,7 @@ pub fn run() {
                     progress_domains,
                     milestone_archive,
                     lift_series,
+                    activity_page,
                     muscles,
                     check_reminders,
                     reminders_status

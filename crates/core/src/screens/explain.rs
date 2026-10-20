@@ -536,7 +536,7 @@ pub(super) fn training_why(t: TrainingInputs) -> Option<Why> {
         };
         let value = [
             t.acute.map(|g| format!("{:.0}", g.value)),
-            t.ratio.map(|r| format!("ratio {r:.1}")),
+            t.ratio.map(|r| format!("{r:.1}× your 4-week load")),
         ]
         .into_iter()
         .flatten()
@@ -640,7 +640,7 @@ pub(super) fn training_why(t: TrainingInputs) -> Option<Why> {
         },
         feedback: None,
         inputs,
-        source: "From Garmin's training status inputs. Raring adds no score.".into(),
+        source: "From Garmin's training status inputs.".into(),
     })
 }
 

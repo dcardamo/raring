@@ -866,10 +866,18 @@ pub fn lift_series(store: &Store, key: &str, range: TrendRange, today: NaiveDate
                     .then(|| counted.iter().map(|s| grams(s) * s.reps.unwrap_or(0) as f64).sum::<f64>())
                     .and_then(|g| weight(Some(g), unit)),
                 excluded: (mine.len() - counted.len()) as u32,
+                most_reps: mine
+                    .iter()
+                    .filter(|i| counts_for_reps(&a.session.sets[**i], &a.flags[**i]))
+                    .filter_map(|i| a.session.sets[*i].reps)
+                    .max(),
             })
         })
         .collect();
-    Some(LiftSeries { key: key.to_owned(), name: display_name(key), unit, range, points })
+    let from = from
+        .or_else(|| points.first().map(|p| p.date.clone()))
+        .unwrap_or_else(|| today_s.clone());
+    Some(LiftSeries { key: key.to_owned(), name: display_name(key), unit, range, from, to: today_s, points })
 }
 
 pub fn is_strength(item: &Value) -> bool {

@@ -24,7 +24,8 @@
     "anaerobicLabel": "Minor",
     "benefit": "Tempo",
     "avgHr": 152,
-    "intensityMin": 62
+    "intensityMin": 62,
+    "distanceUnit": "km"
   },
   "recoveryHours": 18,
   "stats": [
@@ -1948,6 +1949,7 @@
   "vo2maxNew": null,
   "counted": {
     "week": "2025-10-13",
+    "goals": true,
     "lines": [
       {
         "kind": "zone2",

@@ -10,11 +10,11 @@
  <h3 id="hic-h">How it counted</h3>
  <ul>
   {#each counted.lines as l (l.kind)}
-   <li>{#if l.kind === 'strength'}<b>{l.position ?? 1} of {num(l.target)} strength sessions</b> this week{:else}<b>{amount(l.kind, l.amount)} {GOALS[l.kind].name}</b> · {l.recorded != null ? `${num(l.recorded)} of ${num(l.target)} this week` : `goal ${num(l.target)}`}{/if}</li>
+   <li>{#if l.kind === 'strength'}<b>{l.position != null ? `${l.position} of ` : ''}{num(l.target)} strength sessions</b> this week{:else}<b>{amount(l.kind, l.amount)} {GOALS[l.kind].name}</b> · {l.recorded != null ? `${num(l.recorded)} of ${num(l.target)} this week` : `goal ${num(l.target)}`}{/if}</li>
   {/each}
   {#if counted.planItem}<li>Done: <b>{counted.planItem}</b> from your plan</li>{/if}
   {#each counted.bests as b}<li><b>Best in available history</b> · {b}</li>{/each}
-  {#if !counted.lines.length && !counted.planItem && !counted.bests.length}<li>Recorded. No weekly goal counts this kind of activity.</li>{/if}
+  {#if !counted.lines.length && !counted.planItem && !counted.bests.length}<li>Recorded. {counted.goals ? 'No weekly goal counts this kind of activity.' : 'No weekly goals set.'}</li>{/if}
  </ul>
 </section>
 <style>

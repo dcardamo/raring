@@ -95,3 +95,39 @@ fn fallback_only_where_garmin_has_no_metric() {
     let hrv = &vitals(&store, "2025-10-16").readings[1];
     assert_eq!(hrv.tone, Tone::Neutral);
 }
+
+#[test]
+fn resting_hr_chart_band_comes_from_resting_hr_not_the_sleep_hr_baseline() {
+    let store = Store::open(":memory:").unwrap();
+    for i in 0..30 {
+        let date = (chrono::NaiveDate::from_ymd_opt(2025, 10, 16).unwrap()
+            - chrono::Duration::days(i))
+        .to_string();
+        store
+            .put("summary", &date, "now", &json!({"restingHeartRate": 44 + i % 5}))
+            .unwrap();
+    }
+    let with_status: Value =
+        serde_json::from_str(include_str!("fixtures/health_status.json")).unwrap();
+    put(&store, "2025-10-16", &with_status);
+    let view = raring_core::screens::health(&store, "2025-10-16");
+    let sleep_hr = view.vitals.readings.iter().find(|r| r.kind == VitalKind::RestingHr).unwrap();
+    assert_eq!(sleep_hr.normal, Some([52., 62.])); // Health Status's Sleep HR baseline.
+    let band = view.resting_hr_range.unwrap();
+    assert!(band[0] >= 44. && band[1] <= 48., "{band:?}");
+
+    // Without Health Status the vital is resting HR, and both bands agree.
+    let store2 = Store::open(":memory:").unwrap();
+    for i in 0..30 {
+        let date = (chrono::NaiveDate::from_ymd_opt(2025, 10, 16).unwrap()
+            - chrono::Duration::days(i))
+        .to_string();
+        store2
+            .put("summary", &date, "now", &json!({"restingHeartRate": 44 + i % 5}))
+            .unwrap();
+    }
+    let view = raring_core::screens::health(&store2, "2025-10-16");
+    let resting = view.vitals.readings.iter().find(|r| r.kind == VitalKind::RestingHr).unwrap();
+    assert_eq!(resting.range_source, VitalRangeSource::Raring);
+    assert_eq!(resting.normal, view.resting_hr_range);
+}

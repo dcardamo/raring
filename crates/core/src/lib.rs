@@ -214,11 +214,16 @@ impl Raring {
             .collect();
         view.counted = Some(view::WorkoutCount {
             week: board.start.clone(),
+            goals: board.ledger.iter().any(|l| !l.observation),
             lines,
             plan_item: board.items.iter().find(|p| p.recording.as_deref() == Some(id)).map(|p| p.intention.name.clone().unwrap_or_else(|| lead::sport_name(p.intention.sport).to_owned())),
             bests: local.milestones.items.iter().filter(|m| m.activity.as_deref() == Some(id) && !m.withdrawn).map(|m| m.title.clone()).collect(),
         });
         Some(view)
+    }
+    /// Older stored recordings for Training → Activities, from local data only.
+    pub fn activity_page(&self, before_start: &str, before_id: &str, icon: Option<view::Icon>) -> view::ActivityPage {
+        screens::activity_page(&self.store, before_start, before_id, icon, 20)
     }
     /// Sets per muscle group over a range, from local sets only.
     pub fn muscles(&self, range: view::TrendRange, now: DateTime<Local>) -> Option<view::MuscleRange> {

@@ -295,6 +295,30 @@ pub struct VitalsCard {
     pub baseline_ready: bool,
 }
 
+/// How an activity's distance reads: kilometres or miles by Garmin's
+/// measurement setting, and metres or yards (the pool's unit) for swims.
+/// Pace, speed and elevation follow: statute units for `Mi` and `Yd`.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum DistanceUnit {
+    #[default]
+    Km,
+    Mi,
+    M,
+    Yd,
+}
+
+/// A page of older stored recordings for Training → Activities.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ActivityPage {
+    pub activities: Vec<ActivityCard>,
+    /// Older recordings may remain.
+    pub more: bool,
+}
+
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -323,6 +347,8 @@ pub struct ActivityCard {
     /// Garmin's moderate plus twice vigorous minutes for this activity.
     #[serde(default)]
     pub intensity_min: Option<f64>,
+    #[serde(default)]
+    pub distance_unit: DistanceUnit,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Default)]
@@ -1312,6 +1338,11 @@ pub struct HealthView {
     pub body_weight: Option<BodyWeightCard>,
     /// This week's intensity minutes, when Garmin reported any day of it.
     pub intensity: Option<IntensityCard>,
+    /// Raring's usual range for Garmin's daily resting HR over the last 30
+    /// days (Rules: Normal range), the band on the resting-HR chart. Never
+    /// Health Status's Sleep HR baseline, which measures something else.
+    #[serde(default)]
+    pub resting_hr_range: Option<[f64; 2]>,
     /// A past day's detail an explicit open can fetch.
     #[serde(default)]
     pub detail: DayDetail,
@@ -3067,6 +3098,8 @@ pub struct LiftPoint {
     /// Sets of this exercise left out: bodyweight, unweighted, without reps,
     /// or flagged as doubled.
     pub excluded: u32,
+    /// Most reps in one counted bodyweight set (Rules: Records and bests).
+    pub most_reps: Option<u32>,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
@@ -3077,6 +3110,10 @@ pub struct LiftSeries {
     pub name: String,
     pub unit: WeightUnit,
     pub range: TrendRange,
+    /// The range's first day (the first session for Max) and today: the
+    /// chart's date axis.
+    pub from: String,
+    pub to: String,
     /// Sessions in the range, oldest first.
     pub points: Vec<LiftPoint>,
 }
@@ -3290,6 +3327,8 @@ pub struct CountLine {
 pub struct WorkoutCount {
     /// The plan week's first day.
     pub week: String,
+    /// Whether any weekly goal is on that week; without one, nothing counts.
+    pub goals: bool,
     pub lines: Vec<CountLine>,
     /// Your session (or Garmin Coach's) this recording completed.
     pub plan_item: Option<String>,

@@ -31,13 +31,12 @@
 <section class="card" aria-labelledby="limits-h">
  <h3 id="limits-h">Limitations and injuries</h3>
  {#if lim.length}<p class="lim">{lim.join(' · ')}</p>{:else}<p class="small">None set.</p>{/if}
- <p class="small">Yours alone: never sent to Garmin, never on the lock screen.</p>
- <button class="row-link" onclick={limits}><span><b>Manage limitations</b><small>Also in Adapt today</small></span><Icon name="chevron" size={16}/></button>
+ <button class="row-link" onclick={limits}><span><b>Manage limitations</b></span><Icon name="chevron" size={16}/></button>
 </section>
 {#if profile.gear}<div class="gear"><GearCard gear={profile.gear}/></div>{/if}
 <section class="card">
  <button class="row-link" onclick={() => navigate('settings')}><span><b>Settings</b><small>Notifications, privacy, export and sign out</small></span><Icon name="chevron" size={16}/></button>
- <button class="row-link" onclick={() => navigate('help')}><span><b>Help</b><small>Lifting with your watch, sets, the body map, syncing</small></span><Icon name="chevron" size={16}/></button>
+ <button class="row-link" onclick={() => navigate('help')}><span><b>Help</b><small>Lifting with your watch, sets, the body map and which watches work</small></span><Icon name="chevron" size={16}/></button>
 </section>
 <style>
  .hh{display:flex;justify-content:space-between;align-items:center;gap:8px}

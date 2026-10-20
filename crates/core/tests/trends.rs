@@ -277,6 +277,15 @@ fn latest_load_and_morning_readiness_are_distinct_without_double_counting() {
         .average,
         Some(420.)
     );
+    // Training Status can be newer than the last readiness snapshot; the chart
+    // ends on the same value Training shows.
+    put(&store, "training", TODAY, json!({"acuteTrainingLoad": 612}));
+    assert_eq!(
+        trend(&store, &query(TrendMetric::AcuteLoad, TrendRange::Days7), TODAY)
+            .series
+            .average,
+        Some(612.)
+    );
 }
 
 #[test]

@@ -2,8 +2,8 @@
  import {ranges} from '../trends';
  import type {TrendRange} from '../generated/TrendRange';
  // Shared metric range control. Full evidence details may additionally offer Dates.
- let {value,label,onchange,custom=false,local=false,nights=false,disabled=false}:{value:TrendRange,label:string,onchange:(r:TrendRange)=>void,custom?:boolean,local?:boolean,nights?:boolean,disabled?:boolean}=$props();
- let choices=$derived(ranges.filter(r=>local ? r.days!=null && r.days<=30 : custom || r.range!=='custom'));
+ let {value,label,onchange,custom=false,local=false,nights=false,disabled=false,only}:{value:TrendRange,label:string,onchange:(r:TrendRange)=>void,custom?:boolean,local?:boolean,nights?:boolean,disabled?:boolean,only?:TrendRange[]}=$props();
+ let choices=$derived(ranges.filter(r=>only ? only.includes(r.range) : local ? r.days!=null && r.days<=30 : custom || r.range!=='custom'));
  const name=(r:typeof ranges[number])=>r.days?`${r.days} ${nights?'nights':'days'}`:r.range==='year'?'1 year':r.range==='custom'?'Custom dates':'All history';
 </script>
 <div class="rp" role="group" aria-label={label}>
