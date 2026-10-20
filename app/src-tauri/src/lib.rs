@@ -370,6 +370,8 @@ async fn fetch_day_detail(app: tauri::AppHandle, date: String, scope: String) ->
     let parts = day_detail_parts(&scope)?;
     #[cfg(target_os = "android")]
     {
+        // Kotlin re-reads the scope; parsing it here only rejects a bad one early.
+        let _ = parts;
         if !session_ready(&app)? { return Err("Account verification required".into()); }
         let expected = core(&app)?.session_identity().ok_or("Account verification required")?;
         vault(&app)
