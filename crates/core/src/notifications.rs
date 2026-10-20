@@ -5,7 +5,7 @@ use crate::{
 };
 use chrono::{DateTime, Datelike, Local, NaiveDateTime, Timelike};
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Notification {
     pub kind: String,
     pub title: String,
@@ -252,6 +252,8 @@ pub fn bedtime(store: &Store, now: NaiveDateTime) -> Option<BedtimeReminder> {
         body,
     })
 }
+/// Record notifications a platform has already shown. Call `deliver` instead
+/// when the platform can refuse one.
 pub fn mark_sent(
     store: &Store,
     items: &[Notification],
@@ -261,4 +263,46 @@ pub fn mark_sent(
         store.mark_notified(&n.kind, &n.tag, &now.to_rfc3339())?;
     }
     Ok(())
+}
+
+/// What a platform's delivery attempt did with the due notifications.
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Delivery {
+    /// Recorded as sent because the platform accepted them.
+    pub shown: Vec<Notification>,
+    /// Left unmarked, so the next check offers them again.
+    pub failed: Vec<Failed>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Failed {
+    pub kind: String,
+    pub tag: String,
+    pub error: String,
+}
+
+/// Show each due notification and record only those the platform accepted.
+/// A refused or failed delivery stays unmarked: the next check offers it again
+/// rather than losing it.
+pub fn deliver(
+    store: &Store,
+    items: &[Notification],
+    now: DateTime<Local>,
+    mut show: impl FnMut(&Notification) -> Result<(), String>,
+) -> rusqlite::Result<Delivery> {
+    let mut delivery = Delivery::default();
+    for item in items {
+        match show(item) {
+            Ok(()) => {
+                store.mark_notified(&item.kind, &item.tag, &now.to_rfc3339())?;
+                delivery.shown.push(item.clone());
+            }
+            Err(error) => delivery.failed.push(Failed {
+                kind: item.kind.clone(),
+                tag: item.tag.clone(),
+                error,
+            }),
+        }
+    }
+    Ok(delivery)
 }

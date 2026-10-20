@@ -579,6 +579,16 @@ impl Raring {
         notifications::mark_sent(&self.store, items, now)?;
         Ok(())
     }
+    /// Show due notifications through `show` and record only the ones the
+    /// platform accepted.
+    pub fn deliver_notifications(
+        &self,
+        items: &[Notification],
+        now: DateTime<Local>,
+        show: impl FnMut(&Notification) -> std::result::Result<(), String>,
+    ) -> Result<notifications::Delivery> {
+        Ok(notifications::deliver(&self.store, items, now, show)?)
+    }
     pub fn forget_account(&self) -> Result<()> {
         let mut signed_out = self.snapshot_state.lock().unwrap();
         *signed_out = true;
