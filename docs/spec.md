@@ -332,19 +332,26 @@ night is never shown in its place.
 
 ### Training
 
+- **The lead**: Garmin's training status with its Why sheet, the load
+  headline ("In your optimal range", "Room to build", "Load high") and,
+  beside them, VO2max: Garmin's latest estimate with its 30-day change ("+1
+  in 30 days", or "Steady over 30 days" within a point), opening its
+  history. Garmin's status partly reads how VO2max moves with your load, so
+  the two sit together.
 - **This week**: lanes per goal kind against the goal and your usual week
   (Rules: Week lanes), and recorded minutes by sport. Without goals, one
   cardio lane.
 - Three sections, the choice kept across a detail and Back:
   - **Fitness**, around three questions. *Enough, or too much?*: acute load
     as a dot on a compact bar with Garmin's optimal range as a neutral band,
-    training status with its Why sheet, load focus as aligned amount rows
+    load focus as aligned amount rows
     against Garmin's target ranges (printed), and a compact acute-load history
     chart starting at 30 days against the explicitly current optimal range;
-    Compare and all history opens the acute-load metric detail. *Is my fitness improving?*: VO2max with its 30-day change and
-    history, endurance and hill scores, running tolerance. *What am I ready
-    for?*: Garmin's race predictions, thresholds and the next race. Garmin's
-    next scheduled session is a read-only card.
+    Compare and all history opens the acute-load metric detail. *Is my
+    fitness improving?*: endurance and hill scores and running tolerance
+    (VO2max leads the page); without a VO2max estimate it says so. *What am I
+    ready for?*: Garmin's race predictions, thresholds and the next race.
+    Garmin's next scheduled session is a read-only card.
   - **Strength**: this week's sessions against the goal and sets, a small
     muscle map over a chosen range with gaps named (Rules: Muscle gaps; the
     range is shared with Strength), and a link to Strength.

@@ -62,9 +62,13 @@
   finally { if (id === pageRequest) loadingOlder = false; }
  }
  const te = (v: number | null, label: string | null, kind: string) => v == null ? null : `${kind} ${num(v, 1)}${label ? ` · ${label}` : ''}`;
+ // VO₂ max is the fitness side of Garmin's training status, so it sits beside it with its 30-day change.
+ let vo2Change = $derived(trainingData.vo2maxChange30d == null ? null : Math.abs(trainingData.vo2maxChange30d) >= 1
+  ? {text: `${signed(trainingData.vo2maxChange30d)} in 30 days`, color: trainingData.vo2maxChange30d > 0 ? colors.good : colors.poor}
+  : {text: 'Steady over 30 days', color: null});
 </script>
 <div class="page-hero">{@render header()}{#if trainingData.status}<span class="status-pill pill" style:color={toneColor(trainingData.statusTone)}>{trainingData.status}</span>{/if}
- <div class="headline training-head"><h2>{trainingData.headline}</h2>{#if trainingData.statusWhy}<div class="why-line"><WhySheet why={trainingData.statusWhy} label={trainingData.status ? `Why ${trainingData.status}?` : 'Why?'}/></div>{/if}</div></div>
+ <div class="headline training-head"><h2>{trainingData.headline}</h2>{#if trainingData.vo2max != null}<button class="vo2-fact" onclick={() => navigate('metric/vo2max')} aria-label={`VO₂ max ${num(trainingData.vo2max)}${vo2Change ? `, ${vo2Change.text}` : ''}. Open its history`}><b class="n">{num(trainingData.vo2max)}</b><span><small>VO₂ max · Garmin</small>{#if vo2Change}<em style:color={vo2Change.color}>{vo2Change.text}</em>{/if}</span><Icon name="chevron" size={14}/></button>{/if}{#if trainingData.statusWhy}<div class="why-line"><WhySheet why={trainingData.statusWhy} label={trainingData.status ? `Why ${trainingData.status}?` : 'Why?'}/></div>{/if}</div></div>
 <div class="dashboard" {@attach masonry}>
  {#if tw?.lanes.length}<Card title="This week" extra="week-lanes" help="training-week">{#each tw.lanes as lane (lane.kind)}<LaneChart {lane} today={todayIndex} start={tw.start}/>{/each}
   {#if tw.bySport.length}<p class="mix">{#each tw.bySport as m}<span><Icon name={SPORT_ICONS[m.sport]} size={14}/>{SPORT_NAMES[m.sport]} <b class="n">{Math.round(m.minutes)} min</b></span>{/each}</p>{/if}
@@ -86,11 +90,10 @@
  <Card title="Acute load history" extra="q-load-history">
   <HistoryChart compact values={[]} label="Acute load" metric="acuteLoad" initialRange="days30" band={acute?.band??null} bandLabel="Garmin's optimal range now" more={()=>navigate('metric/acuteLoad')} moreLabel="Compare and all history"/>
  </Card>
- <Card title="Is my fitness improving?" extra="q-fitness" help="vo2max">
-  {#if trainingData.vo2max != null}<button class="vo" onclick={() => navigate('metric/vo2max')} aria-label={`VO₂ max ${num(trainingData.vo2max)}, open its history`}><span><small>VO₂ max · Garmin</small><b class="n">{num(trainingData.vo2max)}</b>{#if trainingData.vo2maxChange30d != null && Math.abs(trainingData.vo2maxChange30d) >= 1}<em style:color={trainingData.vo2maxChange30d > 0 ? colors.good : colors.poor}>{signed(trainingData.vo2maxChange30d)} in 30 days</em>{/if}</span><span class="go">History<Icon name="chevron" size={14}/></span></button>
-  {:else}<p class="small">No VO₂ max estimate from Garmin yet.</p>{/if}
+ {#if trainingData.vo2max == null || trainingData.enduranceScore != null || trainingData.hillScore != null || trainingData.runningToleranceKm != null}<Card title="Is my fitness improving?" extra="q-fitness" help="fitness-scores">
+  {#if trainingData.vo2max == null}<p class="small">No VO₂ max estimate from Garmin yet.</p>{/if}
   {#if trainingData.enduranceScore != null || trainingData.hillScore != null || trainingData.runningToleranceKm != null}<div class="metrics">{#if trainingData.enduranceScore != null}<button class="metric-link" onclick={() => navigate('metric/endurance')}><b>{num(trainingData.enduranceScore)}</b><span>Endurance<Icon name="chevron" size={12}/></span></button>{/if}{#if trainingData.hillScore != null}<button class="metric-link" onclick={() => navigate('metric/hill')}><b>{num(trainingData.hillScore)}</b><span>Hill score<Icon name="chevron" size={12}/></span></button>{/if}{#if trainingData.runningToleranceKm != null}<button class="metric-link" onclick={() => navigate('metric/runningTolerance')}><b>{num(trainingData.runningToleranceKm)} km</b><span>Run tolerance<Icon name="chevron" size={12}/></span></button>{/if}</div>{/if}
- </Card>
+ </Card>{/if}
  <Card title="What am I ready for?" extra="q-ready" help="ready-for">
   {#if trainingData.races.length}<h4>Garmin’s race predictions</h4><div class="race">{#each trainingData.races as race}<div><span>{race.label}</span><b class="n">{elapsed(race.seconds)}</b></div>{/each}</div>{/if}
   {#if trainingData.thresholds?.length}<h4>Thresholds & acclimation</h4><div class="race threshold-list">{#each trainingData.thresholds as reading}<div><span>{TH[reading.kind] ?? reading.kind}<small>Recorded {dateLabel(reading.recordedOn)}</small></span><b class="n">{reading.unit.startsWith('s/') ? pace(reading.value).split('/')[0] : num(reading.value)}{reading.unit === '%' ? '' : ' '}{reading.unit.startsWith('s/') ? reading.unit.slice(1) : reading.unit}</b></div>{/each}</div>{/if}
@@ -144,8 +147,8 @@
  .lbar{position:relative;height:10px;border-radius:5px;background:rgba(255,255,255,.07)}.lbar .band{position:absolute;top:0;bottom:0;background:rgba(228,232,240,.22);border-radius:5px}
  .lbar u{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border:2px solid var(--bg);border-radius:50%}
  .lticks{display:flex;flex-wrap:wrap;gap:0 8px;justify-content:space-between;font-size:11px;color:var(--text2)}
- .vo{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:0;color:var(--text);text-align:left;min-height:52px;padding:0}
- .vo small{display:block;font-size:12px;color:var(--text2)}.vo b{font-size:28px;margin-right:8px}.vo em{font:600 12px Inter;font-style:normal}.go{display:inline-flex;gap:4px;align-items:center;font:600 13px Inter;color:var(--text2)}
+ .vo2-fact{display:inline-flex;align-items:center;gap:10px;min-height:52px;margin-top:14px;padding:8px 12px 8px 16px;border-radius:var(--radius-control);border:1px solid var(--line);background:var(--card);color:var(--text);text-align:left}
+ .vo2-fact b{font-size:30px;font-weight:500;line-height:1;letter-spacing:-.03em}.vo2-fact span{display:grid;gap:2px}.vo2-fact small{font:500 12px Inter;color:var(--text2)}.vo2-fact em{font:600 12px Inter;font-style:normal;color:var(--text2)}.vo2-fact :global(svg){color:var(--text2)}
  .planned-race{display:flex;flex-direction:column;gap:5px}.planned-race b{font:600 17px Outfit,Inter,sans-serif}.planned-race span{color:var(--text2);font-size:13px}
  .sw{display:flex;flex-wrap:wrap;gap:16px;align-items:center}.sw>div{display:grid}.big{font-size:26px}.big small{font-size:14px;color:var(--text2)}
  .mus{display:flex;gap:14px;align-items:center;margin-top:10px}.gaps{flex:1;margin:0;font-size:13.5px;color:var(--text)}
