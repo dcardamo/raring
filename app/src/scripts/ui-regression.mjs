@@ -1176,6 +1176,7 @@ try {
    window.progressStatus=samples.status;
    window.progressReplies=0;
    window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
+    if(command==='check_reminders'||command==='reminders_status')return null;
     if(command.startsWith('plugin:event|'))return 1;
     if(command==='app_status')return samples.status;
     if(command==='progress'){
@@ -1282,6 +1283,7 @@ try {
   await np.addInitScript(samples=>{
    window.isTauri=true;window.asked=0;localStorage.setItem('notifications-step-done','1');
    window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command)=>{
+    if(command==='check_reminders'||command==='reminders_status')return null;
     if(command.startsWith('plugin:'))return 1;
     if(command==='request_notification_permission'){window.asked++;return false}
     if(command==='app_status')return structuredClone(samples.status);
@@ -1311,6 +1313,7 @@ try {
   await ep.addInitScript(samples=>{
    window.isTauri=true;window.actions=[];localStorage.setItem('notifications-step-done','1');
    window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
+    if(command==='check_reminders'||command==='reminders_status')return null;
     if(command.startsWith('plugin:'))return 1;
     if(command==='local_action'){window.actions.push(args.action);return null}
     if(command==='app_status')return structuredClone(samples.status);
@@ -1359,6 +1362,7 @@ try {
   await lw.addInitScript(samples=>{
    window.isTauri=true;window.actions=[];localStorage.setItem('notifications-step-done','1');
    window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
+    if(command==='check_reminders'||command==='reminders_status')return null;
     if(command.startsWith('plugin:'))return 1;
     if(command==='local_action'){window.actions.push(args.action);return null}
     if(command==='app_status')return structuredClone(samples.status);
@@ -1383,6 +1387,7 @@ try {
   const state=window.testStatus={permission:'denied',failSave:false,saves:0,settings:{notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,notifyStatus:false,statusOfferSeen:false,adaptiveToday:true,bedtimeLeadMin:30}};
   window.isTauri=true;
   window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
+    if(command==='check_reminders'||command==='reminders_status')return null;
    if(command==='app_status')return samples.status;
    if(command==='get_settings')return structuredClone(state.settings);
    if(command==='patch_settings'){state.saves++;if(state.failSave)throw Error('Synthetic snapshot write failure');Object.assign(state.settings,args.patch);return}
@@ -1425,6 +1430,7 @@ try {
   const state=window.testPatch={stored,patches:[],pending:[],holdKeys:[],holdReads:false,reads:[],readsCompleted:0,settingsReads:0,failOptIn:false};
   window.isTauri=true;
   window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
+    if(command==='check_reminders'||command==='reminders_status')return null;
    if(command.startsWith('plugin:event|'))return 1;
    if(command==='app_status')return structuredClone(samples.status);
    if(command==='get_settings'){
@@ -1528,6 +1534,7 @@ try {
   const state=window.testMarker={stored,patches:[]};
   window.isTauri=true;
   window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
+    if(command==='check_reminders'||command==='reminders_status')return null;
    if(command.startsWith('plugin:event|'))return 1;
    if(command==='app_status')return structuredClone(samples.status);
    if(command==='get_settings')return structuredClone(stored);
@@ -1550,6 +1557,7 @@ try {
   window.__TAURI_INTERNALS__={
    transformCallback:()=>1,
    invoke:async(command)=>{
+    if(command==='check_reminders'||command==='reminders_status')return null;
     if(command==='app_status')return {...samples.status,signedIn:state.signedIn,lastSync:new Date().toISOString()};
     if(command==='begin_sign_in'){
      state.signIns++;
@@ -1623,6 +1631,7 @@ function trendFixture(q){
   window.__TAURI_INTERNALS__={
    transformCallback:()=>1,
    invoke:async(command,args)=>{
+    if(command==='check_reminders'||command==='reminders_status')return null;
  if(command==='trend'){
      const result=trendFixture(args.query);state.trendReads=(state.trendReads??0)+1;
      if(state.holdTrend)await new Promise(resolve=>{state.pendingTrend=resolve});
@@ -1856,6 +1865,7 @@ function trendFixture(q){
   samples.status.lastSync=new Date().toISOString();
   window.isTauri=true;
   window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
+    if(command==='check_reminders'||command==='reminders_status')return null;
  if(command==='trend')return trendFixture(args.query);
    if(command.startsWith('plugin:event|'))return 1;
    if(command==='app_status'){
@@ -2105,6 +2115,7 @@ function trendFixture(q){
    :{...samples.today.focus,phase:'overview',cards:['focus','sleepPlan'],planOpen:true};
   window.isTauri=true;
   window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
+    if(command==='check_reminders'||command==='reminders_status')return null;
    if(command.startsWith('plugin:event|'))return 1;
    if(command==='sync_now')return;
    if(command==='app_status')return structuredClone(samples.status);
@@ -2189,6 +2200,7 @@ function trendFixture(q){
   localStorage.setItem('notifications-step-done','1');
   window.isTauri=true;
   window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
+    if(command==='check_reminders'||command==='reminders_status')return null;
    if(command.startsWith('plugin:event|'))return 1;
    if(command==='app_status')return {...samples.status,signedIn:true,lastSync:new Date().toISOString()};
    if(command==='heart_rate_day'){

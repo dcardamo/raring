@@ -54,6 +54,9 @@ export type { Settings } from './generated/Settings';
 export type { ImportPreview } from './generated/ImportPreview';
 export type SettingsPatch = Partial<Settings>;
 export const supportsStatusSurfaces = (isTauri() && /Android/.test(navigator.userAgent)) || new URLSearchParams(location.search).get('fixture')==='status-offer';
+// Desktop delivers reminders itself while the app runs; Android schedules them natively.
+export const desktopReminders = isTauri() && !/Android/.test(navigator.userAgent);
+export type ReminderStatus = {supported:boolean;granted:boolean;error:string|null;nextAt:string|null};
 export const defaultSettings = {notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,notifyStatus:false,statusOfferSeen:false,bedtimeLeadMin:30,adaptiveToday:true,journalEnabled:false,planPrompt:true,bodyFigure:'profile'} satisfies Settings;
 let previewSettings:Settings = {...defaultSettings};
 const copy = <T>(value:T):T => structuredClone(value);
@@ -146,6 +149,9 @@ const sampleImport:ImportPreview = {exportedAt:'2025-10-19T08:12:00+02:00',appVe
 export const choose_import = ():Promise<ImportPreview> => call('choose_import',undefined,sampleImport);
 export const apply_import = ():Promise<ImportPreview> => call('apply_import',undefined,sampleImport);
 export const request_notification_permission = ():Promise<boolean> => call('request_notification_permission',undefined,true);
+// Desktop re-reads due reminders on resume and after a settings change.
+export const check_reminders = ():Promise<void> => call('check_reminders',undefined,undefined);
+export const reminders_status = ():Promise<ReminderStatus|null> => call('reminders_status',undefined,null);
 export const get_settings = ():Promise<Settings> => call('get_settings',undefined,previewSettings);
 export const patch_settings = (patch:SettingsPatch):Promise<void> => {if(!isTauri()){previewSettings={...previewSettings,...copy(patch)};return Promise.resolve()}return invoke<void>('patch_settings',{patch})};
 export const onStatusChanged = (callback:()=>void):Promise<()=>void> => isTauri()?listen('status-changed',callback):Promise.resolve(()=>{});
