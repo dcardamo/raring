@@ -115,11 +115,9 @@ From item 11, in priority order.
 
 ### 8a. Strength follow-ups
 
-- **Explicit detail refresh**: add a budgeted way to refresh older strength
-  sets through the existing worker and serialized token access. Automatic
-  rechecks stop 48 hours after a workout starts; Refresh and reopening an
-  older workout do not retrieve later Connect edits. Coordinate any shared
-  on-demand refresh with the integration lane rather than adding another path.
+- Check an explicit Refresh from Garmin against a Connect edit made more than
+  48 hours after a real workout started: the button, the last-checked time and
+  a removed set need real data, and only synthetic coverage exists so far.
 - **Confirm a full Forerunner 970 session.** Read-back is only partly
   verified on the watch: no watch-recorded session with named, weighted sets
   (or one run from a structured workout) has been read yet. Record one with
@@ -329,6 +327,20 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **8a explicit strength refresh** (commit "Refresh a strength workout's sets
+  only when asked"). A workout's detail now says when Garmin's sets were last
+  read and offers **Refresh from Garmin**: one explicit
+  `/activity-service/activity/{id}/exerciseSets` request, through the same
+  serialized token path as the on-demand heart-rate read (Android's existing
+  `SyncGate` and token vault, desktop's `with_desktop_tokens`) and the shared
+  request budget, retry wait and 429 backoff. It never runs from navigation or
+  an ordinary sync, keeps the previous sets when the read fails, and reports
+  Garmin's rate-limit message. Core tests use the local mock client only: a
+  strength activity spends one request and updates the detail, a non-strength
+  activity spends none, an active backoff blocks it. The Kotlin plugin and JNI
+  bridge mirror the existing heart-rate on-demand command. Unverified on a
+  real account and device.
 
 - **8a bodyweight bests** (commit "Give bodyweight sets a most-reps best").
   Bodyweight sets (Garmin weight 0 or null) earn no weighted record or best;

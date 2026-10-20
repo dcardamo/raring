@@ -244,8 +244,9 @@ Tonight:
   time's sets as text. An exercise Garmin couldn't name is "Not recognized".
   The heart-rate chart and zones follow. A session timed without lap presses
   says no sets were recorded and links to help. A ? opens a sheet on how sets
-  are counted. Raring never changes the sets; fixing them is a later Garmin
-  write.
+  are counted. A card on the workout says when Garmin's sets were last read
+  and offers Refresh from Garmin (Rules: Explicit strength refresh). Raring
+  never changes the sets; fixing them is a later Garmin write.
 - **How it counted**: the workout's share of this week's goals, the plan
   session it completed and any milestone (Rules: How it counted).
 - **Along the way**: the stored streams this activity has (pace or speed,
@@ -1197,6 +1198,14 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   that session (none without another set); or for an exercise Garmin
   couldn't name. Flags never change Garmin's numbers. The card counts each
   flagged set, except an unnamed exercise counts once.
+- **Explicit strength refresh**: only a person tapping Refresh from Garmin on
+  a stored strength activity's detail reads its sets again. It spends one
+  request on `/activity-service/activity/{id}/exerciseSets`, obeys the shared
+  rate-limit backoff and per-endpoint retry wait, and keeps the previous sets
+  when the read fails. Navigation, opening the workout and ordinary syncs
+  never trigger it. The detail shows when Garmin's sets were last read;
+  before any read it says not checked yet. A refresh of a workout whose
+  Garmin sets were removed leaves no sets and says so.
 - **Records and bests**: a set is a record when an earlier session has the
   exercise and no earlier set (or earlier set in this session) was at least
   as heavy for at least as many reps. A best at N reps is the heaviest set
@@ -1250,9 +1259,9 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
 - **Strength**: sets come from `/activity-service/activity/{id}/exerciseSets`
   for activities Garmin types `strength_training`: once, then at most hourly
   for 48 hours after the start to pick up early Connect edits. Later edits
-  are not fetched by Refresh or reopening a workout; help states this limit.
-  A budgeted explicit detail refresh remains a follow-up. Older strength
-  activities found by the history download get their sets after it. Once
+  are fetched only by an explicit Refresh from Garmin on that workout (Rules:
+  Explicit strength refresh); opening a workout never reads Garmin. Older
+  strength activities found by the history download get their sets after it. Once
   there are sets, weight or a recorded threshold/acclimation response, the
   user settings (`/userprofile-service/userprofile/user-settings`) are read
   weekly and only the measurement system, time format, start of week and

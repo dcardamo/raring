@@ -38,6 +38,7 @@ object NativeBridge {
     @JvmStatic external fun exchangeTicket(ticket: String, testApi: String): String
     @JvmStatic external fun sync(dbPath: String, tokensJson: String, nowIso: String): String
     @JvmStatic external fun heartRateDay(dbPath: String, tokensJson: String, date: String): String
+    @JvmStatic external fun refreshStrength(dbPath: String, tokensJson: String, activityId: String): String
     @JvmStatic external fun markSent(dbPath: String, tagsJson: String, nowIso: String): String
     @JvmStatic external fun bedtime(dbPath: String, nowLocal: String): String
     @JvmStatic external fun refreshStatus(dbPath: String, nowIso: String): String

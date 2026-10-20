@@ -87,6 +87,7 @@ button:disabled{cursor:default}
 .watch-notice .small,.missing-reasons p{color:var(--text2);font-size:13px;line-height:1.5}
 .missing-reasons{display:grid;gap:6px}
 .watch-open{display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:10px 0;background:none;border:0;color:var(--text);font-weight:600;min-height:44px}
+.sets-refresh-wrap{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 @media(max-width:375px){
  .scroll{padding-left:10px;padding-right:10px}
  .dial-button{min-width:0;width:88px}

@@ -16,7 +16,7 @@ export const help:Record<typeof helpPages[number],HelpPage>={
   'Muscles come from Garmin\'s exercise catalog. Sets of an exercise Garmin couldn\'t name count for no muscle.',
   'Raring flags sets that look miscounted: 0 or missing reps, reps at least 1.8 times the middle of the exercise\'s other sets, and exercises Garmin couldn\'t name.',
   'A flag is only a hint. Raring shows Garmin\'s numbers as recorded and never fixes them for you.',
-  'Fix a set in Garmin Connect. Raring automatically rechecks sets only during the first 48 hours after the workout starts. Later edits will not appear in Raring, even after Refresh or reopening the workout. Refreshing an older workout is not supported yet.',
+  'Fix a set in Garmin Connect. Raring automatically rechecks sets only during the first 48 hours after the workout starts. After that, tap Refresh from Garmin on the workout: it reads that workout\'s sets once and shows when they were last checked. Opening a workout never checks Garmin.',
   'A record is a set heavier than any earlier set of that exercise with as many reps or more. Flagged sets never count.',
  ]},
  'strength-muscles':{title:'The body map',icon:'scale',intro:'Raring\'s own front and back figures, shaded by sets.',steps:[

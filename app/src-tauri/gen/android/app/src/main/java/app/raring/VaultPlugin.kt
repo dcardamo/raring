@@ -167,6 +167,29 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
             finally { StatusSurfaces.refresh(activity) }
         }
     }
+    @Command fun refreshStrength(invoke: Invoke) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val id = invoke.getArgs().getString("id")
+                val result = SyncGate.mutex.withLock {
+                    check(AccountSession.active(activity)) { "sign in again" }
+                    val tokens = AccountSession.loadLocked(activity) ?: ""
+                    val db = java.io.File(activity.filesDir, "raring.db").absolutePath
+                    val response = JSONObject(NativeBridge.refreshStrength(db, tokens, id))
+                    if (response.optBoolean("authFailed")) {
+                        AccountSession.suspendLocked(activity)
+                        SyncScheduler.cancel(activity)
+                        throw IllegalStateException("sign in again")
+                    }
+                    response.optString("tokensJson").takeIf { it.isNotEmpty() }?.let { TokenVault.save(activity, it) }
+                    if (!response.isNull("error")) throw IllegalStateException(response.getString("error"))
+                    response.opt("session")
+                }
+                invoke.resolve(JSObject().apply { put("session", result) })
+            } catch (e: Exception) { invoke.reject("Sets could not be refreshed — try again later", e) }
+            finally { StatusSurfaces.refresh(activity) }
+        }
+    }
     @Command fun prepareExport(invoke: Invoke) {
         CoroutineScope(Dispatchers.IO).launch {
             try {

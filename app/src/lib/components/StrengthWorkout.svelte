@@ -6,7 +6,8 @@
  import type {WorkoutView} from '../generated/WorkoutView';
  import type {StrengthSession} from '../generated/StrengthSession';
  import type {StrengthExercise} from '../generated/StrengthExercise';
- let {workout,strength,help}:{workout:WorkoutView,strength:StrengthSession,help:()=>void}=$props();
+import StrengthRefresh from './StrengthRefresh.svelte';
+ let {workout,strength,help,refresh}:{workout:WorkoutView,strength:StrengthSession,help:()=>void,refresh:()=>Promise<StrengthSession|null>}=$props();
  let flags=$derived(flagSummary(strength));
  let reps=$derived(repsLabel(strength));
  let avgHr=$derived(workout.stats.find(s=>s.key==='averageHR' || s.key==='avgHr')?.value??null);
@@ -19,7 +20,8 @@
   <section class="card"><div class="hero">
    <div><div class="eyebrow">Sets</div><div class="hero-n n">{strength.sets}</div>{#if strength.records}<span class="pill ok"><Icon name="star" size={12}/>{strength.records===1?'1 record':`${strength.records} records`}</span>{/if}</div>
    <div class="grid2"><div><b class="n">{elapsed(workout.summary.durationS)}</b><span>Time</span></div><div><b class="n">{reps.value}</b><span class:wrap={reps.label!=='Reps'}>{reps.label}</span></div><div><b class="n">{num(workout.summary.load)}</b><span>Load</span></div><div><b class="n">{num(avgHr)}</b><span>Avg HR</span></div></div>
-  </div></section>
+  </div>
+   <div class="checked"><StrengthRefresh checkedAt={strength.checkedAt} {refresh}/></div></section>
   {#if flags}<button class="card alert" onclick={help}><span class="al-i"><Icon name="alert" size={19}/></span><span class="al-t"><b>{flags.title}</b><span>{flags.detail}</span></span><Icon name="help" size={18}/></button>{/if}
   <section class="card"><h3>Worked</h3><BodyMap figure={strength.figure} muscles={strength.muscles} max={9}/></section>
  </div>
@@ -54,6 +56,7 @@
  .grid2 b{display:block;font:600 21px Outfit}
  .grid2 span{font:500 12px Inter;color:var(--text3);white-space:nowrap}
  .grid2 span.wrap{display:block;max-width:96px;white-space:normal}
+ .checked{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
  .pill :global(svg){flex:none}
  .pill.warn{background:rgba(255,181,71,.14);color:var(--fair)}
  .alert{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border-color:rgba(255,181,71,.3);color:var(--text3)}

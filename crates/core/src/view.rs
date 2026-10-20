@@ -1067,6 +1067,8 @@ pub struct StrengthExercise {
 pub struct StrengthSession {
     pub unit: WeightUnit,
     pub figure: Figure,
+    /// When Garmin's sets were last read, RFC 3339; missing when never read.
+    pub checked_at: Option<String>,
     /// Garmin's active sets; rests are not sets.
     pub sets: u32,
     /// The sum of the known rep counts; none when no set has a count.

@@ -368,6 +368,12 @@
   finally{exporting=false}
  }
 
+ // An explicit Garmin read of one strength workout's sets, never on navigation.
+ async function refreshStrength(id:string){
+  const session=await api.refresh_strength(id);
+  if(session && workoutData?.summary.id===id)data={...workoutData,strength:session};
+  return session;
+ }
  let todayData=$derived(route==='today'||route==='readiness'?data as TodayView|null:null),sleepData=$derived(route.startsWith('sleep')?data as SleepView|null:null),trainingData=$derived(route==='training'?data as TrainingView|null:null),workoutData=$derived(route.startsWith('workout/')?data as WorkoutView|null:null),strengthData=$derived(route==='strength'?data as StrengthPage|null:null),healthData=$derived(route==='health'?data as HealthView|null:null),checkinData=$derived(route.startsWith('review/')?data as CheckinView|null:null),boardData=$derived(route==='plan'||route==='plan/commitments'?data as PlanBoard|null:null),progressData=$derived(route==='progress'?data as ProgressPage|null:null),profileData=$derived(route==='gear'||route==='activities'?data as TrainingView|null:null),profilePage=$derived(route==='profile'?data as ProfileView|null:null);
  let shownActivities=$derived((todayData?.activities??[]).filter(a=>a.id!==todayData?.lead?.activity));
  let todayNaps=$derived((todayData?.day?.events??[]).filter(e=>e.kind==='nap'));
@@ -432,7 +438,7 @@
 {:else if trainingData}
  {#snippet trainingHeader()}<Header title="Training" eyebrow="Last 7 days" {...rootControls}/>{/snippet}<TrainingTab {trainingData} header={trainingHeader} {navigate} bind:section={trainingSection} muscles={api.muscles}/>
 {:else if workoutData}
- {@const sets=workoutData.strength}<Header title={workoutData.summary.name} eyebrow={(sets?'Strength · ':'')+dateLabel(workoutData.summary.startLocal.slice(0,10))+' · '+clock(workoutData.summary.startLocal)} back={back} backLabel={parentLabel} onHelp={sets?()=>sheet=true:undefined}/><WorkoutDetail {workoutData} {navigate} help={()=>sheet=true}/>
+ {@const sets=workoutData.strength}<Header title={workoutData.summary.name} eyebrow={(sets?'Strength · ':'')+dateLabel(workoutData.summary.startLocal.slice(0,10))+' · '+clock(workoutData.summary.startLocal)} back={back} backLabel={parentLabel} onHelp={sets?()=>sheet=true:undefined}/><WorkoutDetail {workoutData} {navigate} help={()=>sheet=true} refresh={refreshStrength}/>
 {:else if strengthData}
  <Header title="Strength" eyebrow="Lifts and muscles" back={back} backLabel={parentLabel} onHelp={()=>navigate('help')}/>{#if strengthData.strengthPage}<StrengthHistory view={strengthData.strengthPage} {navigate} liftSeries={api.lift_series} muscles={api.muscles}/>{:else}<Card title="No sets yet"><p class="small untracked">Start a Strength activity on your watch and press lap after each set. Your sets appear here after Garmin Connect syncs.</p><button class="watch-open" onclick={()=>navigate('help/strength-start')}>Lift with your watch <Icon name="arrow-right" size={16}/></button></Card>{/if}
 {:else if healthData}

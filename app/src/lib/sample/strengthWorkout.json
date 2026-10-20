@@ -848,6 +848,7 @@
   "strength": {
     "unit": "kg",
     "figure": "female",
+    "checkedAt": "2025-10-15T19:30:00Z",
     "sets": 16,
     "reps": 161,
     "unknownRepSets": 0,

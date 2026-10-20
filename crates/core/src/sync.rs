@@ -1470,6 +1470,31 @@ pub async fn heart_rate_on_demand(store: &Store, client: &Client, key: &str) -> 
     report
 }
 
+/// One explicit, budgeted read of a strength activity's sets. A workout's
+/// sets can be edited in Connect long after the 48-hour automatic rechecks, so
+/// this is the only way to see a later edit. It is never called by navigation,
+/// uses one request, and obeys the shared rate-limit backoff and retry wait.
+pub async fn refresh_strength_sets(store: &Store, client: &Client, key: &str) -> SyncReport {
+    let mut report = SyncReport::default();
+    let now = Utc::now();
+    let known = store
+        .get("activity", key)
+        .is_some_and(|v| strength::is_strength(&v));
+    if key.is_empty() || !known {
+        return report;
+    }
+    if store
+        .cursor("backoff_until")
+        .and_then(|v| v.parse::<i64>().ok())
+        .is_some_and(|t| t > now.timestamp())
+    {
+        report.rate_limited = true;
+        return report;
+    }
+    fetch(store, client, &mut report, "exercise_sets", key, None, 1, now).await;
+    report
+}
+
 /// Days older than the recent window come from range requests, one row per day.
 struct Series {
     name: &'static str,

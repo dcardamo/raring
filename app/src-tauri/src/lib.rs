@@ -329,6 +329,53 @@ async fn heart_rate_day(app: tauri::AppHandle, date: String) -> Result<HeartRate
 }
 
 #[tauri::command]
+async fn refresh_strength(
+    app: tauri::AppHandle,
+    id: String,
+) -> Result<Option<StrengthSession>, String> {
+    #[cfg(target_os = "android")]
+    {
+        #[derive(Deserialize)]
+        struct Response {
+            session: Option<StrengthSession>,
+        }
+        if !session_ready(&app)? {
+            return Err("Account verification required".into());
+        }
+        let expected = core(&app)?.session_identity().ok_or("Account verification required")?;
+        let response = vault(&app)
+            .0
+            .run_mobile_plugin_async::<Response>("refreshStrength", serde_json::json!({"id": id}))
+            .await
+            .map_err(|e| e.to_string())?;
+        if !session_ready(&app)? || core(&app)?.session_identity().as_ref() != Some(&expected) {
+            return Err("Account changed while refreshing sets".into());
+        }
+        return Ok(response.session);
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let core = core(&app)?;
+        let (session, report) = with_desktop_tokens(&app, |tokens| async move {
+            let (session, tokens, report) = core
+                .refresh_strength_sets(tokens, &id)
+                .await
+                .map_err(|e| e.to_string())?;
+            Ok(((session, report), tokens))
+        })
+        .await?
+        .ok_or("sign in again")?;
+        if report.auth_failed {
+            return Err("sign in again".into());
+        }
+        if let Some(error) = report.error {
+            return Err(error);
+        }
+        Ok(session)
+    }
+}
+
+#[tauri::command]
 async fn checkin(app: tauri::AppHandle, week_start: Option<String>) -> Result<CheckinView, String> {
     read_view(app, move |core| {
         Ok(core.checkin(&week_start.unwrap_or_else(monday)))
@@ -897,6 +944,7 @@ pub fn run() {
                     get_settings,
                     patch_settings,
                     heart_rate_day,
+                    refresh_strength,
                     export_archive,
                     weight_trend,
                     profile,
@@ -933,6 +981,7 @@ pub fn run() {
                     get_settings,
                     patch_settings,
                     heart_rate_day,
+                    refresh_strength,
                     export_archive,
                     weight_trend,
                     profile,

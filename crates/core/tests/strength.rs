@@ -468,6 +468,45 @@ fn mock(answer: fn(&str) -> (u16, String)) -> (Client, Arc<Mutex<Vec<String>>>) 
 }
 
 #[tokio::test]
+async fn an_explicit_refresh_reads_one_workout_and_obeys_the_backoff() {
+    fn answer(line: &str) -> (u16, String) {
+        if line.contains("/exerciseSets") {
+            return (200, fixture("exercise_sets.json").to_string());
+        }
+        (404, String::new())
+    }
+    let store = with_catalog();
+    // Older than the 48-hour automatic window; still explicitly refreshable.
+    activity(&store, "123456", "2025-03-04T18:00:00");
+    activity(&store, "99", "2025-03-04T18:00:00");
+    store
+        .put("activity", "99", "now", &json!({"activityId": 99, "activityTypeDTO": {"typeKey": "running"},
+            "summaryDTO": {"startTimeLocal": "2025-03-04 18:00:00"}}))
+        .unwrap();
+    let (client, seen) = mock(answer);
+    // A non-strength activity never spends a request.
+    let ignored = sync::refresh_strength_sets(&store, &client, "99").await;
+    assert_eq!((ignored.requests, ignored.error.is_none()), (0, true));
+    assert!(seen.lock().unwrap().is_empty());
+
+    let report = sync::refresh_strength_sets(&store, &client, "123456").await;
+    assert_eq!((report.requests, report.stored), (1, 1), "{report:?}");
+    let lines: Vec<String> = seen.lock().unwrap().iter().map(|r| r.lines().next().unwrap_or_default().to_owned()).collect();
+    assert_eq!(lines, ["GET /activity-service/activity/123456/exerciseSets HTTP/1.1"]);
+    let session = screens::workout(&store, "123456").unwrap().strength.unwrap();
+    assert_eq!(session.sets, 6);
+    assert!(session.checked_at.is_some(), "the detail says when Garmin's sets were read");
+
+    // Garmin's rate-limit backoff blocks every explicit read too.
+    store
+        .set_cursor("backoff_until", &(Utc::now() + Duration::hours(1)).timestamp().to_string())
+        .unwrap();
+    let blocked = sync::refresh_strength_sets(&store, &client, "123456").await;
+    assert!(blocked.rate_limited && blocked.requests == 0);
+    assert_eq!(seen.lock().unwrap().len(), 1, "no request past an active backoff");
+}
+
+#[tokio::test]
 async fn sync_fetches_sets_for_strength_activities_then_the_catalog_and_settings() {
     fn answer(line: &str) -> (u16, String) {
         let now = Utc::now();

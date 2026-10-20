@@ -357,6 +357,8 @@ try {
    sets:[...card.querySelectorAll('.sbar[role=listitem]')].map(set=>[set.querySelector('b').textContent,set.querySelector('span').textContent])
   })));
   assert.deepEqual(rendered,expected.strength.exercises.map(e=>({name:e.name,sets:e.sets.map(s=>[String(s.reps),String(s.weight)])})));
+  await page.getByRole('button',{name:'Refresh from Garmin'}).waitFor();
+  assert.ok((await page.locator('.sets-refresh .small').textContent()).startsWith('Sets checked'),'the workout says when Garmin sets were last read');
   await page.locator('.scroll').evaluate(el=>el.scrollTop=0);
   await page.screenshot({path:resolve(output,`strength-older-${id}.png`),fullPage:false});
  };
@@ -367,6 +369,8 @@ try {
  const oldSession=strengthSample.exercises[0].sessions[6];
  await page.locator('.ses').nth(6).click();await waitRoute('workout/'+oldSession.activityId);
  await assertStrengthWorkout(oldSession.activityId,oldSession.date);
+ await page.getByRole('button',{name:'Refresh from Garmin'}).click();
+ await page.getByText('Refreshing sets needs the Raring app').waitFor();
  await back('strength');
  assert.equal(await page.locator('.strength-history .workout-item').count(),8);
  await page.getByRole('button',{name:'Show all 11 workouts',exact:true}).click();
@@ -391,7 +395,7 @@ try {
  await page.getByRole('button',{name:'Help',exact:true}).click();await waitRoute('help');
  await page.getByRole('button',{name:'How sets are counted'}).click();await waitRoute('help/strength-sets');
  await page.getByText(/1\.8 times/).waitFor();
- await page.getByText(/Later edits will not appear in Raring, even after Refresh/).waitFor();
+ await page.getByText(/After that, tap Refresh from Garmin on the workout/).waitFor();
  await back('help');await back('strength');await back('training');
  await page.getByRole('tab',{name:'Activities'}).click();
  await page.getByRole('button',{name:/^Lower A/}).click();await waitRoute('workout/9000000000002');

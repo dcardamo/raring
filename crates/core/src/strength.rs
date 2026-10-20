@@ -502,6 +502,7 @@ pub fn session(store: &Store, id: &str) -> Option<StrengthSession> {
     Some(StrengthSession {
         unit: prefs.unit,
         figure: prefs.figure,
+        checked_at: store.fetched_at("exercise_sets", id),
         sets: active.len() as u32,
         reps: active
             .iter()
