@@ -137,22 +137,30 @@
     {
       "stage": "deep",
       "minutes": 96,
-      "usualDeltaMin": 12
+      "usualDeltaMin": 12,
+      "comparisonMin": 84,
+      "comparisonNights": 28
     },
     {
       "stage": "light",
       "minutes": 252,
-      "usualDeltaMin": -4
+      "usualDeltaMin": -4,
+      "comparisonMin": 256,
+      "comparisonNights": 28
     },
     {
       "stage": "rem",
       "minutes": 120,
-      "usualDeltaMin": 9
+      "usualDeltaMin": 9,
+      "comparisonMin": 111,
+      "comparisonNights": 28
     },
     {
       "stage": "awake",
       "minutes": 20,
-      "usualDeltaMin": -6
+      "usualDeltaMin": -6,
+      "comparisonMin": 26,
+      "comparisonNights": 26
     }
   ],
   "overnight": [

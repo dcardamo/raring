@@ -33,6 +33,8 @@ const pages=[
  ['sleep-tonight-late','#sleep/tonight','2025-10-16T23:20:00'],
  ['sleep-tonight-day','#sleep/tonight','2025-10-16T13:00:00'],
  ['training','#training'],
+ ['training-strength','#training',undefined,undefined,'Strength'],
+ ['training-activities','#training',undefined,undefined,'Activities'],
  ['workout-run','#workout/9000000000001'],
  ['workout-strength','#workout/9000000000002'],
  ['workout-swim','#workout/9000000000007'],
@@ -45,6 +47,7 @@ const pages=[
  ['progress-fixture','?fixture=progress#progress'],
  ['plan','#plan'],
  ['review','#review/latest'],
+ ['metric-hrv-comparison','#metric/hrv',undefined,undefined,undefined,true],
  ...['Cardio','Strength','Long-term'].map(tab=>[`progress-${tab.toLowerCase()}`,'#progress',undefined,undefined,tab]),
  ...['bodyBattery','stress','heartRate','restingHr','sleepHr','hrv','respiration','spo2','skinTemp','vo2max','endurance','hill','runningTolerance','acuteLoad'].map(m=>[`metric-${m}`,`#metric/${m}`]),
 ];
@@ -140,7 +143,7 @@ try {
  const url=`http://127.0.0.1:${server.httpServer.address().port}`;
  if(shots)await mkdir(output,{recursive:true});
  browser=await chromium.launch({headless:true,executablePath:'/run/current-system/sw/bin/chromium',args:['--no-sandbox']});
- for(const [name,path,clock='2025-10-16T14:05:00',today,tab] of pages){
+ for(const [name,path,clock='2025-10-16T14:05:00',today,tab,compare] of pages){
   const ctx=await browser.newContext({viewport:{width:390,height:844},reducedMotion:'reduce'});
   const page=await ctx.newPage();
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -153,7 +156,8 @@ try {
    await page.goto('about:blank');
    await page.goto(`${url}/${path}`);
    await page.locator('h1').first().waitFor();
-   if(tab){await page.getByRole('tab',{name:tab}).click();await page.locator('.dom').first().waitFor();}
+   if(tab){await page.getByRole('tab',{name:tab,exact:true}).click();await page.locator(name.startsWith('training-')?tab==='Strength'?'.q-strength':'.q-activities':'.dom').first().waitFor();}
+   if(compare){await page.getByRole('button',{name:'Previous',exact:true}).click();await page.locator('.summary-comparison').waitFor();}
    await page.waitForTimeout(250);
    if(scale!==1){await page.evaluate(scaleText,scale);await page.waitForTimeout(150);}
    // Let resize observers and the label thinning settle.

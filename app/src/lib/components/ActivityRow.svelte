@@ -15,4 +15,4 @@
  </span>
  {#if activity.load!=null}<span class="act-load"><b class="n">{Math.round(activity.load)}</b><small>Load</small></span>{/if}
 </button>
-{#if activity.zoneSeconds?.some(seconds=>seconds>0)}<ZoneStrip seconds={activity.zoneSeconds}/>{/if}
+{#if activity.zoneSeconds?.some(seconds=>seconds==null||seconds>0)}<ZoneStrip seconds={activity.zoneSeconds}/>{/if}

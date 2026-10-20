@@ -97,7 +97,12 @@ synthetic data. `design/mockup/index.html` shows the app before the redesign.
 - Weight uses one neutral accent; its changes are directions, never good or
   bad colours.
 - Every chart has axes, units and labelled values; a usual range is a band,
-  a goal a dashed line. Gaps are drawn as gaps. Shared single-metric charts use
+  a goal a dashed line. Amount rows share a zero origin and scale, with the
+  value outside the bar, a labelled tick for a comparison mean or an outlined
+  band for Garmin's target. Unknown amounts are not filled; measured zero
+  stays zero. Duration rows name the clock format instead of adding percentages
+  with an unclear denominator. Period plots use round ticks; count ticks are
+  integers. Gaps are drawn as gaps. Shared single-metric charts use
   2 px main traces, quiet 1 px gridlines and neutral range bands; goal lanes
   keep their labelled goal color. Owned line icons use a 1.75-unit stroke.
 - Chart text is at least 11 px for axis ticks and 12 px for other labels on a
@@ -212,8 +217,9 @@ A briefing with an ending, in this order:
   red) and a few-word headline from Garmin's own feedback. A watch that
   can't record readiness says so, with no headline.
 - Factor bars worst first, each with Garmin's rating word beside its
-  percentage; tapping one explains it in the Why sheet's sentence with the
-  value Garmin used. A bar's
+  factor level on the 0–100 scale; the value Garmin used (when supplied)
+  and rating lead each row. Tapping one explains it in the Why sheet's
+  sentence. Factor levels are not shares of the readiness score. A bar's
   color is Garmin's rating; a percentage without a rating keeps its number
   but stays neutral. A factor Garmin didn't rate (it sends NONE, for example
   without valid sleep) is a gap, never 0.
@@ -234,9 +240,13 @@ Last night:
 
 - Score gauge, and a time-asleep bar with a marker at Garmin's sleep need
   for that night (when the watch reports it), labeled as last night's need.
+  The scale fits both amounts; the difference is neutral, not a more-is-better
+  verdict. A missing duration has no fill.
 - Stage timeline (awake, REM, light, deep) with whole-hour ticks, and in the
-  same card a stage bar with each stage's change against your usual, in
-  neutral ink (Garmin rates none of them).
+  same card aligned duration rows in that order. A tick marks each stage's
+  recorded mean, with small visible text “vs your 30-night average (N nights)”
+  and the mean's value (Rules: Sleep stage comparison). The key names the
+  window's end and says missing nights are excluded. The mean is descriptive, never a target or a stage rating.
 - Overnight tiles with lines: HRV, heart rate, respiration, SpO2, each with
   the night's start and end times and its low and high, opening the metric's
   detail.
@@ -313,9 +323,10 @@ night is never shown in its place.
 - Three sections, the choice kept across a detail and Back:
   - **Fitness**, around three questions. *Enough, or too much?*: acute load
     as a dot on a compact bar with Garmin's optimal range as a neutral band,
-    training status with its Why sheet, load focus against Garmin's target
-    ranges (printed), and the last 30 days of acute load against today's
-    optimal range; History opens the acute-load metric detail. *Is my fitness improving?*: VO2max with its 30-day change and
+    training status with its Why sheet, load focus as aligned amount rows
+    against Garmin's target ranges (printed), and a compact acute-load history
+    chart starting at 30 days against the explicitly current optimal range;
+    Compare and all history opens the acute-load metric detail. *Is my fitness improving?*: VO2max with its 30-day change and
     history, endurance and hill scores, running tolerance. *What am I ready
     for?*: Garmin's race predictions, thresholds and the next race. Garmin's
     next scheduled session is a read-only card.
@@ -341,7 +352,10 @@ night is never shown in its place.
   benefit and recovery time.
 - Stats grid, route map, heart-rate chart colored by zone (bpm axis, each
   zone's floor labelled, the average marked, round minute ticks), time-in-zone
-  bars with each zone's bpm range, and split bars with the fastest
+  rows with each zone's bpm range and recorded duration on a shared zero-based
+  scale (no percentage column); missing/invalid zone durations say Not recorded,
+  while an explicit zero reads 0:00. An incomplete set of zone durations has
+  no normalized overview strip. Split bars have the fastest
   highlighted: rides by speed, swims by pace per 100 m or 100 yd, everything
   else by pace; a lap's distance shows only where laps differ. Power, cadence
   and running dynamics when present. Heart rate is drawn once: at the top of
@@ -393,9 +407,9 @@ Opened from Training → Strength: lifts and muscles.
   same first-week boundary as the chart and filters by sport before any
   pagination limit; newer workouts in other sports cannot hide strength
   activities.
-- Sets per muscle this week with a tick at the previous four weeks' weekly
-  average, the strength workouts, and a Figure control (Profile, Female,
-  Male) that overrides the profile's figure for every body map (Rules:
+- Sets per muscle this week as aligned amount rows, with a tick and value
+  for the previous four weeks' weekly average, the strength workouts, and a
+  Figure control (Profile, Female, Male) that overrides the profile's figure for every body map (Rules:
   Body-map figure).
 - Phone: one column. Unfolded (660 px+): two columns. Desktop (1000 px+):
   exercise list, exercise detail, muscles.
@@ -456,7 +470,9 @@ says so on its chart (Rules: Reading freshness).
   baseline is distinct from Garmin's seven-day HRV status. Explain the comparison
   method behind a tap; personal ranges are not medical targets.
 - **Stress**: the daily-average range chart, with a link to today's
-  three-minute readings (the same detail as Today).
+  three-minute readings (the same detail as Today). The detail shows Garmin's
+  duration in each stress level and Active (not rated) as aligned amount rows;
+  missing time is not extrapolated to a whole day.
 - **All-day heart rate** (opened from the resting heart-rate chart):
   Garmin's daily resting HR (bpm), its history with Raring's usual range
   (Rules: Normal range), the day's minimum and maximum, and a day chart in two-minute elapsed slots, with recorded sleep and activities shaded
@@ -482,8 +498,8 @@ says so on its chart (Rules: Reading freshness).
   measurements stay gaps, never zero; no notifications or unsolicited weight
   targets. Until the account units sync, the card waits rather than guessing.
 - **Fitness Age**: large number labelled as Garmin's estimate with its date,
-  years younger or older than your age, a bar placing it against your real
-  age, its change in years against a year ago, and its history as a compact
+  years younger or older than your age with that age printed (no arbitrary
+  age ruler), its change in years against a year ago, and its history as a compact
   chart (90D, 1Y, Max) that opens on the latest estimate.
 - **Drivers**: VO2max, resting heart rate, BMI or body fat, and vigorous
   minutes as tiles with range bars, Garmin's target in words ("Target ≥ 150
@@ -525,6 +541,16 @@ Fitness Age) open on the latest estimate rather than an empty latest day.
   remain empty. Dates selects a block's inclusive start and end; the comparison
   start selects an equally long block, aligned by elapsed day. One comparison
   at a time; All has no previous period.
+- The period's recorded-day average leads the history chart, labelled as
+  Raring's mean of Garmin readings with its dates and recorded-day count.
+  Selecting a point changes only the smaller dated readout below the plot,
+  never that mean. A previous-period comparison puts both means, counts and
+  the neutral signed change above the plot. This also applies to VO2max and
+  Fitness Age: their inspected readout starts at the latest available bucket,
+  explicitly labelled as a weekly/monthly average where applicable. No
+  deduplicated estimate cadence is inferred. Current bands print their bounds and source. Readiness, Sleep
+  Score, stress and Body Battery use a fixed 0–100 domain on either axis;
+  other metrics keep round, adaptive ticks.
 - Garmin rates days, not averages: only daily readiness bars take Garmin's
   level colors, and the current baseline band shows only on daily ranges.
   Averages, overlays and changes are ink, with no verdict and no new score.
@@ -605,7 +631,11 @@ Four sections, the choice kept across a detail and Back:
   Fitness Age by month, each opening its detail; the current month's bar is
   outlined and spoken labels say "so far".
 
-Follow-through and measured change stay apart; nothing is a grade.
+Follow-through and measured change stay apart; nothing is a grade. Domain
+charts key the outlined current period, dashed weekly goal and hatched/dotted
+coverage marks. Monthly physiological traces are neutral, not colored as a
+verdict from their direction. Resting heart rate opens the daily resting-HR
+page, never the overnight Sleep HR detail.
 
 ### Profile and Settings
 
@@ -1382,6 +1412,17 @@ next pending wind-down while signed in.
   counts of Garmin's alignment ratings. The focus follows the majority rating
   when at least three nights are rated, otherwise whether wake times varied
   by an hour or more, and names the week's median wake time.
+- **Sleep stage comparison**: for the selected night D, each stage's mean
+  is the sum of its finite, non-negative Garmin duration seconds in stored
+  detailed sleep rows dated D−29 through D inclusive, divided by the number
+  of those recorded values, then converted to minutes. Each stage has its
+  own denominator: missing, null and invalid values do not count; an explicit
+  zero does. No earlier or future night fills a gap. With no values the mean
+  and delta are unknown; an absent/invalid selected stage has no amount row.
+  One recorded night is labelled as one, not a usual range. The core exposes
+  that mean and its count, and the selected duration minus the mean; the UI
+  never reconstructs a comparator from the delta. This is a descriptive
+  comparison, not a score, target or favorable direction.
 - **Normal range and vitals off**: use Garmin Health Status's per-day
   baseline bounds and status first. A reported outside-range status counts
   toward the two-vitals warning and notification; `ONBOARDING`, unknown
@@ -1476,7 +1517,9 @@ next pending wind-down while signed in.
   days of a past week). A full pagination page proves only dates newer than
   its oldest entry, since that date may continue on the next page; a short
   page proves the list ended. Cached retry pages and malformed lists do not
-  extend coverage. Strength also requires a known Garmin type for every
+  extend coverage. Workout zone durations likewise preserve missing/invalid
+  values as unknown, never filling an omitted numbered zone with zero.
+  Strength also requires a known Garmin type for every
   indexed activity; missing details aren't a zero workout count. Zone 2
   requires an explicit zone-2 duration for every indexed activity, or an
   explicitly empty zone array (verified zero). Missing/null/malformed zones
@@ -1803,7 +1846,9 @@ read-only in Health with explicit local consent.
 - Chart legibility: a browser check measures the text inside every chart on
   every page at 360, 390, 720 and 1100 px and at 1, 1.3 and 2× text, and fails
   on overlaps, text on a marker, undersized labels, gauge numbers wider than
-  their ring, and (Today, Sleep, Readiness) text leaving its card.
+  their ring, and (Today, Sleep, Readiness) text leaving its card. It includes
+  period summaries and previous-period comparisons, the shared amount rows
+  and every Training and Progress section.
 - Android: an emulator install-and-render smoke test. The spike proves
   sign-in and background sync on a real phone.
 - A test fails if fixtures contain email addresses, Garmin IDs or tokens. Real

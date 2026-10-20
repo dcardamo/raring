@@ -15,19 +15,19 @@
   height?: number, color?: string, fmt?: (v: number) => string, values?: boolean, yMin?: number, yMax?: number, label: string, every?: number, line?: (number | null)[] | null, lineColor?: string, cap?: number, goals?: (number | null)[] | null, integer?: boolean,
  } = $props();
  import {declutter} from '../declutter';
+ import {plotAxis} from '../plot';
+ const patternId=$props.id();
  let w = $state(320);
  const L = 34, R = 8, T = 16, B = 20;
  let stepped = $derived((goals ?? []).filter((v): v is number => v != null));
  let vals = $derived([...points.map(p => p.v), ...(line ?? [])].filter((v): v is number => v != null));
- let lo = $derived(yMin ?? (kind === 'bars' ? 0 : Math.floor(Math.min(...vals, ...(band ?? []), ...(goal != null ? [goal] : []), ...stepped) * .97)));
- // Bounded scales (Body Battery, stress, scores, SpO₂) never run past their maximum.
- let hi = $derived(Math.min(cap ?? Infinity, yMax ?? Math.max(1, Math.ceil(Math.max(...vals, ...(band ?? []), ...(goal != null ? [goal] : []), ...stepped) * 1.08))));
+ let axis = $derived(plotAxis([...vals, ...(band ?? []), ...(goal != null ? [goal] : []), ...stepped], {zero:kind==='bars',integer,min:yMin,max:yMax,cap}));
+ let lo = $derived(axis.scale[0]);
  let step = $derived((w - L - R) / Math.max(1, points.length));
  const y = (v: number) => T + (1 - (v - lo) / Math.max(1e-6, top - lo)) * (height - T - B);
  const x = (i: number) => L + step * i + step / 2;
- // Counts get whole-number ticks: every one up to 4, otherwise an even top.
- let top = $derived(integer ? (hi <= 4 ? Math.ceil(hi) : Math.ceil(hi / 2) * 2) : hi);
- let ticks = $derived(integer ? (top <= 4 ? Array.from({length: top + 1}, (_, i) => i) : [0, top / 2, top]) : [lo, lo + (hi - lo) / 2, hi]);
+ let top = $derived(axis.scale[1]);
+ let ticks = $derived(axis.ticks);
  let n = $derived(every || (points.length <= 8 ? 1 : Math.ceil(points.length / 5)));
  let path = $derived.by(() => { let d = '', pen = false; points.forEach((p, i) => { if (p.v == null) { pen = false; return; } d += `${pen ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`; pen = true; }); return d; });
  let last = $derived(points.findLastIndex(p => p.v != null));
@@ -39,11 +39,11 @@
 <div class="ax" bind:clientWidth={w} data-chart="axis" {@attach declutter}>
  {#if unit}<span class="yu">{unit}</span>{/if}
  <svg width={w} {height} role="img" aria-label={label}>
-  <defs><pattern id="axh" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="1.5" height="5" fill="var(--goal-sleep)" opacity=".35"/></pattern></defs>
+  <defs><pattern id={patternId} width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="1.5" height="5" fill="var(--goal-sleep)" opacity=".35"/></pattern></defs>
   {#each ticks as t}<line x1={L} x2={w - R} y1={y(t)} y2={y(t)} stroke="var(--chart-grid)" stroke-width="var(--stroke-grid)"/><text class="yt" data-thin="2" x={L - 5} y={y(t) + 3.5} text-anchor="end">{fmt(t)}</text>{/each}
   {#if band}<rect x={L} width={w - L - R} y={y(band[1])} height={Math.max(1, y(band[0]) - y(band[1]))} fill="var(--chart-band)"/><text class="bl" x={L + 4} y={y(band[1]) + 10}>{bandLabel} {fmt(band[0])}–{fmt(band[1])}</text>{/if}
   {#each points as p, i}
-   {#if p.mark === 'ill' || p.mark === 'paused'}<rect x={x(i) - step / 2 + 1} y={T} width={step - 2} height={height - T - B} fill="url(#axh)"/>{/if}
+   {#if p.mark === 'ill' || p.mark === 'paused'}<rect x={x(i) - step / 2 + 1} y={T} width={step - 2} height={height - T - B} fill={`url(#${patternId})`}/>{/if}
    {#if p.mark === 'unknown'}<rect x={x(i) - step / 2 + 1} y={T} width={step - 2} height={height - T - B} fill="none" stroke="#6B7689" stroke-dasharray="2 3"/>{/if}
    {#if kind === 'bars' && p.v != null}
     {#if p.parts}{#each p.parts as part, k}{@const below = p.parts.slice(0, k).reduce((s, q) => s + q.v, 0)}<rect x={x(i) - Math.min(14, step * .32)} width={Math.min(28, step * .64)} y={y(below + part.v)} height={Math.max(0, y(below) - y(below + part.v))} fill={part.color} opacity={p.current ? .55 : 1}/>{/each}

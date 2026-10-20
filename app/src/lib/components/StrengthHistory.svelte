@@ -4,8 +4,8 @@
  import Sparkline from './Sparkline.svelte';
  import ActivityRow from './ActivityRow.svelte';
  import {colors} from '../charts';
- import {dateLabel,shortMonth} from '../format';
- import {amountColor} from '../bodymap';
+ import {dateLabel,shortMonth,num} from '../format';
+ import AmountRows from './AmountRows.svelte';
  import {muscleNames,weight,unitLabel} from '../strength';
  import type {StrengthView} from '../generated/StrengthView';
  import type {LiftSeries} from '../generated/LiftSeries';
@@ -40,7 +40,6 @@ const figures:[FigureChoice,string][]=[['profile','Profile'],['female','Female']
  // Oldest first for the chart; sessions without a value are gaps.
  let points=$derived(shown?shown.points.map(p=>{const s=exercise?.sessions.find(x=>x.activityId===p.activityId);return {date:p.date,v:measure==='max'?p.max:measure==='volume'?p.volume:p.mostReps,reps:measure==='max'?s?.top?.reps??null:null,record:measure==='max'&&!!s?.record}}):[]);
  let average=$derived(Object.fromEntries(view.average4w.map(m=>[m.muscle,m.sets])) as Record<string,number>);
- let scale=$derived(Math.max(14,...view.thisWeek.map(m=>m.sets),...view.average4w.map(m=>m.sets)));
  // Drawn at the measured width so axis text keeps its size.
  const H=190,pl=34,pb=22,DAY=864e5,DENSE=40;
  // A best's date: "20 Aug" this year, "Aug 2024" before.
@@ -109,8 +108,7 @@ const figures:[FigureChoice,string][]=[['profile','Profile'],['female','Female']
  </div>
  <div class="col">
   <section class="card"><h3><span>This week vs your 4-week average</span><span class="h-note">Since {dateLabel(view.weekStart)}</span></h3>
-   <div class="mus">{#each view.thisWeek as m}<div class="mu"><span>{muscleNames[m.muscle]}</span><div class="mu-b"><i style:width={m.sets/scale*100+'%'} style:background={amountColor(m.sets,12)}></i><u style:left={(average[m.muscle]??0)/scale*100+'%'}></u></div><b class="n">{m.sets}</b></div>{/each}</div>
-   <p class="note"><i class="tick"></i>Weekly average, previous 4 weeks</p></section>
+   <AmountRows label="Muscle sets this week" unit="sets" referenceLabel="Tick · weekly average, previous 4 weeks" rows={view.thisWeek.map(m=>({label:muscleNames[m.muscle],value:m.sets,text:m.sets+' sets',comparison:average[m.muscle]??null,comparisonText:average[m.muscle]!=null?'Average '+num(average[m.muscle],1)+' sets':'Average unavailable'}))}/></section>
   {#if view.workouts.length}<section class="card"><h3><span>Strength workouts</span><span class="h-note">{view.workouts.length} in 12 weeks</span></h3>{#each allWorkouts?view.workouts:view.workouts.slice(0,WORKOUTS) as w}<div class="workout-item"><ActivityRow activity={w.activity} open={()=>navigate('workout/'+w.activity.id)}/>{#if !w.setsRecorded}<p class="nosets">No sets recorded</p>{/if}</div>{/each}{#if view.workouts.length>WORKOUTS}<button class="more" aria-expanded={allWorkouts} onclick={()=>allWorkouts=!allWorkouts}>{allWorkouts?'Show fewer':`Show all ${view.workouts.length} workouts`}</button>{/if}</section>{/if}
  </div>
 </div>
@@ -149,15 +147,8 @@ const figures:[FigureChoice,string][]=[['profile','Profile'],['female','Female']
  .ses .pr{display:flex;justify-content:flex-end;color:var(--good)}
  .more{display:block;width:100%;min-height:44px;margin-top:8px;border:0;border-top:1px solid var(--line);background:none;color:var(--text);font:600 13px Inter;padding:12px 0 0}
  .nosets{margin:2px 0 0 56px;font-size:12px;color:var(--text2)}
- .mus{display:grid;gap:10px}
  .mlist{list-style:none;margin:10px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:4px 16px;font-size:13px}
  .mlist li{display:grid;grid-template-columns:1fr auto 30px;gap:6px;align-items:baseline;color:var(--text2)}.mlist b{color:var(--text)}.mlist small{font-size:11px}.mlist li.gap span{color:var(--fair);font-weight:600}
- .mu{display:grid;grid-template-columns:84px 1fr 26px;align-items:center;gap:10px;font-size:13px;color:var(--text2)}
- .mu b{font:600 14px Outfit;color:var(--text);text-align:right}
- .mu-b{position:relative;height:8px;border-radius:4px;background:rgba(255,255,255,.06)}
- .mu-b i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
- .mu-b u{position:absolute;top:-4px;bottom:-4px;width:2px;border-radius:1px;background:var(--ink);opacity:.7}
- .tick{display:inline-block;width:2px;height:12px;border-radius:1px;background:var(--ink);opacity:.7}
  .exl{display:flex;align-items:center;gap:10px;width:calc(100% + 16px);padding:10px 8px;margin:0 -8px;border:0;border-radius:12px;background:none;text-align:left;min-height:44px}
  .exl.on{background:rgba(255,255,255,.07)}
  .exl>span{flex:1;min-width:0}

@@ -15,9 +15,7 @@
  import WeekBars from '../components/WeekBars.svelte';
  import LaneChart from '../components/LaneChart.svelte';
  import LoadFocus from '../components/LoadFocus.svelte';
- import AxisChart from '../components/AxisChart.svelte';
- import * as api from '../api';
- import type {TrendPoint} from '../generated/TrendPoint';
+ import HistoryChart from '../components/HistoryChart.svelte';
  import BodyMap from '../components/BodyMap.svelte';
  import ActivityRow from '../components/ActivityRow.svelte';
  import RangePicker from '../components/RangePicker.svelte';
@@ -40,11 +38,6 @@
  let strengthLane = $derived(tw?.lanes.find(l => l.kind === 'strength') ?? null);
  // An unknown lane day stays unknown; Garmin's count stands in only without a lane.
  let strengthCount = $derived(strengthLane ? strengthLane.cumulative[todayIndex] ?? null : trainingData.strength?.strengthActivities ?? null);
- // The last 30 days of Garmin's acute load against today's optimal range; History opens the full detail.
- let loadDays = $state<TrendPoint[]>([]);
- // Round ends (hundreds) so the three ticks read as tidy numbers.
- let loadScale = $derived.by(() => { const v = [...loadDays.map(p => p.value).filter((x): x is number => x != null), ...(acute?.band ?? [])]; return v.length ? {yMin: Math.floor(Math.min(...v) / 100) * 100, yMax: Math.ceil(Math.max(...v) / 100) * 100} : {}; });
- $effect(() => { if (section !== 'fitness') return; void api.trend({metric: 'acuteLoad', range: 'days30', end: null, overlay: null, previous: false, start: null, comparisonStart: null}).then(t => loadDays = t.series.points).catch(() => loadDays = []); });
  // Muscles over the chosen range, read from the core.
  let muscleView = $state<MuscleRange | null>(null), muscleError = $state(false);
  let request = 0;
@@ -90,10 +83,9 @@
   {:else}<p class="small">Garmin hasn’t sent an acute load yet.</p>{/if}
   {#if trainingData.loadFocus.length}<h4>Load focus · last 4 weeks</h4><LoadFocus bars={trainingData.loadFocus}/>{/if}
  </Card>
- {#if loadDays.some(p => p.value != null)}<Card title="Acute load, last 30 days" extra="q-load-history">
-  <AxisChart points={loadDays.map((p, i) => ({x: (loadDays.length - 1 - i) % 7 === 0 ? dateLabel(p.start).replace(/^\S+ /, '') : '', v: p.value}))} kind="line" every={1} {...loadScale} band={acute?.band ?? null} bandLabel="optimal" color="var(--ink)" height={130} label={`Garmin's acute load each day for 30 days${acute?.band ? `, optimal range ${acute.band[0]}–${acute.band[1]}` : ''}`}/>
-  <button class="go-row" onclick={() => navigate('metric/acuteLoad')}>History<Icon name="chevron" size={14}/></button>
- </Card>{/if}
+ <Card title="Acute load history" extra="q-load-history">
+  <HistoryChart compact values={[]} label="Acute load" metric="acuteLoad" initialRange="days30" band={acute?.band??null} bandLabel="Garmin's optimal range now" more={()=>navigate('metric/acuteLoad')} moreLabel="Compare and all history"/>
+ </Card>
  <Card title="Is my fitness improving?" extra="q-fitness" help="vo2max">
   {#if trainingData.vo2max != null}<button class="vo" onclick={() => navigate('metric/vo2max')} aria-label={`VO₂ max ${num(trainingData.vo2max)}, open its history`}><span><small>VO₂ max · Garmin</small><b class="n">{num(trainingData.vo2max)}</b>{#if trainingData.vo2maxChange30d != null && Math.abs(trainingData.vo2maxChange30d) >= 1}<em style:color={trainingData.vo2maxChange30d > 0 ? colors.good : colors.poor}>{signed(trainingData.vo2maxChange30d)} in 30 days</em>{/if}</span><span class="go">History<Icon name="chevron" size={14}/></span></button>
   {:else}<p class="small">No VO₂ max estimate from Garmin yet.</p>{/if}

@@ -1,7 +1,8 @@
 <script lang="ts">
  import {untrack,getContext,onDestroy} from 'svelte';
  import type {ChartStateContext} from '../chart-state';
- import {addDays,historyAxis,readinessTone} from '../history';
+ import {addDays,readinessTone} from '../history';
+ import {metricAxis} from '../plot';
  import {dateLabel} from '../format';
  import {colors,toneColor} from '../charts';
  import {ranges,localPoints,pointLabel,axisLabel,bucketDays,trendValue,trendNames,trendDecimals,defaultOverlay,changeValue,firstDay} from '../trends';
@@ -12,6 +13,7 @@
  import type {TrendPoint} from '../generated/TrendPoint';
  import Icon from './Icon.svelte';
  import RangePicker from './RangePicker.svelte';
+ import MetricSummary from './MetricSummary.svelte';
 
  // Without `metric` the chart shows the screen's own 7 or 30 days, ending on `endDate`. With it, longer ranges and comparisons
  // come from the core, which averages long ranges into weeks or months.
@@ -46,9 +48,9 @@
  let count=$derived(points.length);
  let index=$derived(Math.max(0,count-1-Math.min(offset,count-1)));
  let selected=$derived(points[index] as TrendPoint|undefined);
- let period=$derived(nights?'nights':'days');
+ let period=$derived(activeMetric?(['sleepScore','sleepTime','hrv','sleepHr','respiration','spo2','skinTemp'].includes(activeMetric)?'nights':'days'):nights?'nights':'days');
  let activeLabel=$derived(primary?trendNames[primary]:label);
- let activeUnit=$derived(primary?shown?.series.unit??'':unit);
+ let activeUnit=$derived(primary?shown?.series.unit??'':unit || shown?.series.unit || '');
  let activeDecimals=$derived(primary?trendDecimals(primary):decimals);
  let activeReadiness=$derived(activeMetric==='readiness' || !activeMetric && readiness);
  // Garmin's estimates arrive every few days or weeks: open on the latest one, not an empty latest day.
@@ -68,10 +70,10 @@
  // Garmin rates single days; averaged weeks and months and other metrics are ink.
  let levels=$derived(activeReadiness && bucket==='day');
  let shownBand=$derived(!primary && bucket==='day'?band:null);
- // Readiness keeps Garmin's 0–100 with its Moderate boundary; other metrics tick at round values.
- let axis=$derived(activeReadiness?{scale:[0,100] as [number,number],ticks:[0,50,100]}:historyAxis([...points,...(previous?.points ?? [])].map(p=>p.value),shownBand,activeUnit));
+ // Bounded Garmin metrics share a stable domain; a quiet day must not fill the scale.
+ let axis=$derived(metricAxis(activeReadiness?'readiness':activeMetric,[...points,...(previous?.points??[])].map(p=>p.value),shownBand,activeUnit));
  let scale=$derived(axis.scale);
- let axis2=$derived(overlay?historyAxis(overlay.points.map(p=>p.value),null,overlay.unit):{scale:[0,1] as [number,number],ticks:[]});
+ let axis2=$derived(overlay?metricAxis(overlay.metric,overlay.points.map(p=>p.value),null,overlay.unit):{scale:[0,1] as [number,number],ticks:[]});
  let scale2=$derived(axis2.scale);
  let W=$derived(Math.max(280,Math.round(width)));
  let H=$derived(W>=560?200:154);
@@ -117,20 +119,34 @@
 <div class="history" {@attach measure} aria-busy={busy}>
  <div class="history-top">
   {#if metric && !compact && !overlayOnly}<label class="metric-choice"><span class="sr-only">Primary metric</span><select aria-label="Primary metric" value={activeMetric} onchange={(e)=>{primary=e.currentTarget.value as TrendMetric;offset=0;if(overlayMetric===primary)overlayMetric=defaultOverlay(primary)}}>{#each pairs as m}<option value={m}>{trendNames[m]}</option>{/each}</select></label>{:else if !compact}<span class="history-label">{label}</span>{/if}
-  <RangePicker value={range} onchange={setRange} label="History period" custom={!!metric} local={!metric} {nights} only={compact?compactRanges:undefined}/>
+  <RangePicker value={range} onchange={setRange} label="History period" custom={!!metric} local={!metric} nights={period==='nights'} only={compact?compactRanges:undefined}/>
  </div>
  {#if view?.freshness?.stale && view.freshness.recordedOn}<p class="stale-note" role="note">Last reading {dateLabel(view.freshness.recordedOn)} · {view.freshness.ageDays} days ago</p>{/if}
  {#if range==='custom'}<div class="dates"><label>Block start<input aria-label="Block start" type="date" min={firstDay} max={customEnd || latestDay} bind:value={customStart}/></label><label>Block end<input aria-label="Block end" type="date" min={customStart || firstDay} max={latestDay} bind:value={customEnd}/></label></div>{/if}
- <div class="history-reading" aria-live="polite" aria-atomic="true">
+ {#snippet inspectedReading()}
+ <div class="history-reading" class:inspected={!local} aria-live="polite" aria-atomic="true">
   <div class="reading-values">
    <div><b class="n" style:color={selected?.value==null?toneColor('neutral'):levels?toneColor(readinessTone(selected.value)):color}>{show(selected?.value)}</b><span>{selected?.value==null?'Not recorded':bucket==='week'?'weekly average':bucket==='month'?'monthly average':activeUnit==='min'?'h:mm':activeUnit}</span></div>
    {#if overlay && selected}<div class="overlay-reading"><b class="n">{trendValue(overlay.points[index]?.value,overlay.unit,overlayDecimals)}</b><span>{overlay.name}</span></div>{/if}
    {#if previous && selected}<div class="overlay-reading"><b class="n">{show(previous.points[index]?.value)}</b><span>{comparisonStart?'comparison block':'period before'}</span></div>{/if}
   </div>
-  <span>{selectedDate}{#if bucket!=='day' && selected}<small>{selected.days} of {bucketDays(selected)} days recorded</small>{:else if offset===0 && selected}<small>{range==='custom'?'Block end':nights?'Latest night':'Latest day'}</small>{/if}</span>
+  <span>{selectedDate}{#if bucket!=='day' && selected}<small>{selected.days} of {bucketDays(selected)} days recorded</small>{:else if offset===0 && selected}<small>{range==='custom'?'Block end':period==='nights'?'Latest night':'Latest day'}</small>{/if}</span>
  </div>
  {#if canOpenDay && selected && openDay}<button class="open-day" onclick={()=>openDay(selected.start)}>Open {dateLabel(selected.start)}<Icon name="chevron" size={15}/></button>{/if}
+ {/snippet}
+ {#if shown}
+  <div class="period-summary">
+   <p class="period-source">Garmin {sparse?'estimates':'readings'} · {dateLabel(shown.from)} {shown.from.slice(0,4)} – {dateLabel(shown.to)} {shown.to.slice(0,4)}</p>
+   <MetricSummary label="Recorded-day average" value={show(shown.series.average)} unit={tileUnit} context={`Raring · ${shown.series.days} recorded ${period}`}/>
+   {#if previous}<div class="summary-comparison">
+    <MetricSummary small label={comparisonStart?'Comparison block average':'Previous period average'} value={show(previous.average)} unit={tileUnit} context={`${previous.days} recorded ${period}`}/>
+    <MetricSummary small label="Change in average" value={changeValue(shown.change,activeUnit,activeDecimals)} unit={tileUnit}/>
+   </div><p class="period-source">Compared with {previous.points[0]?.start} – {previous.points.at(-1)?.end} · aligned by elapsed day</p>{/if}
+  </div>
+ {/if}
+ {#if local}{@render inspectedReading()}{/if}
  <div data-chart="history">
+ <div class="plot-units"><span>{activeLabel}{activeUnit?' · '+(activeUnit==='min'?'h:mm':activeUnit):''}</span>{#if overlay}<span>{overlay.name} · {overlay.unit} (right)</span>{/if}</div>
  <button class="chart-surface" tabindex={compact?0:-1} aria-hidden={compact?undefined:true} aria-label={compact?`${activeLabel} chart. ${selectedText}. Left and right arrows choose a day.`:undefined} onclick={selectFromChart} onkeydown={compact?(e)=>{if(e.key==='ArrowLeft'&&index>0){e.preventDefault();offset++}else if(e.key==='ArrowRight'&&index<count-1){e.preventDefault();offset--}}:undefined}>
   <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${activeLabel}, ${count} ${bucketName}. ${present} recorded. Missing readings are gaps.`}>
    {#if shownBand}
@@ -165,6 +181,7 @@
   </svg>
  </button>
  {#if count}<div class="history-axis"><span>{bucket==='day'?dateLabel(points[0].start):axisLabel(points[0],bucket)}</span><span>{bucket==='day'?dateLabel(points[count-1].start):axisLabel(points[count-1],bucket)}</span></div>{/if}
+ {#if !local}{@render inspectedReading()}{/if}
  {#each [previous,overlay] as other}{#if other}<div class="sr-only">{other.name}: {other.days} recorded days</div>{/if}{/each}
  {#if !compact}<div class="history-controls">
   <button aria-label="Previous reading" disabled={index===0} onclick={()=>offset++}><Icon name="arrow-left" size={17}/></button>
@@ -173,7 +190,7 @@
  </div>{/if}
  <span id={id} class="sr-only">{activeLabel}, {count} {bucketName}. {present} recorded. Missing readings are gaps. Use the slider to select a date.</span>
  <div class="history-legend">
-  {#if shownBand}<span><i style:background="rgba(255,255,255,.13)"></i>{bandLabel}</span>{/if}
+  {#if shownBand}<span><i style:background="rgba(255,255,255,.13)"></i>{bandLabel} · {show(shownBand[0])}–{show(shownBand[1])}{activeUnit && activeUnit!=='min'?' '+activeUnit:''}</span>{/if}
   {#if levels}<span><i style:background={colors.poor}></i>Low / Poor</span><span><i style:background={colors.fair}></i>Moderate</span><span><i style:background={colors.good}></i>High / Prime</span>{/if}
   {#if bucket!=='day'}<span><i style:background={colors.ink}></i>{bucket==='week'?'Weekly':'Monthly'} average of recorded days</span>{/if}
   {#if overlay}<span><i class="line" style:border-color={colors.secondary} style:border-top-style="dashed"></i>{overlay.name}, right axis</span>{/if}
@@ -196,16 +213,8 @@
    {/if}
   </div>
   {#if compare==='previous'}<div class="dates"><label>Comparison block start<input aria-label="Comparison block start" type="date" min={firstDay} max={latestDay} bind:value={comparisonStart}/></label><button class="reset-date" onclick={()=>comparisonStart=''}>Use preceding period</button></div>{/if}
-  {#if previous && shown}
-   <p class="history-note">{shown.from} – {shown.to}<br/>Against {previous.points[0]?.start} – {previous.points.at(-1)?.end} · aligned by elapsed day</p>
-   <div class="period-averages">
-    <div><span>Average</span><b class="n">{show(shown.series.average)}<small>{tileUnit}</small></b><em>{shown.series.days} {period}</em></div>
-    <div><span>{comparisonStart?'Comparison block':'Period before'}</span><b class="n muted">{show(previous.average)}<small>{tileUnit}</small></b><em>{previous.days} {period}</em></div>
-    <div><span>Change</span><b class="n">{changeValue(shown.change,activeUnit,activeDecimals)}<small>{tileUnit}</small></b></div>
-   </div>
-  {/if}
   {#if compare==='metric'}<p class="history-note">Each line keeps its own scale. Moving together doesn't mean one causes the other.</p>{/if}
-  <details class="history-note"><summary>About this history</summary><p>Each day counts once. Weeks and months average recorded days only; gaps never count as zero. Period averages use all recorded days, not averages of averages.</p>{#if activeMetric==='readiness'}<p>Morning readiness readings, including today. The main gauge can show a later update.</p>{:else if activeMetric==='bodyBattery'}<p>The highest Body Battery recorded each day, not the latest level.</p>{:else if activeMetric==='acuteLoad'}<p>Garmin's acute load from the day's latest readiness snapshot.</p>{:else if ['hrv','sleepHr','respiration','spo2','skinTemp'].includes(activeMetric??'')}<p>Health Status where available, otherwise the nightly record. Garmin's respiration values can differ slightly between these sources. Current baselines aren't historical targets.</p>{/if}</details>
+  <details class="history-note"><summary>About this history</summary><p>Each day counts once. Weeks and months average recorded days only; gaps never count as zero. Period averages use all recorded days, not averages of averages.</p>{#if activeMetric==='readiness'}<p>Morning readiness readings, including today. The main gauge can show a later update.</p>{:else if activeMetric==='bodyBattery'}<p>The highest Body Battery recorded each day, not the latest level.</p>{:else if activeMetric==='acuteLoad'}<p>Garmin's acute load from the day's Training Status, otherwise its last readiness snapshot. The band is the current optimal range, not a historical target.</p>{:else if ['hrv','sleepHr','respiration','spo2','skinTemp'].includes(activeMetric??'')}<p>Health Status where available, otherwise the nightly record. Garmin's respiration values can differ slightly between these sources. Current baselines aren't historical targets.</p>{/if}</details>
  {/if}
  {#if loadError}<p class="history-empty" role="status">Couldn't read this range: {loadError}</p>
  {:else if !local && !shown}<p class="history-empty">Reading your history…</p>
@@ -247,12 +256,14 @@
  .compare-options{flex:1}
  .compare-options button{flex:1}
  select{width:100%;min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);padding:0 12px;font:600 14px Inter,sans-serif}
- .period-averages{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}
- .period-averages div{background:rgba(255,255,255,.035);border-radius:var(--radius-control);padding:12px;min-width:0}
- .period-averages span,.period-averages em{display:block;font-size:12px;color:var(--text2);font-style:normal}
- .period-averages b{display:block;font-size:22px;font-weight:600;margin:4px 0 2px}
- .period-averages b.muted{color:var(--text2)}
- .period-averages small{font-size:12px;color:var(--text2);margin-left:2px;font-family:Inter,sans-serif;font-weight:500}
+ .period-summary{margin:16px 0}
+ .period-source{font:400 12px/1.5 Inter;color:var(--text2);margin:0 0 10px;overflow-wrap:anywhere}
+ .summary-comparison{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(130px,100%),1fr));gap:12px;margin:12px 0}
+ .plot-units{display:flex;justify-content:space-between;gap:6px 16px;flex-wrap:wrap;font:400 12px/1.5 Inter;color:var(--text2);margin-bottom:8px}
+ .history-reading.inspected{padding-top:12px;border-top:1px solid var(--line);margin:12px 0 4px;flex-wrap:wrap}
+ .history-reading.inspected b{font-size:23px}
+ .history-reading.inspected>span{max-width:none;flex:1}
+ .reading-values>div{display:flex;flex-wrap:wrap;align-items:baseline;min-width:0}
  details p{margin-top:8px}summary{cursor:pointer}
  .history-note,.history-empty{font-size:12px;line-height:1.5;color:var(--text2);margin-top:12px}
  .dates{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}.dates label{flex:1;min-width:120px;font-size:12px;color:var(--text2)}.dates input{display:block;font:inherit;color:var(--text);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px;cursor:auto;box-sizing:border-box}.reset-date{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px;color:var(--text2)}.metric-choice select{width:auto;max-width:100%;font-size:12px}.history-top{min-width:0}

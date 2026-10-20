@@ -3,6 +3,15 @@ import type { Stage } from "./Stage";
 
 export type StageTotal = { stage: Stage, minutes: number, 
 /**
- * Against your 30-night average; positive means more.
+ * Against this stage's recorded mean in the 30 calendar days ending
+ * on the selected night (including it); positive means more.
  */
-usualDeltaMin: number | null, };
+usualDeltaMin: number | null, 
+/**
+ * That mean, in minutes; never a target or a rating.
+ */
+comparisonMin: number | null, 
+/**
+ * This stage's denominator. Missing/invalid values do not count; zero does.
+ */
+comparisonNights: number, };

@@ -6,6 +6,7 @@ import {chromium} from 'playwright';
 import {contrastFailures} from './contrast.mjs';
 import {planProgressChecks} from './ui-plan-progress.mjs';
 import {visualLanguageChecks} from './ui-visual-language.mjs';
+import {dataPresentationChecks} from './ui-data-presentation.mjs';
 
 const server=await createServer({configFile:resolve('vite.config.ts'),server:{host:'127.0.0.1',port:0}});
 const output=resolve('../.data/screens');
@@ -19,6 +20,7 @@ try {
  const url=`http://127.0.0.1:${server.httpServer.address().port}`;
  browser=await chromium.launch({headless:true,executablePath:'/run/current-system/sw/bin/chromium',args:['--no-sandbox']});
  await visualLanguageChecks(browser,url,output);
+ await dataPresentationChecks(browser,url,output);
  const page=await browser.newPage({viewport:{width:390,height:844},hasTouch:true,isMobile:true});
  const errors=[];
  for(const width of [390,700,1100]){
@@ -224,7 +226,7 @@ try {
  assert.equal(await timeline.getAttribute('aria-valuetext'),'06:12: active, not rated','movement is a labelled gap, not zero');
  for(let i=0;i<21;i++)await timeline.press('ArrowRight');
  assert.equal(await timeline.getAttribute('aria-valuetext'),'07:15: no reading','off-wrist time is a gap, not zero');
- assert.equal(await page.locator('.stress-row').count(),5);
+ assert.equal(await page.getByRole('group',{name:'Garmin stress durations'}).locator('.amount-row').count(),5);
  await back('today');
  await tab('Health');
  await page.getByRole('button',{name:'Stress today and all history'}).click();await waitRoute('metric/stress');
@@ -946,10 +948,10 @@ try {
   await lp.route(u=>u.pathname==='/src/lib/sample/sleep.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify({...sleepSample,napsState:naps,naps:[]})}`}));
   await lp.goto(`${url}/#sleep/last`);
   const stages=lp.locator('.card').filter({has:lp.locator('h3',{hasText:'Stages'})});
-  await stages.locator('.stage-legend').waitFor();
-  const deltas=await stages.locator('.stage-legend em').evaluateAll(els=>els.map(e=>getComputedStyle(e).color));
-  assert.ok(deltas.length>0 && new Set(deltas).size===1,'every stage change has one neutral colour');
-  await stages.getByText('Change vs your usual',{exact:true}).waitFor();
+  await stages.locator('.stage-amounts').waitFor();
+  const comparisons=await stages.locator('.comparison-text').evaluateAll(els=>els.map(e=>getComputedStyle(e).color));
+  assert.ok(comparisons.length===4 && new Set(comparisons).size===1,'every stage comparison has one neutral colour');
+  await stages.getByText(/Tick · Raring average, 30 nights/).waitFor();
   assert.equal(await lp.locator('.dashboard>.card:not(:has(h3))').count(),0,'no untitled stage-totals card');
   assert.ok((await stages.locator('.time-label').allTextContents()).every(t=>/^\d\d:00$/.test(t)),'hypnogram ticks fall on whole hours');
   const hrv=lp.getByRole('button',{name:/^HRV 58 ms, \d+ to \d+ overnight$/});
@@ -1019,7 +1021,7 @@ try {
    await sp.setViewportSize({width,height:900});
    assert.equal(await sp.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`Tonight fits ${width}px`);
    await sp.getByRole('tab',{name:'Last night'}).click();
-   const stack=sp.locator('.stage-stack').first();
+   const stack=sp.locator('.stage-amounts').first();
    if(await stack.count()){const box=await stack.boundingBox(),card=await stack.locator('xpath=ancestor::section[1]').boundingBox();
     assert.ok(box.x>=card.x && box.x+box.width<=card.x+card.width+1,`stage totals stay inside their card at ${width}px`)}
    assert.equal(await sp.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`Last night fits ${width}px`);
@@ -1083,9 +1085,10 @@ try {
   assert.ok(!(await ts.locator('.q-load .lbar .band').evaluate(b=>getComputedStyle(b).backgroundColor)).includes('61, 220, 151'),'no status green without a verdict');
   // M3: a compact 30-day acute-load chart; History opens the metric detail.
   const loadHistory=ts.locator('.q-load-history');
-  await loadHistory.getByRole('img',{name:/^Garmin's acute load each day for 30 days, optimal range 420–760/}).waitFor();
+  await loadHistory.getByRole('img',{name:/^Acute load, 30 days/}).waitFor();
+  assert.match(await loadHistory.locator('.history-legend').textContent(),/Garmin's optimal range now · 420–760/);
   assert.equal(await ts.getByRole('group',{name:/metric/i}).count(),0,'no metric picker on Training');
-  await loadHistory.getByRole('button',{name:/^History/}).click();await ts.waitForURL(/#metric\/acuteLoad$/);
+  await loadHistory.getByRole('button',{name:'Compare and all history'}).click();await ts.waitForURL(/#metric\/acuteLoad$/);
   await ts.getByRole('heading',{name:'Acute load',level:1}).waitFor();
   await ts.goBack();await ts.waitForURL(/#training$/);
   await ts.getByRole('tab',{name:'Strength'}).click();
@@ -2523,7 +2526,7 @@ function trendFixture(q){
   assert.match(await history.locator('.history-reading small').textContent(),/^\d of \d days recorded$/);
   await history.getByRole('button',{name:'Previous',exact:true}).click();
   await history.locator('.history-previous').waitFor();
-  assert.ok((await history.locator('.period-averages').textContent()).includes('Period before'));
+  assert.ok((await history.locator('.period-summary').textContent()).includes('Previous period average'));
   await shot('trends-previous');
   await history.getByRole('button',{name:'All history',exact:true}).click();
   await history.getByText(/^\d+ \/ \d+ weeks$/).waitFor();
@@ -2546,11 +2549,11 @@ function trendFixture(q){
   await history.getByLabel('Block end',{exact:true}).fill('2025-08-28');
   await history.getByRole('button',{name:'Previous',exact:true}).click();
   await history.getByLabel('Comparison block start',{exact:true}).fill('2025-05-01');
-  await history.getByText(/Against 2025-05-01 – 2025-05-28/).waitFor();
+  await history.getByText(/Compared with 2025-05-01 – 2025-05-28/).waitFor();
   await history.getByLabel('Block start',{exact:true}).fill('');
   await history.getByText(/Couldn't read this range/).waitFor();
   await history.getByLabel('Block start',{exact:true}).fill('2025-08-01');
-  await history.getByText(/Against 2025-05-01 – 2025-05-28/).waitFor();
+  await history.getByText(/Compared with 2025-05-01 – 2025-05-28/).waitFor();
   await history.scrollIntoViewIfNeeded();
   await shot('trends-custom');
   const overflow=await trends.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
@@ -2567,7 +2570,7 @@ function trendFixture(q){
   assert.ok((await stress.getByRole('slider').getAttribute('aria-valuetext')).startsWith('October 2025:'));
   await trends.goto(`${url}/#metric/hrv`);
   await nightly.getByRole('button',{name:'All history',exact:true}).click();
-  assert.equal(await nightly.getByText('Current Garmin baseline',{exact:true}).count(),0,'past baselines differed, so averages show none');
+  assert.equal(await nightly.getByText(/^Current Garmin baseline/).count(),0,'past baselines differed, so averages show none');
   await shot('trends-all');
   await trends.close();
  }

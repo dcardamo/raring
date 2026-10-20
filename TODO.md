@@ -39,6 +39,26 @@ In priority order; the redesign shipped (Done, item 26) without them.
    read-only by name and date until a populated response verifies their
    sport, duration and completion fields.
 
+### Data presentation prototype follow-ups
+
+- Maintainer review of the built branch-only chart prototype. Dan accepted
+  period means as history headlines with inspected readings below, small visible
+  30-night stage averages with actual counts, and keeping Today/Tonight and
+  the five tabs. That direction approval is not merge or release approval.
+- Check the new amount rows and comparison controls with TalkBack and the
+  largest system text on a phone. Browser geometry checks are not a physical
+  WebView or screen-reader check.
+- Historical baseline bands need each day's actual Garmin bounds/status in
+  the trend contract; the prototype explicitly labels the current range and
+  never applies it as a historical rating. No account requests in this lane.
+- Decide whether Trends should suppress previous-period changes for unequal
+  coverage. Current comparisons show both recorded-day counts, without a
+  significance or favorable-direction claim; no new coverage threshold.
+- Regenerate coherent browser fixtures from the core: the existing handcrafted
+  strength counts, latest load/VO2 and overnight HR disagree across pages.
+  Identical before/after fixtures expose those differences rather than hiding
+  them in presentation logic.
+
 ### Visual language follow-ups
 
 - Maintainer review of the refined warm-graphite prototype. Dan approved
@@ -497,6 +517,23 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Data presentation prototype** (commit "Make metric comparisons and chart evidence explicit"). Shared period summaries separate existing core means and changes from the
+  inspected day; current range bounds, source dates and recorded counts stay
+  visible. History uses fixed 0–100 domains for bounded Garmin metrics,
+  including overlays. Shared amount rows align stage/zone/stress/load-focus
+  and muscle comparisons, preserve zero/unknown and remove ambiguous
+  percentage columns. The zone-duration contract now preserves omitted, null
+  and invalid durations as unknown (tested in Rust), rather than zero-filling;
+  partial zone summaries no longer draw a misleading normalized strip. Sleep-stage comparisons now expose their core mean and
+  per-stage sample count under the tested 30-calendar-day rule. Training's
+  load preview uses the common history chart; Progress uses round ticks,
+  neutral physiological traces and a coverage/goal key, with the resting-HR
+  link corrected. The arbitrary Fitness Age ruler is gone; Readiness factors
+  lead with Garmin's input and rating, not an unexplained percent. Today,
+  Plan, Tonight, weight rules and the five tabs remain. Private research and
+  comparison captures stay ignored; no new endpoints or account requests.
+  Branch-only and awaiting review, not released.
 
 - **Visual language on the current Today/Sleep layouts** (commit "Apply the
   refined language to the current Today and Sleep components"). Main's four

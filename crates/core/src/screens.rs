@@ -974,17 +974,19 @@ pub(crate) fn activity(store: &Store, id: &str) -> Option<ActivityCard> {
             .as_array()
             .map(|a| {
                 if a.iter().any(|z| z["zoneNumber"].as_u64().is_some()) {
-                    let mut seconds = vec![0.; 5];
+                    let mut seconds = vec![None; 5];
                     for z in a {
                         if let Some(n @ 1..=5) = z["zoneNumber"].as_u64() {
                             seconds[n as usize - 1] =
-                                num(z, &[&["secsInZone"], &["timeInZone"]]).unwrap_or(0.);
+                                num(z, &[&["secsInZone"], &["timeInZone"]])
+                                    .filter(|s| s.is_finite() && *s >= 0.);
                         }
                     }
                     seconds
                 } else {
                     a.iter()
-                        .map(|z| num(z, &[&["secsInZone"], &["timeInZone"]]).unwrap_or(0.))
+                        .map(|z| num(z, &[&["secsInZone"], &["timeInZone"]])
+                            .filter(|s| s.is_finite() && *s >= 0.))
                         .collect()
                 }
             })
@@ -2173,10 +2175,11 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
         ]
         .iter()
         .filter_map(|(stage, key)| {
-            num(v, &[&[*key]]).map(|s| {
+            num(v, &[&[*key]]).filter(|s| s.is_finite() && *s >= 0.).map(|s| {
                 let history: Vec<f64> = stage_history
                     .iter()
                     .filter_map(|night| num(sleep(night), &[&[*key]]))
+                    .filter(|s| s.is_finite() && *s >= 0.)
                     .collect();
                 let average = (!history.is_empty())
                     .then(|| history.iter().sum::<f64>() / history.len() as f64);
@@ -2184,6 +2187,8 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
                     stage: *stage,
                     minutes: s / 60.,
                     usual_delta_min: average.map(|avg| (s - avg) / 60.),
+                    comparison_min: average.map(|avg| avg / 60.),
+                    comparison_nights: history.len() as u32,
                 }
             })
         })

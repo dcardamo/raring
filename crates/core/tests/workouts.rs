@@ -1,5 +1,5 @@
 use raring_core::{screens, store::Store, view::Icon};
-use serde_json::json;
+use serde_json::{json, Value};
 
 #[test]
 fn nested_detail_indexes_activity_and_reads_garmin_summary_and_zones() {
@@ -50,7 +50,7 @@ fn nested_detail_indexes_activity_and_reads_garmin_summary_and_zones() {
     assert_eq!(view.summary.aerobic_te, Some(2.4));
     assert_eq!(view.summary.aerobic_label.as_deref(), Some("Maintaining"));
     assert_eq!(view.summary.benefit.as_deref(), Some("Base"));
-    assert_eq!(view.summary.zone_seconds, vec![30., 20., 0., 10., 5.]);
+    assert_eq!(view.summary.zone_seconds, vec![Some(30.), Some(20.), None, Some(10.), Some(5.)]);
     assert_eq!(view.zone_floors, vec![105., 155., 175.]);
     for (key, value) in [
         ("distance", 1.2),
@@ -237,8 +237,25 @@ fn unnumbered_zones_and_positional_second_timestamps_remain_supported() {
         )
         .unwrap();
     let view = screens::workout(&store, "4").unwrap();
-    assert_eq!(view.summary.zone_seconds, vec![3., 4.]);
+    assert_eq!(view.summary.zone_seconds, vec![Some(3.), Some(4.)]);
     assert_eq!(view.heart_rate[1].t_s, 30.);
+}
+
+#[test]
+fn missing_null_and_invalid_zone_durations_are_not_measured_zero() {
+    let store = Store::open(":memory:").unwrap();
+    store.put("activity", "4", "now", &json!({"activityId":4,"startTimeLocal":"2025-02-03T07:00:00"})).unwrap();
+    for (zones, expected) in [
+        (json!([{"zoneNumber":1,"secsInZone":0},{"zoneNumber":2,"secsInZone":null},{"zoneNumber":4,"secsInZone":-1},{"zoneNumber":5,"secsInZone":30}]),
+         vec![Some(0.),None,None,None,Some(30.)]),
+        (json!([{"secsInZone":0},{"secsInZone":null},{"secsInZone":-1},{"secsInZone":30}]),
+         vec![Some(0.),None,None,Some(30.)]),
+        (json!([]), vec![]),
+        (Value::Null, vec![]),
+    ] {
+        store.put("zones", "4", "now", &zones).unwrap();
+        assert_eq!(screens::workout(&store, "4").unwrap().summary.zone_seconds, expected);
+    }
 }
 
 #[test]

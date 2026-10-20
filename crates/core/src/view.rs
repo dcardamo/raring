@@ -372,8 +372,9 @@ pub struct ActivityCard {
     pub duration_s: f64,
     pub distance_km: Option<f64>,
     pub load: Option<f64>,
-    /// Seconds in heart-rate zones 1–5.
-    pub zone_seconds: Vec<f64>,
+    /// Seconds in heart-rate zones 1–5. Missing/invalid durations are unknown,
+    /// distinct from an explicitly recorded zero.
+    pub zone_seconds: Vec<Option<f64>>,
     pub aerobic_te: Option<f64>,
     /// Garmin's label for the aerobic effect: Minor, Maintaining, Improving…
     pub aerobic_label: Option<String>,
@@ -562,8 +563,15 @@ pub struct StageSegment {
 pub struct StageTotal {
     pub stage: Stage,
     pub minutes: f64,
-    /// Against your 30-night average; positive means more.
+    /// Against this stage's recorded mean in the 30 calendar days ending
+    /// on the selected night (including it); positive means more.
     pub usual_delta_min: Option<f64>,
+    /// That mean, in minutes; never a target or a rating.
+    #[serde(default)]
+    pub comparison_min: Option<f64>,
+    /// This stage's denominator. Missing/invalid values do not count; zero does.
+    #[serde(default)]
+    pub comparison_nights: u32,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]

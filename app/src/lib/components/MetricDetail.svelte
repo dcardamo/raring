@@ -14,6 +14,7 @@
  import Card from './Card.svelte';
  import Gauge from './Gauge.svelte';
  import RangeBar from './RangeBar.svelte';
+ import AmountRows from './AmountRows.svelte';
  import StressTimeline from './StressTimeline.svelte';
  import WhySheet from './WhySheet.svelte';
  let {metric,data,dayDate=null}:{metric:string,data:TodayView|HealthView|TrainingView,dayDate?:string|null}=$props();
@@ -21,7 +22,6 @@
  let battery=$derived(metric==='bodyBattery'?(data as TodayView).bodyBattery:null);
  let stress=$derived(metric==='stress'?(data as TodayView|HealthView).stress:null);
  let isDay=$derived(dayDate!=null);
- let stressTotal=$derived(stress?stress.time.reduce((a,b)=>a+b.seconds,stress.activeS??0):0);
  let vital=$derived(source==='health'?(data as HealthView).vitals.readings.find(v=>v.kind===metric):null);
  let training=$derived(source==='training'?data as TrainingView:null);
  let trainingValue=$derived(training?({vo2max:training.vo2max,endurance:training.enduranceScore,hill:training.hillScore,runningTolerance:training.runningToleranceKm,acuteLoad:training.acute?.value??null} as Record<string,number|null>)[metric]:null);
@@ -80,7 +80,7 @@
   <Card title="Daily resting HR"><HistoryChart values={[]} endDate={(data as HealthView).date} label="Resting heart rate" unit="bpm" metric="restingHr" initialRange="days30" band={trendBand('restingHr',data as HealthView)} bandLabel="Raring usual range"/></Card>
  {:else if stress}
   {#if stress.timeline.length}<Card title="Through the day"><StressTimeline {stress}/></Card>{:else}<Card title="Through the day"><p class="small">Garmin has no stress readings for this day.</p></Card>{/if}
-  {#if stress.time.length}<Card title="Time in each level">{#each stress.time as t}<div class="stress-row"><b>{stressNames[t.level]}</b><div class="bar"><i style:width={t.seconds/Math.max(stressTotal,1)*100+'%'} style:background={stressColors[t.level]}></i></div><span class="n">{duration(t.seconds/60)}</span><small>{Math.round(t.seconds/Math.max(stressTotal,1)*100)}%</small></div>{/each}{#if stress.activeS}<div class="stress-row"><b>Active</b><div class="bar"><i style:width={stress.activeS/Math.max(stressTotal,1)*100+'%'} style:background={colors.secondary}></i></div><span class="n">{duration(stress.activeS/60)}</span><small>{Math.round(stress.activeS/Math.max(stressTotal,1)*100)}%</small></div>{/if}</Card>{/if}
+  {#if stress.time.length}<Card title="Time in each level"><AmountRows label="Garmin stress durations" unit="h:mm" format={duration} rows={[...stress.time.map(t=>({label:stressNames[t.level],value:t.seconds/60,text:duration(t.seconds/60),color:stressColors[t.level]})),...(stress.activeS!=null?[{label:'Active · not rated',value:stress.activeS/60,text:duration(stress.activeS/60),color:colors.secondary}]:[])]}/></Card>{/if}
   <Card title="Daily average">
    <HistoryChart values={stress.trend} endDate={(data as TodayView|HealthView).date} label="Average stress" color={colors.ink} metric="stress"/>
   </Card>

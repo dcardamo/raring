@@ -12,9 +12,10 @@ id: string, icon: Icon, name: string,
  */
 startLocal: string, durationS: number, distanceKm: number | null, load: number | null, 
 /**
- * Seconds in heart-rate zones 1–5.
+ * Seconds in heart-rate zones 1–5. Missing/invalid durations are unknown,
+ * distinct from an explicitly recorded zero.
  */
-zoneSeconds: Array<number>, aerobicTe: number | null, 
+zoneSeconds: Array<number | null>, aerobicTe: number | null, 
 /**
  * Garmin's label for the aerobic effect: Minor, Maintaining, Improving…
  */
