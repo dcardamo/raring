@@ -15,7 +15,8 @@
  let low=$derived(heartRate?40:0),high=$derived(heartRate?180:100);
  const y=(value:number)=>top+h-Math.max(0,Math.min(1,(value-low)/(high-low)))*h;
  const time=(minute:number)=>`${String(Math.floor(minute/60)%24).padStart(2,'0')}:${String(Math.floor(minute%60)).padStart(2,'0')}`;
- const elapsed=(minute:number)=>`${String(Math.floor(minute/60)).padStart(2,'0')}:${String(Math.floor(minute%60)).padStart(2,'0')}`;
+ // Heart rate runs on elapsed time from the day's start, so it never wears clock-style labels.
+ const elapsed=(minute:number)=>{const m=Math.floor(minute);return `${Math.floor(m/60)} h ${String(m%60).padStart(2,'0')} m`};
  // A compact chart averages only present samples; missing slots remain gaps.
  let bucket=$derived(compact?(heartRate?8:5):1);
  let paths=$derived.by(()=>{
@@ -33,7 +34,7 @@
  let slot=$derived(Math.min(selected??latest,timeline.length-1));
  let reading=$derived(slot<0?null:timeline[slot]??null);
  let moving=$derived(slot>=0 && ranges.some(([a,b])=>slot*step>=a && slot*step<b));
- let label=$derived(slot<0?'No readings yet':`${heartRate?elapsed(slot*step)+' elapsed':time(slot*step)}: ${reading!=null?heartRate?`${num(reading)} bpm`:`${num(reading)}, ${stressNames[stressLevel(reading)]}`:moving?heartRate?'activity, no reading':'active, not rated':'no reading'}`);
+ let label=$derived(slot<0?'No readings yet':`${heartRate?elapsed(slot*step)+' into the day':time(slot*step)}: ${reading!=null?heartRate?`${num(reading)} bpm`:`${num(reading)}, ${stressNames[stressLevel(reading)]}`:moving?heartRate?'activity, no reading':'active, not rated':'no reading'}`);
  function key(e:KeyboardEvent){
   const last=timeline.length-1,jump=e.shiftKey?20:1;
   const next=e.key==='ArrowLeft'?slot-jump:e.key==='ArrowRight'?slot+jump:e.key==='Home'?0:e.key==='End'?last:null;
@@ -49,7 +50,7 @@
 </script>
 {#if !compact}
  <div class="readout" aria-live="polite">
-  {#if slot>=0}<span>{heartRate?`${elapsed(slot*step)} elapsed`:time(slot*step)}</span>{/if}
+  {#if slot>=0}<span>{heartRate?`${elapsed(slot*step)} into the day`:time(slot*step)}</span>{/if}
   {#if reading!=null}<b class="n" style:color={heartRate?colors.ink:stressColors[stressLevel(reading)]}>{num(reading)}</b><em>{heartRate?'bpm':stressNames[stressLevel(reading)]}</em>
   {:else if moving}<em>{heartRate?'Activity · no reading':'Active · not rated'}</em>{:else if slot>=0}<em>No reading</em>{/if}
  </div>
@@ -66,10 +67,10 @@
  {#if compact}<line x1="0" x2={W} y1={top+h+.5} y2={top+h+.5} stroke="currentColor" opacity=".12"/>{/if}
  {#each Object.entries(paths) as [level,d]}{#if d}<path {d} fill={heartRate?colors.ink:stressColors[level]} opacity=".9"/>{/if}{/each}
  {#if !compact && slot>=0}<line x1={x(slot*step+step/2)} x2={x(slot*step+step/2)} y1={top-8} y2={top+h} stroke="currentColor" opacity=".4" stroke-dasharray="2 3"/>{/if}
- {#if !compact}{#each [0,1,2,3,4] as i}{@const m=heartRate?dayMinutes*i/4:i*360}<text x={x(m)} y={top+h+16} fill="#8E98AC" font-size="10" text-anchor={i===0?'start':i===4?'end':'middle'}>{heartRate?elapsed(m):i===4?'24:00':time(m)}</text>{/each}{/if}
+ {#if !compact}{#each [0,1,2,3,4] as i}{@const m=heartRate?dayMinutes*i/4:i*360}<text x={x(m)} y={top+h+16} fill="#8E98AC" font-size="10" text-anchor={i===0?'start':i===4?'end':'middle'}>{heartRate?`${Math.round(m/60)} h`:i===4?'24:00':time(m)}</text>{/each}{/if}
 {/snippet}
 {#if !compact}
- {#if heartRate}<p class="axis-note">Elapsed hours from day start · not local clock time</p>{/if}
+ {#if heartRate && dayMinutes!==1440}<p class="axis-note">A {num(dayMinutes/60,1)}-hour day: hours count from its start</p>{/if}
  <div class="legend">{#if heartRate}<span><i style:background={colors.ink}></i>Heart rate</span>{:else}{#each ['rest','low','medium','high'] as level}<span><i style:background={stressColors[level]}></i>{stressNames[level]}</span>{/each}{/if}<span><i style:background={colors.secondary}></i>{heartRate?'Activity':'Active'}</span>{#if sleep.length}<span><i style:background={colors.ink} style:opacity=".5"></i>Asleep</span>{/if}</div>
 {/if}
 <style>

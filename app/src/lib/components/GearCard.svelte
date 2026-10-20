@@ -1,7 +1,8 @@
 <script lang="ts">
  import Card from './Card.svelte';
  import type {GearView} from '../generated/GearView';
- import {num} from '../format';
+ import {num,dateLabel,clock} from '../format';
+ const fetched=(at:string)=>{const d=new Date(at);return Number.isNaN(d.getTime())?'time unavailable':`${dateLabel(d.toLocaleDateString('en-CA'))} ${clock(at)}`};
  let {gear}:{gear:GearView}=$props();
  let expanded=$state(false);
  let activeCount=$derived(gear.items.every(g=>g.status==='Active'||g.status==='Retired')
@@ -20,7 +21,7 @@
    {#if item.distance!=null && item.threshold!=null}<div class="gear-track" role="img" aria-label={`${distance(item.distance)} of ${distance(item.threshold)} Garmin threshold`}><i style:width={`${Math.min(100,item.distance/item.threshold*100)}%`}></i></div>{/if}
   </div>
  {/each}
- <p class="small gear-fetched">Distance from Garmin · fetched {new Date(gear.fetchedAt).toLocaleString()}</p>
+ <p class="small gear-fetched">Distance from Garmin · fetched {fetched(gear.fetchedAt)}</p>
 </Card>
 <style>
  .gear-summary,.gear-heading,.gear-distance{display:flex;justify-content:space-between;gap:10px;align-items:baseline}

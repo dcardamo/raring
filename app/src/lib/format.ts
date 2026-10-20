@@ -27,6 +27,11 @@ export const dateLabel=(date:string)=>{
  const day=calendarDay(date);
  return day?`${weekdays[(day.getDay()+6)%7]} ${day.getDate()} ${months[day.getMonth()]}`:'Date unavailable';
 };
+/** "4 Nov 2024": a date that may lie in another year. */
+export const yearDate=(date:string)=>{
+ const day=calendarDay(date);
+ return day?`${day.getDate()} ${months[day.getMonth()]} ${day.getFullYear()}`:'Date unavailable';
+};
 export const monthLabel=(date:string)=>{
  const day=calendarDay(date);
  return day?`${months[day.getMonth()]} ${day.getFullYear()}`:'Date unavailable';

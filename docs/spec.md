@@ -298,7 +298,8 @@ by sets, gray when none.
 Short offline pages, opened from Settings, the "?" sheets, the ? on Strength
 and the strength workout sheet: lifting with the watch, how sets are counted,
 the body map and which watches work. The "?" sheets on pages and cards say in
-two or three lines what a number is, where it comes from and how to read it. Each area ships its pages with the feature.
+two or three lines what a number is, where it comes from and how to read it,
+and link a Help page only where their area has one. Each area ships its pages with the feature.
 Questions go to GitHub; the address is shown as text.
 
 ### Health
@@ -470,9 +471,15 @@ Follow-through and measured change stay apart; nothing is a grade.
   Adapt, My routines).
 - **Settings**: notifications, the wind-down lead, persistent status, Follow
   my day (and that Raring doesn't learn from how you use the app), the
-  plan-your-week prompt, journal consent, history, recent Garmin changes
-  (Rules: Recent Garmin changes), export, a validated import of another
+  plan-your-week prompt, journal consent, recent Garmin changes once there are
+  any (Rules: Recent Garmin changes), export, a validated import of another
   export's settings (Rules: Import), sign-out, help and how Raring works.
+  History on the phone is on Profile. Export and Import each lead with one
+  line, the rest behind "What's included"; an import preview (with years)
+  replaces the intro and puts Import and Cancel first. Sign-out ("Sign out and
+  erase this phone's data") confirms in place, names what it erases (Garmin
+  history, journal logs, goals, plans, limits and routines; nothing in Garmin)
+  and offers Export first.
 
 ### Weekly check-in
 
@@ -569,21 +576,23 @@ names that plan.
 
 ## Notifications
 
-A declined notification permission is remembered on the phone: Settings
-says so, offers no button and Raring doesn't ask again (Android Settings can
-still allow it). Granting it later through the persistent-status switch
-clears the note.
+Settings reads whether Android allows Raring's notifications each time it
+opens. When Android blocks them, one line at the top of Notifications says so
+and the switches are greyed; it offers Allow until a request is declined. A
+declined request is remembered on the phone: the line then points to Android
+Settings and Raring doesn't ask again. Granting it later through the
+persistent-status switch clears the note. Each switch says when it fires.
 
 Sent by the phone itself.
 
 | Notification                  | When                                         | Default |
 | ----------------------------- | -------------------------------------------- | ------- |
 | Morning readiness             | Last night's sleep and readiness have synced; while resting, ill, paused or limited, a factual update with that line and no training call | On      |
-| Weekly check-in               | Monday 08:00                                 | On      |
+| Weekly review                 | Monday 08:00                                 | On      |
 | VO2max or Fitness Age changed | Either direction                             | On      |
-| Vitals off                    | Two or more vitals outside normal range      | On      |
+| Vitals outside your ranges    | Two or more vitals outside normal range      | On      |
 | Training status changed       | On sync                                      | Off     |
-| Bedtime                       | Wind-down time of tonight's plan (lead 30 min, configurable) | Off     |
+| Wind-down reminder            | Wind-down time of tonight's plan (lead 30 min before bedtime, configurable) | Off     |
 | Persistent status (Android)   | Existing sync; silent, no extra Garmin requests | Off     |
 
 The morning readiness notification opens Today, the weekly check-in the
@@ -1146,8 +1155,9 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   Use Garmin's UTC start and completed-day end as elapsed bounds: a source day
   can span 23 or 25 hours. A partial day reserves a 24-hour axis (and extends
   it if later real samples require it). The axis explicitly says elapsed
-  hours from day start, not wall-clock time; source-local travel/DST clocks
-  cannot be reconstructed from a single start offset. Sleep and activities
+  hours from day start ("6 h", readout "23 h 58 m into the day"), never
+  clock-style times; a 23- or 25-hour day says how long it is. Source-local
+  travel/DST clocks cannot be reconstructed from a single start offset. Sleep and activities
   use their GMT instants, or local-only times only when start/end source
   offsets agree for a completed day. Their intervals clip at day bounds.
   Ungraded heart rate uses neutral ink, not a poor-status color.

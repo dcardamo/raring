@@ -22,7 +22,7 @@ try {
   const exportPage=await browser.newPage({viewport:{width,height:844}});
   await exportPage.goto(`${url}/?fixture=export#settings`);
   await exportPage.getByRole('button',{name:'Export your data'}).waitFor();
-  assert.match(await exportPage.getByText('Download a ZIP', {exact:false}).textContent(),/only when you share it/);
+  assert.match(await exportPage.getByText('A ZIP of your Garmin history', {exact:false}).textContent(),/only when you share it/);
   await exportPage.getByRole('button',{name:'Export your data'}).scrollIntoViewIfNeeded();
   await exportPage.screenshot({path:resolve(output,`export-settings-${width}.png`),fullPage:true});
   await exportPage.getByRole('button',{name:'Export your data'}).click();
@@ -33,7 +33,9 @@ try {
  for(const width of [390,1100]){
   const changes=await browser.newPage({viewport:{width,height:844}});
   await changes.goto(`${url}/#settings`);
-  await changes.getByText('Raring hasn’t changed anything in Garmin.',{exact:false}).waitFor();
+  await changes.getByRole('heading',{name:'Export',exact:true}).waitFor();
+  assert.equal(await changes.getByRole('heading',{name:'Recent Garmin changes'}).count(),0,'an empty change log takes no space');
+  assert.equal(await changes.getByRole('heading',{name:'Garmin history'}).count(),0,'history lives on Profile');
   await changes.goto(`${url}/?fixture=garmin-changes#settings`);
   const log=changes.getByRole('list',{name:'Recent Garmin changes'});
   await log.waitFor();
@@ -54,11 +56,12 @@ try {
  await importPage.goto(`${url}/?fixture=import#settings`);
  const chooseImport=importPage.getByRole('button',{name:'Choose a Raring export'});
  await chooseImport.waitFor();
+ await importPage.locator('.card',{hasText:'Restore your Raring settings'}).getByText('What’s included').click();
  await importPage.getByText('a sync downloads it again for this phone',{exact:false}).waitFor();
  await importPage.getByText('journal logs stay this phone’s own',{exact:false}).waitFor();
  await chooseImport.scrollIntoViewIfNeeded();
  await chooseImport.click();
- await importPage.getByText('rows will be applied',{exact:false}).waitFor();
+ await importPage.getByText('4 Nov 2024 – 4 Nov 2025',{exact:false}).waitFor();
  assert.equal(await importPage.getByRole('button',{name:'Import these settings'}).count(),1,'the preview is confirmed before anything is written');
  await importPage.getByText('already here',{exact:false}).first().waitFor();
  await importPage.getByText('Milestones and records',{exact:false}).waitFor();
@@ -90,6 +93,7 @@ try {
  const enabled=privatePage.locator('.card').filter({hasText:'Journal privacy'}).locator('input[type=checkbox]');
  assert.equal(await enabled.isChecked(),true);
  await enabled.uncheck();
+ await privatePage.locator('#export').getByText('What’s included').click();
  await privatePage.getByText('Previously downloaded journal logs are included even if journal reads are now off',{exact:false}).waitFor();
  await privatePage.getByRole('navigation').getByRole('button',{name:'Health'}).click();
  await privatePage.getByRole('button',{name:'Allow local journal reads'}).waitFor();
@@ -395,7 +399,7 @@ try {
  console.log('Plan week, goals, check-in plan and intensity pages: passed');
  await page.goto(`${url}/#settings`);await waitRoute('settings');
  assert.equal(await page.locator('.setting.lead').count(),0,'the lead appears with the bedtime reminder');
- await page.locator('label.setting',{hasText:'Bedtime'}).locator('input').check();
+ await page.locator('label.setting',{hasText:'Wind-down reminder'}).locator('input').check();
  await page.locator('.setting.lead select').selectOption('45');
  await tab('Today');
  await openSettings(page);await waitRoute('settings');
@@ -876,11 +880,10 @@ try {
   assert.equal(await hp.getByRole('dialog').count(),0);
   await hp.getByRole('button',{name:'Help: Acute load'}).click();
   assert.deepEqual(await contrastFailures(hp),[],'Help sheet contrast');
-  await hp.getByRole('dialog').getByRole('button',{name:'All help'}).click();
-  await hp.waitForURL('**/#help');
+  assert.equal(await hp.getByRole('dialog').getByRole('button',{name:/help/i}).count(),0,'no Help link where the area has no Help pages');
   await hp.close();
  }
- console.log('Help: ? sheets on root pages and cards, Back/Escape close, link to all help: passed');
+ console.log('Help: ? sheets on root pages and cards, Back/Escape close, no dead-end help link: passed');
  // Stage-5 journeys: activity rows name average HR (U05), unsupported readiness says why (U07),
  // Fitness Age is Garmin's dated estimate (U48), and Settings says Raring doesn't learn from use (U54).
  {
@@ -1315,6 +1318,7 @@ try {
    window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command)=>{
     if(command.startsWith('plugin:'))return 1;
     if(command==='request_notification_permission'){window.asked++;return false}
+    if(command==='notification_permission')return false;
     if(command==='app_status')return structuredClone(samples.status);
     if(command==='get_settings')return {};
     if(command in samples)return structuredClone(samples[command]);
@@ -1322,11 +1326,14 @@ try {
    }};
   },samples);
   await np.goto(`${url}/#settings`);
-  await np.getByRole('button',{name:'Enable notifications'}).click();
-  await np.getByText(/Notifications were declined\. Raring won’t ask again/).waitFor();
-  assert.equal(await np.getByRole('button',{name:'Enable notifications'}).count(),0);
+  // Android's own state decides: blocked shows one line and greys the switches.
+  await np.getByText('Android is blocking Raring’s notifications.',{exact:true}).waitFor();
+  assert.equal(await np.getByRole('checkbox',{name:/Morning readiness/}).isDisabled(),true,'switches that can’t fire are greyed');
+  await np.getByRole('button',{name:'Allow',exact:true}).click();
+  await np.getByText('Android is blocking Raring’s notifications. Allow them for Raring in Android Settings.',{exact:true}).waitFor();
+  assert.equal(await np.getByRole('button',{name:'Allow',exact:true}).count(),0);
   await np.reload();
-  await np.getByText(/Notifications were declined/).waitFor();
+  await np.getByText(/Allow them for Raring in Android Settings/).waitFor();
   assert.equal(await np.evaluate(()=>window.asked),0,'not asked again after a reload');
   await np.close();
  }
@@ -1478,7 +1485,7 @@ try {
  },samples);
  await patches.goto(`${url}/?fixture=status-offer#settings`);
  const morning=patches.getByRole('checkbox',{name:'Morning readiness'});
- const weekly=patches.getByRole('checkbox',{name:'Weekly check-in'});
+ const weekly=patches.getByRole('checkbox',{name:'Weekly review'});
  const privacy=patches.getByRole('checkbox',{name:/Persistent status/});
  await morning.waitFor();
  assert.equal(await patches.getByRole('checkbox').count(),10,'journal has its own consent control');
@@ -1509,9 +1516,9 @@ try {
  await patches.waitForFunction(()=>window.testPatch.stored.notifyWeeklyCheckin===false);
  assert.equal(await privacy.isChecked(),false,'unrelated patch after failed opt-in cannot revive consent');
  assert.equal(await patches.evaluate(()=>window.testPatch.stored.notifyStatus),false);
- await patches.getByRole('checkbox',{name:'Bedtime'}).check();
+ await patches.getByRole('checkbox',{name:'Wind-down reminder'}).check();
  await patches.waitForFunction(()=>window.testPatch.stored.notifyBedtime===true);
- await patches.getByLabel('Wind-down reminder').selectOption('45');
+ await patches.getByLabel('Wind-down starts').selectOption('45');
  await patches.waitForFunction(()=>window.testPatch.stored.bedtimeLeadMin===45);
  assert.deepEqual(await patches.evaluate(()=>window.testPatch.patches.slice(-2)),[{notifyBedtime:true},{bedtimeLeadMin:45}]);
  await privacy.click();
@@ -1611,7 +1618,7 @@ try {
  await onboarding.getByText(/Sign-in tokens are encrypted/).waitFor();
  await privacySummary.press('Enter');
  await onboarding.getByRole('button',{name:'Sign in with Garmin'}).click();
- await onboarding.getByRole('alert').getByText('Error: Synthetic sign-in failure',{exact:true}).waitFor();
+ await onboarding.getByRole('alert').getByText('Synthetic sign-in failure',{exact:true}).waitFor();
  await onboarding.evaluate(()=>{window.testOnboarding.failSignIn=false});
  await onboarding.getByRole('button',{name:'Sign in with Garmin'}).click();
  await onboarding.getByRole('heading',{name:'Stay in the loop'}).waitFor();
@@ -1621,10 +1628,13 @@ try {
  assert.equal(await onboarding.evaluate(()=>window.testOnboarding.permissions),0,'notification permission is optional');
  await openSettings(onboarding);
  await onboarding.getByText('How Raring works',{exact:true}).waitFor();
- await onboarding.locator('summary').click();
+ await onboarding.locator('.card',{hasText:'How Raring works'}).locator('summary').click();
  await onboarding.getByText(/This does not delete anything from your Garmin account/).waitFor();
- onboarding.once('dialog',dialog=>dialog.accept());
- await onboarding.getByRole('button',{name:'Sign out',exact:true}).click();
+ await onboarding.getByRole('button',{name:'Sign out and erase this phone’s data'}).click();
+ const confirmOut=onboarding.getByRole('group',{name:'Sign out'});
+ assert.ok((await confirmOut.textContent()).includes('goals, plans, limits and routines'),'the confirm names local records');
+ await confirmOut.getByRole('button',{name:'Export first'}).waitFor();
+ await confirmOut.getByRole('button',{name:'Sign out and erase',exact:true}).click();
  await onboarding.waitForURL('**/#onboarding');
  assert.equal(await onboarding.evaluate(()=>localStorage.getItem('notifications-step-done')),null);
  await onboarding.getByRole('button',{name:'Sign in with Garmin'}).click();

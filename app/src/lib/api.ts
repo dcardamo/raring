@@ -146,6 +146,7 @@ const sampleImport:ImportPreview = {exportedAt:'2025-10-19T08:12:00+02:00',appVe
 export const choose_import = ():Promise<ImportPreview> => call('choose_import',undefined,sampleImport);
 export const apply_import = ():Promise<ImportPreview> => call('apply_import',undefined,sampleImport);
 export const request_notification_permission = ():Promise<boolean> => call('request_notification_permission',undefined,true);
+export const notification_permission = ():Promise<boolean|null> => call('notification_permission',undefined,new URLSearchParams(location.search).get('fixture')!=='notifications-blocked');
 export const get_settings = ():Promise<Settings> => call('get_settings',undefined,previewSettings);
 export const patch_settings = (patch:SettingsPatch):Promise<void> => {if(!isTauri()){previewSettings={...previewSettings,...copy(patch)};return Promise.resolve()}return invoke<void>('patch_settings',{patch})};
 export const onStatusChanged = (callback:()=>void):Promise<()=>void> => isTauri()?listen('status-changed',callback):Promise.resolve(()=>{});

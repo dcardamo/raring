@@ -128,6 +128,13 @@ priority order; the bugs and most majors shipped (Done).
 - **Body Battery's latest time** (review m5): the detail gauge says "Latest
   synced" without a time; `BodyBatteryCard` has no reading time yet.
 - **Vital details repeat the hero value** in the chart readout (review m15).
+- **Notification state on a phone**: the Settings blocked line and greyed
+  switches use the new `notificationPermission` plugin command; check on the
+  emulator and a phone with notifications turned off in Android Settings
+  (the emulator was busy with another lane when this shipped).
+- **Sign-in error wording**: map the native sign-in failures (no network,
+  cancelled, Garmin refused) to one plain line each once their messages are
+  known; Raring now only drops the "Error:" prefix.
 
 ## Next
 
@@ -359,6 +366,20 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Settings, Profile and Help review fixes** (commit "Make Settings say what
+  it erases and what Android allows"). Settings reads Android's notification
+  state each time it opens (new `notification_permission` command: Android's
+  notifications switch and the runtime permission) and replaces the old
+  Permission card with one blocked line that greys the switches; each switch
+  says when it fires, with clearer names. Sign-out is "Sign out and erase this
+  phone's data" with an in-place confirm naming goals, plans, limits and
+  routines and offering Export first. Import previews carry years and the
+  export's Raring version, Export and Import lead with one line, an empty
+  Garmin change log and the duplicate history card are gone, "?" sheets link
+  Help only where the area has pages, the heart-rate axis reads elapsed hours
+  ("6 h"), gear shows the app's date format, and sign-in errors drop the
+  "Error:" prefix.
 
 - **Health review fixes: resting-HR band, search and a summary Health**
   (commit "Give Health its own resting-HR band and summary charts"). The
