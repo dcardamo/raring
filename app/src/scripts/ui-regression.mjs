@@ -248,7 +248,7 @@ try {
  assert.equal(await page.getByRole('tab',{name:'Tonight'}).getAttribute('aria-selected'),'true','the tonight line opens the Tonight tab');
  const plan=page.locator('.tonight-plan');
  assert.ok((await plan.textContent()).includes('22:30–23:06'));
- assert.equal(await plan.getByRole('img',{name:/^Tonight: now/}).count(),1,'a compact dial with labelled times');
+ assert.equal(await plan.getByRole('img',{name:/^Tonight: now/}).count(),1,'a timeline from the evening to the usual wake');
  assert.ok((await plan.textContent()).includes('Wind down22:00'),'the plan leads with the wind-down time');
  assert.ok((await plan.textContent()).includes('Garmin plan'));
  assert.ok((await plan.textContent()).includes("Garmin added 20 min for today's activity and load."));
@@ -267,7 +267,7 @@ try {
  const alignment=page.locator('.alignment');
  assert.equal(await alignment.locator('h3 .pill').textContent(),'Aligned');
  assert.equal(await alignment.locator('.night').count(),7,'a week of nights against Garmin\'s optimal window');
- assert.equal(await alignment.locator('rect.optimal').getAttribute('stroke-dasharray'),'4 3','Garmin\'s target is outlined, never shaded like usual windows');
+ assert.equal(await alignment.locator('.optimal').evaluate(el=>{const s=getComputedStyle(el);return `${s.borderTopStyle} ${s.backgroundColor}`}),'dashed rgba(0, 0, 0, 0)','Garmin\'s target is outlined, never shaded like usual windows');
  assert.ok((await alignment.textContent()).includes('Optimal 22:45–06:15'));
  assert.ok((await page.locator('.consistency .averages').textContent()).includes('22:55'));
  await tab('Health');
@@ -695,7 +695,7 @@ try {
   const bbPath=await yd.locator('.track.chart path').first().getAttribute('d');
   assert.ok(Math.max(...bbPath.match(/[ML](\d+)/g).map(t=>+t.slice(1)))<=810,'nothing is drawn after the upload');
   assert.equal(await yd.getByRole('button',{name:'Body Battery 78 at 13:30, nap +6'}).count(),1,'the nap change is on the Body Battery row');
-  assert.equal(await yd.getByText('+6 nap').count(),1);
+  assert.equal(await yd.getByText('nap +6').count(),1,'the nap change sits with the row value, off the plot');
   assert.equal(await yd.getByRole('button',{name:/^Heart rate through the day, resting 54/}).count(),1);
   assert.equal(await yd.getByRole('button',{name:'Morning Run 06:12, 52 min'}).count(),1);
   assert.equal(await dayPage.locator('.dashboard').getByRole('button',{name:/^Body Battery/}).count(),0,'Your day replaces the separate Body Battery card');

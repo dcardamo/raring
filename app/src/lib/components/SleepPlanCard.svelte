@@ -5,6 +5,7 @@
  import Card from './Card.svelte';
  import Icon from './Icon.svelte';
  import SleepPlanEvidence from './SleepPlanEvidence.svelte';
+ import {declutter} from '../declutter';
  // `evidence` adds the "Why this plan" sheet; Today opens Sleep instead. Today's `mode` follows
  // the time of day: one line until the plan leads, then the evening, wind-down or late-night card.
  type Mode='full'|'line'|'evening'|'windDown'|'lateNight';
@@ -20,9 +21,9 @@
 
 {#snippet stripView()}
  {#if strip}
-  <div class="strip" aria-hidden="true">
-   <div class="strip-bar"><i class="wd" style:left={strip.windDown+'%'} style:width={strip.start-strip.windDown+'%'}></i><i class="bw" style:left={strip.start+'%'} style:width={Math.max(1,strip.end-strip.start)+'%'}></i>{#if strip.now!=null}<u style:left={strip.now+'%'}></u>{/if}</div>
-   <div class="strip-ticks">{#each strip.ticks as tick,i}<span class:first={i===0} class:last={i===strip.ticks.length-1} style:left={tick.left+'%'}>{tick.label}</span>{/each}</div>
+  <div class="strip" aria-hidden="true" data-chart="night-strip" {@attach declutter}>
+   <div class="strip-bar"><i class="wd" style:left={strip.windDown+'%'} style:width={strip.start-strip.windDown+'%'}></i><i class="bw" style:left={strip.start+'%'} style:width={Math.max(1,strip.end-strip.start)+'%'}></i>{#if strip.now!=null}<u data-mark="now" style:left={strip.now+'%'}></u>{/if}</div>
+   <div class="strip-ticks">{#each strip.ticks as tick,i}<span data-thin class:first={i===0} class:last={i===strip.ticks.length-1} style:left={tick.left+'%'}>{tick.label}</span>{/each}</div>
    <div class="strip-key"><span><i class="wd"></i>Wind down</span><span><i class="bw"></i>{garmin?'Bedtime window':'Asleep by'}</span>{#if strip.now!=null}<span><i class="now"></i>Now</span>{/if}</div>
   </div>
  {/if}
@@ -107,11 +108,11 @@
  .wd{background:rgba(228,232,240,.22)}
  .bw{background:var(--ink)}
  .strip-bar u{position:absolute;top:-4px;width:3px;height:18px;border-radius:2px;background:var(--text);transform:translateX(-50%);box-shadow:0 0 0 2px var(--bg)}
- .strip-ticks{position:relative;height:16px;margin-top:6px}
- .strip-ticks span{position:absolute;transform:translateX(-50%);font:500 11px Inter;color:var(--text3)}
+ .strip-ticks{position:relative;height:1.5em;margin-top:6px;font:500 11px Inter}
+ .strip-ticks span{position:absolute;transform:translateX(-50%);color:var(--text3)}
  .strip-ticks .first{transform:none}
  .strip-ticks .last{transform:translateX(-100%)}
- .strip-key{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:11px;color:var(--text2)}
+ .strip-key{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:12px;color:var(--text2)}
  .strip-key span{display:flex;align-items:center;gap:5px}
  .strip-key i{width:10px;height:10px;border-radius:3px}
  .strip-key i.now{width:3px;height:12px;border-radius:2px;background:var(--text)}

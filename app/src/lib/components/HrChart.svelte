@@ -20,6 +20,6 @@
  </defs>
  {#each floors.filter(f=>f>=lo && f<=hi) as f}<line x1="0" x2="326" y1={y(f)} y2={y(f)} stroke="rgba(255,255,255,.06)" stroke-dasharray="3 4"/>{/each}
  {#if d}<path d={`${d}L326,116L0,116Z`} fill="url(#hr-area)"/><path class="hr-trace" {d} fill="none" stroke={zoned?'url(#hr-zones)':colors.ink} stroke-width="2.2" stroke-linejoin="round"/>{/if}
- {#each [0,1/3,2/3,1] as part,i}<text x={part*326} y="132" fill="#8E98AC" font-size="11" text-anchor={i===0?'start':i===3?'end':'middle'}>{elapsed(maxT*part)}</text>{/each}
+ {#each [0,1/3,2/3,1] as part,i}<text x={part*326} y="132" fill="#8E98AC" font-size="11.5" text-anchor={i===0?'start':i===3?'end':'middle'}>{elapsed(maxT*part)}</text>{/each}
 </svg>
 <style>.chart{width:100%;display:block}</style>
