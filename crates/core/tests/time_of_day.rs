@@ -67,7 +67,7 @@ fn phases_follow_wake_and_tonights_plan() {
         ("2025-03-12T06:50", DayPhase::Wake, "2025-03-12T09:40:00", true),
         ("2025-03-12T09:39", DayPhase::Wake, "2025-03-12T09:40:00", true),
         ("2025-03-12T09:40", DayPhase::Day, "2025-03-12T20:30:00", true),
-        ("2025-03-12T20:30", DayPhase::Evening, "2025-03-12T22:00:00", true),
+        ("2025-03-12T20:30", DayPhase::Evening, "2025-03-12T22:00:00", false),
         ("2025-03-12T22:00", DayPhase::WindDown, "2025-03-12T23:10:00", false),
         ("2025-03-12T23:10", DayPhase::LateNight, "2025-03-13T07:00:00", false),
         // Crossing midnight keeps tonight's plan until the usual wake.
@@ -551,7 +551,7 @@ fn tonights_plan_leads_your_day_late_in_the_evening() {
         };
         use TodayCard::*;
         for (t, phase, effort) in [
-            ("2026-10-19T21:30", DayPhase::Evening, true),
+            ("2026-10-19T21:30", DayPhase::Evening, false),
             ("2026-10-19T22:50", DayPhase::WindDown, false),
             ("2026-10-19T23:21", DayPhase::WindDown, false),
             ("2026-10-20T01:30", DayPhase::LateNight, false),
@@ -572,4 +572,30 @@ fn tonights_plan_leads_your_day_late_in_the_evening() {
         drop(core);
         let _ = std::fs::remove_file(path);
     }
+}
+
+/// The demo account's next morning before its night syncs, and its day
+/// after the morning run: no training call from an old night, and no
+/// effort scale once the day's workout is recorded.
+#[test]
+fn the_unsynced_morning_waits_and_a_finished_workout_drops_the_effort_call() {
+    let (core, path) = raring_with("demo-morning", |store| {
+        raring_core::demo::seed(store, NaiveDate::from_ymd_opt(2026, 10, 19).unwrap()).unwrap();
+    });
+    let at = |t: &str| {
+        let now = local(t);
+        core.today_live_at(&core.current_date(now), now)
+    };
+    let day = at("2026-10-19T14:20");
+    let lead = day.lead.unwrap();
+    assert_eq!(lead.kind, raring_core::view::LeadKind::Done, "{}", lead.headline);
+    assert!(!day.focus.effort);
+    let morning = at("2026-10-20T07:30");
+    assert_eq!(morning.date, "2026-10-19", "before the handover");
+    assert!(morning.focus.sleep_missing && !morning.focus.effort);
+    let lead = morning.lead.unwrap();
+    assert_eq!(lead.kind, raring_core::view::LeadKind::Waiting, "{}", lead.headline);
+    assert!(lead.action.is_none() && !lead.dismissable);
+    drop(core);
+    let _ = std::fs::remove_file(path);
 }

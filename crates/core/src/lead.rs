@@ -107,14 +107,21 @@ fn route(r: &str) -> Option<String> {
     Some(r.to_owned())
 }
 
+/// The displayed night hasn't synced: a day without readiness, or the
+/// phase's neutral wait, which keeps the previous day's readiness on screen
+/// but no effort call (`phase::focus` turns effort off only for that and the
+/// sleep phases). Read before `hold_back` removes effort for other reasons.
+fn waiting(view: &TodayView) -> bool {
+    let sleep_phase = matches!(view.focus.phase, DayPhase::Evening | DayPhase::WindDown | DayPhase::LateNight);
+    view.focus.sleep_missing && (view.readiness.is_none() || !view.focus.effort) && !sleep_phase
+}
+
 /// What every surface must respect today: rest, illness, a pause, limits and
 /// a dismissed training suggestion. Removes the effort call when any of the
 /// first four apply. Returns the state and whether the suggestion was dismissed.
 pub fn hold_back(local: &LocalRecords, view: &mut TodayView, today: NaiveDate) -> (AdaptState, bool) {
     let phase = view.focus.phase;
-    let sleep_phase = matches!(phase, DayPhase::Evening | DayPhase::WindDown | DayPhase::LateNight);
-    let waiting = view.focus.sleep_missing && view.readiness.is_none() && !sleep_phase;
-    let state = adapt(local, today, phase == DayPhase::LateNight || waiting);
+    let state = adapt(local, today, phase == DayPhase::LateNight || waiting(view));
     if state.blocked || limited(&state) {
         view.call = None;
         view.call_note = None;
@@ -150,10 +157,16 @@ pub fn circumstance_line(state: &AdaptState) -> Option<&'static str> {
 pub fn apply(store: &Store, view: &mut TodayView, today: NaiveDate, now: DateTime<FixedOffset>) {
     let local = local::load(store);
     let sleep_phase = matches!(view.focus.phase, DayPhase::Evening | DayPhase::WindDown | DayPhase::LateNight);
-    let waiting = view.focus.sleep_missing && view.readiness.is_none() && !sleep_phase;
+    let waiting = waiting(view);
     let (state, _) = hold_back(&local, view, today);
     let board = ledger::board(store, today, today, now.to_utc());
-    view.lead = Some(choose(view, &local, &state, &board, today, waiting, sleep_phase));
+    let lead = choose(view, &local, &state, &board, today, waiting, sleep_phase);
+    // A finished workout lets the day finish, and tonight's sleep invites
+    // no effort: no effort scale beside either.
+    if matches!(lead.kind, LeadKind::Done | LeadKind::Sleep) {
+        view.focus.effort = false;
+    }
+    view.lead = Some(lead);
     view.adapt = Some(state);
 }
 
@@ -396,6 +409,14 @@ mod tests {
         let l = v.lead.unwrap();
         assert_eq!((l.kind, l.headline.as_str()), (LeadKind::Waiting, "Last night hasn't synced yet"));
         assert!(l.action.is_none() && !l.dismissable);
+        // Past the usual wake the previous day's readiness stays on screen,
+        // but its verdict doesn't lead.
+        let store = fixture("LOW", 30);
+        let mut v = view(&store, DayPhase::Wake);
+        (v.focus.sleep_missing, v.focus.effort, v.focus.last_night) = (true, false, None);
+        assert!(v.readiness.is_some());
+        apply(&store, &mut v, today(), at(13, 8).fixed_offset());
+        assert_eq!(v.lead.unwrap().kind, LeadKind::Waiting);
     }
 
     #[test]

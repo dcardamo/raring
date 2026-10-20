@@ -123,9 +123,10 @@ A briefing with an ending, in this order:
   another** (Rules: Today's choice); a suggestion can be dismissed with "Not
   today". When Garmin's readiness allows, the **effort** scale (Rest, Easy,
   Steady, Push) marks the suggested level, with one reason line from
-  Garmin's inputs. It is a display, not buttons. Evening, wind-down and late
-  night lead with tonight's sleep and keep any session still planned as a
-  quiet line.
+  Garmin's inputs. It is a display, not buttons. There is no effort scale
+  beside a recorded workout (the day can finish) or from the evening on.
+  Evening, wind-down and late night lead with tonight's sleep and keep any
+  session still planned as a quiet line.
 - **Your day**: sleep stages, Body Battery, stress, heart rate and recorded
   activities and naps on one 00–24 axis with a now marker (Rules: Your day).
   Each row opens its detail. From the evening on it follows tonight's plan,
@@ -912,7 +913,8 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   minutes, record, ring or goal count. Names never appear in notifications,
   widgets or the status snapshot.
 - **Today's lead**: live Today only (never a historical read), gates in this
-  order, first match leads: a night that hasn't synced waits (no advice);
+  order, first match leads: a night that hasn't synced waits (no advice,
+  even while the previous day's readiness stays on screen);
   evening, wind-down and late night lead with tonight's sleep (no exercise;
   a session still planned today stays as a quiet "still in your plan" line);
   illness or a pause (resume from Adapt); rest; the fixed layout's recorded
@@ -1096,16 +1098,19 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   watch's upload time, never the snapshot write or API fetch time; include its
   date so an old reading cannot look like today's. No separate stale-score
   verdict or expiry threshold is added.
-- **Compact focus**: reuse `TodayFocus` and its phase rules. Wake, daytime
-  and fixed layout show the suggested Rest/Easy/Steady/Push effort and the
-  same lowest Garmin-rated factor as Today. Without readiness, wait
-  neutrally; the shared unsynced-night wait has no effort or reason.
-  Evening, wind-down and late night use Today's headline and the shared
-  sleep plan's reason, with no effort after wind-down. Outside those phases,
-  today's circumstances (Rules: Adapt) replace the effort word and reason:
-  "Ill · goals paused", "Training paused", "Rest day", "Training suggestions
-  limited", or "No training suggestion today" after Not today, opening Today.
-  The limits text never reaches a surface. A local change republishes the
+- **Compact focus**: the live Today's lead (Rules: Today's lead) decides,
+  in its gate order. Tonight's sleep uses the lead's headline and the shared
+  sleep plan's reason, opening Sleep. A night that hasn't synced (including
+  the phase's neutral wait, which keeps the previous day's readiness on
+  screen) says "Waiting for last night's sleep" with no effort or reason.
+  Illness, a pause, rest, limits, a review and Not today use a short private
+  line instead of the lead's text: "Ill · goals paused", "Training paused",
+  "Rest day", "Training suggestions limited", or "No training suggestion
+  today", opening Today. A recorded workout says "Activity recorded today",
+  opening Today. Wherever else Today shows Garmin's effort call, the
+  suggested Rest/Easy/Steady/Push effort and Today's reason line from
+  Garmin's inputs; without readiness, "Waiting for readiness". Session, workout and
+  activity names and the limits text never reach a surface. A local change republishes the
   snapshot offline. Native surfaces
   describe the last snapshot, not a live watch reading. Offline widget
   updates, clock changes and sync re-evaluate the phase; Android may defer

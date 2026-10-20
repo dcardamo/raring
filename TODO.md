@@ -57,9 +57,6 @@ From item 4, in priority order.
 - On desktop widths the masonry columns can place the leading card beside a
   notice rather than first in reading order; check it once desktop ships.
 - "Timing history" opens Sleep at its top; scroll it to Consistency.
-- Item 9's notification applies item 26's rest, illness and limits
-  suppression from the same records, but still chooses its focus with the
-  `TodayFocus` phase rules rather than Today's lead gates; align the two.
 
 ### Sleep rhythm follow-ups
 
@@ -332,6 +329,17 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Status surfaces follow Today's lead** (commit "Choose the status focus
+  with Today's lead"). The persistent notification and widgets take their
+  focus from the live Today's lead gates (`status::snapshot` runs
+  `lead::apply`), keeping the private circumstance lines; the evening now
+  reads "Make room for sleep" as Today does, a recorded workout reads
+  "Activity recorded today", and the reason is Today's own line from
+  Garmin's inputs instead of "biggest drag" (review M12). Today's waiting
+  gate also covers the phase's neutral wait, so yesterday's readiness no
+  longer suggests training between the usual wake and the handover (B1). No
+  effort scale beside a recorded workout or from the evening on (M3).
 
 - **Tonight's plan above Your day** (commit "Lead the night with tonight's
   plan, above Your day"). v0.1.33 computed wind-down correctly but always drew

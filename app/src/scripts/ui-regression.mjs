@@ -1105,7 +1105,7 @@ try {
  const phases=[
   ['wake','07:10',{phase:'wake',cards:['focus','day','sleepPlan'],until:'2025-10-16T09:39:00',effort:true,planOpen:false},'Ready to push','.plan-line'],
   ['day','14:20',{phase:'day',cards:['day','now','focus','sleepPlan'],until:'2025-10-16T20:30:00',effort:true,planOpen:false},'Ready to push','.now-card'],
-  ['evening','20:45',{phase:'evening',cards:['sleepPlan','day','focus'],until:'2025-10-16T22:00:00',effort:true,planOpen:true},'Wind down at 22:00','.sleep-plan'],
+  ['evening','20:45',{phase:'evening',cards:['sleepPlan','day','focus'],until:'2025-10-16T22:00:00',effort:false,planOpen:true},'Wind down at 22:00','.sleep-plan'],
   ['winddown','22:10',{phase:'windDown',cards:['sleepPlan','day','focus'],until:'2025-10-16T23:06:00',effort:false,planOpen:true},'Time to wind down','.sleep-plan'],
   ['late','23:40',{phase:'lateNight',cards:['sleepPlan','day','focus'],until:'2025-10-17T06:36:00',effort:false,planOpen:true},"Rest when you're ready",'.sleep-plan'],
   ['missing','2025-10-17T07:30',{phase:'wake',cards:['focus','day'],until:'2025-10-17T12:00:00',effort:false,planOpen:false,sleepMissing:true,lastNight:null},"Waiting for last night's sleep",null],
@@ -1172,7 +1172,7 @@ try {
   board.prompt={review:null};
   await night.route(u=>u.pathname==='/src/lib/sample/board.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(board)}`}));
   const cases=[
-   ['21:30','evening','2025-10-16T22:40:00',true,lead('evening:2025-10-17','Make room for sleep','Wind down from 22:40')],
+   ['21:30','evening','2025-10-16T22:40:00',false,lead('evening:2025-10-17','Make room for sleep','Wind down from 22:40')],
    ['22:50','windDown','2025-10-16T23:30:00',false,lead('wind:2025-10-17','Time to wind down',"Garmin's window 23:10–23:30")],
    ['23:21','windDown','2025-10-16T23:30:00',false,lead('wind:2025-10-17','Time to wind down',"Garmin's window 23:10–23:30")],
    ['2025-10-17T01:30','lateNight','2025-10-17T06:36:00',false,lead('late:2025-10-17',"Rest when you're ready",null)],

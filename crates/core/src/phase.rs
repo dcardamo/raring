@@ -203,8 +203,10 @@ pub fn focus(input: &PhaseInput) -> TodayFocus {
     } else if now < night.promote {
         focus(DayPhase::Day, &[TodayCard::Day, Now, Focus, SleepPlan], Some(night.promote))
     } else if now < night.wind_down {
+        // From the evening on nothing should invite a workout.
         TodayFocus {
             plan_open: true,
+            effort: false,
             ..focus(DayPhase::Evening, &[SleepPlan, Day, Focus], Some(night.wind_down))
         }
     } else {
@@ -213,7 +215,6 @@ pub fn focus(input: &PhaseInput) -> TodayFocus {
         } else {
             (DayPhase::LateNight, night.wake)
         };
-        // No effort call once winding down: nothing should invite a workout.
         TodayFocus {
             plan_open: true,
             effort: false,
