@@ -581,9 +581,10 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
 On desktop the app shows the same notifications itself while it runs, with
 the same wording, settings, rest/illness/limits suppression and night
 identity. A desktop build records a notification only after the Tauri
-notification plugin accepted it; a refusal or failure leaves it unmarked and
-Settings says why. Settings also states the next pending wind-down while
-signed in.
+notification plugin accepted it, and on Linux only when the session has a
+notification server (the plugin discards that server's error); a refusal or
+failure leaves it unmarked and Settings says why. Settings also states the
+next pending wind-down while signed in.
 
 ## Rules
 

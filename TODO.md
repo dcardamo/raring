@@ -76,10 +76,10 @@ From item 3, in priority order.
 - Sleep alignment on other watches and while Garmin calibrates is unverified;
   Raring treats status codes containing CALIBRAT, NOT_ENOUGH, INSUFFICIENT or
   LEARNING as calibrating. Record real codes when seen.
-- Check desktop reminders in a real session: Linux without a notification
-  daemon and with Do Not Disturb, plus macOS and Windows. The plugin reports
-  that a notification was accepted, not that it was displayed, so a Linux
-  session without a server may still record one as sent.
+- Check desktop reminders in a real session: Linux with a notification
+  daemon and with Do Not Disturb, plus macOS and Windows. A missing Linux
+  server leaves the reminder pending, but Do Not Disturb still accepts and
+  records one that nobody sees.
 - A desktop notification opens no screen when clicked; Android's tap targets
   (Today, the review, Sleep · Tonight) have no desktop twin yet.
 - Garmin's average bedtime before midnight: confirm whether
@@ -347,9 +347,12 @@ faces, screens, sensors and audio prompts stay in Connect.
   clock, wakes at the pending wind-down and at least every five minutes, and
   checks again on resume, after a sync and after a notification setting
   changes, so a reminder whose window passed while the machine slept is
-  dropped rather than fired late. Rust tests cover per-notification marking,
-  wake targets and a night already sent; the desktop layout and a real
-  notification session remain to check (see follow-ups).
+  dropped rather than fired late. On Linux the check refuses to mark
+  anything when the session has no notification server, because the plugin
+  discards that error; verified under Xvfb with no server: no notify call, no
+  recorded reminder and "no desktop notification service" kept for Settings.
+  Rust tests cover per-notification marking, wake targets and a night already
+  sent; a real notification session remains to check (see follow-ups).
 
 - **21. Write rules** (commit "Add the Garmin write rules and a log of
   recent changes"). One core write path (`crates/core/src/writes.rs`): only
