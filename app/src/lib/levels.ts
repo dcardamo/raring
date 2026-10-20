@@ -49,7 +49,7 @@ export function chartScale(metric: TrendMetric | null | undefined, {band = null,
       return {
         tone: v => v < age ? 'good' : v > age ? 'poor' : 'fair',
         edges: [{value: age, below: 'good', above: 'poor'}],
-        key: [{tone: 'good', label: 'Younger than you'}, {tone: 'poor', label: 'Older'}],
+        key: [{tone: 'good', label: 'Younger than you'}, {tone: 'fair', label: 'Same'}, {tone: 'poor', label: 'Older'}],
       };
   }
   if (metric && RANGE_METRICS.includes(metric) && band) return {
@@ -66,10 +66,11 @@ export const chartColor = (tone: Tone) => tone === 'neutral' ? colors.neutral : 
 /** Hard gradient stops down a plot whose domain is [low, high]: offset 0 is the top (high), 1 the bottom. */
 export function gradientStops(scale: ChartScale, [low, high]: [number, number]): {offset: number; color: string}[] {
   if (!scale.edges.length || !(high > low)) return [];
-  const at = (v: number) => Math.max(0, Math.min(1, (high - v) / (high - low)));
+  const at = (v: number) => (high - v) / (high - low);
   const stops = [{offset: 0, color: chartColor(scale.tone(high))}];
+  // An edge on a bound still switches there, so the plot doesn't blend across it.
   for (const edge of [...scale.edges].sort((a, b) => b.value - a.value)) {
-    if (edge.value >= high || edge.value <= low) continue;
+    if (edge.value > high || edge.value < low) continue;
     stops.push({offset: at(edge.value), color: chartColor(edge.above)}, {offset: at(edge.value), color: chartColor(edge.below)});
   }
   stops.push({offset: 1, color: chartColor(scale.tone(low))});

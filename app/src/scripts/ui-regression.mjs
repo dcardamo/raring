@@ -631,6 +631,11 @@ try {
   await detail.getByRole('slider',{name:'Weight readings'}).press('Home');
   assert.ok((await detail.getByRole('slider').getAttribute('aria-valuetext')).includes(unit));
   assert.deepEqual(await contrastFailures(wp),[],`weight detail ${unit} contrast`);
+  // A range only the detail offers shows on Health as 30 days, with that button selected.
+  await wp.goBack();await wp.waitForFunction(()=>location.hash==='#health');
+  await card.locator('.fresh').waitFor();
+  assert.equal(await card.getByRole('group',{name:'Weight range'}).locator('button.active').textContent(),'30D');
+  assert.match(await card.locator('.period-source').textContent(),/Wed 17 Sept 2025 – Thu 16 Oct 2025/);
   await wp.close();
  }
  console.log('Weight: core fixtures, gap markers, units, freshness, ranges and canonical detail passed');

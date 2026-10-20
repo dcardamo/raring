@@ -107,7 +107,8 @@ synthetic data. `design/mockup/index.html` shows the app before the redesign.
   with an unclear denominator. Period plots use round ticks; count ticks are
   integers. Gaps are drawn as gaps. Shared single-metric charts use
   2 px main traces, quiet 1 px gridlines and green-tinted usual-range bands
-  with dashed edges; goal lanes
+  with dashed edges; range bars (vitals, drivers) tint the usual range or
+  Garmin's target green under the reading's dot; goal lanes
   keep their labelled goal color. Owned line icons use a 1.75-unit stroke.
 - Chart text is at least 11 px for axis ticks and 12 px for other labels on a
   390 px phone, never overlaps other text or a marker, and stays inside the
@@ -543,7 +544,8 @@ says so on its chart (Rules: Reading freshness).
 
 Every trend chart (Readiness, the vitals, stress, Body Battery, VO2max,
 acute load, Fitness Age and Sleep's history card) is the same interactive chart, drawn from local data.
-Health's cards use its compact form (Health). Garmin's sparse estimates (VO2max,
+Health's cards use its compact form (Health), except Fitness Age, whose card is
+its bar and opens the chart. Garmin's sparse estimates (VO2max,
 Fitness Age) open on the latest estimate rather than an empty latest day.
 
 - Shared range control: 7D, 14D, 30D, 90D, 1Y and Max (All history), plus Dates for a chosen training block. Up to 90 days shows each day; longer

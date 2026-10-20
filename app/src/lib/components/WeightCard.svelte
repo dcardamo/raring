@@ -18,11 +18,14 @@
  // the detail; the detail adds every range, each change and body composition.
  let {range=$bindable('days30'),initial,navigate}:{range?:TrendRange,initial?:WeightView,navigate?:(route:string)=>void}=$props();
  let compact=$derived(!!navigate);
+ // Health offers four of the detail's ranges; one chosen only on the detail (14D, Max) shows here as 30D.
+ const COMPACT:TrendRange[]=['days7','days30','days90','year'];
+ let wanted=$derived<TrendRange>(compact && !COMPACT.includes(range)?'days30':range);
  let view=$state<WeightView|null>(untrack(()=>initial??null)),busy=$state(false),error=$state('');
  const generation=getContext<()=>number>('trend-generation')??(()=>0);
  const color=colors.neutral;
  $effect(()=>{
-  generation();const read=range;let active=true;busy=true;error='';
+  generation();const read=wanted;let active=true;busy=true;error='';
   api.weight_trend(read).then(v=>{if(active){view=v;busy=false}}).catch(e=>{if(active){error=String(e);busy=false}});
   return()=>{active=false};
  });
@@ -54,7 +57,7 @@
 {#if compact}
  <section class="card weight-card" aria-label="Weight" aria-busy={busy}>
   <h3><span>Weight</span><span class="card-actions"><HelpButton topic="trend-weight"/></span></h3>
-  <div class="picker"><RangePicker value={range} onchange={r=>range=r} label="Weight range" only={['days7','days30','days90','year']}/></div>
+  <div class="picker"><RangePicker value={wanted} onchange={r=>range=r} label="Weight range" only={COMPACT}/></div>
   {@render history()}
   <button class="link-row history-more" onclick={()=>navigate?.('health/weight')}>Changes and body composition<Icon name="chevron" size={15}/></button>
  </section>
