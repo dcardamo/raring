@@ -3,13 +3,15 @@ package app.raring
 import android.Manifest
 import android.app.Activity
 import android.content.ActivityNotFoundException
-import android.os.Build
 import android.content.Intent
+import android.os.Build
 import android.webkit.WebView
 import android.webkit.CookieManager
 import android.webkit.WebStorage
+import androidx.activity.result.ActivityResult
 import org.json.JSONObject
 import app.tauri.PermissionState
+import app.tauri.annotation.ActivityCallback
 import app.tauri.annotation.Command
 import app.tauri.annotation.Permission
 import app.tauri.annotation.PermissionCallback
@@ -216,6 +218,56 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
                 invoke.resolve(JSObject())
             } catch (e: Exception) {
                 invoke.reject("could not share export", e)
+            }
+        }
+    }
+    // The system picker reads the chosen export; only a private cache copy is
+    // handed to the core, which validates it before anything is written.
+    @Command fun pickImport(invoke: Invoke) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                ImportPicker.sweep(activity.cacheDir)
+                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "*/*"
+                    // Show zips whose provider labels them generically, hide the rest.
+                    putExtra(Intent.EXTRA_MIME_TYPES, arrayOf(
+                        "application/zip", "application/x-zip-compressed", "application/octet-stream"
+                    ))
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                withContext(Dispatchers.Main) { startActivityForResult(invoke, intent, "importPicked") }
+            } catch (e: Exception) {
+                invoke.reject("Could not open the file chooser", e)
+            }
+        }
+    }
+    @ActivityCallback
+    private fun importPicked(invoke: Invoke, result: ActivityResult) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                if (result.resultCode != Activity.RESULT_OK) {
+                    invoke.reject("No file chosen")
+                    return@launch
+                }
+                val uri = result.data?.data ?: run {
+                    invoke.reject("No file chosen")
+                    return@launch
+                }
+                val filename = ImportPicker.copy(activity, uri)
+                invoke.resolve(JSObject().apply { put("filename", filename) })
+            } catch (e: Exception) {
+                invoke.reject(e.message ?: "Could not read the chosen file", e)
+            }
+        }
+    }
+    @Command fun discardImport(invoke: Invoke) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                ImportPicker.delete(activity.cacheDir, invoke.getArgs().getString("filename"))
+                invoke.resolve(JSObject())
+            } catch (e: Exception) {
+                invoke.reject("Could not remove the chosen file", e)
             }
         }
     }

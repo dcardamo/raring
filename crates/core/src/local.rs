@@ -163,7 +163,7 @@ fn write<T: Record>(tx: &SettingsTx, value: &T) -> Result<()> {
     Ok(())
 }
 
-fn load_tx(tx: &SettingsTx) -> Result<LocalRecords> {
+pub(crate) fn load_tx(tx: &SettingsTx) -> Result<LocalRecords> {
     let mut read_only = vec![];
     Ok(LocalRecords {
         goals: read(tx, &mut read_only)?,
@@ -263,6 +263,390 @@ pub fn load(store: &Store) -> LocalRecords {
         load_tx(tx)
     };
     if due { store.settings_tx(read) } else { store.settings_read(read) }.unwrap_or_default()
+}
+
+/// Records an export brings, already parsed and validated by `import`.
+#[derive(Default)]
+pub(crate) struct Imported {
+    pub goals: Option<Goals>,
+    pub intentions: Option<Intentions>,
+    pub links: Option<Links>,
+    pub circumstances: Option<Circumstances>,
+    pub reviews: Option<Reviews>,
+    pub events: Option<Events>,
+    pub routines: Option<Routines>,
+}
+
+impl Imported {
+    /// An export made before local records existed carries only the earlier
+    /// plan row, which must still migrate on this phone.
+    fn is_empty(&self) -> bool {
+        self.goals.is_none()
+            && self.intentions.is_none()
+            && self.links.is_none()
+            && self.circumstances.is_none()
+            && self.reviews.is_none()
+            && self.events.is_none()
+            && self.routines.is_none()
+    }
+}
+
+/// What an import changes for one record kind.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct RowChange {
+    pub kind: &'static str,
+    pub added: u32,
+    pub replaced: u32,
+    pub kept: u32,
+}
+
+#[derive(Default, Clone, Copy)]
+struct Counts {
+    added: u32,
+    replaced: u32,
+    kept: u32,
+}
+
+impl Counts {
+    fn row(self, kind: &'static str) -> Option<RowChange> {
+        (self.added + self.replaced + self.kept > 0).then_some(RowChange {
+            kind,
+            added: self.added,
+            replaced: self.replaced,
+            kept: self.kept,
+        })
+    }
+}
+
+/// Merge an export's records into this phone's. Only local records change; a
+/// record this phone already has is kept unless the incoming copy is strictly
+/// newer, and a row this build may not rewrite is left alone and reported.
+/// Goals merge by effective date; a same-day copy whose `savedAt` is later
+/// wins. Sessions, links and decisions take the later timestamp; a later link
+/// re-pairs a pair an earlier unlink separated. Rest days, wind-downs,
+/// dismissals, prompt answers and checklist items only fill what this phone
+/// lacks; a pause with the same id takes a closed interval over an open one.
+pub(crate) fn merge(current: &LocalRecords, incoming: &Imported) -> (LocalRecords, Vec<RowChange>, Vec<&'static str>) {
+    let mut merged = current.clone();
+    let mut rows = vec![];
+    let mut skipped = vec![];
+    let mut record_row = |kind: &'static str, counts: Counts| {
+        rows.extend(counts.row(kind));
+    };
+    if let Some(value) = &incoming.goals {
+        if current.read_only.contains(&Goals::KEY) {
+            skipped.push(Goals::KEY);
+        } else {
+            let (goals, counts) = merge_goals(&current.goals, value);
+            merged.goals = goals;
+            record_row("Goals", counts);
+        }
+    }
+    if let Some(value) = &incoming.intentions {
+        if current.read_only.contains(&Intentions::KEY) {
+            skipped.push(Intentions::KEY);
+        } else {
+            let (intentions, counts) = merge_intentions(&current.intentions, value);
+            merged.intentions = intentions;
+            record_row("Your sessions", counts);
+        }
+    }
+    if let Some(value) = &incoming.links {
+        if current.read_only.contains(&Links::KEY) {
+            skipped.push(Links::KEY);
+        } else {
+            let (links, counts) = merge_links(&current.links, value);
+            merged.links = links;
+            record_row("Plan links", counts);
+        }
+    }
+    if let Some(value) = &incoming.circumstances {
+        if current.read_only.contains(&Circumstances::KEY) {
+            skipped.push(Circumstances::KEY);
+        } else {
+            let (circumstances, counts) = merge_circumstances(&current.circumstances, value);
+            merged.circumstances = circumstances;
+            record_row("Rest, pauses and limits", counts);
+        }
+    }
+    if let Some(value) = &incoming.reviews {
+        if current.read_only.contains(&Reviews::KEY) {
+            skipped.push(Reviews::KEY);
+        } else {
+            let (reviews, counts) = merge_reviews(&current.reviews, value);
+            merged.reviews = reviews;
+            record_row("Plan-week prompts", counts);
+        }
+    }
+    if let Some(value) = &incoming.events {
+        if current.read_only.contains(&Events::KEY) {
+            skipped.push(Events::KEY);
+        } else {
+            let (events, counts) = merge_events(&current.events, value);
+            merged.events = events;
+            record_row("Events", counts);
+        }
+    }
+    if let Some(value) = &incoming.routines {
+        if current.read_only.contains(&Routines::KEY) {
+            skipped.push(Routines::KEY);
+        } else {
+            let (routines, counts) = merge_routines(&current.routines, value);
+            merged.routines = routines;
+            record_row("Routines", counts);
+        }
+    }
+    (merged, rows, skipped)
+}
+
+/// Write the merged rows in one transaction and mark the schema as current, so
+/// the earlier plan row is not migrated again on top of imported records.
+pub(crate) fn import(tx: &SettingsTx, current: &LocalRecords, incoming: &Imported) -> Result<(Vec<RowChange>, Vec<&'static str>)> {
+    let (merged, rows, skipped) = merge(current, incoming);
+    if merged.goals != current.goals {
+        write(tx, &merged.goals)?;
+    }
+    if merged.intentions != current.intentions {
+        write(tx, &merged.intentions)?;
+    }
+    if merged.links != current.links {
+        write(tx, &merged.links)?;
+    }
+    if merged.circumstances != current.circumstances {
+        write(tx, &merged.circumstances)?;
+    }
+    if merged.reviews != current.reviews {
+        write(tx, &merged.reviews)?;
+    }
+    if merged.events != current.events {
+        write(tx, &merged.events)?;
+    }
+    if merged.routines != current.routines {
+        write(tx, &merged.routines)?;
+    }
+    // A row this build may not rewrite leaves the migration unfinished, as a change would.
+    if !incoming.is_empty() && !skipped.contains(&Goals::KEY) && !skipped.contains(&Circumstances::KEY) {
+        tx.set(MARKER, &SCHEMA.to_string())?;
+    }
+    Ok((rows, skipped))
+}
+
+fn merge_goals(current: &Goals, incoming: &Goals) -> (Goals, Counts) {
+    let mut merged = current.clone();
+    let mut counts = Counts::default();
+    for version in &incoming.versions {
+        match merged.versions.iter_mut().find(|v| v.from == version.from) {
+            Some(existing) if version.saved_at > existing.saved_at => {
+                *existing = version.clone();
+                counts.replaced += 1;
+            }
+            Some(_) => counts.kept += 1,
+            None => {
+                merged.versions.push(version.clone());
+                counts.added += 1;
+            }
+        }
+    }
+    merged.versions.sort_by(|a, b| a.from.cmp(&b.from));
+    merged.observation_explained |= incoming.observation_explained;
+    (merged, counts)
+}
+
+/// The time of a session's last change; sessions with no history sort first.
+fn last_change(i: &Intention) -> &str {
+    i.history.last().map_or("", |e| e.at.as_str())
+}
+
+fn merge_intentions(current: &Intentions, incoming: &Intentions) -> (Intentions, Counts) {
+    let mut merged = current.clone();
+    let mut counts = Counts::default();
+    for item in &incoming.items {
+        match merged.items.iter_mut().find(|i| i.id == item.id) {
+            Some(existing) if last_change(item) > last_change(existing) => {
+                *existing = item.clone();
+                counts.replaced += 1;
+            }
+            Some(_) => counts.kept += 1,
+            None => {
+                merged.items.push(item.clone());
+                counts.added += 1;
+            }
+        }
+    }
+    (merged, counts)
+}
+
+fn merge_links(current: &Links, incoming: &Links) -> (Links, Counts) {
+    let mut merged = current.clone();
+    let mut counts = Counts::default();
+    for link in &incoming.links {
+        match merged.links.iter_mut().find(|l| l.plan_id == link.plan_id) {
+            Some(existing) if link.at > existing.at => {
+                *existing = link.clone();
+                counts.replaced += 1;
+            }
+            Some(_) => counts.kept += 1,
+            None => {
+                merged.links.push(link.clone());
+                counts.added += 1;
+            }
+        }
+    }
+    for unlink in &incoming.unlinks {
+        match merged.unlinks.iter_mut().find(|l| l.plan_id == unlink.plan_id && l.activity_id == unlink.activity_id) {
+            Some(existing) if unlink.at > existing.at => {
+                *existing = unlink.clone();
+                counts.replaced += 1;
+            }
+            Some(_) => counts.kept += 1,
+            None => {
+                merged.unlinks.push(unlink.clone());
+                counts.added += 1;
+            }
+        }
+    }
+    // A later link takes the pair back; a later unlink keeps that pairing apart.
+    merged.unlinks.retain(|u| !merged.links.iter().any(|l| l.plan_id == u.plan_id && l.activity_id == u.activity_id && l.at > u.at));
+    let unlinks = merged.unlinks.clone();
+    merged.links.retain(|l| !unlinks.iter().any(|u| u.plan_id == l.plan_id && u.activity_id == l.activity_id && u.at >= l.at));
+    (merged, counts)
+}
+
+fn merge_circumstances(current: &Circumstances, incoming: &Circumstances) -> (Circumstances, Counts) {
+    let mut merged = current.clone();
+    let mut counts = Counts::default();
+    for day in &incoming.rest {
+        if merged.rest.iter().any(|d| d.date == day.date) {
+            counts.kept += 1;
+        } else {
+            merged.rest.push(day.clone());
+            counts.added += 1;
+        }
+    }
+    for pause in &incoming.pauses {
+        match merged.pauses.iter_mut().find(|p| p.id == pause.id) {
+            // A closed interval is a decision; an open one is still running here.
+            Some(existing)
+                if pause.until.is_some()
+                    && (existing.until.is_none() || pause.until > existing.until) =>
+            {
+                *existing = pause.clone();
+                counts.replaced += 1;
+            }
+            Some(_) => counts.kept += 1,
+            None => {
+                merged.pauses.push(pause.clone());
+                counts.added += 1;
+            }
+        }
+    }
+    if incoming.limits != Limits::default() {
+        if merged.limits == Limits::default() {
+            merged.limits = incoming.limits.clone();
+            counts.replaced += 1;
+        } else {
+            counts.kept += 1;
+        }
+    }
+    for dismissal in &incoming.dismissals {
+        if merged.dismissals.iter().any(|d| d.id == dismissal.id && d.date == dismissal.date) {
+            counts.kept += 1;
+        } else {
+            merged.dismissals.push(dismissal.clone());
+            counts.added += 1;
+        }
+    }
+    for report in &incoming.wind_downs {
+        if merged.wind_downs.iter().any(|w| w.date == report.date) {
+            counts.kept += 1;
+        } else {
+            merged.wind_downs.push(report.clone());
+            counts.added += 1;
+        }
+    }
+    if let Some(choice) = &incoming.today_choice {
+        match &merged.today_choice {
+            Some(existing) if choice.date <= existing.date => counts.kept += 1,
+            Some(_) => {
+                merged.today_choice = Some(choice.clone());
+                counts.replaced += 1;
+            }
+            None => {
+                merged.today_choice = Some(choice.clone());
+                counts.added += 1;
+            }
+        }
+    }
+    (merged, counts)
+}
+
+fn merge_reviews(current: &Reviews, incoming: &Reviews) -> (Reviews, Counts) {
+    let mut merged = current.clone();
+    let mut counts = Counts::default();
+    for (week, choice) in &incoming.prompts {
+        if merged.prompts.contains_key(week) {
+            counts.kept += 1;
+        } else {
+            merged.prompts.insert(week.clone(), *choice);
+            counts.added += 1;
+        }
+    }
+    for decision in &incoming.decisions {
+        match merged.decisions.iter_mut().find(|d| d.week == decision.week) {
+            Some(existing) if decision.at > existing.at => {
+                *existing = decision.clone();
+                counts.replaced += 1;
+            }
+            Some(_) => counts.kept += 1,
+            None => {
+                merged.decisions.push(decision.clone());
+                counts.added += 1;
+            }
+        }
+    }
+    (merged, counts)
+}
+
+fn merge_events(current: &Events, incoming: &Events) -> (Events, Counts) {
+    let mut merged = current.clone();
+    let mut counts = Counts::default();
+    for event in &incoming.events {
+        if merged.events.iter().any(|e| e.id == event.id) {
+            counts.kept += 1;
+        } else {
+            merged.events.push(event.clone());
+            counts.added += 1;
+        }
+    }
+    merged.events.sort_by(|a, b| a.date.cmp(&b.date));
+    (merged, counts)
+}
+
+fn merge_routines(current: &Routines, incoming: &Routines) -> (Routines, Counts) {
+    let mut merged = current.clone();
+    let mut counts = Counts::default();
+    for item in &incoming.items {
+        if merged.items.iter().any(|i| i.id == item.id) {
+            counts.kept += 1;
+        } else {
+            merged.items.push(item.clone());
+            counts.added += 1;
+        }
+    }
+    for report in &incoming.reports {
+        match merged.reports.iter_mut().find(|r| r.id == report.id && r.date == report.date) {
+            Some(existing) if report.at > existing.at => {
+                *existing = report.clone();
+                counts.replaced += 1;
+            }
+            Some(_) => counts.kept += 1,
+            None => {
+                merged.reports.push(report.clone());
+                counts.added += 1;
+            }
+        }
+    }
+    (merged, counts)
 }
 
 /// The goal version in effect on `date`, if any.

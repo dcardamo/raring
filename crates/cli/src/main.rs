@@ -214,6 +214,11 @@ async fn main() -> Result<()> {
             show(&serde_json::json!({"requests":report.requests,"day":day}))?;
         },
         Some("export")=>{let path=Path::new(args.get(1).context("export FILE.zip")?);if path.exists(){bail!("export file already exists")};core.export(path, env!("CARGO_PKG_VERSION"))?;println!("Exported {}",path.display());},
+        // Validate an export's settings and, with --apply, import them for this phone's account.
+        Some("import")=>{let apply=args.iter().any(|a|a=="--apply");
+            let path=Path::new(args.iter().skip(1).find(|a|!a.starts_with("--")).context("import [--apply] FILE.zip")?);
+            show(&core.import_preview(path,None)?)?;
+            if apply{show(&core.import_settings(path,None)?)?;println!("Imported settings from {}",path.display());}}, 
         // Synthetic QA data for a scratch RARING_HOME; never mixed into a signed-in account's history.
         Some("demo")=>{if core.status().signed_in{bail!("demo needs an empty RARING_HOME, not a signed-in one")}
             let day=match args.windows(2).find(|v|v[0]=="--date"){Some(v)=>chrono::NaiveDate::parse_from_str(&v[1],"%Y-%m-%d").context("--date YYYY-MM-DD")?,None=>now.date_naive()};

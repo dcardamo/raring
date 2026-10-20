@@ -171,12 +171,15 @@ rest, illness, limits and privacy rules.
   updates and allows users to dismiss ongoing notifications. Minimum-size
   RemoteViews passed emulator tests at font scales 1.0, 1.3 and 1.5.
 
-### Export follow-up: import local settings on a new phone
+### Import follow-ups
 
-The ZIP includes every safe settings row, including the weekly plan's targets
-and paused weeks (`plan`) and prospective sleep-plan snapshots
-(`sleep_plan:YYYY-MM-DD`). Offer a validated import of these settings on a new
-phone; no import is provided yet.
+- Check the desktop chooser and preview on a real desktop (Linux, macOS or
+  Windows). The dialog is built and unit-tested around the core, but this
+  lane's host is headless, so only the Android picker was checked end to end.
+- Exports made before the manifest named the archive format and its account
+  are refused, so a backup taken by v0.1.30 or earlier cannot seed a new
+  phone; decide whether a migration path (reading the cached profile from the
+  raw entries) is worth it.
 
 ### Export follow-up: optional activity FIT originals
 
@@ -322,6 +325,24 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Import local settings on a new phone** (commit "Import a validated Raring
+  export's settings on a new phone"). Settings reads a Raring ZIP chosen with
+  the Android system file picker or a desktop file dialog, validates the
+  archive format version, the account in the manifest, each row's `schema`,
+  each record's shape and the absence of credentials, then shows counts per
+  record kind (added, replaced, kept), the covered date range and what is
+  skipped and why before the person confirms. Applying is one transaction
+  under the account/write barrier; goals merge by effective date and later
+  save, sessions, links and decisions take the later timestamp, and rest days,
+  pause closures, limits, prompts, events, routines, plan weeks and saved
+  nights only fill what the phone lacks. Garmin responses, journal logs and
+  milestones are not imported; the UI says so. Re-importing a file changes
+  nothing. The manifest now names the archive format version and the account
+  that made the export; files from another account are refused whole. Checked
+  on the emulator with the synthetic demo account: the picker listed the
+  synthetic ZIP, the preview reported two rows, the import wrote them, the
+  cache copy was removed, and the demo state was restored afterwards.
 
 - **8a strength introduction and figure choice** (commit "Replace the strength
   intro with help at the point of use"). The mandatory-seeming `intro-1` to

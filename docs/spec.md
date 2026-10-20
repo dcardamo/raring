@@ -40,6 +40,10 @@ synthetic data. `design/mockup/index.html` shows the app before the redesign.
   An export leaves the phone only when the user chooses to share it. FIT
   originals are not downloaded as part of this offline export. A user-created
   export may include stored opted-in journal records; it never includes tokens.
+  The manifest names the archive format's version and the Garmin account that
+  made the export (a numeric identifier, never a credential), so another phone
+  can validate an import and refuse a file from a different account (Rules:
+  Import).
 - **Its own identity.** Own name, palette, icons and copy. Garmin's metric
   names describe Garmin data. Nothing copied from other fitness apps.
 
@@ -454,8 +458,9 @@ Follow-through and measured change stay apart; nothing is a grade.
   Adapt, My routines).
 - **Settings**: notifications, the wind-down lead, persistent status, Follow
   my day (and that Raring doesn't learn from how you use the app), the
-  plan-your-week prompt, journal consent, history, export, sign-out, help and
-  how Raring works.
+  plan-your-week prompt, journal consent, history, export, a validated import
+  of another export's settings (Rules: Import), sign-out, help and how Raring
+  works.
 
 ### Weekly check-in
 
@@ -594,6 +599,35 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   it the day before (a pause begun the same day leaves none), and a review
   date only prompts. A dismissal lasts its local day (kept 30 days). A wind-down
   reported before noon belongs to the evening before.
+- **Import**: a Raring export's settings can be restored on another phone by
+  choosing the ZIP with the system file picker (Android) or a file dialog
+  (desktop); it is read from the phone and nothing is sent anywhere. Import
+  needs a verified signed-in account and an export that names its account; a
+  file from another account, an unknown archive format or a newer one, a row
+  written by a newer version of Raring, an unreadable record shape or a
+  credential field is refused whole, before anything is written. A newer
+  archive marker, a newer `schema`, an unknown `local:*` row, an unreadable
+  weekly plan or saved night, and a credential key at any depth are refusals,
+  not skips. Only settings are imported: the weekly plan row, prospective
+  sleep-plan snapshots, the versioned local records and the plan prompt
+  preference. Garmin responses, journal logs and milestones are not imported:
+  a sync downloads this phone's Garmin data and journal reads stay this
+  phone's own choice, and milestones are awarded again from its recordings.
+  A validated preview names the counts per record kind (added, replaced,
+  kept), the covered date range and what is skipped and why, before the person
+  confirms. Applying is one transaction under the account/write barrier, and
+  the offline status snapshot follows. Existing local records are never
+  silently overwritten: goals merge by effective date and a same-day copy is
+  replaced only by a later save; sessions, plan links, review decisions and
+  routine reports take the later timestamp, and a later link re-pairs a pair
+  an earlier unlink separated; rest days, wind-down reports, dismissals,
+  prompt answers, events, checklist items, plan weeks and sleep-plan snapshots
+  only fill what this phone lacks (a saved night is prospective evidence and
+  is never replaced); a pause with the same id takes a closed interval over an
+  open one; limits fill only an empty set; the kept session for a day takes
+  the later day; the plan prompt preference fills a phone that never saved
+  settings. A row this build may not rewrite is skipped and named. A second
+  import of the same file changes nothing.
 - **Plan migration**: the earlier weekly-plan row migrates once, on the first
   local read or change. No saved version (`configured: false`) means no goals;
   the preset preview is never adopted. Each saved version becomes a goal version

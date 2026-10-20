@@ -218,6 +218,12 @@ struct SavedNight {
     captured_local: String,
 }
 
+/// A prospective sleep-plan row from an export is imported only if this build
+/// can read it, so a newer capture shape is never half-understood.
+pub(crate) fn saved_night_ok(json: &str) -> bool {
+    serde_json::from_str::<SavedNight>(json).is_ok()
+}
+
 /// Called on live sync/open only. Keep the first available plan for a night,
 /// before its window and before any recorded outcome. Immutable insert also
 /// protects against simultaneous foreground/background captures.

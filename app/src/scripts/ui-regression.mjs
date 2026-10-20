@@ -30,6 +30,24 @@ try {
   await exportPage.close();
  }
  console.log('Export settings at 390/700/1100 and preview handoff: passed');
+ const importPage=await browser.newPage({viewport:{width:390,height:844}});
+ await importPage.goto(`${url}/?fixture=import#settings`);
+ const chooseImport=importPage.getByRole('button',{name:'Choose a Raring export'});
+ await chooseImport.waitFor();
+ await importPage.getByText('a sync downloads it again for this phone',{exact:false}).waitFor();
+ await importPage.getByText('journal logs stay this phone’s own',{exact:false}).waitFor();
+ await chooseImport.scrollIntoViewIfNeeded();
+ await chooseImport.click();
+ await importPage.getByText('rows will be applied',{exact:false}).waitFor();
+ assert.equal(await importPage.getByRole('button',{name:'Import these settings'}).count(),1,'the preview is confirmed before anything is written');
+ await importPage.getByText('already here',{exact:false}).first().waitFor();
+ await importPage.getByText('Milestones and records',{exact:false}).waitFor();
+ await importPage.screenshot({path:resolve(output,'import-settings-390.png'),fullPage:true});
+ await importPage.getByRole('button',{name:'Import these settings'}).click();
+ await importPage.getByText('Settings imported',{exact:false}).waitFor();
+ await importPage.getByRole('button',{name:'Choose a Raring export'}).waitFor();
+ await importPage.close();
+ console.log('Import card, preview counts, skips and confirmation: passed');
  const privatePage=await browser.newPage({viewport:{width:390,height:844}});
  await privatePage.goto(`${url}/?fixture=private#sleep`);
  await privatePage.getByText('Wed 15 Oct 23:45 – Thu 16 Oct 00:15',{exact:true}).waitFor();
