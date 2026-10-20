@@ -6,11 +6,9 @@
  import type {TodayView} from '../generated/TodayView';
  import type {HealthView} from '../generated/HealthView';
  import type {TrainingView} from '../generated/TrainingView';
- import type {VitalReading} from '../generated/VitalReading';
- import type {TrendMetric} from '../generated/TrendMetric';
  import {metricDescriptions,metricSource} from '../metrics';
  import {num,dateLabel,duration} from '../format';
- import {vitalStatus,rangeName,vitalName} from '../signals';
+ import {vitalStatus,rangeName,vitalName,vitalTrend,isSleepHr,trendBand} from '../signals';
  import HistoryChart from './HistoryChart.svelte';
  import {toneColor,batteryColor,colors,stressColors,stressNames} from '../charts';
  import Card from './Card.svelte';
@@ -26,9 +24,7 @@
  let stressTotal=$derived(stress?stress.time.reduce((a,b)=>a+b.seconds,stress.activeS??0):0);
  let vital=$derived(source==='health'?(data as HealthView).vitals.readings.find(v=>v.kind===metric):null);
  let training=$derived(source==='training'?data as TrainingView:null);
- let trainingValue=$derived(training?({vo2max:training.vo2max,endurance:training.enduranceScore,hill:training.hillScore,runningTolerance:training.runningToleranceKm} as Record<string,number|null>)[metric]:null);
- // Health Status's HR is Garmin's sleep average, so its history is Sleep HR, not resting HR.
- const vitalTrend=(v:VitalReading):TrendMetric=>v.kind==='restingHr'?(v.status || v.rangeSource==='garmin'?'sleepHr':'restingHr'):v.kind;
+ let trainingValue=$derived(training?({vo2max:training.vo2max,endurance:training.enduranceScore,hill:training.hillScore,runningTolerance:training.runningToleranceKm,acuteLoad:training.acute?.value??null} as Record<string,number|null>)[metric]:null);
  let decimals=$derived(metric==='skinTemp'||metric==='respiration'?1:0);
  let initial=$derived(metric==='heartRate'?(data as HealthView).heartRateDay:null);
  let heartRate=$state<HeartRateDay|null>(null);
@@ -52,7 +48,7 @@
  {#if metric==='heartRate' && shown}
   <div class="metric-value n">{num(shown.resting)}<span class="unit">bpm</span></div>
   <p class="small">Garmin daily resting HR · {dateLabel(hrDate||shown.date)}</p>
-  <div class="hr-days"><button disabled={hrBusy} onclick={()=>changeHrDate(addDays(hrDate||shown!.date,-1))}>← Previous</button><span>{dateLabel(hrDate||shown.date)}</span><button disabled={hrBusy || (hrDate||shown.date)>=(data as HealthView).date} onclick={()=>changeHrDate(addDays(hrDate||shown!.date,1))}>Next →</button></div>
+  <div class="hr-days"><button disabled={hrBusy} onclick={()=>changeHrDate(addDays(hrDate||shown!.date,-1))}>← Previous day</button><span>{dateLabel(hrDate||shown.date)}</span><button disabled={hrBusy || (hrDate||shown.date)>=(data as HealthView).date} onclick={()=>changeHrDate(addDays(hrDate||shown!.date,1))}>Next day →</button></div>
   {#if hrError}<p class="small">{hrError}</p>{/if}
  {:else if stress}
   <div class="metric-value n" style:color={stress.level?stressColors[stress.level]:toneColor('neutral')}>{num(stress.average)}</div>
@@ -73,7 +69,8 @@
 <div class="dashboard" {@attach masonry}>
  {#if metric==='heartRate' && shown}
   <Card title="Through the day">{#if shown.timeline.length}{#key shown.date}<StressTimeline heartRate={shown}/>{/key}{:else}<p class="small">No heart-rate samples for this day.</p>{/if}</Card>
-  <Card title="Daily values"><div class="battery-totals"><div><b class="big n">{num(shown.resting)}</b><span>Garmin resting HR · bpm</span></div><div><b class="big n">{num(shown.minimum)}</b><span>Minimum · bpm</span></div><div><b class="big n">{num(shown.maximum)}</b><span>Maximum · bpm</span></div></div></Card>
+  <Card title="Daily range"><div class="battery-totals"><div><b class="big n">{num(shown.minimum)}</b><span>Minimum · bpm</span></div><div><b class="big n">{num(shown.maximum)}</b><span>Maximum · bpm</span></div></div></Card>
+  <Card title="Daily resting HR"><HistoryChart values={[]} endDate={(data as HealthView).date} label="Resting heart rate" unit="bpm" metric="restingHr" initialRange="days30" band={trendBand('restingHr',data as HealthView)} bandLabel="Raring usual range"/></Card>
  {:else if stress}
   {#if stress.timeline.length}<Card title="Through the day"><StressTimeline {stress}/></Card>{:else}<Card title="Through the day"><p class="small">Garmin has no stress readings for this day.</p></Card>{/if}
   {#if stress.time.length}<Card title="Time in each level">{#each stress.time as t}<div class="stress-row"><b>{stressNames[t.level]}</b><div class="bar"><i style:width={t.seconds/Math.max(stressTotal,1)*100+'%'} style:background={stressColors[t.level]}></i></div><span class="n">{duration(t.seconds/60)}</span><small>{Math.round(t.seconds/Math.max(stressTotal,1)*100)}%</small></div>{/each}{#if stress.activeS}<div class="stress-row"><b>Active</b><div class="bar"><i style:width={stress.activeS/Math.max(stressTotal,1)*100+'%'} style:background={colors.secondary}></i></div><span class="n">{duration(stress.activeS/60)}</span><small>{Math.round(stress.activeS/Math.max(stressTotal,1)*100)}%</small></div>{/if}</Card>{/if}
@@ -92,10 +89,12 @@
   <Card title={rangeName(vital)}>
    {#if vital.normal}<RangeBar value={vital.value} scale={vital.scale} range={vital.normal} color={toneColor(vital.tone)}/><p class="metric-copy range-caption">{num(vital.normal[0],decimals)}–{num(vital.normal[1],decimals)} {vital.unit}</p>{:else}<p class="metric-copy">{vital.status==='ONBOARDING'?"Garmin is still building this baseline.":metric==='hrv'?"Waiting for Garmin to report your HRV baseline.":"At least 14 recorded nights are needed for Raring's fallback range."}</p>{/if}
   </Card>
+ {:else if training && metric==='acuteLoad'}
+  <Card title="History"><HistoryChart values={[]} label="Acute load" metric="acuteLoad" initialRange="days30" band={training.acute?.band ?? null} bandLabel="Garmin's optimal range now"/></Card>
  {:else if training && metric==='vo2max' && training.vo2maxTrend.some(v=>v!=null)}
   <Card title="History"><HistoryChart values={[]} label="VO₂ max" metric="vo2max" initialRange="year"/></Card>
  {/if}
- <Card title="About this metric"><p class="metric-copy">{vital?.kind==='restingHr' && (vital.status || vital.rangeSource==='garmin') ? 'Garmin’s average heart rate during sleep, compared with its Health Status baseline. This is not your resting heart rate or a medical target.' : metricDescriptions[metric]}</p></Card>
+ <Card title="About this metric"><p class="metric-copy">{vital && isSleepHr(vital) ? 'Garmin’s average heart rate during sleep, compared with its Health Status baseline. Your daily resting heart rate is on the heart-rate page.' : metricDescriptions[metric]}</p></Card>
 </div>
 <style>
  .hr-days{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 4px;color:var(--text2);font-size:12px}

@@ -72,7 +72,7 @@ pub fn week(store: &Store, local: &LocalRecords, today: NaiveDate, now: DateTime
     // Up to eight earlier weeks, each counted by the week review's rule.
     let past: Vec<(NaiveDate, PlanBoard)> = (1..=8)
         .map(|i| start - Duration::days(7 * i))
-        .filter(|w| review::week(store, local, *w, today).review.counted)
+        .filter(|w| review::week(store, local, *w, today, now).review.counted)
         .map(|w| (w, ledger::board_with(store, local, w, today, now)))
         .collect();
     let lanes = kinds

@@ -7,6 +7,7 @@ import sampleTraining from './sample/training.json';
 import sampleWorkout from './sample/workout.json';
 import sampleStrengthWorkout from './sample/strengthWorkout.json';
 import sampleStrengthWorkoutHistory from './sample/strengthWorkoutHistory.json';
+import sampleOtherWorkouts from './sample/otherWorkouts.json';
 import sampleStrength from './sample/strength.json';
 import sampleHealth from './sample/health.json';
 import type {HeartRateDay} from './generated/HeartRateDay';
@@ -21,6 +22,8 @@ import type { ProgressDomains } from './generated/ProgressDomains';
 import type { Milestone } from './generated/Milestone';
 import type { ProfileView } from './generated/ProfileView';
 import type { LiftSeries } from './generated/LiftSeries';
+import type { ActivityPage } from './generated/ActivityPage';
+import type { Icon as IconName } from './generated/Icon';
 import type { MuscleRange } from './generated/MuscleRange';
 import type { AppStatus } from './generated/AppStatus';
 import type { TodayView } from './generated/TodayView';
@@ -73,6 +76,14 @@ export const muscles = (range:TrendRange):Promise<MuscleRange|null> => {
  return Promise.resolve({range,from:new Date(Date.parse(v.date)-(days-1)*864e5).toISOString().slice(0,10),to:v.date,days,figure:v.figure,muscles:list,
   gaps:list.filter(m=>m.sets<=gapAt).sort((a,b)=>a.sets-b.sets).map(m=>m.muscle),gapAt});
 };
+// Older stored recordings; the browser preview pages through the sample's activities and strength workouts.
+export const activity_page = (beforeStart:string,beforeId:string,icon:IconName|null):Promise<ActivityPage> => {
+ if(isTauri())return invoke<ActivityPage>('activity_page',{beforeStart,beforeId,icon});
+ const all=[...(sampleTraining as unknown as TrainingView).workouts,...(sampleStrength as unknown as StrengthView).workouts.map(w=>w.activity)];
+ const seen=new Set<string>(),older=all.filter(a=>!seen.has(a.id)&&seen.add(a.id)).sort((a,b)=>b.startLocal.localeCompare(a.startLocal)||b.id.localeCompare(a.id))
+  .filter(a=>a.startLocal<beforeStart||a.startLocal===beforeStart&&a.id<beforeId).filter(a=>!icon||a.icon===icon);
+ return Promise.resolve({activities:older.slice(0,20),more:older.length>20});
+};
 // The browser preview derives a series from the sample's sessions; the app asks the core.
 export const lift_series = (key:string,range:TrendRange):Promise<LiftSeries|null> => {
  if(isTauri())return invoke<LiftSeries|null>('lift_series',{key,range});
@@ -80,8 +91,9 @@ export const lift_series = (key:string,range:TrendRange):Promise<LiftSeries|null
  if(!e)return Promise.resolve(null);
  const days=({days7:7,days14:14,days30:30,days90:90,year:365} as Record<string,number>)[range];
  const from=days?new Date(Date.parse(sampleToday.date)-(days-1)*864e5).toISOString().slice(0,10):'';
- const points=[...e.sessions].reverse().filter(s=>s.date>=from).map(s=>({date:s.date,activityId:s.activityId,max:s.top?.weight??null,volume:s.top?.weight!=null?Math.round(s.top.weight*s.reps.reduce<number>((t,r)=>t+(r??0),0)):null,excluded:s.top?0:s.reps.length}));
- return Promise.resolve({key,name:e.name,unit:(sampleStrength as unknown as StrengthView).unit,range,points});
+ const points=[...e.sessions].reverse().filter(s=>s.date>=from).map(s=>({date:s.date,activityId:s.activityId,max:s.top?.weight??null,volume:s.top?.weight!=null?Math.round(s.top.weight*s.reps.reduce<number>((t,r)=>t+(r??0),0)):null,excluded:s.top?0:s.reps.length,
+  mostReps:s.top?null:Math.max(0,...s.reps.map(r=>r??0))||null}));
+ return Promise.resolve({key,name:e.name,unit:(sampleStrength as unknown as StrengthView).unit,range,from:from||(points[0]?.date??sampleToday.date),to:sampleToday.date,points});
 };
 export const milestone_archive = ():Promise<Milestone[]> => call('milestone_archive',undefined,(sampleProgress as unknown as {milestones:Milestone[]}).milestones);
 export const progress_domains = ():Promise<ProgressDomains> => call('progress_domains',undefined,sampleDomains as unknown as ProgressDomains);
@@ -89,7 +101,7 @@ export const profile = ():Promise<ProfileView> => call('profile',undefined,sampl
 export const training = (date?:string):Promise<TrainingView> => call('training',{date},sampleTraining as unknown as TrainingView);
 export const workout = (id:string):Promise<WorkoutView> => {
  if(isTauri())return invoke<WorkoutView>('workout',{id});
- const history=sampleStrengthWorkoutHistory as unknown as Record<string,WorkoutView>;
+ const history={...sampleStrengthWorkoutHistory,...sampleOtherWorkouts} as unknown as Record<string,WorkoutView>;
  const listed=sampleTraining.workouts.find(a=>a.id===id);
  // Other listed preview activities keep their own summary, never a run's charts.
  const summaryOnly=listed?{summary:listed,recoveryHours:null,stats:[],route:[],heartRate:[],zoneFloors:[],splits:[],strength:null,along:null,more:[],effects:[],vo2maxNew:null,counted:null}:null;
@@ -152,6 +164,7 @@ const sampleImport:ImportPreview = {exportedAt:'2025-10-19T08:12:00+02:00',appVe
 export const choose_import = ():Promise<ImportPreview> => call('choose_import',undefined,sampleImport);
 export const apply_import = ():Promise<ImportPreview> => call('apply_import',undefined,sampleImport);
 export const request_notification_permission = ():Promise<boolean> => call('request_notification_permission',undefined,true);
+export const notification_permission = ():Promise<boolean|null> => call('notification_permission',undefined,new URLSearchParams(location.search).get('fixture')!=='notifications-blocked');
 // Desktop re-reads due reminders on resume and after a settings change.
 export const check_reminders = ():Promise<void> => call('check_reminders',undefined,undefined);
 export const reminders_status = ():Promise<ReminderStatus|null> => call('reminders_status',undefined,null);

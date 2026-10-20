@@ -7,13 +7,13 @@
 {#if !quiet}
  <Card title="Next session" onclick={open} extra="planned-session">
   {#if planned.session}
-   <div class="planned-detail"><b>{planned.session.name}</b><span>{dateLabel(planned.session.date)} · Garmin schedule</span>{#if planned.coach}<span>Active Coach plan · {planned.coach}</span>{/if}</div>
+   <div class="planned-detail"><b>{planned.session.name}</b><span>{dateLabel(planned.session.date)} · ◇ Garmin schedule · read-only</span>{#if planned.coach}<span>Active Coach plan · {planned.coach}</span>{/if}</div>
   {:else if planned.state==='empty'}
-   <p class="small">No workouts in Garmin’s cached schedule{#if planned.coverageStart && planned.coverageEnd}, {dateLabel(planned.coverageStart)}–{dateLabel(planned.coverageEnd)}{/if}.{#if planned.coach} {planned.coach} is active.{/if}</p>
+   <p class="small">No workouts in Garmin’s cached schedule{#if planned.coverageStart && planned.coverageEnd}, {dateLabel(planned.coverageStart)}–{dateLabel(planned.coverageEnd)}{/if}.{#if planned.coach}{' '}{planned.coach} is active.{/if}</p>
   {:else if planned.state==='stale'}
-   <p class="small">Schedule needs a refresh.{#if planned.coverageStart && planned.coverageEnd} Cached coverage: {dateLabel(planned.coverageStart)}–{dateLabel(planned.coverageEnd)}.{/if}{#if planned.coach} {planned.coach} is active.{/if}</p>
+   <p class="small">Schedule needs a refresh.{#if planned.coverageStart && planned.coverageEnd}{' '}Cached coverage: {dateLabel(planned.coverageStart)}–{dateLabel(planned.coverageEnd)}.{/if}{#if planned.coach}{' '}{planned.coach} is active.{/if}</p>
   {:else}
-   <p class="small">Schedule unavailable.{#if planned.coach} {planned.coach} is active.{/if}</p>
+   <p class="small">Schedule unavailable.{#if planned.coach}{' '}{planned.coach} is active.{/if}</p>
   {/if}
  </Card>
 {/if}

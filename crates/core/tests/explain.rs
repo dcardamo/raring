@@ -194,7 +194,7 @@ fn training_status_why_names_load_focus_hrv_and_acute_load() {
             ("hrvStatus", Some("Balanced"), Tone::Good),
         ]
     );
-    assert_eq!(why.inputs[0].value.as_deref(), Some("520 · ratio 1.6"));
+    assert_eq!(why.inputs[0].value.as_deref(), Some("520 · 1.6× your 4-week load"));
 }
 
 /// Readiness level, sleep score, Body Battery at wake, HRV status, training

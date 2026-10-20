@@ -5,6 +5,11 @@ import type { WeightUnit } from "./WeightUnit";
 
 export type LiftSeries = { key: string, name: string, unit: WeightUnit, range: TrendRange, 
 /**
+ * The range's first day (the first session for Max) and today: the
+ * chart's date axis.
+ */
+from: string, to: string, 
+/**
  * Sessions in the range, oldest first.
  */
 points: Array<LiftPoint>, };

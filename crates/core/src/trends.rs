@@ -130,7 +130,8 @@ fn sources(metric: TrendMetric) -> &'static [Source] {
             &["$.fitnessAge", "$.fitnessAgeData.fitnessAge"],
         )],
         Vo2max => &[Row("max_metrics", screens::vo2)],
-        AcuteLoad => &[Row("readiness", acute_load)],
+        // Training Status first, so the chart ends on the value Training shows.
+        AcuteLoad => &[Row("training", screens::acute), Row("readiness", acute_load)],
     }
 }
 

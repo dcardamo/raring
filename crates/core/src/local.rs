@@ -82,6 +82,9 @@ pub struct MilestoneRecord {
     pub title: String,
     pub route: Option<String>,
     pub withdrawn: bool,
+    /// The set's own rep count, for showing a best; evidence only, never stored.
+    #[serde(skip)]
+    pub set_reps: Option<u32>,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug, PartialEq)]
@@ -1104,11 +1107,11 @@ pub(crate) fn apply(
                 if start > today || plan::week_start(start, first) != start {
                     return Err(Error::InvalidLocal("review week"));
                 }
-                let next_day = start + Duration::days(7);
-                if !accepted.is_empty() && (start + Duration::days(6) > today || next_day < plan::week_start(today, first)) {
+                if !accepted.is_empty() && !crate::review::latest_completed(start, today, plan::week_start(today, first)) {
                     return Err(Error::InvalidLocal("only the latest completed week can change upcoming goals"));
                 }
-                let next = next_day.to_string();
+                // Once next week has begun, a change applies from today and keeps its starting targets.
+                let next = (start + Duration::days(7)).max(today).to_string();
                 let chosen: Vec<&GoalProposal> = proposals
                     .iter()
                     .filter(|p| accepted.contains(&p.kind) && p.proposed != p.current)

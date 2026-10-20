@@ -21,6 +21,8 @@ export const amount = (kind: GoalKind, n: number) => `${Math.round(n)} ${unitFor
 export const SPORT_NAMES: Record<Sport, string> = {running: 'Run', cycling: 'Ride', walking: 'Walk', hiking: 'Hike', swimming: 'Swim', strength: 'Strength', other: 'Session'};
 export const SPORT_COLORS: Record<Sport, string> = {running: '#3DDC97', cycling: '#5CA8FF', walking: '#9FD36B', hiking: '#C9A35C', swimming: '#36C9C6', strength: '#FF7DB8', other: '#A48BFF'};
 export const SPORT_ICONS: Record<Sport, IconName> = {running: 'run', cycling: 'bike', walking: 'walk', hiking: 'hike', swimming: 'swim', strength: 'strength', other: 'other'};
+// Garmin Coach cardio has no sport yet: a neutral cardio icon, not the alert-like 'other'.
+export const itemIcon = (p: {intention: {sport: Sport}, coach: {kind: string | null} | null}): IconName => p.coach?.kind === 'cardio' ? 'pulse' : SPORT_ICONS[p.intention.sport];
 
 /** One word per state, the same everywhere. */
 export const STATE_WORD: Record<ItemState, string> = {done: 'Done', review: 'Needs review', planned: 'Planned', notRecorded: 'Not recorded', awaiting: 'Awaiting data', letGo: 'Let go', missed: 'Marked missed'};
@@ -28,9 +30,10 @@ export const STATE_WORD: Record<ItemState, string> = {done: 'Done', review: 'Nee
 export const noGoals = (): GoalTargets => ({strengthSessions: 0, zone2Min: 0, highIntensityMin: 0, intensityMin: 0, intensityGarminGoal: false, sleepNights: 0, sleepTime: null, sleepKind: 'asleepBy', sleepScore: 0, restDays: []});
 
 const CHUNK: Record<string, [keyof Allocation, number]> = {zone2: ['zone2Min', 45], highIntensity: ['highIntensityMin', 20], intensity: ['intensityMin', 30]};
-// A backlog item taken for a day: one session, or a share of the minutes left.
+// A backlog item taken for a day: one session, or a share of the minutes
+// left; the whole remainder when less than ten minutes would be left over.
 export function backlogDraft(b: BacklogItem, date: string): {date: string, sport: Sport, allocation: Partial<Allocation>} {
   if (b.kind === 'strength') return {date, sport: 'strength', allocation: {strengthSessions: 1}};
   const [field, chunk] = CHUNK[b.kind] ?? ['zone2Min', 30];
-  return {date, sport: b.sport ?? 'running', allocation: {[field]: Math.min(b.amount, chunk)}};
+  return {date, sport: b.sport ?? 'running', allocation: {[field]: b.amount - chunk < 10 ? b.amount : chunk}};
 }

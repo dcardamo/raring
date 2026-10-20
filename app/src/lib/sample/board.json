@@ -129,6 +129,7 @@
       ],
       "done": true,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [
         "9000000000005"
       ],
@@ -165,6 +166,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [
         "9000000000004"
       ],
@@ -199,6 +201,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [
         "9000000000002",
         "9000000000003"
@@ -234,6 +237,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [
         "9000000000001"
       ],
@@ -268,6 +272,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 1,
       "recordings": [],
       "items": [
         "i1760380000001"
@@ -302,6 +307,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 1,
       "recordings": [],
       "items": [
         "i1760380000002"
@@ -336,6 +342,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,

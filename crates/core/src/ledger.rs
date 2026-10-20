@@ -459,7 +459,12 @@ pub fn board_with(store: &Store, local: &LocalRecords, anchor: NaiveDate, today:
                     planned,
                     remaining,
                     reached: !observation && recorded.is_some_and(|r| r >= target),
-                    review: items.iter().filter(|p| p.state == ItemState::Review && allocated(&p.intention.allocation, kind) > 0.).count() as u32,
+                    review: items
+                        .iter()
+                        .filter(|p| p.state == ItemState::Review && allocated(&p.intention.allocation, kind) > 0.)
+                        .flat_map(|p| p.candidates.iter())
+                        .collect::<std::collections::BTreeSet<_>>()
+                        .len() as u32,
                     unavailable: unavailable.map(str::to_owned),
                     observation,
                 })
@@ -519,6 +524,7 @@ pub fn board_with(store: &Store, local: &LocalRecords, anchor: NaiveDate, today:
                 rings,
                 done: !workouts.is_empty() && workouts.iter().all(|p| p.state == ItemState::Done),
                 not_recorded: day_items.iter().any(|p| p.state == ItemState::NotRecorded),
+                planned: day_items.iter().filter(|p| p.state == ItemState::Planned).count() as u32,
                 recordings: day_recs.iter().map(|c| c.rec.id.clone()).collect(),
                 items: day_items.iter().map(|p| p.intention.id.clone()).collect(),
                 garmin: (garmin.iter().filter(|g| g.date == ds).count() + coach_sessions.iter().filter(|c| c.date == ds).count()) as u32,

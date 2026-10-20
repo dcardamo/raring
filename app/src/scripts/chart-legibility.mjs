@@ -17,7 +17,7 @@ const sample=JSON.parse(await readFile(resolve('src/lib/sample/today.json'),'utf
 const windDownToday={...sample,focus:{...sample.focus,phase:'windDown',cards:['sleepPlan','focus'],until:'2025-10-16T23:06:00'}};
 const eveningToday={...sample,focus:{...sample.focus,phase:'evening',cards:['sleepPlan','focus'],until:'2025-10-16T22:00:00'}};
 
-// [name, hash or query, local clock, Today override]
+// [name, hash or query, local clock, Today override, section tab to open]
 const pages=[
  ['today','#today','2025-10-16T14:05:00'],
  ['today-evening','#today','2025-10-16T20:10:00',eveningToday],
@@ -30,6 +30,8 @@ const pages=[
  ['training','#training'],
  ['workout-run','#workout/9000000000001'],
  ['workout-strength','#workout/9000000000002'],
+ ['workout-swim','#workout/9000000000007'],
+ ['workout-walk','#workout/9000000000008'],
  ['strength','#strength'],
  ['health','#health'],
  ['health-heart-rate','?fixture=heart-rate#health'],
@@ -38,7 +40,8 @@ const pages=[
  ['progress-fixture','?fixture=progress#progress'],
  ['plan','#plan'],
  ['review','#review/latest'],
- ...['bodyBattery','stress','heartRate','restingHr','hrv','respiration','spo2','skinTemp','vo2max','endurance','hill','runningTolerance'].map(m=>[`metric-${m}`,`#metric/${m}`]),
+ ...['Cardio','Strength','Long-term'].map(tab=>[`progress-${tab.toLowerCase()}`,'#progress',undefined,undefined,tab]),
+ ...['bodyBattery','stress','heartRate','restingHr','hrv','respiration','spo2','skinTemp','vo2max','endurance','hill','runningTolerance','acuteLoad'].map(m=>[`metric-${m}`,`#metric/${m}`]),
 ];
 const widths=[360,390,720,1100];
 const scales=[1,1.3,2];
@@ -132,7 +135,7 @@ try {
  const url=`http://127.0.0.1:${server.httpServer.address().port}`;
  if(shots)await mkdir(output,{recursive:true});
  browser=await chromium.launch({headless:true,executablePath:'/run/current-system/sw/bin/chromium',args:['--no-sandbox']});
- for(const [name,path,clock='2025-10-16T14:05:00',today] of pages){
+ for(const [name,path,clock='2025-10-16T14:05:00',today,tab] of pages){
   const ctx=await browser.newContext({viewport:{width:390,height:844},reducedMotion:'reduce'});
   const page=await ctx.newPage();
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -145,6 +148,7 @@ try {
    await page.goto('about:blank');
    await page.goto(`${url}/${path}`);
    await page.locator('h1').first().waitFor();
+   if(tab){await page.getByRole('tab',{name:tab}).click();await page.locator('.dom').first().waitFor();}
    await page.waitForTimeout(250);
    if(scale!==1){await page.evaluate(scaleText,scale);await page.waitForTimeout(150);}
    // Let resize observers and the label thinning settle.

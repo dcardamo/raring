@@ -186,7 +186,7 @@ fn sleep_need_minutes(need: &Value) -> Option<f64> {
                 })
         })
 }
-fn sleep_need(v: &Value) -> Option<f64> {
+pub(crate) fn sleep_need(v: &Value) -> Option<f64> {
     sleep_need_minutes(&sleep(v)["sleepNeed"])
 }
 fn parse_local(s: &str) -> Option<NaiveDateTime> {
@@ -779,7 +779,7 @@ pub(crate) fn status(v: &Value) -> Option<String> {
         )
     })
 }
-fn acute(v: &Value) -> Option<f64> {
+pub(crate) fn acute(v: &Value) -> Option<f64> {
     num(
         training_device(v),
         &[
@@ -940,7 +940,18 @@ pub(crate) fn activity(store: &Store, id: &str) -> Option<ActivityCard> {
         Icon::Other
     };
     let zones = store.get("zones", id).unwrap_or(Value::Null);
+    let statute = store
+        .get("profile_settings", "me")
+        .and_then(|s| s["measurementSystem"].as_str().map(|s| s.starts_with("statute")))
+        .unwrap_or(false);
+    let distance_unit = match (icon, v.get("unitOfPoolLength")["unitKey"].as_str(), statute) {
+        (Icon::Swim, Some("yard"), _) | (Icon::Swim, None, true) => DistanceUnit::Yd,
+        (Icon::Swim, _, _) => DistanceUnit::M,
+        (_, _, true) => DistanceUnit::Mi,
+        _ => DistanceUnit::Km,
+    };
     Some(ActivityCard {
+        distance_unit,
         id: id.into(),
         icon,
         name: v
@@ -990,6 +1001,28 @@ pub(crate) fn activity(store: &Store, id: &str) -> Option<ActivityCard> {
             .filter(|(m, g)| *m >= 0. && *g >= 0.)
             .map(|(m, g)| m + 2. * g),
     })
+}
+/// Stored recordings older than one already shown, newest first. The sport
+/// filter applies before the page limit, so other sports can't hide older
+/// ones; no Garmin request is made.
+pub fn activity_page(store: &Store, before_start: &str, before_id: &str, icon: Option<Icon>, limit: usize) -> ActivityPage {
+    let (mut start, mut id) = (before_start.to_owned(), before_id.to_owned());
+    let mut activities = vec![];
+    loop {
+        let batch = store.activities_before(&start, &id, 100);
+        if batch.is_empty() {
+            return ActivityPage { activities, more: false };
+        }
+        for (next_id, next_start) in batch {
+            if activities.len() == limit {
+                return ActivityPage { activities, more: true };
+            }
+            if let Some(card) = activity(store, &next_id).filter(|c| icon.is_none_or(|i| c.icon == i)) {
+                activities.push(card);
+            }
+            (start, id) = (next_start, next_id);
+        }
+    }
 }
 fn activities(store: &Store, since: &str) -> Vec<ActivityCard> {
     store
@@ -2282,8 +2315,8 @@ pub fn training_at_calendar(store: &Store, date: &str, calendar: NaiveDate, now:
     let races = [
         ("5K", "time5K"),
         ("10K", "time10K"),
-        ("Half", "timeHalfMarathon"),
-        ("Full", "timeMarathon"),
+        ("Half marathon", "timeHalfMarathon"),
+        ("Marathon", "timeMarathon"),
     ]
     .iter()
     .filter_map(|(label, key)| {
@@ -2298,7 +2331,8 @@ pub fn training_at_calendar(store: &Store, date: &str, calendar: NaiveDate, now:
         acute: load.map(|amount| {
             gauge(
                 amount,
-                (amount * 1.3).max(band(&v).map(|b| b[1] * 1.2).unwrap_or(1000.)),
+                // A round scale end, so the bar's last tick is a tidy number.
+                ((amount * 1.3).max(band(&v).map(|b| b[1] * 1.2).unwrap_or(1000.)) / 100.).ceil() * 100.,
                 match band(&v) {
                     Some([lo, _]) if amount < lo => "Low",
                     Some([_, hi]) if amount > hi => "High",
@@ -2323,7 +2357,7 @@ pub fn training_at_calendar(store: &Store, date: &str, calendar: NaiveDate, now:
         headline: match (load, band(&v)) {
             (Some(amount), Some([lo, _])) if amount < lo => "Room to build".into(),
             (Some(amount), Some([_, hi])) if amount > hi => "Load high".into(),
-            (Some(_), Some(_)) => "Room to build".into(),
+            (Some(_), Some(_)) => "In your optimal range".into(),
             _ => status
                 .map(|s| label(Some(s)))
                 .unwrap_or_else(|| "Training at a glance".into()),
@@ -2545,7 +2579,7 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
         .map(|((kind, unit, _), values)| StreamSeries { kind: *kind, unit: (*unit).into(), values })
         .collect();
     let along = (!series.is_empty()).then_some(AlongTheWay { t_s: along_t, series });
-    let more: Vec<Stat> = [
+    let mut more: Vec<Stat> = [
         ("movingDuration", "Moving time", "s"),
         ("moderateIntensityMinutes", "Moderate intensity", "min"),
         ("vigorousIntensityMinutes", "Vigorous intensity", "min"),
@@ -2560,6 +2594,12 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
         ("strideLength", "Stride length", "cm"),
         ("avgRespirationRate", "Breathing rate", "brpm"),
         ("recoveryHeartRate", "Recovery heart rate", "bpm"),
+        // Pool swims (unverified against a real swim; see TODO).
+        ("activeLengths", "Lengths", ""),
+        ("averageSwolf", "Avg SWOLF", ""),
+        ("averageStrokes", "Strokes per length", ""),
+        ("averageSwimCadenceInStrokesPerMinute", "Stroke rate", "strokes/min"),
+        ("averageStrokeDistance", "Distance per stroke", "m"),
         ("averageTemperature", "Watch temperature, average", "°C"),
         ("minTemperature", "Watch temperature, lowest", "°C"),
         ("maxTemperature", "Watch temperature, highest", "°C"),
@@ -2569,6 +2609,11 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
         v.number(&[*key]).filter(|n| n.is_finite()).map(|value| Stat { key: (*key).into(), label: (*label).into(), value, unit: (*unit).into() })
     })
     .collect();
+    // Garmin sends the pool length in the pool's own unit.
+    if let Some(length) = v.number(&["poolLength"]).filter(|l| *l > 0.) {
+        let unit = if summary.distance_unit == DistanceUnit::Yd { "yd" } else { "m" };
+        more.insert(0, Stat { key: "poolLength".into(), label: "Pool length".into(), value: length, unit: unit.into() });
+    }
     let effects: Vec<EffectLine> = [
         (EffectKind::Aerobic, summary.aerobic_te, summary.aerobic_label.clone()),
         (EffectKind::Anaerobic, summary.anaerobic_te, summary.anaerobic_label.clone()),
@@ -2877,8 +2922,16 @@ pub fn health_at_calendar(store: &Store, date: &str, calendar: &str) -> HealthVi
         intensity: NaiveDate::parse_from_str(date, "%Y-%m-%d").ok().and_then(|d| {
             plan::intensity(store, plan::week_start(d, plan::week_starts_on(store)), d)
         }),
+        resting_hr_range: resting_hr_range(store, date),
         detail: day_detail(store, date, &[DayDetailPart::Stress, DayDetailPart::Vitals]),
     }
+}
+/// The resting-HR chart plots Garmin's daily resting HR, so its band comes
+/// from that history even when Health Status reports Sleep HR.
+fn resting_hr_range(store: &Store, date: &str) -> Option<[f64; 2]> {
+    let to = NaiveDate::parse_from_str(date, "%Y-%m-%d").ok()?;
+    let days = crate::trends::daily(store, TrendMetric::RestingHr, to - Duration::days(29), to);
+    rules::normal(&days.into_values().collect::<Vec<_>>())
 }
 pub fn checkin(store: &Store, monday: &str) -> CheckinView {
     let previous = date_sub(monday, 7);
@@ -2922,50 +2975,54 @@ pub fn checkin(store: &Store, monday: &str) -> CheckinView {
             area,
             headline: match area {
                 CheckinArea::Readiness => "Readiness",
-                CheckinArea::Sleep => "Sleep",
-                CheckinArea::Training => "Training",
-                CheckinArea::Health => "Fitness age",
+                CheckinArea::Sleep => "Sleep Score",
+                CheckinArea::Training => "Acute load",
+                CheckinArea::Health => "Fitness Age",
             }
             .into(),
             value,
             unit: unit.into(),
             previous,
-            tone: value.map(rules::score).unwrap_or(Tone::Neutral),
+            // Garmin rates readiness and sleep as scores; load and Fitness Age have no such scale.
+            tone: match area {
+                CheckinArea::Readiness | CheckinArea::Sleep => value.map(rules::score).unwrap_or(Tone::Neutral),
+                _ => Tone::Neutral,
+            },
             series,
         });
     }
-    let win = cards
-        .iter()
-        .find(|c| match c.area {
-            CheckinArea::Readiness | CheckinArea::Sleep => {
-                c.value.zip(c.previous).is_some_and(|(a, b)| a > b)
+    // A change under 1 reads as steady on the cards, so it is never a win.
+    let win = cards.iter().find_map(|c| {
+        let (a, b) = c.value.zip(c.previous)?;
+        match c.area {
+            CheckinArea::Readiness | CheckinArea::Sleep if a - b >= 1. => {
+                Some(format!("{} up {:.0} on the week before, averaging {:.0}", c.headline, a - b, a))
             }
-            CheckinArea::Health => c.value.zip(c.previous).is_some_and(|(a, b)| a < b),
-            _ => false,
-        })
-        .map(|c| format!("{} improved", c.headline));
+            CheckinArea::Health if b - a >= 1. => Some(format!("Fitness Age down {:.1} years on the week before", b - a)),
+            _ => None,
+        }
+    });
     let last = date_sub(monday, 1);
-    let sleep_gaps: Vec<f64> = (1..=7)
+    let nights: Vec<(f64, f64)> = (1..=7)
         .filter_map(|i| {
             let s = sleep_view(store, &date_sub(monday, i));
-            s.asleep_min
-                .zip(s.need_min)
-                .filter(|(_, n)| *n > 0.)
-                .map(|(a, n)| ((n - a) / n).max(0.))
+            s.asleep_min.zip(s.need_min).filter(|(_, n)| *n > 0.)
         })
         .collect();
-    let sleep_gap =
-        (!sleep_gaps.is_empty()).then(|| sleep_gaps.iter().sum::<f64>() / sleep_gaps.len() as f64);
+    let mean = |v: Vec<f64>| (!v.is_empty()).then(|| v.iter().sum::<f64>() / v.len() as f64);
+    let sleep_gap = mean(nights.iter().map(|(a, n)| ((n - a) / n).max(0.)).collect());
+    let sleep_short = mean(nights.iter().map(|(a, n)| (n - a).max(0.)).collect());
     let training = training(store, &last);
-    let load_gap = training
+    let load_short = training
         .load_focus
         .iter()
         .filter_map(|bar| {
             bar.target
                 .filter(|r| r[0] > 0.)
-                .map(|r| ((r[0] - bar.value) / r[0]).max(0.))
+                .map(|r| (bar, ((r[0] - bar.value) / r[0]).max(0.)))
         })
-        .reduce(f64::max);
+        .max_by(|a, b| a.1.total_cmp(&b.1));
+    let load_gap = load_short.map(|(_, gap)| gap);
     let readiness_drop = cards[0]
         .value
         .zip(cards[0].previous)
@@ -2976,20 +3033,30 @@ pub fn checkin(store: &Store, monday: &str) -> CheckinView {
     let intensity = plan_week.and_then(|(d, start)| plan::intensity(store, start, d));
     // Garmin's weekly intensity minutes against its goal; without them, the
     // Fitness Age vigorous-minutes average against its target.
-    let intensity_gap = intensity
-        .as_ref()
-        .and_then(|i| i.goal.map(|g| (i.total, g)))
-        .or_else(|| {
-            health(store, &last)
-                .drivers
-                .iter()
-                .find(|d| d.key == "vigorousMinutes")
-                .and_then(|d| d.value.zip(d.target))
-        })
-        .filter(|(_, t)| *t > 0.)
-        .map(|(v, t)| ((t - v) / t).max(0.));
-    let focus =
-        rules::weekly_focus(sleep_gap, load_gap, readiness_drop, intensity_gap).map(str::to_owned);
+    let weekly = intensity.as_ref().and_then(|i| i.goal.map(|g| (i.total, g))).filter(|(_, t)| *t > 0.);
+    let vigorous = || {
+        health(store, &last)
+            .drivers
+            .iter()
+            .find(|d| d.key == "vigorousMinutes")
+            .and_then(|d| d.value.zip(d.target))
+            .filter(|(_, t)| *t > 0.)
+    };
+    let intensity_values = weekly.or_else(vigorous);
+    let intensity_gap = intensity_values.map(|(v, t)| ((t - v) / t).max(0.));
+    // One line naming Garmin's metric and its values, never just the area.
+    let focus = rules::weekly_focus(sleep_gap, load_gap, readiness_drop, intensity_gap).and_then(|name| match name {
+        "Sleep" => sleep_short.map(|m| format!("Sleep: about {m:.0} min a night under Garmin's sleep need")),
+        "Load focus" => load_short.map(|(bar, _)| format!("Garmin's load focus: {} was furthest below its range", bar.name.to_lowercase())),
+        "Readiness" => cards[0].value.zip(cards[0].previous).map(|(a, b)| format!("Readiness: Garmin's score averaged {a:.0}, down from {b:.0}")),
+        _ => intensity_values.map(|(v, t)| {
+            if weekly.is_some() {
+                format!("Intensity minutes: {v:.0} of Garmin's {t:.0}-minute weekly goal")
+            } else {
+                format!("Vigorous minutes: {v:.0} of the {t:.0} a week Fitness Age looks for")
+            }
+        }),
+    });
     let vo2max_change = historical_vo2(store, &last)
         .zip(historical_vo2(store, &date_sub(monday, 8)))
         .map(|(a, b)| a - b);

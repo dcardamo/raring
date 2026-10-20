@@ -1,18 +1,18 @@
 <script lang="ts">
  import type {VitalsCard} from '../generated/VitalsCard';
- import {vitalStatus,vitalSummary,vitalDecimals,vitalIcons,vitalName,rangeName} from '../signals';
+ import {vitalStatus,vitalSummary,vitalDecimals,vitalIcons,vitalName,rangeName,isSleepHr} from '../signals';
  import {toneColor} from '../charts';
- import {num} from '../format';
+ import {num,dateLabel} from '../format';
  import Card from './Card.svelte';
  import Icon from './Icon.svelte';
  import RangeBar from './RangeBar.svelte';
- let {vitals,compact=false,open}:{vitals:VitalsCard;compact?:boolean;open:(kind:string)=>void}=$props();
+ let {vitals,compact=false,open,date}:{vitals:VitalsCard;compact?:boolean;open:(kind:string)=>void;date?:string}=$props();
  const id=$props.id();
  let summary=$derived(vitalSummary(vitals));
 </script>
 
 <Card title="Vitals" extra={compact?'vitals-monitor compact-monitor':'vitals-monitor'}>
- {#snippet aside()}<span class="source">Latest synced readings</span>{/snippet}
+ {#snippet aside()}<span class="source">{date?`Night ending ${dateLabel(date)}`:'Latest synced readings'}</span>{/snippet}
  <div class="monitor-heading" style:--signal={toneColor(summary.tone)}>
   <span class="monitor-icon"><Icon name={summary.tone==='good'?'check':'pulse'} size={20}/></span>
   <div><strong>{summary.headline}</strong><p>{summary.detail}</p></div>
@@ -23,13 +23,13 @@
    {@const decimals=vitalDecimals(v.kind)}
    <button class="signal-tile" aria-label={'View '+vitalName(v)} aria-describedby={id+'-'+v.kind} onclick={()=>open(v.kind)} style:--signal={toneColor(state.tone)}>
     <span id={id+'-'+v.kind} class="sr-only">{num(v.value,decimals)} {v.unit}. {state.label}.</span>
-    <span class="signal-name"><Icon name={vitalIcons[v.kind]} size={16}/><span>{compact?(v.kind==='restingHr' && (v.status || v.rangeSource==='garmin')?'Sleep HR':({restingHr:'RHR',hrv:'HRV',respiration:'Resp',spo2:'SpO₂',skinTemp:'Skin'} as Record<string,string>)[v.kind]):vitalName(v)}</span>{#if !compact}<Icon name="arrow-right" size={12}/>{/if}</span>
-    <span class="signal-value n">{v.kind==='skinTemp' && (v.value??0)>0?'+':''}{num(v.value,decimals)}<small>{v.unit}</small></span>
+    <span class="signal-name"><Icon name={vitalIcons[v.kind]} size={16}/><span>{compact?(isSleepHr(v)?'Sleep HR':({restingHr:'RHR',hrv:'HRV',respiration:'Resp',spo2:'SpO₂',skinTemp:'Skin'} as Record<string,string>)[v.kind]):vitalName(v)}</span>{#if !compact}<Icon name="arrow-right" size={12}/>{/if}</span>
+    <span class="signal-value n">{v.kind==='skinTemp' && (v.value??0)>0?'+':''}{num(v.value,decimals)}{#if v.value!=null}<small>{v.unit}</small>{/if}</span>
     {#if compact}<span class="signal-dot" title={state.label}></span>
     {:else}
      <span class="signal-state">{state.label}</span>
      <RangeBar value={v.value} scale={v.scale} range={v.normal} color={toneColor(state.tone)}/>
-     <span class="signal-range">{#if v.normal}{rangeName(v)} {num(v.normal[0],decimals)}–{num(v.normal[1],decimals)} {v.unit}{:else if v.status==='ONBOARDING'}Garmin baseline building{:else if v.status}Garmin range unavailable{:else if v.kind==='hrv'}Awaiting Garmin baseline{:else}Needs 14 recorded nights{/if}</span>
+     <span class="signal-range">{#if v.normal}{rangeName(v)} <span class="nowrap">{num(v.normal[0],decimals)}–{num(v.normal[1],decimals)} {v.unit}</span>{:else if v.status==='ONBOARDING' && v.value!=null}{:else if v.status==='ONBOARDING'}Garmin baseline building{:else if v.status}Garmin range unavailable{:else if v.kind==='hrv'}Awaiting Garmin baseline{:else}Needs 14 recorded nights{/if}</span>
     {/if}
    </button>
   {/each}
@@ -42,6 +42,7 @@
 
 <style>
  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+ .nowrap{white-space:nowrap}
  .source{font-size:10px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--text2)}
  .monitor-heading{display:flex;align-items:center;gap:10px;margin-bottom:18px}
  .monitor-icon{display:grid;place-items:center;flex:none;width:36px;height:36px;border:1px solid color-mix(in srgb,var(--signal) 35%,transparent);border-radius:12px;color:var(--signal);background:color-mix(in srgb,var(--signal) 8%,transparent)}

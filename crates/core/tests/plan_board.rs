@@ -135,7 +135,7 @@ fn raring_asks_only_when_it_cannot_tell() {
     assert_eq!(item(&b, &b2).state, ItemState::Review);
     assert_eq!(item(&b, &a).candidates, ["1"]);
     let l = row(&b, GoalKind::Strength);
-    assert_eq!((l.recorded, l.planned, l.review, l.remaining), (Some(1.), 0., 2, Some(2.)), "review is neither planned nor a second count");
+    assert_eq!((l.recorded, l.planned, l.review, l.remaining), (Some(1.), 0., 1, Some(2.)), "one recording to review, neither planned nor a second count");
 
     f.core.local_action(&LocalAction::RemoveIntention { id: b2 }, at(10, 9)).unwrap();
     assert_eq!(item(&board(&f), &a).state, ItemState::Done);
@@ -219,6 +219,10 @@ fn a_passed_session_is_not_recorded_until_its_person_says_otherwise() {
     assert_eq!(item(&b, &q).state, ItemState::Missed);
     assert_eq!(item(&b, &gone).state, ItemState::LetGo);
     assert!(day(&b, "2025-03-11").not_recorded);
+    assert_eq!(day(&b, "2025-03-11").planned, 0, "a passed session is not recorded, not planned");
+    assert_eq!(day(&b, "2025-03-15").planned, 0, "a session let go isn't planned");
+    lift(&f, "2025-03-15");
+    assert_eq!(day(&board(&f), "2025-03-15").planned, 1, "a later day shows what is still planned");
     listed(&f.store, "2025-03-12", "2025-03-13");
     assert_eq!(item(&board(&f), &p).state, ItemState::Awaiting, "an incomplete day awaits data");
 }

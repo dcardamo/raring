@@ -686,6 +686,10 @@
     "baselineReady": true
   },
   "journalEnabled": true,
+  "restingHrRange": [
+    55,
+    58
+  ],
   "journal": [
     {
       "date": "2025-10-16",
@@ -697,7 +701,7 @@
         },
         {
           "name": "Morning caffeine",
-          "value": "2 COFFEE"
+          "value": "2 coffee"
         },
         {
           "name": "Other reading",

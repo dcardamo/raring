@@ -30,7 +30,8 @@
       "anaerobicLabel": null,
       "benefit": null,
       "avgHr": null,
-      "intensityMin": null
+      "intensityMin": null,
+      "distanceUnit": "km"
     },
     "recoveryHours": null,
     "stats": [
@@ -169,7 +170,8 @@
       "anaerobicLabel": null,
       "benefit": null,
       "avgHr": null,
-      "intensityMin": null
+      "intensityMin": null,
+      "distanceUnit": "km"
     },
     "recoveryHours": null,
     "stats": [
@@ -274,7 +276,8 @@
       "anaerobicLabel": null,
       "benefit": null,
       "avgHr": null,
-      "intensityMin": null
+      "intensityMin": null,
+      "distanceUnit": "km"
     },
     "recoveryHours": null,
     "stats": [
@@ -659,7 +662,8 @@
       "anaerobicLabel": null,
       "benefit": null,
       "avgHr": null,
-      "intensityMin": null
+      "intensityMin": null,
+      "distanceUnit": "km"
     },
     "recoveryHours": null,
     "stats": [
@@ -1044,7 +1048,8 @@
       "anaerobicLabel": null,
       "benefit": null,
       "avgHr": null,
-      "intensityMin": null
+      "intensityMin": null,
+      "distanceUnit": "km"
     },
     "recoveryHours": null,
     "stats": [
@@ -1429,7 +1434,8 @@
       "anaerobicLabel": null,
       "benefit": null,
       "avgHr": null,
-      "intensityMin": null
+      "intensityMin": null,
+      "distanceUnit": "km"
     },
     "recoveryHours": null,
     "stats": [
@@ -1814,7 +1820,8 @@
       "anaerobicLabel": null,
       "benefit": null,
       "avgHr": null,
-      "intensityMin": null
+      "intensityMin": null,
+      "distanceUnit": "km"
     },
     "recoveryHours": null,
     "stats": [
@@ -2199,7 +2206,8 @@
       "anaerobicLabel": null,
       "benefit": null,
       "avgHr": null,
-      "intensityMin": null
+      "intensityMin": null,
+      "distanceUnit": "km"
     },
     "recoveryHours": null,
     "stats": [
@@ -2584,7 +2592,8 @@
       "anaerobicLabel": null,
       "benefit": null,
       "avgHr": null,
-      "intensityMin": null
+      "intensityMin": null,
+      "distanceUnit": "km"
     },
     "recoveryHours": null,
     "stats": [
@@ -2969,7 +2978,8 @@
       "anaerobicLabel": null,
       "benefit": null,
       "avgHr": null,
-      "intensityMin": null
+      "intensityMin": null,
+      "distanceUnit": "km"
     },
     "recoveryHours": null,
     "stats": [
@@ -3348,7 +3358,8 @@
       "anaerobicLabel": null,
       "benefit": null,
       "avgHr": null,
-      "intensityMin": null
+      "intensityMin": null,
+      "distanceUnit": "km"
     },
     "recoveryHours": null,
     "stats": [
@@ -3742,7 +3753,8 @@
       "anaerobicLabel": null,
       "benefit": null,
       "avgHr": null,
-      "intensityMin": null
+      "intensityMin": null,
+      "distanceUnit": "km"
     },
     "recoveryHours": null,
     "stats": [
@@ -4121,7 +4133,8 @@
       "anaerobicLabel": null,
       "benefit": null,
       "avgHr": null,
-      "intensityMin": null
+      "intensityMin": null,
+      "distanceUnit": "km"
     },
     "recoveryHours": null,
     "stats": [
@@ -4500,7 +4513,8 @@
       "anaerobicLabel": null,
       "benefit": null,
       "avgHr": null,
-      "intensityMin": null
+      "intensityMin": null,
+      "distanceUnit": "km"
     },
     "recoveryHours": null,
     "stats": [

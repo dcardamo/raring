@@ -15,15 +15,16 @@
 
  // Without `metric` the chart shows the screen's own 7 or 30 days, ending on `endDate`. With it, longer ranges and comparisons
  // come from the core, which averages long ranges into weeks or months.
- let {values,endDate='',label,unit='',decimals=0,band=null,bandLabel='Your usual range',readiness=false,nights=false,color=colors.ink,metric,initialRange='days7',openDay=null,overlayOnly}:{
+ // `compact` is a summary card's chart: its own metric, four ranges, tap to read a day; `more` opens the full tool.
+ let {values,endDate='',label,unit='',decimals=0,band=null,bandLabel='Your usual range',readiness=false,nights=false,color=colors.ink,metric,initialRange='days7',compact=false,ranges:compactRanges=['days7','days30','days90','year'],more,moreLabel='Compare and all history',openDay=null,overlayOnly}:{
   values:(number|null)[];endDate?:string;label:string;unit?:string;decimals?:number;band?:[number,number]|null;
-  bandLabel?:string;readiness?:boolean;nights?:boolean;color?:string;metric?:TrendMetric;initialRange?:TrendRange;openDay?:((date:string)=>void)|null;
+  bandLabel?:string;readiness?:boolean;nights?:boolean;color?:string;metric?:TrendMetric;initialRange?:TrendRange;compact?:boolean;ranges?:TrendRange[];more?:()=>void;moreLabel?:string;openDay?:((date:string)=>void)|null;
   // One fixed metric with a single overlay toggle instead of the explorer's metric choice and comparisons.
   overlayOnly?:TrendMetric;
  }=$props();
  const id=$props.id();
  // A caller can retain controls when its canonical detail is reopened by Back.
- const saved=untrack(()=>getContext<ChartStateContext|undefined>('chart-state')?.(metric ?? label));
+ const saved=untrack(()=>compact?undefined:getContext<ChartStateContext|undefined>('chart-state')?.(metric ?? label));
  let range=$state<TrendRange>(saved?.initial?.range ?? untrack(()=>initialRange)),offset=$state(saved?.initial?.offset ?? 0),width=$state(320);
  const generation=getContext<()=>number>('trend-generation') ?? (()=>0);
  let primary=$state<TrendMetric|null>(saved?.initial?.primary ?? null);
@@ -50,6 +51,9 @@
  let activeUnit=$derived(primary?shown?.series.unit??'':unit);
  let activeDecimals=$derived(primary?trendDecimals(primary):decimals);
  let activeReadiness=$derived(activeMetric==='readiness' || !activeMetric && readiness);
+ // Garmin's estimates arrive every few days or weeks: open on the latest one, not an empty latest day.
+ let sparse=$derived(activeMetric==='vo2max'||activeMetric==='fitnessAge');
+ const latestOffset=(list:TrendPoint[])=>{const last=list.findLastIndex(p=>p.value!=null);return last<0?0:list.length-1-last};
  $effect(()=>{
   generation();
   if(!activeMetric)return;
@@ -57,7 +61,7 @@
   let cancelled=false;
   view=null;busy=true;loadError='';
   api.trend(query)
-   .then(next=>{if(!cancelled){view=next;busy=false}})
+   .then(next=>{if(!cancelled){view=next;busy=false;if(sparse)offset=latestOffset(next.series.points)}})
    .catch(e=>{if(!cancelled){loadError=String(e);busy=false}});
   return ()=>{cancelled=true};
  });
@@ -112,8 +116,8 @@
 
 <div class="history" {@attach measure} aria-busy={busy}>
  <div class="history-top">
-  {#if metric && !overlayOnly}<label class="metric-choice"><span class="sr-only">Primary metric</span><select aria-label="Primary metric" value={activeMetric} onchange={(e)=>{primary=e.currentTarget.value as TrendMetric;offset=0;if(overlayMetric===primary)overlayMetric=defaultOverlay(primary)}}>{#each pairs as m}<option value={m}>{trendNames[m]}</option>{/each}</select></label>{:else}<span class="history-label">{label}</span>{/if}
-  <RangePicker value={range} onchange={setRange} label="History period" custom={!!metric} local={!metric} {nights}/>
+  {#if metric && !compact && !overlayOnly}<label class="metric-choice"><span class="sr-only">Primary metric</span><select aria-label="Primary metric" value={activeMetric} onchange={(e)=>{primary=e.currentTarget.value as TrendMetric;offset=0;if(overlayMetric===primary)overlayMetric=defaultOverlay(primary)}}>{#each pairs as m}<option value={m}>{trendNames[m]}</option>{/each}</select></label>{:else if !compact}<span class="history-label">{label}</span>{/if}
+  <RangePicker value={range} onchange={setRange} label="History period" custom={!!metric} local={!metric} {nights} only={compact?compactRanges:undefined}/>
  </div>
  {#if view?.freshness?.stale && view.freshness.recordedOn}<p class="stale-note" role="note">Last reading {dateLabel(view.freshness.recordedOn)} · {view.freshness.ageDays} days ago</p>{/if}
  {#if range==='custom'}<div class="dates"><label>Block start<input aria-label="Block start" type="date" min={firstDay} max={customEnd || latestDay} bind:value={customStart}/></label><label>Block end<input aria-label="Block end" type="date" min={customStart || firstDay} max={latestDay} bind:value={customEnd}/></label></div>{/if}
@@ -127,7 +131,7 @@
  </div>
  {#if canOpenDay && selected && openDay}<button class="open-day" onclick={()=>openDay(selected.start)}>Open {dateLabel(selected.start)}<Icon name="chevron" size={15}/></button>{/if}
  <div data-chart="history">
- <button class="chart-surface" tabindex="-1" aria-hidden="true" onclick={selectFromChart}>
+ <button class="chart-surface" tabindex={compact?0:-1} aria-hidden={compact?undefined:true} aria-label={compact?`${activeLabel} chart. ${selectedText}. Left and right arrows choose a day.`:undefined} onclick={selectFromChart} onkeydown={compact?(e)=>{if(e.key==='ArrowLeft'&&index>0){e.preventDefault();offset++}else if(e.key==='ArrowRight'&&index<count-1){e.preventDefault();offset--}}:undefined}>
   <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${activeLabel}, ${count} ${bucketName}. ${present} recorded. Missing readings are gaps.`}>
    {#if shownBand}
     <rect x={L} y={y(shownBand[1])} width={R-L} height={Math.max(1,y(shownBand[0])-y(shownBand[1]))} fill="#fff" opacity=".13"/>
@@ -162,11 +166,11 @@
  </button>
  {#if count}<div class="history-axis"><span>{bucket==='day'?dateLabel(points[0].start):axisLabel(points[0],bucket)}</span><span>{bucket==='day'?dateLabel(points[count-1].start):axisLabel(points[count-1],bucket)}</span></div>{/if}
  {#each [previous,overlay] as other}{#if other}<div class="sr-only">{other.name}: {other.days} recorded days</div>{/if}{/each}
- <div class="history-controls">
+ {#if !compact}<div class="history-controls">
   <button aria-label="Previous reading" disabled={index===0} onclick={()=>offset++}><Icon name="arrow-left" size={17}/></button>
   <input aria-label={'Selected '+activeLabel.toLowerCase()+' date'} aria-describedby={id} aria-valuetext={selectedText} type="range" min="0" max={Math.max(0,count-1)} step="1" value={index} oninput={(e)=>offset=count-1-Number(e.currentTarget.value)}/>
   <button aria-label="Next reading" disabled={index>=count-1} onclick={()=>offset--}><Icon name="arrow-right" size={17}/></button>
- </div>
+ </div>{/if}
  <span id={id} class="sr-only">{activeLabel}, {count} {bucketName}. {present} recorded. Missing readings are gaps. Use the slider to select a date.</span>
  <div class="history-legend">
   {#if shownBand}<span><i style:background="rgba(255,255,255,.13)"></i>{bandLabel}</span>{/if}
@@ -177,10 +181,9 @@
   <span class="record-count">{present} / {count} {bucket==='day'?'recorded':bucketName}</span>
  </div>
  </div>
- {#if metric}
-  {#if overlayOnly}
-  <div class="compare"><button class="overlay-toggle" aria-pressed={compare==='metric'} onclick={()=>{overlayMetric=overlayOnly;compare=compare==='metric'?'off':'metric'}}>Overlay {trendNames[overlayOnly].toLowerCase()}</button></div>
-  {:else}
+ {#if overlayOnly}<div class="compare"><button class="overlay-toggle" aria-pressed={compare==='metric'} onclick={()=>{overlayMetric=overlayOnly;compare=compare==='metric'?'off':'metric'}}>Overlay {trendNames[overlayOnly].toLowerCase()}</button></div>{/if}
+ {#if compact && more}<button class="link-row history-more" onclick={more}>{moreLabel}<Icon name="chevron" size={15}/></button>
+ {:else if metric && !compact && !overlayOnly}
   <div class="compare">
    <span class="compare-label">Compare</span>
    <div class="periods compare-options" role="group" aria-label="Compare">
@@ -192,7 +195,6 @@
     <select aria-label="Metric to overlay" value={overlayMetric} onchange={(e)=>overlayMetric=e.currentTarget.value as TrendMetric}>{#each choices as m}<option value={m}>{trendNames[m]}</option>{/each}</select>
    {/if}
   </div>
-  {/if}
   {#if compare==='previous'}<div class="dates"><label>Comparison block start<input aria-label="Comparison block start" type="date" min={firstDay} max={latestDay} bind:value={comparisonStart}/></label><button class="reset-date" onclick={()=>comparisonStart=''}>Use preceding period</button></div>{/if}
   {#if previous && shown}
    <p class="history-note">{shown.from} – {shown.to}<br/>Against {previous.points[0]?.start} – {previous.points.at(-1)?.end} · aligned by elapsed day</p>

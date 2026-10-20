@@ -1,5 +1,5 @@
-import {describe,it,expect} from 'vitest';
-import {duration,elapsed,pace,clock,dateLabel,monthLabel,shortMonth,signed,num,readAt} from './format';
+import {describe,it,expect,vi} from 'vitest';
+import {duration,elapsed,pace,clock,dateLabel,dateLabelIn,dayMonthYear,hoursMinutes,monthLabel,shortMonth,signed,signedTime,num,localDateTime,weekLetters,readAt} from './format';
 describe('Garmin formatting',()=>{
  it('dates a read time unless it was today',()=>{
   const now=new Date('2025-10-16T21:00:00');
@@ -26,5 +26,27 @@ describe('Garmin formatting',()=>{
   const instant='2025-10-16T20:12:00Z';
   expect(clock(instant)).toBe(new Date(instant).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
   expect(clock('invalid')).toBe('—');expect(clock(null)).toBe('—');
+ });
+ it('writes amounts of time and dates whose year matters',()=>{
+  expect(hoursMinutes(1194)).toBe('19 h 54 min');expect(hoursMinutes(16701)).toBe('278 h');expect(hoursMinutes(45)).toBe('45 min');expect(hoursMinutes(null)).toBe('—');
+  expect(signedTime(185)).toBe('+3 h 05');expect(signedTime(-44)).toBe('−44 min');expect(signedTime(0)).toBe('');
+  expect(dayMonthYear('2025-10-23')).toBe('23 Oct 2025');
+  expect(dateLabelIn('2025-10-23','2026-10-22')).toBe('Thu 23 Oct 2025');expect(dateLabelIn('2026-10-19','2026-10-22')).toBe('Mon 19 Oct');
+ });
+ it('dates an offset timestamp on the device clock, across midnight',()=>{
+  try{
+   // 02:00 UTC is the previous evening in Toronto and the same morning in Tokyo.
+   vi.stubEnv('TZ','America/Toronto');
+   expect(localDateTime('2025-10-16T02:00:00+00:00')).toBe('Wed 15 Oct · 22:00');
+   vi.stubEnv('TZ','Asia/Tokyo');
+   expect(localDateTime('2025-10-15T20:00:00Z')).toBe('Thu 16 Oct · 05:00');
+  }finally{vi.unstubAllEnvs()}
+  expect(localDateTime('2025-10-16T06:12:00')).toBe('Thu 16 Oct · 06:12');
+  expect(localDateTime(null)).toBe('—');
+ });
+ it('labels a plan week from its first day',()=>{
+  expect(weekLetters('2025-10-13').join('')).toBe('MTWTFSS');
+  expect(weekLetters('2025-10-12').join('')).toBe('SMTWTFS');
+  expect(weekLetters('2025-10-11').join('')).toBe('SSMTWTF');
  });
 });

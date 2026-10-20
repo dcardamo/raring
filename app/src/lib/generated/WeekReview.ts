@@ -15,4 +15,13 @@ reasons: Array<string>, illDays: number, pausedDays: number, restDays: number, n
 /**
  * For the week after this one; empty without goals.
  */
-proposals: Array<GoalProposal>, nextStart: string, decision: ReviewDecision | null, };
+proposals: Array<GoalProposal>, nextStart: string, 
+/**
+ * When an accepted change would take effect: next week's start, or today
+ * once that week has begun.
+ */
+appliesFrom: string, 
+/**
+ * Only the latest completed week's review, while undecided, can change goals.
+ */
+decidable: boolean, decision: ReviewDecision | null, };

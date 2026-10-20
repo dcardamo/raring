@@ -30,4 +30,9 @@ strength: number | null,
 /**
  * Garmin's latest VO₂ max estimate dated in the week.
  */
-vo2max: number | null, };
+vo2max: number | null, 
+/**
+ * That week's own targets (Goal ledger); None before goals or while a
+ * goal was off. Intensity following Garmin's goal is Garmin's weekly goal.
+ */
+zone2Goal: number | null, highIntensityGoal: number | null, intensityGoal: number | null, strengthGoal: number | null, };

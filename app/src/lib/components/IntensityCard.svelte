@@ -5,12 +5,12 @@
  import {weekRange} from '../plan';
  import Card from './Card.svelte';
  import Gauge from './Gauge.svelte';
- let {intensity,open}:{intensity:IntensityCard;open?:()=>void}=$props();
+ let {intensity,open,id}:{intensity:IntensityCard;open?:()=>void;id?:string}=$props();
  let met=$derived(intensity.goal!=null && intensity.total>=intensity.goal);
 </script>
 
-<Card title="Intensity minutes" onclick={open} extra="intensity-card">
- {#snippet aside()}<span class="pill" title={weekRange(intensity.start,intensity.end)}>This week</span>{/snippet}
+<Card title="Intensity minutes" onclick={open} extra="intensity-card" {id}>
+ {#snippet aside()}<span class="pill">{weekRange(intensity.start,intensity.end)}</span>{/snippet}
  <div class="ring">
   <Gauge size={112} stroke={11} value={intensity.total} max={intensity.goal??Math.max(intensity.total,1)} display={num(intensity.total)} caption={intensity.goal!=null?`of ${num(intensity.goal)}`:'min'} color={met?colors.good:colors.ink}/>
   <div class="split">

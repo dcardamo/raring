@@ -118,6 +118,42 @@ From item 11, in priority order.
   `enduranceScoreScalar` and `hillScoreScalar` (start, end, weekly
   aggregation); unverified.
 
+### Health and profile review follow-ups
+
+From the Health/Profile UX review (`.data/ux-review/health-profile.md`), in
+priority order; the bugs and most majors shipped (Done).
+
+- **VO₂ max and Fitness Age as dated estimates** (review M5): plot one point
+  per Garmin estimate with a faint step line, no weekly or monthly averaging
+  and no missing-day marks, and date the VO₂ max hero ("52 · Garmin estimate ·
+  Sun 12 Oct"). First confirm with a read-only probe whether stored
+  `max_metrics` and `fitness_age` rows repeat the estimate daily or appear
+  only on the day Garmin made it; the charts already open on the latest
+  estimate.
+- **Endurance, hill score and running tolerance details** (review M12): each
+  is a bare number. Carry the estimate's date and Garmin's level in
+  `TrainingView` and show them on the detail, or stop the Training tiles from
+  opening a detail until there is history (see the Trends follow-up on
+  `enduranceScoreScalar`). Coordinate with the Training lane.
+- **Bottom tab labels at 2× text** (review M4): "Plan", "Training" and
+  "Health" run together and "Progress" clips. App-wide; belongs with the
+  large-text audit.
+- **Trend chart axes** (review m1, m2): round y ticks with the unit on the top
+  label, and decide whether the missing-day dots under bar charts stay (the
+  line charts already show gaps). Chart legibility lane.
+- **Body Battery's latest time** (review m5): the detail gauge says "Latest
+  synced" without a time; `BodyBatteryCard` has no reading time yet.
+- **Vital details repeat the hero value** in the chart readout (review m15).
+- **Notification state on a phone**: on emulator-5560 (in-place debug
+  install, signer `0d59d1bf…7a63`, synthetic demo) a revoked
+  `POST_NOTIFICATIONS` showed the blocked line with Allow and greyed the six
+  switches, and re-granting cleared it on the next Settings open. Still to
+  check on a phone: the app's notifications switch turned off in Android
+  Settings while the permission stays granted (`areNotificationsEnabled`).
+- **Sign-in error wording**: map the native sign-in failures (no network,
+  cancelled, Garmin refused) to one plain line each once their messages are
+  known; Raring now only drops the "Error:" prefix.
+
 ### Chart legibility follow-ups
 
 From the chart legibility pass, in priority order.
@@ -144,12 +180,34 @@ From the Today and Sleep review's remainder, in priority order.
 
 ### 7a. Weekly plan follow-ups
 
+- Planning next week ahead: Plan shows one week, so Add, Move and Reschedule
+  offer only this plan week's remaining days. Week navigation (‹ ›) could open
+  next week once Plan has a dated route.
 - Check on a watch whose account starts the week on Sunday whether its own
   intensity-minutes widget resets on Monday like Garmin's weekly rows.
 - The mockup's "Next up" strength workout card on the plan screen waits for
   planned training (item 15) or the workout builder (item 22).
 - Offline help pages "How targets count" and "Rest days and paused weeks"
   when the Help screen ships.
+
+### Plan and Progress review follow-ups
+
+From the UX review (`.data/ux-review/plan-progress.md`), in priority order;
+the rest shipped (Done: Plan and Progress review fixes).
+
+- **PP-B13** (rest): Progress's calendar now opens the tapped day, but Today's
+  week cells still open Plan at today. Plan has no dated route to select a
+  day or another week; add one, then open the tapped day.
+- **PP-N5**: sessions during an illness or pause still read Planned and count
+  as placed; show them "On hold", muted and not placed (a Goal ledger rule
+  change).
+- **PP-N12**: goal colours repeat sport colours on Progress (Zone 2 and Ride
+  blue, intensity and Swim teal, strength pink); separate the palettes in the
+  spec's Look first.
+- The review of the week in progress (`#review/<this week>`) still labels
+  every goal Not counted; say "so far" instead, or route it to Plan.
+- Progress's activity chart has uneven y ticks (143, 72); round tick steps
+  belong with the chart legibility work.
 
 ### 8a. Strength follow-ups
 
@@ -169,6 +227,31 @@ From the Today and Sleep review's remainder, in priority order.
   activities, including ones timed without sets. `StrengthWeek.strengthActivities`
   is distinct from `sessionsWithSets`; missing lap presses must not reduce
   credit toward the weekly activity goal.
+
+### Training and workout review follow-ups
+
+From the read-only UX review of Training and workouts, in priority order.
+
+- **Real swim and walk**: the pool-swim fields (`poolLength` in the pool's
+  unit, `unitOfPoolLength.unitKey`, `activeLengths`, `averageSwolf`,
+  `averageStrokes`, `averageSwimCadenceInStrokesPerMinute`,
+  `averageStrokeDistance`) and a yard pool are synthetic; compare a real
+  pool swim (and an open-water swim) with Connect. Stroke-rate streams
+  (`directStrokeCadence`) aren't read. Add a swim and a walk to `raring demo`.
+- **Endurance and hill levels**: show Garmin's classification word and the
+  reading's date beside Endurance, Hill score and Run tolerance once their
+  fields are verified (the tiles now carry a chevron only).
+- **Units elsewhere**: running tolerance, Progress distance totals and gear
+  still read km; follow Garmin's measurement setting there too.
+- **Acute-load band per day**: the 30-day chart and metric detail use today's
+  optimal range; draw Garmin's stored range for each day where it exists.
+- **Large text**: at 2x on 360 px, the strength session rows, the acute
+  bar's tick labels and the Splits "Fastest" pill still pass their card;
+  some card text still runs long at 2x (the chart lane covers charts only).
+- **Fixtures from the core**: the preview's training, strength and workout
+  fixtures are still hand-made and disagree in places (lane vs board
+  strength counts, squat bests, the sets check time before the workout);
+  generate them from `raring demo` as `raring show` does.
 
 ### Thresholds follow-ups
 
@@ -414,6 +497,125 @@ faces, screens, sensors and audio prompts stay in Connect.
   is gone from the evening. Choose marks Garmin's session ◇ "Garmin ·
   read-only", "Review needed" under limits. The "?" and event chips have
   44 px targets.
+
+- **Plan and Progress review fixes** (from the UX review in
+  `.data/ux-review/plan-progress.md`). Commit "Offer review decisions only
+  where they can apply": only the latest completed, undecided week's review
+  offers Keep all and Accept (`WeekReview.decidable`); a change accepted after
+  next week began applies from that day as a revision, keeping the week's
+  starting target (`appliesFrom`, "From today, Thu 22 Oct"); kept proposals
+  read "Kept (proposed 3)". Add a session, Move and Reschedule offer only this
+  plan week's days, with the day on the button and an optional name.
+  Commit "Make the goal rings fit and say why a week didn't count": every
+  ring fits at any size (four- and five-goal weeks drew nothing inside 36 px),
+  marks sit over faded rings in the weekly strip (`GoalWeek.current`, `mark`),
+  this week's ring opens Plan, ring grids have a colour key, the week ring's
+  centre is clear, day cells mark planned and not-recorded sessions
+  (`DayCell.planned`) with the weekday above the date, the calendar falls back
+  to activity days without goals and hides for the current week, and the
+  Last week / Earlier weeks rows merge into the strip's "All weekly reviews".
+  Commit "Lead the weekly review with the decision": the goals card comes
+  first; readiness, Sleep Score, acute load and Fitness Age sit in one grid
+  with averages, the change against the week before and seven labelled days
+  instead of seven swipe cards; load and Fitness Age lose their invented
+  gauges and score colours; the win needs a change of 1 or more (it said
+  "Fitness age improved" beside "Steady"); the focus names Garmin's metric;
+  "Keep the momentum" is gone.
+  Commit "Make Progress readable and judge each week by its own goals":
+  Cardio and Strength draw each week's own target as a stepped line
+  (`DomainWeek.*Goal`; intensity following Garmin's goal now has its line),
+  sleep against need reads the need Sleep reads (Garmin's seconds field too)
+  and sits in the period report, Progress and reviews take the caller's clock
+  so a stale Garmin Coach snapshot plans nothing on both Plan and Progress,
+  one milestone row per set with its reps, dates carry the year when it isn't
+  this one, totals read "19 h 54 min" under one "Compared with" line, the
+  activity bars are an axis chart with blank days to come, the current week
+  and month are outlined, counts get whole-number ticks and measured zeros a
+  label; the causal copy, Latest readings tiles and the Strength bests and
+  lift charts (Training · Strength has them) are cut.
+  Commit "Gather what needs you on Plan": the week card keeps the rings, goal
+  lines (once reached, only "reached"; "was 2" on a second line; "to review"
+  counts recordings) and one Needs you place: review rows name the day and
+  recording and open the session, not-recorded sessions are one row with
+  Reschedule and Let it go; the event and Garmin Coach groups shrink to the
+  event's line in Events and one Coach line, so Days is back above the fold.
+  A recording that may be a session says which; unnamed sessions read "Run
+  18:00"; Coach cardio has a neutral icon; a Coach rest day is marked and said
+  beside your session; durations read "52 min"; removing an event asks
+  first; Do it today leaves no crumbs; inputs fit at large text; explainer
+  copy is cut.
+  Merged with the chart legibility work: the stepped goal lines, outlined
+  current bars and whole-number ticks keep its minimums (current bars keep
+  date ticks; spoken labels say this week or so far), and
+  `chart-legibility.mjs` now also measures Progress's Cardio, Strength and
+  Long-term sections.
+
+- **Training and workout review: major items** (commit "Make workouts and
+  Training readable per sport and unit"). Heart rate is one chart (bpm axis,
+  labelled zone floors, average, round minutes) at the top of Along the way
+  or in its own card; pace is drawn faster-up; distance, pace, speed and
+  elevation follow Garmin's measurement setting, swims read in the pool's
+  unit with pace per 100 and Garmin's swim fields; rides split by speed;
+  splits print their scale and only differing lap distances; zones show bpm
+  ranges; load focus prints Garmin's target as a solid band; the acute bar is
+  a toned dot on a neutral band with a round scale end; Training's load
+  history is a compact 30-day chart opening a new acute-load metric detail;
+  set bars show the weight change against last time; muscles are listed
+  once on Strength with shading scaled to the range; the text-only "Lifts and
+  exercises" card, the TE pills in Activities and the disclaimer lines are
+  gone; race predictions say Half marathon and Marathon. Smaller fixes: the
+  lane legend is a one-line key, the strength lane steps, Refresh from Garmin
+  is a text button, the next session carries ◇ Garmin schedule · read-only,
+  the Why sheet says "1.1× your 4-week load", Strength's ? opens the strength
+  help sheet, and dropped leading spaces are restored. Synthetic pool-swim and
+  walk fixtures were added to the preview, and Training's preview list now
+  matches Strength's sessions in date order.
+
+- **Training and workout review: bugs** (commit "Fix Training and workout
+  review bugs"). From the read-only UX review of Training and workouts: the
+  in-range headline says "In your optimal range"; week-lane letters follow
+  the plan week's first day; "Sets checked" uses one local date and clock;
+  Back keeps the chosen exercise, lift range, measure and one muscle range
+  shared by Training and Strength; lift charts sit on a date axis (range
+  start to today, year on the first month and January, dots thinned past 40
+  sessions) and bodyweight exercises chart most reps instead of dead weight
+  controls; Activities pages back through stored history by sport without a
+  Garmin request, Today's link opens it narrowed to today and `#activities`
+  aliases Training; unknown lanes are never 0; How it counted is left out
+  without goals; the acute-load trend prefers Training Status so the chart
+  and card agree; the Training eyebrow is the date and the 7-day fallback is
+  titled as such.
+
+- **Settings, Profile and Help review fixes** (commit "Make Settings say what
+  it erases and what Android allows"). Settings reads Android's notification
+  state each time it opens (new `notification_permission` command: Android's
+  notifications switch and the runtime permission) and replaces the old
+  Permission card with one blocked line that greys the switches; each switch
+  says when it fires, with clearer names. Sign-out is "Sign out and erase this
+  phone's data" with an in-place confirm naming goals, plans, limits and
+  routines and offering Export first. Import previews carry years and the
+  export's Raring version, Export and Import lead with one line, an empty
+  Garmin change log and the duplicate history card are gone, "?" sheets link
+  Help only where the area has pages, the heart-rate axis reads elapsed hours
+  ("6 h"), gear shows the app's date format, and sign-in errors drop the
+  "Error:" prefix.
+
+- **Health review fixes: resting-HR band, search and a summary Health**
+  (commit "Give Health its own resting-HR band and summary charts"). The
+  resting-HR chart's band is Raring's usual range over Garmin's daily resting
+  HR (`HealthView.restingHrRange`), never Health Status's Sleep HR baseline;
+  a table test covers every trend metric's band with and without Health
+  Status. Search normalises "spo2"/"vo2", adds synonyms and Health, Fitness
+  Age, intensity, journal, body composition, import/export and tab entries,
+  opens cards scrolled into view, and sends "resting heart rate" to Garmin's
+  daily resting HR while Sleep HR appears under its own name. Health's charts
+  are compact (own metric, 7D–1Y, tap to read, one link to the canonical
+  detail); the heart-rate detail gained the resting-HR history. Fitness Age's
+  history moved into its hero (sparkline and separate card removed, latest
+  estimate selected), the biggest lever folded into its driver, drivers print
+  Garmin's targets in words, the weight card summarises 30 days and opens the
+  full detail, Add weight lives on Profile only, signed zeros read 0.0, range
+  chips wrap at large text, and journal subtypes read as words.
 
 - **Chart and label legibility** (commit "Make every chart's text legible at
   phone widths and large text"). Sleep · Tonight's dial is a timeline from an

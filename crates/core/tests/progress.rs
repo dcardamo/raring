@@ -129,6 +129,10 @@ fn sleep_against_need_counts_nights_with_both_and_no_running_total() {
     }
     let s = view(&f, Period::Week, "2025-11-18", at(11, 18)).sleep.unwrap();
     assert_eq!((s.nights, s.below_hour), (2, 1));
+    // The same need Sleep reads: Garmin's seconds field when there is no adjusted need.
+    f.store.put("sleep", "2025-11-18", "now", &json!({"dailySleepDTO": {"sleepTimeSeconds": 300 * 60, "sleepNeed": {"totalSleepNeedInSeconds": 450 * 60}}})).unwrap();
+    let s = view(&f, Period::Week, "2025-11-18", at(11, 18)).sleep.unwrap();
+    assert_eq!((s.nights, s.below_hour), (2, 2));
 }
 
 fn sets(store: &Store, id: u64, date: &str, weight_g: f64, reps: u32) {
@@ -154,21 +158,27 @@ fn bests_are_awarded_once_and_a_garmin_edit_corrects_without_a_new_award() {
     sets(&f.store, 1, "2025-11-03", 90_000., 5);
     sets(&f.store, 2, "2025-11-10", 100_000., 5);
     let m = view(&f, Period::Month, "2025-11-18", at(11, 18));
-    let best = m.milestones.iter().find(|x| x.id == "best:SQUAT/BARBELL_BACK_SQUAT:5").unwrap();
-    assert_eq!((best.value.as_str(), best.date.as_str(), best.new, best.corrected), ("100 kg", "2025-11-10", false, false));
-    assert_eq!(best.title, "Barbell Back Squat · best for 5 reps");
+    let squat = |m: &ProgressView| m.milestones.iter().find(|x| x.kind == MilestoneKind::Best).cloned().unwrap();
+    assert_eq!(m.milestones.iter().filter(|x| x.kind == MilestoneKind::Best).count(), 1, "one row per set, not one per rep count");
+    let best = squat(&m);
+    assert_eq!((best.value.as_str(), best.date.as_str(), best.new, best.corrected), ("100 kg × 5 · heaviest for 1–5 reps", "2025-11-10", false, false));
+    assert_eq!(best.title, "Barbell Back Squat");
     f.core.local_action(&LocalAction::MilestonesSeen, at(11, 18)).unwrap();
     let again = view(&f, Period::Month, "2025-11-18", at(11, 18));
     assert!(again.milestones.iter().all(|x| !x.new), "seen once, never replayed");
     // A Garmin edit removes the heavier set: the record moves back, corrected once.
     sets(&f.store, 2, "2025-11-10", 80_000., 5);
     let edited = view(&f, Period::Month, "2025-11-18", at(11, 18));
-    let best = edited.milestones.iter().find(|x| x.id == "best:SQUAT/BARBELL_BACK_SQUAT:5").unwrap();
-    assert_eq!((best.value.as_str(), best.date.as_str(), best.new, best.corrected), ("90 kg", "2025-11-03", false, true));
+    let best = squat(&edited);
+    assert_eq!((best.value.as_str(), best.date.as_str(), best.new, best.corrected), ("90 kg × 5 · heaviest for 1–5 reps", "2025-11-03", false, true));
     // A genuinely heavier set later is a new award.
     sets(&f.store, 3, "2025-11-18", 105_000., 5);
-    let best = view(&f, Period::Month, "2025-11-18", at(11, 18)).milestones.into_iter().find(|x| x.id == "best:SQUAT/BARBELL_BACK_SQUAT:5").unwrap();
-    assert_eq!((best.value.as_str(), best.new, best.corrected), ("105 kg", true, false));
+    let best = squat(&view(&f, Period::Month, "2025-11-18", at(11, 18)));
+    assert_eq!((best.value.as_str(), best.new, best.corrected), ("105 kg × 5 · heaviest for 1–5 reps", true, false));
+    // A lighter set with more reps holds the higher rep counts on its own row.
+    sets(&f.store, 4, "2025-11-18", 60_000., 10);
+    let rows: Vec<String> = view(&f, Period::Month, "2025-11-18", at(11, 18)).milestones.into_iter().filter(|x| x.kind == MilestoneKind::Best).map(|x| x.value).collect();
+    assert_eq!(rows, ["105 kg × 5 · heaviest for 1–5 reps", "60 kg × 10 · heaviest for 8–10 reps"]);
 }
 
 #[test]
@@ -194,8 +204,22 @@ fn goals_over_time_show_each_weeks_rings_and_the_first_fully_met_week() {
     assert_eq!(starts, ["2025-11-03", "2025-11-10", "2025-11-17"], "weeks before goals have none");
     assert_eq!((m.goal_weeks[0].met, m.goal_weeks[0].goals, m.goal_weeks[0].rings[0].fill), (1, 1, 1.));
     assert_eq!((m.goal_weeks[1].met, m.goal_weeks[1].rings[0].fill), (0, 0.));
+    let marks: Vec<(bool, Option<DayMark>)> = m.goal_weeks.iter().map(|w| (w.current, w.mark)).collect();
+    assert_eq!(marks, [(false, None), (false, None), (true, None)], "the week in progress is current, not unknown");
     let first = m.milestones.iter().find(|x| x.kind == MilestoneKind::GoalWeek).unwrap();
     assert_eq!((first.date.as_str(), first.route.as_deref()), ("2025-11-09", Some("review/2025-11-03")));
+}
+
+#[test]
+fn a_week_that_did_not_count_says_why_on_its_rings() {
+    let f = fx("goalweek-marks");
+    f.core.local_action(&LocalAction::SetGoals { targets: GoalTargets { strength_sessions: 1, ..Default::default() } }, at(11, 3)).unwrap();
+    f.core.local_action(&LocalAction::Pause { reason: PauseReason::Ill, review: None }, at(11, 11)).unwrap();
+    f.core.local_action(&LocalAction::Resume, at(11, 13)).unwrap();
+    f.store.set_cursor("listed:lo", "2025-11-05").unwrap();
+    let m = view(&f, Period::Month, "2025-11-18", at(11, 18));
+    let marks: Vec<(bool, Option<DayMark>)> = m.goal_weeks.iter().map(|w| (w.counted, w.mark)).collect();
+    assert_eq!(marks, [(false, Some(DayMark::Unknown)), (false, Some(DayMark::Ill)), (false, None)]);
 }
 
 #[test]
@@ -234,7 +258,7 @@ fn vanished_records_remain_visible_as_quiet_corrections() {
     f.store.put("exercise_sets","1","now",&json!({"exerciseSets":[]})).unwrap();
     let changed=view(&f,Period::Month,"2025-11-18",at(11,18));
     assert!(!changed.milestones.is_empty());
-    assert!(changed.milestones.iter().all(|m|m.corrected && !m.new && m.route.is_none() && m.value=="Evidence no longer available"));
+    assert!(changed.milestones.iter().all(|m|m.corrected && !m.new && m.route.is_none() && m.value.starts_with("Evidence no longer available")));
 }
 
 #[test]
@@ -291,7 +315,7 @@ fn ring_days_cover_whole_plan_weeks_of_week_and_month_periods() {
 }
 
 #[test]
-fn domains_report_weeks_bests_and_months_without_inventing_zeroes() {
+fn domains_report_weeks_and_months_without_inventing_zeroes() {
     let f = fx("domains");
     sets(&f.store, 1, "2025-11-03", 90_000., 5);
     sets(&f.store, 2, "2025-11-10", 100_000., 3);
@@ -308,12 +332,27 @@ fn domains_report_weeks_bests_and_months_without_inventing_zeroes() {
     assert_eq!((wk.strength, wk.zone2_min, wk.vo2max, wk.mark), (Some(1.), None, Some(48.), None));
     let earlier = d.weeks.iter().find(|w| w.start == "2025-10-06").unwrap();
     assert_eq!((earlier.strength, earlier.zone2_min), (Some(0.), Some(0.)), "a covered empty week is zero");
-    let best = &d.bests[0];
-    assert_eq!((best.name.as_str(), best.weight, best.reps, best.date.as_str()), ("Barbell Back Squat", Some(100.), 3, "2025-11-10"), "the heaviest set");
     assert_eq!(d.months.len(), 12);
     let nov = d.months.last().unwrap();
     assert_eq!((nov.start.as_str(), nov.minutes, nov.vo2max), ("2025-11-01", Some(110.), Some(48.)));
     assert_eq!(d.months[0].minutes, None, "before history");
+}
+
+#[test]
+fn each_domain_week_carries_its_own_targets() {
+    let f = fx("domain-goals");
+    let targets = |strength| GoalTargets { strength_sessions: strength, intensity_garmin_goal: true, ..Default::default() };
+    f.core.local_action(&LocalAction::SetGoals { targets: targets(1) }, at(11, 4)).unwrap();
+    f.core.local_action(&LocalAction::SetGoals { targets: targets(2) }, at(11, 12)).unwrap();
+    for d in 10..=18 {
+        f.store.put("summary", &format!("2025-11-{d}"), "now", &json!({"moderateIntensityMinutes": 10, "vigorousIntensityMinutes": 5, "intensityMinutesGoal": 150})).unwrap();
+    }
+    let d = f.core.progress_domains(at(11, 18));
+    let goals = |start: &str| d.weeks.iter().find(|w| w.start == start).map(|w| (w.strength_goal, w.intensity_goal)).unwrap();
+    assert_eq!(goals("2025-10-27"), (None, None), "no goal before goals began");
+    assert_eq!(goals("2025-11-03").0, Some(1.));
+    assert_eq!(goals("2025-11-10"), (Some(2.), Some(150.)), "a week ends on its latest target; intensity follows Garmin's goal");
+    assert_eq!(d.weeks.last().unwrap().zone2_goal, None, "a goal that is off has no line");
 }
 
 #[test]

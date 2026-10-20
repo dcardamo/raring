@@ -2,6 +2,8 @@ import type {Factor} from './generated/Factor';
 import type {VitalReading} from './generated/VitalReading';
 import type {VitalsCard} from './generated/VitalsCard';
 import type {Tone} from './generated/Tone';
+import type {TrendMetric} from './generated/TrendMetric';
+import type {HealthView} from './generated/HealthView';
 
 export function rangeStatus(value: number | null, range: [number, number] | null, kind?: VitalReading['kind']): {label: string; tone: Tone} {
   if (value == null) return {label: 'Not recorded', tone: 'neutral'};
@@ -21,7 +23,17 @@ export function vitalStatus(v: VitalReading): {label:string; tone:Tone} {
   return rangeStatus(v.value,v.normal,v.kind);
 }
 
-export const vitalName = (v: VitalReading) => v.kind==='restingHr' && (v.status || v.rangeSource==='garmin') ? 'Sleep HR' : shortVitalNames[v.kind];
+/** Health Status's HR is Garmin's average during sleep, not resting HR (Rules: Normal range). */
+export const isSleepHr = (v: VitalReading) => v.kind==='restingHr' && (!!v.status || v.rangeSource==='garmin');
+export const vitalName = (v: VitalReading) => isSleepHr(v) ? 'Sleep HR' : shortVitalNames[v.kind];
+/** The history a vital's reading and range belong to. */
+export const vitalTrend = (v: VitalReading): TrendMetric => isSleepHr(v) ? 'sleepHr' : v.kind;
+/** A trend chart's usual band, only from a range measured on that same metric: Sleep HR's baseline never shades resting HR. */
+export function trendBand(metric: TrendMetric, health: Pick<HealthView,'vitals'|'restingHrRange'>): [number, number] | null {
+  if (metric === 'restingHr') return health.restingHrRange ?? null;
+  const reading = health.vitals.readings.find(v => vitalTrend(v) === metric);
+  return reading?.normal ? [reading.normal[0], reading.normal[1]] : null;
+}
 export const rangeName = (v: VitalReading) => v.rangeSource==='garmin' || v.status ? 'Garmin baseline' : v.rangeSource==='raring' ? 'Raring usual range' : 'Personal range';
 
 export function vitalSummary(vitals: VitalsCard) {
@@ -34,7 +46,7 @@ export function vitalSummary(vitals: VitalsCard) {
     : complete ? 'Within your ranges'
     : compared.length ? `${compared.length} ${compared.length===1?'reading':'readings'} in range`
     : recorded.length ? 'Getting to know your usual' : 'Waiting for readings';
-  const detail = `${recorded.length} of ${vitals.readings.length} recorded · ${compared.length} comparable`;
+  const detail = `${recorded.length} of ${vitals.readings.length} recorded`;
   const tone: Tone = outside ? 'fair' : complete ? 'good' : 'neutral';
   return {headline, detail, tone, outside};
 }

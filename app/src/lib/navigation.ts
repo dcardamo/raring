@@ -2,14 +2,14 @@ export const tabs = ['today', 'plan', 'training', 'health', 'progress'] as const
 
 const metrics = new Set([
   'bodyBattery', 'stress', 'heartRate', 'restingHr', 'hrv', 'respiration', 'spo2', 'skinTemp',
-  'vo2max', 'endurance', 'hill', 'runningTolerance',
+  'vo2max', 'endurance', 'hill', 'runningTolerance', 'acuteLoad',
 ]);
 const routes = new Set([...tabs, 'sleep', 'sleep/last', 'sleep/tonight', 'readiness', 'settings', 'onboarding', 'strength', 'help',
-  'activities', 'profile', 'gear', 'plan/commitments', 'review/latest', 'reviews', 'health/weight', 'progress/milestones']);
+  'profile', 'gear', 'plan/commitments', 'review/latest', 'reviews', 'health/weight', 'progress/milestones']);
 // Earlier routes keep working; each opens its current page, never a silent Today.
-export const aliases: Record<string, string> = {checkin: 'review/latest', 'plan-setup': 'plan/commitments', explore: 'training', 'metric/weight': 'health/weight'};
+export const aliases: Record<string, string> = {checkin: 'review/latest', 'plan-setup': 'plan/commitments', explore: 'training', 'metric/weight': 'health/weight', activities: 'training'};
 export const helpPages = ['strength-start', 'strength-sets', 'strength-muscles', 'strength-watches'] as const;
-const trainingMetrics = new Set(['vo2max', 'endurance', 'hill', 'runningTolerance']);
+const trainingMetrics = new Set(['vo2max', 'endurance', 'hill', 'runningTolerance', 'acuteLoad']);
 
 /** A real calendar date, so a mistyped fragment opens Today rather than an empty page. */
 export function isoDate(value: string): boolean {
@@ -90,7 +90,7 @@ export function routeTrail(target: string, fromTrail: string[] = []): string[] {
   if (route === 'plan/commitments') return fromTrail.at(-1)?.startsWith('review/') ? [...fromTrail, route] : ['today', 'plan', route];
   if (route === 'reviews' || route === 'progress/milestones') return ['today', 'progress', route];
   if (route.startsWith('review/')) return fromTrail.at(-1) === 'reviews' ? [...fromTrail, route] : ['today', 'progress', route];
-  if (route === 'strength' || route === 'activities') return ['today', 'training', route];
+  if (route === 'strength') return ['today', 'training', route];
   if (route === 'profile') return over(route, fromTrail, page => page === 'profile' || page === 'settings' || page === 'gear');
   if (route === 'gear') return fromTrail.at(-1) === 'profile' ? [...fromTrail, route] : ['today', 'training', route];
   if (route === 'settings') {
@@ -105,10 +105,10 @@ export function routeTrail(target: string, fromTrail: string[] = []): string[] {
   }
   if (route.startsWith('workout/')) {
     const last = fromTrail.at(-1);
-    if (last === 'strength' || last === 'activities') return ['today', 'training', last, route];
+    if (last === 'strength') return ['today', 'training', last, route];
     const tab = section(fromTrail);
     if (tab) return ['today', tab, route];
-    return fromTrail.some(page => page === 'today') ? ['today', route] : ['today', 'training', 'activities', route];
+    return fromTrail.some(page => page === 'today') ? ['today', route] : ['today', 'training', route];
   }
   const metric = route.slice(7);
   const tab = section(fromTrail);

@@ -5,7 +5,11 @@ export type WorkoutCount = {
 /**
  * The plan week's first day.
  */
-week: string, lines: Array<CountLine>, 
+week: string, 
+/**
+ * Whether any weekly goal is on that week; without one, nothing counts.
+ */
+goals: boolean, lines: Array<CountLine>, 
 /**
  * Your session (or Garmin Coach's) this recording completed.
  */

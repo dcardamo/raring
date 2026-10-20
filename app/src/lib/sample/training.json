@@ -15,7 +15,7 @@
     "title": "Why Productive",
     "summary": "Your load is building fitness. Load focus shows an anaerobic shortage.",
     "feedback": null,
-    "source": "From Garmin's training status inputs. Raring adds no score.",
+    "source": "From Garmin's training status inputs.",
     "inputs": [
       {
         "key": "loadFocus",
@@ -28,7 +28,7 @@
       {
         "key": "acuteLoad",
         "name": "Acute load",
-        "value": "612 · ratio 1.1",
+        "value": "612 · 1.1× your 4-week load",
         "rating": "Optimal",
         "tone": "good",
         "detail": "Your last 7 days of load against your 4-week load."
@@ -51,7 +51,7 @@
       }
     ]
   },
-  "headline": "Room to build",
+  "headline": "In your optimal range",
   "chips": [
     {
       "icon": "flame",
@@ -150,11 +150,11 @@
       "seconds": 2710
     },
     {
-      "label": "Half",
+      "label": "Half marathon",
       "seconds": 5990
     },
     {
-      "label": "Full",
+      "label": "Marathon",
       "seconds": 12665
     }
   ],
@@ -227,30 +227,8 @@
       "anaerobicLabel": "Minor",
       "benefit": "Tempo",
       "avgHr": 152,
-      "intensityMin": 62
-    },
-    {
-      "id": "9000000000002",
-      "icon": "strength",
-      "name": "Lower A",
-      "startLocal": "2025-10-15T17:12:00",
-      "durationS": 2882,
-      "distanceKm": null,
-      "load": 74,
-      "zoneSeconds": [
-        840,
-        1320,
-        540,
-        180,
-        2
-      ],
-      "aerobicTe": null,
-      "aerobicLabel": null,
-      "anaerobicTe": null,
-      "anaerobicLabel": null,
-      "benefit": null,
-      "avgHr": 118,
-      "intensityMin": 24
+      "intensityMin": 62,
+      "distanceUnit": "km"
     },
     {
       "id": "9000000000003",
@@ -273,7 +251,224 @@
       "anaerobicLabel": "Minor",
       "benefit": "Base",
       "avgHr": 138,
-      "intensityMin": 96
+      "intensityMin": 96,
+      "distanceUnit": "km"
+    },
+    {
+      "id": "9000000000002",
+      "icon": "strength",
+      "name": "Lower A",
+      "startLocal": "2025-10-15T17:12:00",
+      "durationS": 2882,
+      "distanceKm": null,
+      "load": 74,
+      "zoneSeconds": [
+        840,
+        1320,
+        540,
+        180,
+        2
+      ],
+      "aerobicTe": null,
+      "aerobicLabel": null,
+      "anaerobicTe": null,
+      "anaerobicLabel": null,
+      "benefit": null,
+      "avgHr": 118,
+      "intensityMin": 24,
+      "distanceUnit": "km"
+    },
+    {
+      "id": "9000000000004",
+      "icon": "strength",
+      "name": "Upper B",
+      "startLocal": "2025-10-14T07:10:00",
+      "durationS": 3120,
+      "distanceKm": null,
+      "load": 68,
+      "zoneSeconds": [
+        700,
+        1500,
+        600,
+        200,
+        0
+      ],
+      "aerobicTe": null,
+      "aerobicLabel": null,
+      "anaerobicTe": null,
+      "anaerobicLabel": null,
+      "benefit": null,
+      "avgHr": null,
+      "intensityMin": null,
+      "distanceUnit": "km"
+    },
+    {
+      "id": "9000000000005",
+      "icon": "strength",
+      "name": "Strength",
+      "startLocal": "2025-10-13T12:30:00",
+      "durationS": 2400,
+      "distanceKm": null,
+      "load": 31,
+      "zoneSeconds": [
+        1500,
+        800,
+        100,
+        0,
+        0
+      ],
+      "aerobicTe": null,
+      "aerobicLabel": null,
+      "anaerobicTe": null,
+      "anaerobicLabel": null,
+      "benefit": null,
+      "avgHr": null,
+      "intensityMin": null,
+      "distanceUnit": "km"
+    },
+    {
+      "id": "9000000000007",
+      "icon": "swim",
+      "name": "Pool Swim",
+      "startLocal": "2025-10-09T07:05:00",
+      "durationS": 1920,
+      "distanceKm": 1.5,
+      "load": 58,
+      "zoneSeconds": [
+        300,
+        900,
+        600,
+        120,
+        0
+      ],
+      "aerobicTe": 2.4,
+      "aerobicLabel": "Improving",
+      "anaerobicTe": 1.2,
+      "anaerobicLabel": "Minor",
+      "benefit": "Base",
+      "avgHr": 132,
+      "intensityMin": 30,
+      "distanceUnit": "m"
+    },
+    {
+      "id": "9000000000110",
+      "icon": "strength",
+      "name": "Lower A",
+      "startLocal": "2025-10-08T18:05:00",
+      "durationS": 2700,
+      "distanceKm": null,
+      "load": 60,
+      "zoneSeconds": [
+        800,
+        1300,
+        500,
+        150,
+        0
+      ],
+      "aerobicTe": null,
+      "aerobicLabel": null,
+      "anaerobicTe": null,
+      "anaerobicLabel": null,
+      "benefit": null,
+      "avgHr": null,
+      "intensityMin": null,
+      "distanceUnit": "km"
+    },
+    {
+      "id": "9000000000008",
+      "icon": "walk",
+      "name": "Lunch Walk",
+      "startLocal": "2025-10-07T12:10:00",
+      "durationS": 2880,
+      "distanceKm": 4.1,
+      "load": 22,
+      "zoneSeconds": [
+        1500,
+        1200,
+        180,
+        0,
+        0
+      ],
+      "aerobicTe": 1.1,
+      "aerobicLabel": "Improving",
+      "anaerobicTe": 1.2,
+      "anaerobicLabel": "Minor",
+      "benefit": "Recovery",
+      "avgHr": 104,
+      "intensityMin": null,
+      "distanceUnit": "km"
+    },
+    {
+      "id": "9000000000109",
+      "icon": "strength",
+      "name": "Upper A",
+      "startLocal": "2025-10-01T18:05:00",
+      "durationS": 2730,
+      "distanceKm": null,
+      "load": 61,
+      "zoneSeconds": [
+        800,
+        1300,
+        500,
+        150,
+        0
+      ],
+      "aerobicTe": null,
+      "aerobicLabel": null,
+      "anaerobicTe": null,
+      "anaerobicLabel": null,
+      "benefit": null,
+      "avgHr": null,
+      "intensityMin": null,
+      "distanceUnit": "km"
+    },
+    {
+      "id": "9000000000108",
+      "icon": "strength",
+      "name": "Lower A",
+      "startLocal": "2025-09-24T18:05:00",
+      "durationS": 2760,
+      "distanceKm": null,
+      "load": 62,
+      "zoneSeconds": [
+        800,
+        1300,
+        500,
+        150,
+        0
+      ],
+      "aerobicTe": null,
+      "aerobicLabel": null,
+      "anaerobicTe": null,
+      "anaerobicLabel": null,
+      "benefit": null,
+      "avgHr": null,
+      "intensityMin": null,
+      "distanceUnit": "km"
+    },
+    {
+      "id": "9000000000107",
+      "icon": "strength",
+      "name": "Upper A",
+      "startLocal": "2025-09-17T18:05:00",
+      "durationS": 2790,
+      "distanceKm": null,
+      "load": 63,
+      "zoneSeconds": [
+        800,
+        1300,
+        500,
+        150,
+        0
+      ],
+      "aerobicTe": null,
+      "aerobicLabel": null,
+      "anaerobicTe": null,
+      "anaerobicLabel": null,
+      "benefit": null,
+      "avgHr": null,
+      "intensityMin": null,
+      "distanceUnit": "km"
     }
   ],
   "planned": {
@@ -382,8 +577,8 @@
         "cumulative": [
           0,
           30,
-          30,
-          30,
+          82,
+          100,
           null,
           null,
           null

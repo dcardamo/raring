@@ -13,6 +13,10 @@
  const n = (v: number | null) => v == null ? '—' : String(Math.round(v));
  const toggle = (k: GoalKind) => chosen = chosen.includes(k) ? chosen.filter(x => x !== k) : [...chosen, k];
  let decided = $derived(review.decision);
+ // A decision keeps the proposals it saw; an old or ongoing week offers none.
+ let shown = $derived(decided ? decided.proposals : review.decidable ? review.proposals : []);
+ let from = $derived(decided ? (decided.at.slice(0, 10) > review.nextStart ? decided.at.slice(0, 10) : review.nextStart) : review.appliesFrom);
+ let fromLabel = $derived(from === review.nextStart ? `Next week, from ${dateLabel(from)}` : `From today, ${dateLabel(from)}`);
 </script>
 <section class="card wr" aria-labelledby="wr-h">
  <h3 id="wr-h">Goals · week of {dateLabel(review.start)}</h3>
@@ -21,13 +25,13 @@
  {:else}<p class="small">No weekly goals that week.</p>{/if}
  {#if review.reasons.length}<p class="small">{review.counted ? '' : 'Not counted toward next week: '}{review.reasons.join(' · ')}</p>{/if}
  {#if review.notRecorded}<p class="small">{review.notRecorded} planned session{review.notRecorded === 1 ? '' : 's'} not recorded</p>{/if}
- {#if review.proposals.length}
-  <h4>Next week, from {dateLabel(review.nextStart)}</h4>
-  <ul class="props">{#each review.proposals as p}<li>
+ {#if shown.length}
+  <h4>{fromLabel}</h4>
+  <ul class="props">{#each shown as p}{@const accepted = decided?.accepted.includes(p.kind)}<li>
    {#if p.proposed !== p.current && !decided}<label><input type="checkbox" checked={chosen.includes(p.kind)} onchange={() => toggle(p.kind)}/><b>{GOALS[p.kind].name}</b> {n(p.current)} → {n(p.proposed)} {unitFor(p.kind, p.proposed)}</label>
-   {:else}<span><b>{GOALS[p.kind].name}</b> {p.proposed !== p.current && decided?.accepted.includes(p.kind) ? `${n(p.current)} → ${n(p.proposed)}` : `keep ${n(p.current)}`} {unitFor(p.kind, p.current)}</span>{/if}
-   <small>{p.reason}</small></li>{/each}</ul>
-  {#if decided}<p class="small">Decided{decided.accepted.length ? `: ${decided.accepted.map(k => GOALS[k].name).join(', ')} changed from next week` : ': goals kept'}.</p>
+   {:else}<span><b>{GOALS[p.kind].name}</b> {p.proposed !== p.current && accepted ? `${n(p.current)} → ${n(p.proposed)}` : `keep ${n(p.current)}`} {unitFor(p.kind, p.current)}</span>{/if}
+   {#if decided && !accepted && p.proposed !== p.current}<small>Kept (proposed {n(p.proposed)})</small>{:else}<small>{p.reason}</small>{/if}</li>{/each}</ul>
+  {#if decided}<p class="small">Decided{decided.accepted.length ? `: ${decided.accepted.map(k => GOALS[k].name).join(', ')} changed from ${dateLabel(from)}` : ': goals kept'}.</p>
   {:else}<div class="acts">{#if changes.length}<button class="primary" disabled={busy || !chosen.length} onclick={() => act({action: 'decideReview', week: review.start, accepted: chosen})}>Accept {chosen.length || ''} change{chosen.length === 1 ? '' : 's'}</button>{/if}<button class="secondary" disabled={busy} onclick={() => act({action: 'decideReview', week: review.start, accepted: []})}>Keep all</button></div>{/if}
  {/if}
  <button class="edit" onclick={() => navigate('plan/commitments')}>Edit goals</button>

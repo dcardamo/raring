@@ -26,7 +26,8 @@ planned: number,
  */
 remaining: number | null, reached: boolean, 
 /**
- * Plan items for this goal that need review.
+ * Recordings to review for this goal: each counted once, however many
+ * of its sessions could be it.
  */
 review: number, 
 /**

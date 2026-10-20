@@ -1,5 +1,6 @@
 import {describe,it,expect} from 'vitest';
-import {rangeStatus,vitalStatus,vitalSummary,limitingFactor} from './signals';
+import {rangeStatus,vitalStatus,vitalSummary,limitingFactor,trendBand,vitalTrend,vitalName} from './signals';
+import type {TrendMetric} from './generated/TrendMetric';
 import type {VitalsCard} from './generated/VitalsCard';
 import type {VitalReading} from './generated/VitalReading';
 
@@ -12,7 +13,7 @@ describe('personal range presentation',()=>{
  it('does not call missing readings normal, even when a baseline exists',()=>{
   expect(rangeStatus(null,[44,52])).toEqual({label:'Not recorded',tone:'neutral'});
   expect(vitalSummary(card(vital(48,[44,52]),vital(null,[44,52])))).toMatchObject({
-   headline:'1 reading in range',detail:'1 of 2 recorded · 1 comparable',tone:'neutral',
+   headline:'1 reading in range',detail:'1 of 2 recorded',tone:'neutral',
   });
  });
  it('keeps uncalibrated readings neutral',()=>{
@@ -59,4 +60,39 @@ it('selects the factor Garmin rates worst without changing their order',()=>{
  expect(factors[0].key).toBe('sleep');
  expect(limitingFactor([factors[1],factors[3]])).toBeNull();
  expect(limitingFactor([])).toBeNull();
+});
+
+describe('trend bands come only from the same measure',()=>{
+ const reading=(kind:VitalReading['kind'],normal:[number,number],healthStatus:boolean):VitalReading=>({
+  kind,value:50,normal,unit:'',scale:[0,100],trend:[],tone:'good',status:healthStatus?'IN_RANGE':null,rangeSource:healthStatus?'garmin':'raring',
+ });
+ const health=(healthStatus:boolean)=>({
+  restingHrRange:[44,50] as [number,number],
+  vitals:card(reading('restingHr',[52,62],healthStatus),reading('hrv',[48,63],healthStatus),reading('respiration',[13,15],healthStatus),reading('spo2',[94,98],healthStatus),reading('skinTemp',[-0.4,0.4],healthStatus)),
+ });
+ const metrics:TrendMetric[]=['readiness','sleepScore','sleepTime','hrv','restingHr','sleepHr','respiration','spo2','skinTemp','bodyBattery','stress','vo2max','fitnessAge','acuteLoad'];
+ it.each([
+  // metric, with Health Status, without
+  ['restingHr',[44,50],[44,50]],
+  ['sleepHr',[52,62],null],
+  ['hrv',[48,63],[48,63]],
+  ['respiration',[13,15],[13,15]],
+  ['spo2',[94,98],[94,98]],
+  ['skinTemp',[-0.4,0.4],[-0.4,0.4]],
+ ] as [TrendMetric,[number,number]|null,[number,number]|null][])('%s',(metric,withStatus,without)=>{
+  expect(trendBand(metric,health(true))).toEqual(withStatus);
+  expect(trendBand(metric,health(false))).toEqual(without);
+ });
+ it('never shades a metric without a measured range',()=>{
+  for(const m of metrics.filter(m=>!['restingHr','sleepHr','hrv','respiration','spo2','skinTemp'].includes(m))){
+   expect(trendBand(m,health(true))).toBeNull();
+   expect(trendBand(m,health(false))).toBeNull();
+  }
+ });
+ it('names and routes Health Status HR as Sleep HR, never resting HR',()=>{
+  expect(vitalTrend(reading('restingHr',[52,62],true))).toBe('sleepHr');
+  expect(vitalName(reading('restingHr',[52,62],true))).toBe('Sleep HR');
+  expect(vitalTrend(reading('restingHr',[52,62],false))).toBe('restingHr');
+  expect(vitalName(reading('restingHr',[52,62],false))).toBe('Resting HR');
+ });
 });

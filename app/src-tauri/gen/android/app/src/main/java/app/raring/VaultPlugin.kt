@@ -2,6 +2,7 @@ package app.raring
 
 import android.Manifest
 import android.app.Activity
+import android.app.NotificationManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Build
@@ -308,6 +309,13 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
             false
         }
         invoke.resolve(JSObject().apply { put("launched", launched) })
+    }
+    // Android can block notifications in its settings even after the permission was granted.
+    @Command fun notificationPermission(invoke: Invoke) {
+        val manager = activity.getSystemService(NotificationManager::class.java)
+        invoke.resolve(JSObject().apply {
+            put("granted", manager.areNotificationsEnabled() && (Build.VERSION.SDK_INT < 33 || getPermissionState("notifications") == PermissionState.GRANTED))
+        })
     }
     @Command fun requestNotificationPermission(invoke: Invoke) {
         if (Build.VERSION.SDK_INT < 33 || getPermissionState("notifications") == PermissionState.GRANTED) {
