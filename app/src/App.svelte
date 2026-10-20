@@ -3,7 +3,7 @@
  import GarminChanges from './lib/components/GarminChanges.svelte';
  import type {GarminChange} from './lib/generated/GarminChange';
  import {isTauri} from '@tauri-apps/api/core';
- import {createNavigation,knownRoute,tabs} from './lib/navigation';
+ import {createNavigation,datedDetail,knownRoute,tabs} from './lib/navigation';
  import {shouldSync,CACHE_POLL_MS} from './lib/freshness';
  import {watchLabel,watchNeedsSync} from './lib/watch';
  import {masonry} from './lib/masonry';
@@ -164,7 +164,9 @@
  const views=new Map<string,PageData>();
  const pendingViews=new Map<string,Promise<PageData>>();
  let cacheDay=new Date().toDateString();
- function clearViews(){views.clear();pendingViews.clear();pendingSwap=null;prefetched=false;cacheGeneration++}
+ // An explicit open asks Garmin once per page; retry clears the record for that page.
+ let openedAttempts=new Set<string>(),detailState=$state<{kind:'loading'|'failed';message:string}|null>(null);
+ function clearViews(){views.clear();pendingViews.clear();pendingSwap=null;prefetched=false;cacheGeneration++;openedAttempts.clear();detailState=null}
  const scrollPositions=new Map<string,number>();
  function checkDay(){
   const day=new Date().toDateString();
@@ -213,7 +215,7 @@
  // Every root header shows today's circumstances; they come with the live Today.
  function readAdapt(){void readView('today').then(v=>{adaptState=(v as TodayView).adapt??null}).catch(()=>{})}
  let activeTab=$derived([...trail].reverse().find(r=>(tabs as readonly string[]).includes(r))??'today');
- let parentLabel=$derived.by(()=>{const parent=trail.at(-2);if(!parent)return 'Today';if(parent.startsWith('workout/'))return 'Workout';if(parent.startsWith('help/'))return 'Help';return ({today:'Today',sleep:'Sleep',training:'Training',health:'Health',readiness:'Readiness',plan:'Plan',progress:'Progress',profile:'Profile',activities:'Activities','plan/commitments':'Goals',strength:'Strength',help:'Help',settings:'Settings'} as Record<string,string>)[parent]??'Back'});
+ let parentLabel=$derived.by(()=>{const parent=trail.at(-2);if(!parent)return 'Today';if(parent.startsWith('workout/'))return 'Workout';if(parent.startsWith('health/')&&parent!=='health/weight')return 'Health';if(parent.startsWith('help/'))return 'Help';return ({today:'Today',sleep:'Sleep',training:'Training',health:'Health',readiness:'Readiness',plan:'Plan',progress:'Progress',profile:'Profile',activities:'Activities','plan/commitments':'Goals',strength:'Strength',help:'Help',settings:'Settings'} as Record<string,string>)[parent]??'Back'});
  // Keep Progress's selection with its cached page, not a component that is
  // destroyed on a detail visit. Older reads may not replace a newer selection.
  function saveProgress(progress:ProgressView){
@@ -227,7 +229,33 @@
  function clearSessionViews(){progressQuery={period:'month'};progressRevision++;weightRange='days30';clearViews()}
  function navigate(to:string){navigation.navigate(to)}
  function back(){return closeSheet() || navigation.back()}
+ function openedDetail(current:string){return datedDetail(current) ?? (/^workout\/\d+$/.test(current)?{page:'workout',date:current.slice(8)}:null)}
+ function detailKey(opened:{page:string,date:string}){return (opened.page==='workout'?'workout:':'day:')+opened.date}
+ function detailMissing(view:PageData){return 'detail' in view && view.detail.missing.length>0}
+ // Only a page whose route names its own day or workout fetches. Prefetched tabs never do.
+ async function fetchOpenedDetail(current:string){
+  const opened=openedDetail(current);
+  // The dated heart-rate page reads only its heart-rate day, inside MetricDetail.
+  if(!opened || opened.page==='heartRate')return;
+  const key=detailKey(opened);
+  if(openedAttempts.has(key))return;
+  openedAttempts.add(key);
+  detailState={kind:'loading',message:''};
+  try{
+   if(opened.page==='workout')await api.fetch_workout_detail(opened.date);
+   else await api.fetch_day_detail(opened.date,opened.page==='sleep'?'sleep':'day');
+   const next=await loadView(current);
+   if(route===current){data=next;views.set(current,next);pendingSwap=null}
+   if(detailMissing(next))detailState={kind:'failed',message:'Garmin didn’t return this detail. Try again later.'};
+   else detailState=null;
+  }catch(e){detailState={kind:'failed',message:String(e)}}
+  if(route!==current)detailState=null;
+ }
+ function retryOpenedDetail(){const opened=openedDetail(route);if(opened){openedAttempts.delete(detailKey(opened));detailState=null;void fetchOpenedDetail(route)}}
  async function loadView(current:string):Promise<PageData>{
+  const opened=datedDetail(current);
+  // A dated page reads only its own day; a metric's dated page reads the day's Health view.
+  if(opened)return opened.page==='sleep'?api.sleep(opened.date):api.health(opened.date);
   const [key,id]=current.split('/');
   switch(key){
    case 'sleep':case 'sleep/last':case 'sleep/tonight':return api.sleep();
@@ -293,6 +321,7 @@
     if(touching && data && updated)pendingSwap={route:current,data:updated};
     else data=updated;
     if(data){hasRendered=true;prefetchTabs()}
+    if(updated && detailMissing(updated))void fetchOpenedDetail(current);
     if(current==='today' && updated){adaptState=(updated as TodayView).adapt??adaptState;lastPhase=(updated as TodayView).focus.phase}
     if(current==='plan' && updated)weekBoard=updated as PlanBoard;
     else if((tabs as readonly string[]).includes(current)||current.startsWith('sleep'))void readView('plan').then(b=>{if(request===requestId)weekBoard=b as PlanBoard}).catch(()=>{});
@@ -325,7 +354,7 @@
    const from=route;
    if(next[next.length-1]!=='today')invalidLink=null;
    const changed=next[next.length-1]!==route;
-   if(changed){scrollPositions.set(route,scroll?.scrollTop??0);pendingSwap=null;selectedFactor='';checkinIndex=0;sheet=false;search=false;chooseOpen=false;garminSheet=null;quickHelp.topic=null;addDraft=null;itemSheet=null;eventSheet=false;reviewData=null;journalOpen=false;journalDayOpen=null}
+   if(changed){scrollPositions.set(route,scroll?.scrollTop??0);pendingSwap=null;detailState=null;selectedFactor='';checkinIndex=0;sheet=false;search=false;chooseOpen=false;garminSheet=null;quickHelp.topic=null;addDraft=null;itemSheet=null;eventSheet=false;reviewData=null;journalOpen=false;journalDayOpen=null}
    trail=next;route=next[next.length-1];
    const available=changed?cached(route):null;
    if(changed){
@@ -424,7 +453,8 @@
   if(session && workoutData?.summary.id===id)data={...workoutData,strength:session};
   return session;
  }
- let todayData=$derived(route==='today'||route==='readiness'?data as TodayView|null:null),sleepData=$derived(route.startsWith('sleep')?data as SleepView|null:null),trainingData=$derived(route==='training'?data as TrainingView|null:null),workoutData=$derived(route.startsWith('workout/')?data as WorkoutView|null:null),strengthData=$derived(route==='strength'?data as StrengthPage|null:null),healthData=$derived(route==='health'?data as HealthView|null:null),checkinData=$derived(route.startsWith('review/')?data as CheckinView|null:null),boardData=$derived(route==='plan'||route==='plan/commitments'?data as PlanBoard|null:null),progressData=$derived(route==='progress'?data as ProgressPage|null:null),profileData=$derived(route==='gear'||route==='activities'?data as TrainingView|null:null),profilePage=$derived(route==='profile'?data as ProfileView|null:null);
+ let openedDay=$derived(datedDetail(route));
+ let todayData=$derived(route==='today'||route==='readiness'?data as TodayView|null:null),sleepData=$derived(route.startsWith('sleep')?data as SleepView|null:null),trainingData=$derived(route==='training'?data as TrainingView|null:null),workoutData=$derived(route.startsWith('workout/')?data as WorkoutView|null:null),strengthData=$derived(route==='strength'?data as StrengthPage|null:null),healthData=$derived(route==='health'||openedDay?.page==='health'?data as HealthView|null:null),checkinData=$derived(route.startsWith('review/')?data as CheckinView|null:null),boardData=$derived(route==='plan'||route==='plan/commitments'?data as PlanBoard|null:null),progressData=$derived(route==='progress'?data as ProgressPage|null:null),profileData=$derived(route==='gear'||route==='activities'?data as TrainingView|null:null),profilePage=$derived(route==='profile'?data as ProfileView|null:null);
  let shownActivities=$derived((todayData?.activities??[]).filter(a=>a.id!==todayData?.lead?.activity));
  let todayNaps=$derived((todayData?.day?.events??[]).filter(e=>e.kind==='nap'));
  // Pages between the area cards and the closing summary, in order.
@@ -436,6 +466,7 @@
 {#snippet promptCard()}{#if prompt}<section class="card prompt-card" aria-label="Plan your week"><b>Plan your week</b><p class="small">{prompt.review?'See how last week went, then choose this week’s sessions.':'Nothing is placed this week yet.'}</p><div class="acts">{#if prompt.review}<button class="primary" onclick={()=>navigate('review/'+prompt!.review)}>Review last week</button>{/if}<button class={prompt.review?'secondary':'primary'} onclick={()=>answerPrompt('planned')}>Plan now</button><button class="secondary" onclick={()=>answerPrompt('dismissed')}>Not this week</button></div><button class="linkish" onclick={()=>void patchSettings({planPrompt:false}).then(ok=>{if(ok){clearViews();void refresh(true)}})}>Don’t offer this again</button></section>{/if}{/snippet}
 <div class="phone"><div class="glow" style:--glow={glow?`color-mix(in srgb, ${glow} 12%, transparent)`:'transparent'}></div><main class="scroll" bind:this={scroll} ontouchstart={(e)=>{touching=true;startY=e.touches[0].clientY;startedAtTop=e.currentTarget.scrollTop===0}} ontouchend={pullEnd} ontouchcancel={finishTouch}><div class="page" class:reading={route.startsWith('review/')||route==='onboarding'||route==='plan/commitments'}>
 {#if error && (data || route==='settings')}<p class="warning" role="status">{error}</p>{/if}
+{#if detailState}<p class="warning" role="status">{#if detailState.kind==='loading'}Fetching this {openedDetail(route)?.page==='workout'?'workout':'day'} from Garmin…{:else}{detailState.message} <button class="link-inline" onclick={retryOpenedDetail}>Try again</button>{/if}</p>{/if}
 {#if route==='onboarding'}
  <section class="welcome" class:intro={onboardStep===0}>
   <div class="welcome-brand"><BrandMark/><h1>Raring</h1></div>
@@ -484,7 +515,8 @@
 {:else if route==='readiness' && todayData}
  {#snippet readinessHeader()}<Header title="Readiness" eyebrow={dateLabel(todayData.date)} back={back} backLabel="Today"/>{/snippet}<ReadinessDetail {todayData} header={readinessHeader} bind:selectedFactor/>
 {:else if sleepData}
- {#snippet sleepHeader()}<Header title="Sleep" eyebrow={sleepData.startLocal?`${clock(sleepData.startLocal)} – ${clock(sleepData.endLocal)}`:dateLabel(sleepData.date)} {...rootControls}/>{/snippet}{#snippet tonightTab()}<SleepTonight sleep={sleepData} board={weekBoard} {act} {navigate} {now} reminder={settings.notifyBedtime} setReminder={on=>void patchSettings({notifyBedtime:on})}/>{/snippet}<SleepDetail {sleepData} header={sleepHeader} tab={route==='sleep/tonight'||(route==='sleep'&&sleepData.tonightFirst)?'tonight':'last'} setTab={t=>navigate('sleep/'+(t==='last'?'last':'tonight'))} tonight={tonightTab}/>
+ {@const historical=openedDay?.page==='sleep'}
+ {#snippet sleepHeader()}{#if historical}<Header title="Sleep" eyebrow={dateLabel(sleepData.date)} back={back} backLabel={parentLabel}/>{:else}<Header title="Sleep" eyebrow={sleepData.startLocal?`${clock(sleepData.startLocal)} – ${clock(sleepData.endLocal)}`:dateLabel(sleepData.date)} {...rootControls}/>{/if}{/snippet}{#snippet tonightTab()}<SleepTonight sleep={sleepData} board={weekBoard} {act} {navigate} {now} reminder={settings.notifyBedtime} setReminder={on=>void patchSettings({notifyBedtime:on})}/>{/snippet}<SleepDetail {sleepData} header={sleepHeader} {navigate} {historical} tab={historical?'last':route==='sleep/tonight'||(route==='sleep'&&sleepData.tonightFirst)?'tonight':'last'} setTab={historical?undefined:t=>navigate('sleep/'+(t==='last'?'last':'tonight'))} tonight={tonightTab}/>
 {:else if trainingData}
  {#snippet trainingHeader()}<Header title="Training" eyebrow="Last 7 days" {...rootControls}/>{/snippet}<TrainingTab {trainingData} header={trainingHeader} {navigate} bind:section={trainingSection} muscles={api.muscles}/>
 {:else if workoutData}
@@ -492,7 +524,8 @@
 {:else if strengthData}
  <Header title="Strength" eyebrow="Lifts and muscles" back={back} backLabel={parentLabel} onHelp={()=>navigate('help')}/>{#if strengthData.strengthPage}<StrengthHistory view={strengthData.strengthPage} {navigate} liftSeries={api.lift_series} muscles={api.muscles} figureChoice={settings.bodyFigure} setFigure={saveFigure}/>{:else}<Card title="No sets yet"><p class="small untracked">Start a Strength activity on your watch and press lap after each set. Your sets appear here after Garmin Connect syncs.</p><button class="watch-open" onclick={()=>navigate('help/strength-start')}>Lift with your watch <Icon name="arrow-right" size={16}/></button></Card>{/if}
 {:else if healthData}
- <Header title="Health" eyebrow={dateLabel(healthData.date)} {...rootControls}/><HealthDetail {healthData} {navigate} {toggleJournal} journalBusy={settingsBusy.journalEnabled} bind:journalOpen bind:journalDayOpen>{#snippet weightContent()}<WeightCard bind:range={weightRange} {navigate}/>{/snippet}</HealthDetail>
+ {@const historical=openedDay?.page==='health'}
+ {#if historical}<Header title="Health" eyebrow={dateLabel(healthData.date)} back={back} backLabel={parentLabel}/>{:else}<Header title="Health" eyebrow={dateLabel(healthData.date)} {...rootControls}/>{/if}<HealthDetail {healthData} {navigate} {toggleJournal} {historical} journalBusy={settingsBusy.journalEnabled} bind:journalOpen bind:journalDayOpen>{#snippet weightContent()}<WeightCard bind:range={weightRange} {navigate}/>{/snippet}</HealthDetail>
 {:else if boardData && route==='plan'}
  {#snippet planHeader()}<Header title="Plan" eyebrow="This week" {...rootControls}/>{/snippet}<PlanTab board={boardData} {navigate} {act} header={planHeader} openAdd={d=>addDraft=d as Draft} openItem={p=>itemSheet=p} openEvent={()=>eventSheet=true} openGarmin={g=>garminSheet=g} limited={!!adaptState&&(adaptState.limits.excluded.length>0||!!adaptState.limits.note)}/>
 {:else if boardData && route==='plan/commitments'}
@@ -508,7 +541,7 @@
 {:else if route==='health/weight'}
  <Header title="Weight" eyebrow="Garmin weigh-ins · Raring trend" back={back} backLabel={parentLabel}/><WeightCard initial={data as WeightView} bind:range={weightRange}/>
 {:else if route.startsWith('metric/')}
- <Header title={route.split('/')[1]==='restingHr' && (data as HealthView).vitals?.readings.some(v=>v.kind==='restingHr' && (v.status || v.rangeSource==='garmin')) ? 'Sleep HR' : metricNames[route.split('/')[1]]} eyebrow="GARMIN METRIC" back={back} backLabel={parentLabel}/><MetricDetail metric={route.split('/')[1]} data={data as TodayView|HealthView|TrainingView}/>
+ <Header title={route.split('/')[1]==='restingHr' && (data as HealthView).vitals?.readings.some(v=>v.kind==='restingHr' && (v.status || v.rangeSource==='garmin')) ? 'Sleep HR' : metricNames[route.split('/')[1]]} eyebrow={openedDay?dateLabel(openedDay.date):'GARMIN METRIC'} back={back} backLabel={parentLabel}/><MetricDetail metric={route.split('/')[1]} data={data as TodayView|HealthView|TrainingView} dayDate={openedDay?.page==='heartRate'?openedDay.date:null}/>
 {:else if checkinData}
  <Header title="Weekly review" eyebrow={'Week of '+dateLabel(checkinData.weekStart)} back={back} backLabel={parentLabel}/><div class="checkin-progress">{#each Array(checkinPages+1) as _,i}<span class:on={i===checkinIndex}></span>{/each}</div><div class="checkin-swiper" role="group" aria-label="Weekly check-in cards" ontouchstart={(e)=>swipeX=e.touches[0].clientX} ontouchend={(e)=>{let dx=e.changedTouches[0].clientX-swipeX;if(Math.abs(dx)>50)checkinIndex=Math.max(0,Math.min(checkinPages,checkinIndex+(dx<0?1:-1)))}}>{#if checkinIndex<checkinData.cards.length}{@const c=checkinData.cards[checkinIndex]}<Card title={c.area}><div class="checkin-content"><div class="eyebrow">YOUR WEEK IN {c.area.toUpperCase()}</div>{#if c.value!=null}<Gauge size={210} stroke={15} value={c.value} max={c.area==='training'?1000:c.area==='health'?50:100} color={toneColor(c.tone)} caption={c.unit}/>{/if}<h2>{c.headline}</h2><span class="pill" class:ok={c.previous!=null && c.value!=null && (c.area==='health'?c.value<=c.previous:c.value>=c.previous)}>{#if c.previous!=null && c.value!=null && Math.abs(c.value-c.previous)>=1}<Icon name={c.value<c.previous?'trend-down':'trend-up'} size={14}/>{signed(c.value-c.previous)} vs last week{:else if c.value==null}No readings this week{:else if c.previous!=null}Steady vs last week{:else}No previous week to compare{/if}</span><Sparkline values={c.series} w={240} h={60} color={colors.ink}/></div></Card>{:else if checkinPage==='timing' && checkinData.timing}{@const t=checkinData.timing}<Card title="Timing" extra="timing-review"><div class="checkin-content"><div class="eyebrow">YOUR WEEK IN SLEEP TIMING</div><ConsistencyChart nights={t.nights} date={addDays(checkinData.weekStart,6)} days={7}/><div class="timing-ranges">{#if t.bedRange}<div><span>Bedtimes</span><b class="n">{t.bedRange[0]}–{t.bedRange[1]}</b></div>{/if}{#if t.wakeRange}<div><span>Wake times</span><b class="n">{t.wakeRange[0]}–{t.wakeRange[1]}</b></div>{/if}</div>{#if t.aligned+t.ahead+t.behind>0}<span class="pill">Garmin: {[[t.aligned,'aligned'],[t.behind,'behind'],[t.ahead,'ahead']].filter(([n])=>Number(n)>0).map(([n,w])=>`${n} ${w}`).join(' · ')}</span>{/if}<h3>THE TIMING FOCUS</h3><p>{t.focus}</p></div></Card>{:else if checkinPage==='intensity' && checkinData.intensity}{@const im=checkinData.intensity}<Card title="Intensity" extra="intensity-review"><div class="checkin-content"><div class="eyebrow">YOUR WEEK IN INTENSITY MINUTES</div><Gauge size={210} stroke={15} value={im.total} max={im.goal??Math.max(im.total,1)} display={num(im.total)} caption={im.goal!=null?`of ${num(im.goal)} min`:'min'} color={im.goal!=null&&im.total>=im.goal?colors.good:colors.ink}/><h2>{im.goal==null?'Intensity minutes':im.total>=im.goal?"Garmin's goal reached":`${num(Math.ceil(im.goal-im.total))} min short`}</h2><span class="pill">{num(im.moderate)} moderate · {num(im.vigorous)} vigorous, counted twice</span></div></Card>{:else}<Card title="Your week ahead"><div class="checkin-summary"><div class="brand-mark"><Icon name="sparkle" size={70}/></div><h2>Keep the momentum</h2>{#if checkinData.vo2maxChange!=null && Math.abs(checkinData.vo2maxChange)>=1}<span class="pill ok">VO₂ max {signed(checkinData.vo2maxChange)}</span>{/if}{#if checkinData.fitnessAgeChange!=null && Math.abs(checkinData.fitnessAgeChange)>=1}<span class="pill ok">Fitness Age {signed(checkinData.fitnessAgeChange)}</span>{/if}{#if checkinData.win}<h3>THE WIN</h3><p>{checkinData.win}</p>{/if}{#if checkinData.focus}<h3>THE FOCUS</h3><p>{checkinData.focus}</p>{/if}</div></Card>{/if}</div><div class="checkin-controls"><button disabled={checkinIndex===0} onclick={()=>checkinIndex--}><Icon name="arrow-left" size={16}/> Previous</button><span>{checkinIndex+1} / {checkinPages+1}</span><button disabled={checkinIndex===checkinPages} onclick={()=>checkinIndex++}>Next <Icon name="arrow-right" size={16}/></button></div>{#if reviewData}<WeekReviewCard review={reviewData} {act} {navigate} busy={changing}/>{/if}
 {/if}

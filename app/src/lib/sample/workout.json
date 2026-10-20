@@ -1,4 +1,8 @@
 {
+  "detail": {
+    "missing": [],
+    "unavailable": []
+  },
   "summary": {
     "id": "9000000000001",
     "icon": "run",

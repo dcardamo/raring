@@ -63,7 +63,7 @@ const copy = <T>(value:T):T => structuredClone(value);
 const call = <T>(name:string,args:Record<string,unknown>|undefined,fallback:T):Promise<T> => isTauri()?invoke<T>(name,args):Promise.resolve(copy(fallback));
 export const app_status = ():Promise<AppStatus> => call('app_status',undefined,sampleStatus as AppStatus);
 export const today = (date?:string):Promise<TodayView> => call('today',{date},sampleToday as unknown as TodayView);
-export const sleep = (date?:string):Promise<SleepView> => call('sleep',{date},sampleSleep as unknown as SleepView);
+export const sleep = (date?:string):Promise<SleepView> => call('sleep',{date},date?{...copy(sampleSleep as unknown as SleepView),date}:sampleSleep as unknown as SleepView);
 // The browser preview uses the sample's week or four weeks; the app asks the core.
 export const muscles = (range:TrendRange):Promise<MuscleRange|null> => {
  if(isTauri())return invoke<MuscleRange|null>('muscles',{range});
@@ -99,8 +99,11 @@ export const workout = (id:string):Promise<WorkoutView> => {
 export const strength = (date?:string):Promise<StrengthView|null> => call('strength',{date},sampleStrength as unknown as StrengthView);
 // One explicit Garmin read of a workout's sets; navigation never calls it.
 export const refresh_strength = (id:string):Promise<StrengthSession|null> => isTauri()?invoke<StrengthSession|null>('refresh_strength',{id}):Promise.reject(new Error('Refreshing sets needs the Raring app'));
-export const health = (date?:string):Promise<HealthView> => isTauri()?invoke<HealthView>('health',{date}):Promise.resolve({...copy(sampleHealth as unknown as HealthView),journalEnabled:previewSettings.journalEnabled});
+export const health = (date?:string):Promise<HealthView> => isTauri()?invoke<HealthView>('health',{date}):Promise.resolve({...copy(sampleHealth as unknown as HealthView),...(date?{date}:{}),journalEnabled:previewSettings.journalEnabled});
 export const heart_rate_day = (date:string):Promise<HeartRateDay> => isTauri()?invoke<HeartRateDay>('heart_rate_day',{date}):Promise.resolve({...((sampleHealth as unknown as HealthView).heartRateDay),date});
+// An explicit open of a past day or an older workout; navigation prefetch never calls these.
+export const fetch_day_detail = (date:string,scope:'sleep'|'day'):Promise<void> => isTauri()?invoke<void>('fetch_day_detail',{date,scope}):Promise.resolve();
+export const fetch_workout_detail = (id:string):Promise<void> => isTauri()?invoke<void>('fetch_workout_detail',{id}):Promise.resolve();
 export const checkin = (weekStart?:string):Promise<CheckinView> => call('checkin',{weekStart},sampleCheckin as unknown as CheckinView);
 export const trend = (query:TrendQuery):Promise<TrendView> => isTauri()?invoke<TrendView>('trend',{query}):Promise.resolve().then(()=>sampleTrend(query));
 // The preview keeps local changes in memory; only the Rust core applies the plan rules.

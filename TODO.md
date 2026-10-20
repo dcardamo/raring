@@ -93,10 +93,24 @@ From item 11, in priority order.
 - Check the trend charts on a real phone with the full history: each range
   should draw without a visible wait, and the overlay picker should be easy
   to use one-handed.
-- Opening an old day or workout should fetch its per-day detail (sleep
-  stages, stress readings, charts, route) on demand and keep it. Not built:
-  it needs a way to open a past day on Sleep and Stress and an online fetch
-  path for views, larger than item 11.
+- Verify the new opened-day and opened-workout reads on a real account. The
+  read-only `raring day-detail YYYY-MM-DD` and `raring workout-detail ID` run
+  the same core path as the app. Record how far back `dailySleepData`,
+  `dailyStress`, the daily summary, Health Status and an activity's
+  splits/zones/charts answer; Health Status may be the shortest.
+- An opened old day without a Health Status row shows an empty vitals card and
+  offers a Vitals read. If Garmin has no Health Status that far back, fall
+  back to the stored nightly records before offering a fetch (the emulator
+  demo shows this empty card).
+- Naps for an opened older day stay unfetched (naps sync only the last two
+  days), so the nap card reads unavailable. Decide whether the open should
+  read `sleep-service/sleep/naps/{date}` too.
+- An opened older strength workout's sets still arrive from history sync's
+  `strength_without_sets` queue, not from the open; confirm that happens
+  before a person opens the workout, or leave sets to Refresh from Garmin.
+- Android's `fetchDetail` with real credentials is unverified on a device: the
+  demo has no Garmin tokens and refuses before JNI, so only compilation and
+  the credential-less guard were exercised.
 - Weekly trend buckets run Monday to Sunday. Consider aligning them with
   Garmin's reported intensity-week boundary, which the weekly plan already
   uses; a display preference need not match that data window.
@@ -353,6 +367,36 @@ faces, screens, sensors and audio prompts stay in Connect.
   recorded reminder and "no desktop notification service" kept for Settings.
   Rust tests cover per-notification marking, wake targets and a night already
   sent; a real notification session remains to check (see follow-ups).
+
+- **Opening an old day or workout** (commits "Fetch a past day or an older
+  workout's detail only when it is opened" and "Open a past day or an older
+  workout from the date that names it"). Past-night
+  (`#sleep/YYYY-MM-DD`), past-day (`#health/YYYY-MM-DD`) and dated stress and
+  heart-rate routes show that date on Sleep's Last night and on Health/Stress,
+  opened from Progress's calendar, a selected trend point and the seven-night
+  chart; Back returns to the page or section that opened each, and the plain
+  `sleep`, `sleep/last`, `sleep/tonight`, `health` and `metric/stress` links
+  keep their meaning. A route whose day or workout has never been read fetches
+  only the missing rows its page shows once (a night's sleep and HRV; a
+  Health day's stress, summary and Health Status; an old activity's
+  summary/splits/zones/charts) through
+  the existing on-demand shape: Android's `SyncGate` and token vault or
+  desktop's `with_desktop_tokens`, a small budget, the shared per-endpoint
+  retry wait and 429 backoff, never from navigation prefetch, and every
+  answer kept, including empty ones. The page says while it loads and when
+  Garmin has nothing for that day; today's data is never shown for a past
+  date. Older workouts listed but not detailed by the history download now
+  fill their route and streams when opened, and nothing else fetches them.
+  The CLI's `day-detail` and `workout-detail` run the same read-only core
+  path. Core mock-client tests cover fetch order, partial and empty answers,
+  unchanged repeats, today/future/unknown keys and 429; browser tests cover
+  the calendar, trend-point and seven-night entries, caller-aware Back, the
+  dated stress and heart-rate pages, and the one-fetch loading and unavailable
+  states. Emulator-5560 (shared; signer-verified in-place debug install,
+  SHA-256 `0d59d1bf…7a63`) showed dated Sleep/Health/stress pages from a
+  calendar day and a seven-night bar; the synthetic demo has no Garmin
+  credentials, so `fetchDetail` refused it locally without a request or a
+  sign-out. The credentialed JNI read is unverified on a device.
 
 - **21. Write rules** (commit "Add the Garmin write rules and a log of
   recent changes"). One core write path (`crates/core/src/writes.rs`): only

@@ -1470,6 +1470,89 @@ pub async fn heart_rate_on_demand(store: &Store, client: &Client, key: &str) -> 
     report
 }
 
+/// An opened workout fetches its summary, splits, zones and charts.
+const WORKOUT_DETAIL_BUDGET: usize = 4;
+
+/// One explicitly opened past day. Fetches only the parts that page shows and
+/// only the reads this phone has never stored, in page order, and keeps every
+/// answer. It shares the request budget, per-endpoint retry wait and 429
+/// backoff with sync, and navigation never calls it: only a person opening a
+/// past day does.
+pub async fn day_detail_on_demand(
+    store: &Store,
+    client: &Client,
+    key: &str,
+    parts: &[crate::view::DayDetailPart],
+) -> SyncReport {
+    let mut report = SyncReport::default();
+    let now = Utc::now();
+    let valid = NaiveDate::parse_from_str(key, "%Y-%m-%d")
+        .ok()
+        .is_some_and(|d| d.to_string() == key && d < Local::now().date_naive());
+    if !valid {
+        return report;
+    }
+    if store
+        .cursor("backoff_until")
+        .and_then(|v| v.parse::<i64>().ok())
+        .is_some_and(|t| t > now.timestamp())
+    {
+        report.rate_limited = true;
+        return report;
+    }
+    let name = store
+        .get("profile", "me")
+        .and_then(|v| v["displayName"].as_str().map(str::to_owned));
+    let Some(name) = name else { return report };
+    let budget = parts
+        .iter()
+        .map(|part| crate::screens::detail_kinds(*part).len())
+        .sum();
+    for part in parts {
+        for kind in crate::screens::detail_kinds(*part) {
+            if store.get(kind, key).is_some() {
+                continue;
+            }
+            if !fetch(store, client, &mut report, kind, key, Some(&name), budget, now).await {
+                return report;
+            }
+        }
+    }
+    report
+}
+
+/// One explicitly opened activity whose charts, splits, zones and summary the
+/// history download listed but never stored. Older workouts already open with
+/// their stored summary; this is what fills in the rest, once, on request.
+pub async fn workout_detail_on_demand(store: &Store, client: &Client, key: &str) -> SyncReport {
+    let mut report = SyncReport::default();
+    let now = Utc::now();
+    let known = store.get("activity", key).is_some() || store.get("listed", key).is_some();
+    if key.is_empty()
+        || !key.bytes().all(|b| b.is_ascii_digit())
+        || !known
+    {
+        return report;
+    }
+    if store
+        .cursor("backoff_until")
+        .and_then(|v| v.parse::<i64>().ok())
+        .is_some_and(|t| t > now.timestamp())
+    {
+        report.rate_limited = true;
+        return report;
+    }
+    for kind in crate::screens::detail_kinds(crate::view::DayDetailPart::Workout) {
+        if store.get(kind, key).is_some() {
+            continue;
+        }
+        if !fetch(store, client, &mut report, kind, key, None, WORKOUT_DETAIL_BUDGET, now).await {
+            return report;
+        }
+    }
+    report
+}
+
 /// One explicit, budgeted read of a strength activity's sets. A workout's
 /// sets can be edited in Connect long after the 48-hour automatic rechecks, so
 /// this is the only way to see a later edit. It is never called by navigation,

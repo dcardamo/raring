@@ -357,6 +357,97 @@ async fn heart_rate_day(app: tauri::AppHandle, date: String) -> Result<HeartRate
     }
 }
 
+fn day_detail_parts(scope: &str) -> Result<Vec<DayDetailPart>, String> {
+    match scope {
+        "sleep" => Ok(vec![DayDetailPart::Sleep]),
+        "day" => Ok(vec![DayDetailPart::Stress, DayDetailPart::Vitals]),
+        _ => Err("unknown day detail scope".into()),
+    }
+}
+
+#[tauri::command]
+async fn fetch_day_detail(app: tauri::AppHandle, date: String, scope: String) -> Result<(), String> {
+    let parts = day_detail_parts(&scope)?;
+    #[cfg(target_os = "android")]
+    {
+        if !session_ready(&app)? { return Err("Account verification required".into()); }
+        let expected = core(&app)?.session_identity().ok_or("Account verification required")?;
+        vault(&app)
+            .0
+            .run_mobile_plugin_async::<serde_json::Value>(
+                "fetchDetail",
+                serde_json::json!({"date":date,"activityId":"","scope":scope}),
+            )
+            .await
+            .map_err(|e| e.to_string())?;
+        if !session_ready(&app)? || core(&app)?.session_identity().as_ref() != Some(&expected) {
+            return Err("Account changed while reading the day".into());
+        }
+        return Ok(());
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let core = core(&app)?;
+        let report = with_desktop_tokens(&app, |tokens| async move {
+            let (tokens, report) = core
+                .fetch_day_detail(tokens, &date, &parts)
+                .await
+                .map_err(|e| e.to_string())?;
+            Ok((report, tokens))
+        })
+        .await?
+        .ok_or("sign in again")?;
+        if report.auth_failed {
+            return Err("sign in again".into());
+        }
+        if let Some(error) = report.error {
+            return Err(error);
+        }
+        Ok(())
+    }
+}
+
+#[tauri::command]
+async fn fetch_workout_detail(app: tauri::AppHandle, id: String) -> Result<(), String> {
+    #[cfg(target_os = "android")]
+    {
+        if !session_ready(&app)? { return Err("Account verification required".into()); }
+        let expected = core(&app)?.session_identity().ok_or("Account verification required")?;
+        vault(&app)
+            .0
+            .run_mobile_plugin_async::<serde_json::Value>(
+                "fetchDetail",
+                serde_json::json!({"date":"","activityId":id}),
+            )
+            .await
+            .map_err(|e| e.to_string())?;
+        if !session_ready(&app)? || core(&app)?.session_identity().as_ref() != Some(&expected) {
+            return Err("Account changed while reading the workout".into());
+        }
+        return Ok(());
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let core = core(&app)?;
+        let report = with_desktop_tokens(&app, |tokens| async move {
+            let (tokens, report) = core
+                .fetch_workout_detail(tokens, &id)
+                .await
+                .map_err(|e| e.to_string())?;
+            Ok((report, tokens))
+        })
+        .await?
+        .ok_or("sign in again")?;
+        if report.auth_failed {
+            return Err("sign in again".into());
+        }
+        if let Some(error) = report.error {
+            return Err(error);
+        }
+        Ok(())
+    }
+}
+
 #[tauri::command]
 async fn refresh_strength(
     app: tauri::AppHandle,
@@ -1139,6 +1230,8 @@ pub fn run() {
                     patch_settings,
                     heart_rate_day,
                     refresh_strength,
+                    fetch_day_detail,
+                    fetch_workout_detail,
                     export_archive,
                     choose_import,
                     apply_import,
@@ -1181,6 +1274,8 @@ pub fn run() {
                     patch_settings,
                     heart_rate_day,
                     refresh_strength,
+                    fetch_day_detail,
+                    fetch_workout_detail,
                     export_archive,
                     choose_import,
                     apply_import,

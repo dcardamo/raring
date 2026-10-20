@@ -98,7 +98,12 @@ keeping its section, period and scroll. Short "?" sheets explain a page or
 card in shipped terms. Earlier links still open their current page:
 `#checkin` the latest weekly review, `#plan-setup` the weekly goals,
 `#explore` Training, `#metric/weight` the weight detail; a link this version
-doesn't know opens Today and says so.
+doesn't know opens Today and says so. A page that opens one past day or
+workout names its date or activity in the route (`#sleep/YYYY-MM-DD`,
+`#health/YYYY-MM-DD`, `#metric/stress/YYYY-MM-DD`,
+`#metric/heartRate/YYYY-MM-DD`, `#workout/ID`); Back returns to the page or
+section that opened it, and `sleep`, `sleep/last`, `sleep/tonight`, `health`
+and `metric/stress` keep their current meaning.
 
 ### Welcome & privacy
 
@@ -205,7 +210,15 @@ Tonight:
   reminder switch. With a sleep-timing goal, "Make tonight one of them"
   places tonight's wind-down session.
 - This week's sleep goals, and the seven nights ending last night against
-  each night's own need, with how many were below it. No running debt.
+  each night's own need, with how many were below it. No running debt. Each
+  night opens that night (Rules: Opened past days and workouts).
+
+**A past night.** The seven-night bars and Sleep history's selected day open
+`#sleep/YYYY-MM-DD`: Last night for that date, with no Tonight tab and no
+plan for a night that has passed. A night this phone has never stored is
+fetched once when opened, inside the shared budget and backoff; the page
+says while it loads, and says when Garmin has no record for it. Today's
+night is never shown in its place.
 
 ### Training
 
@@ -259,6 +272,9 @@ Tonight:
   training effect with its band in plain words, intensity minutes, Body
   Battery change and stamina; **Recorded by your watch**: the other summary
   fields it has (Rules: Workout detail).
+- An activity the history download listed but never detailed opens with its
+  stored summary and fills in its charts, route, splits and zones once when
+  opened (Rules: Opened past days and workouts).
 
 ### Strength
 
@@ -373,6 +389,16 @@ freshness).
   message suggests taking it easy and checking how you feel, without
   diagnosing an illness. A partially calibrated monitor reports only the
   readings it can compare.
+- **A past day**: the Progress calendar and a selected trend point open
+  `#health/YYYY-MM-DD`, anchored to that date: its charts end there, its
+  stress and vitals are that day's, and the journal's seven days end there.
+  The stress detail (`#metric/stress/YYYY-MM-DD`) shows that day's timeline;
+  the all-day heart-rate detail (`#metric/heartRate/YYYY-MM-DD`) opens that
+  day and reads its heart-rate day on demand. Missing per-day detail (sleep,
+  HRV, stress, the daily summary, Health Status) is fetched once on opening
+  and kept, inside the shared budget and backoff; the page says while it
+  loads, and says when Garmin has nothing for that day. Today's readings are
+  never substituted for an older date (Rules: Opened past days and workouts).
 
 ### Trends
 
@@ -957,6 +983,17 @@ next pending wind-down while signed in.
   ending last night against each night's own Garmin need: how many recorded
   nights were below it, never a running debt. A missing night is labelled,
   not zero.
+- **Opened past days and workouts**: only an explicit open of a page whose
+  route names its own date or activity reads Garmin for that detail;
+  navigation prefetch, cached tabs and ordinary sync never do. One open reads
+  only the parts its page shows and only rows this phone has never
+  stored—absent, not Garmin's empty answer—in a fixed page order, inside a
+  small budget and the shared per-endpoint retry wait and 429 backoff, and
+  keeps every answer, including empty ones. Today's data is never substituted for an older date; a part
+  Garmin has nothing for says so. The route keeps the date, Back returns to
+  the page or section that opened it, and the plain `sleep`, `sleep/last`,
+  `sleep/tonight`, `health`, `metric/stress` and workout links keep their
+  current meaning. The all-day heart-rate read keeps its own one-day rule.
 - **Your day**: live Today only, the local calendar day on one 00–24 axis:
   last night's recorded stages at their clock times, clipped at midnight;
   Garmin's intraday Body Battery and stress in three-minute slots and heart
@@ -1372,7 +1409,12 @@ next pending wind-down while signed in.
   Trend charts read only this local history. No Health Status range was found
   in the web GraphQL inventory or probes; older nights' vitals come from the
   nightly records, without extra per-day requests. Respiration can differ
-  slightly between Health Status and the nightly record.
+  slightly between Health Status and the nightly record. An explicitly opened
+  past night may read that day's sleep and HRV; an opened Health day its
+  stress, daily summary and Health Status; an opened older workout its
+  activity, splits, heart-rate zones and chart details. Both are one budgeted pass for rows this phone has
+  never stored, share the retry wait and 429 backoff, and are never
+  prefetched (Rules: Opened past days and workouts).
 - Garmin Connect stays installed on the phone because it uploads the watch's
   data. Device registration lists watches and their capabilities; device
   service details give the watch's last upload. Opening Connect is an Android
@@ -1465,6 +1507,8 @@ next pending wind-down while signed in.
   battery/radio cost and Doze delivery remain phone checks.
 - **View cache**: after the first view renders, the five tabs and Sleep are
   prefetched and cached by route for the current day, from local data only.
+  A dated past day, dated metric or old workout is never prefetched; it is
+  read when opened, and its one explicit detail fetch follows that open.
   A local change (goals, sessions, Adapt, routines) clears the cache and
   rereads the visible page and the header's Adapt state. Training's and
   Progress's chosen sections are kept for the session; Progress's domain
