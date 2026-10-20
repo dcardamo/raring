@@ -33,18 +33,18 @@
 </script>
 {#if along && workout.heartRate.length}
  <section class="card wm" aria-labelledby="along-h"><div class="wm-h"><h3 id="along-h">Along the way</h3>{#if along.series.some(x => x.kind === 'temperature')}<HelpButton topic="watch-temperature"/>{/if}</div>
-  <HrChart samples={workout.heartRate} floors={workout.zoneFloors} durationS={workout.summary.durationS} avg={workout.summary.avgHr ?? null} axis={false}/>
+  <HrChart samples={workout.heartRate} floors={workout.zoneFloors} durationS={workout.summary.durationS} avg={workout.summary.avgHr ?? null} axis={false} name="Heart rate"/>
   {#each along.series as s (s.kind)}
    {@const label = (n: number) => s.kind === lastKind ? xs[n] : ''}
    {#if s.kind === 'speed' && !ride}
     {@const values = idx.map(i => paceOf(s.values[i]))}
-    <AxisChart points={idx.map((_, n) => ({x: label(n), v: values[n]}))} kind="line" unit={`pace ${paceUnit(unit)}`} color={COLOR.speed} height={100} every={1} {...paceScale(values)} fmt={v => elapsed(-v)} label={`Pace over ${elapsed(workout.summary.durationS)}, minutes ${paceUnit(unit).replace('/', 'per ')}`}/>
+    <AxisChart points={idx.map((_, n) => ({x: label(n), v: values[n]}))} kind="line" unit={`Pace · min${paceUnit(unit)}`} color={COLOR.speed} height={100} every={1} {...paceScale(values)} fmt={v => elapsed(-v)} label={`Pace over ${elapsed(workout.summary.durationS)}, minutes ${paceUnit(unit).replace('/', 'per ')}`}/>
    {:else if s.kind === 'speed' || s.kind === 'elevation'}
     {@const conv = (v: number) => s.kind === 'speed' ? speed(v, unit) : elevation(v, unit)}
     {@const u = s.kind === 'speed' ? speedUnit(unit) : elevationUnit(unit)}
-    <AxisChart points={idx.map((i, n) => ({x: label(n), v: s.values[i] != null ? conv(s.values[i]!) : null}))} kind="line" unit={u} color={COLOR[s.kind]} height={90} every={1} fmt={v => num(v, 0)} label={`${NAME[s.kind]} over ${elapsed(workout.summary.durationS)}, ${u}`}/>
+    <AxisChart points={idx.map((i, n) => ({x: label(n), v: s.values[i] != null ? conv(s.values[i]!) : null}))} kind="line" unit={`${NAME[s.kind]} · ${u}`} color={COLOR[s.kind]} height={90} every={1} fmt={v => num(v, 0)} label={`${NAME[s.kind]} over ${elapsed(workout.summary.durationS)}, ${u}`}/>
    {:else}
-    <AxisChart points={idx.map((i, n) => ({x: label(n), v: s.values[i]}))} kind="line" unit={s.unit} color={COLOR[s.kind]} height={90} every={1} fmt={v => num(v, 0)} label={`${NAME[s.kind]} over ${elapsed(workout.summary.durationS)}, ${s.unit}`}/>
+    <AxisChart points={idx.map((i, n) => ({x: label(n), v: s.values[i]}))} kind="line" unit={`${NAME[s.kind]} · ${s.unit}`} color={COLOR[s.kind]} height={90} every={1} fmt={v => num(v, 0)} label={`${NAME[s.kind]} over ${elapsed(workout.summary.durationS)}, ${s.unit}`}/>
    {/if}
   {/each}
   <p class="small axis-note">Minutes from the start</p>

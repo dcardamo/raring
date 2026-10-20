@@ -1345,6 +1345,9 @@ try {
   await along.waitFor();
   for(const name of [/^Heart rate over/,/^Pace over .*minutes per km/,/^Elevation over/,/^Cadence over .*spm/])assert.equal(await along.getByRole('img',{name}).count(),1,String(name));
   assert.equal(await along.getByRole('img',{name:/^Power over/}).count(),0,'no power without a power meter');
+  // Each chart names what it plots, not only its unit.
+  assert.deepEqual((await along.locator('.yu').allTextContents()).map(t=>t.trim()),['Pace · min/km','Elevation · m','Cadence · spm']);
+  assert.equal((await along.locator('[data-chart=hr] text.u').textContent()).trim(),'Heart rate · bpm');
   const did=await wp.getByRole('region',{name:'What it did'}).textContent();
   for(const want of ['3.8','Improving','builds your aerobic base','Minor benefit','62','14 moderate + 2 × 24 vigorous','-9'])assert.ok(did.includes(want),`${want} in ${did}`);
   const rec=await wp.getByRole('region',{name:'Recorded by your watch'}).textContent();
