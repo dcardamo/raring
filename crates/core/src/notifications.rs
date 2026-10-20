@@ -236,12 +236,12 @@ pub fn bedtime(store: &Store, now: NaiveDateTime) -> Option<BedtimeReminder> {
     let need = duration(plan.need_min);
     let body = match &plan.bedtime_start {
         Some(start) => format!(
-            "Garmin's bedtime window: {start}–{} · need {need}",
-            plan.bedtime
+            "In bed by {} · Garmin's bedtime window: {start}–{} · need {need}",
+            plan.in_bed, plan.bedtime
         ),
         None => format!(
-            "Aim to be asleep by {} (Raring's estimate) · need {need}",
-            plan.bedtime
+            "In bed by {} · aim to be asleep by {} (Raring's estimate) · need {need}",
+            plan.in_bed, plan.bedtime
         ),
     };
     Some(BedtimeReminder {

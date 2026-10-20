@@ -42,6 +42,24 @@ pub fn battery(value: f64) -> Tone {
         Tone::Poor
     }
 }
+/// Tonight's in-bed, wind-down and wake times (docs/spec.md, Rules: Bedtime
+/// and Wind-down). Garmin's window and need stay Garmin's: in bed is the
+/// asleep-by time minus the time to fall asleep; wind-down is the lead before
+/// the earlier of the window's start and in bed; the wake is asleep-by plus
+/// the need.
+pub fn bed_times(
+    window_start: Option<chrono::NaiveDateTime>,
+    asleep_by: chrono::NaiveDateTime,
+    need_min: f64,
+    fall_asleep_min: u32,
+    lead_min: u32,
+) -> (chrono::NaiveDateTime, chrono::NaiveDateTime, chrono::NaiveDateTime) {
+    use chrono::Duration;
+    let in_bed = asleep_by - Duration::minutes(fall_asleep_min.into());
+    let start = window_start.map_or(in_bed, |w| w.min(in_bed));
+    (in_bed, start - Duration::minutes(lead_min.into()), asleep_by + Duration::minutes(need_min.round() as i64))
+}
+
 pub fn normal(values: &[f64]) -> Option<[f64; 2]> {
     if values.len() < 14 {
         return None;
@@ -321,5 +339,37 @@ mod tests {
             Some("Load focus")
         );
         assert_eq!(weekly_focus(None, None, None, None), None);
+    }
+}
+
+#[cfg(test)]
+mod bed_times_tests {
+    use super::bed_times;
+    use chrono::NaiveDateTime;
+
+    fn t(s: &str) -> NaiveDateTime {
+        NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M").unwrap()
+    }
+
+    #[test]
+    fn in_bed_wind_down_and_wake_follow_the_time_to_fall_asleep() {
+        // (window start, asleep by, need, fall asleep, lead) -> (in bed, wind-down, wake)
+        let rows = [
+            // Garmin's window: the wind-down leads its start while in bed falls inside it.
+            (Some("2026-10-20 22:30"), "2026-10-20 23:10", 470., 15, 30, ("2026-10-20 22:55", "2026-10-20 22:00", "2026-10-21 07:00")),
+            (Some("2026-10-20 22:30"), "2026-10-20 23:10", 470., 0, 30, ("2026-10-20 23:10", "2026-10-20 22:00", "2026-10-21 07:00")),
+            // In bed before the window opens: the wind-down leads in bed instead.
+            (Some("2026-10-20 22:30"), "2026-10-20 23:10", 470., 60, 30, ("2026-10-20 22:10", "2026-10-20 21:40", "2026-10-21 07:00")),
+            // Without a window: Raring's asleep-by estimate.
+            (None, "2026-10-20 23:15", 480., 15, 45, ("2026-10-20 23:00", "2026-10-20 22:15", "2026-10-21 07:15")),
+            (None, "2026-10-20 23:15", 480., 0, 45, ("2026-10-20 23:15", "2026-10-20 22:30", "2026-10-21 07:15")),
+            (None, "2026-10-20 23:15", 480., 60, 45, ("2026-10-20 22:15", "2026-10-20 21:30", "2026-10-21 07:15")),
+            // Asleep after midnight: in bed and the wind-down cross back to the evening.
+            (None, "2026-10-21 00:20", 450., 30, 30, ("2026-10-20 23:50", "2026-10-20 23:20", "2026-10-21 07:50")),
+        ];
+        for (start, asleep, need, fall, lead, (bed, wind, wake)) in rows {
+            let got = bed_times(start.map(t), t(asleep), need, fall, lead);
+            assert_eq!(got, (t(bed), t(wind), t(wake)), "{start:?} {asleep} {fall} min");
+        }
     }
 }

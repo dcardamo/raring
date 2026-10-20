@@ -23,8 +23,25 @@ bedtime: string,
  */
 bedtimeStart: string | null, bedtimeSource: BedtimeSource, 
 /**
- * Time to start winding down, HH:MM: the lead before the window starts
- * (or before the asleep-by time without Garmin's window).
+ * Time to be in bed, HH:MM: the asleep-by time minus the time to fall
+ * asleep (Raring's, from Settings).
+ */
+inBed: string, inBedAt: string, 
+/**
+ * The time to fall asleep the plan allows, minutes.
+ */
+fallAsleepMin: number, 
+/**
+ * The need plus the time to fall asleep: time in bed tonight, minutes.
+ */
+inBedMin: number, 
+/**
+ * When tonight's sleep should end: the asleep-by time plus the need.
+ */
+wakeAt: string, 
+/**
+ * Time to start winding down, HH:MM: the lead before the earlier of
+ * Garmin's window start and the in-bed time.
  */
 windDown: string, windDownLeadMin: number, 
 /**

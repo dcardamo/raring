@@ -130,17 +130,33 @@ optional after sign-in.
 
 A briefing with an ending, in this order:
 
-- **Last night and readiness**: time asleep against Garmin's need (with the
-  Sleep Score), and the readiness gauge, which opens Readiness. A watch that
+- **Last night and readiness**: four compact stats in one row (two by two
+  at large text), each opening its detail: **Sleep** (time asleep in a ring
+  against Garmin's need, the Sleep Score under it; opens Last night),
+  **Readiness** (Garmin's score in a ring in its tone, the level word under
+  it), **Sleep HR** and **HRV** (last night's value with ▲ or ▼ and "6
+  above usual", "Within usual", "Usual not set yet" or "Garmin calibrating";
+  they open their metric detail at 30 days; Rules: Night vitals on Today). A
+  tone colour appears only with its words, when Garmin rates a reading low
+  or it is outside its usual range in the unwelcome direction. A watch that
   can't record readiness says so. While the displayed night hasn't synced
-  both wait neutrally: no earlier score, readiness, chips or reconciliation
-  shown as this morning's. A score without a duration is labelled as one.
+  all four wait neutrally: no earlier score, readiness, vitals, chips or
+  reconciliation shown as this morning's. A missing reading is a dash and
+  "Not recorded". From the evening on only Sleep and Readiness stay. A score
+  without a duration is labelled as one.
 - **The lead**: one headline, at most one line and one action, chosen by the
-  gates in Rules: Today's lead. A planned session offers **Keep · Choose
-  another** (Rules: Today's choice); a suggestion can be dismissed with "Not
-  today". When Garmin's readiness allows, the **effort** scale (Rest, Easy,
+  gates in Rules: Today's lead; a suggestion can be dismissed with "Not
+  today". When Garmin's readiness allows, the **effort** strip (Rest, Easy,
   Steady, Push) marks the suggested level, with one reason line from
-  Garmin's inputs. It is a display, not buttons. There is no effort scale
+  Garmin's inputs under it. It is a display, not buttons. When a session
+  leads, the headline is about the day ("A steady day fits"), never the
+  session's name.
+- **Today's session**: a separate card below the day's context, with the
+  session's name, its source (◇ Garmin Coach with its week, ◇ Garmin
+  calendar, or Your plan), what it is in plain words and how it compares
+  with today's suggested effort (Rules: Today's session). **Keep · Choose
+  another** sit inside it (Rules: Today's choice), so they act on the
+  session. There is no effort scale
   beside a recorded workout (the day can finish) or from the evening on.
   Evening, wind-down and late night lead with tonight's sleep and keep any
   session still planned as a quiet line; beside tonight's plan card the hero
@@ -575,7 +591,8 @@ Follow-through and measured change stay apart; nothing is a grade.
 - **Adapt** (every root header): Rest today, I'm ill, Pause training,
   Lighter week, Limits and My routines; Resume shows the goals first (Rules:
   Adapt, My routines).
-- **Settings**: notifications, the wind-down lead, persistent status, Follow
+- **Settings**: notifications, the wind-down lead, the time to fall asleep
+  (also on Sleep · Tonight beside the plan), persistent status, Follow
   my day (and that Raring doesn't learn from how you use the app), the
   plan-your-week prompt, journal consent, recent Garmin changes once there are
   any (Rules: Recent Garmin changes), export, a validated import of another
@@ -673,10 +690,14 @@ scheduled or active, the core reads
 `GET /trainingplan-service/trainingplan/fbt-adaptive/{trainingPlanId}`
 (positive numeric id) on the same six-hour check, budget and backoff. Its
 `taskList` holds the current week only, one task per day with
-`calendarDate`, `workoutOrder` and `taskWorkout` (`workoutName`,
-`estimatedDurationInSecs`, `restDay`, `trainingEffectLabel`,
-`sportType.sportTypeKey`, `adaptiveCoachingWorkoutStatus`; `workoutId` is
-null, so no steps). A response for another plan, without the adaptive
+`calendarDate`, `weekId`, `workoutOrder` and `taskWorkout` (`workoutName`,
+`workoutPhrase`, `workoutDescription`, `estimatedDurationInSecs`, `restDay`,
+`trainingEffectLabel`, `sportType.sportTypeKey`,
+`adaptiveCoachingWorkoutStatus`; `workoutId` is null, so no steps); the plan
+carries `durationInWeeks`. Seen phrases: `BASE`, `LACTATE_THRESHOLD`,
+`POOREST_SLEEP_RECOVERY`, `FORCED_REST` and strength codes ending
+`_GENERIC_GYM` or `_GENERIC_BODYWEIGHT`; cardio descriptions are a target
+heart rate like "129bpm", strength and rest have none. A response for another plan, without the adaptive
 category, or with an empty or undated task list counts as a data failure and
 keeps the last good snapshot. Sessions show only while the plan list still
 names that plan.
@@ -1068,15 +1089,36 @@ next pending wind-down while signed in.
   headed "Done today" above the recording, with its strength count against
   the goal or Garmin's intensity minutes; Garmin's
   scheduled workout today unless dismissed (limits make it "Review needed",
-  since its sport and movements are unknown; Garmin's easy or rest call makes
-  it "An easier day may fit"); your planned session today (a movement note
-  asks for review; an excluded sport is labelled); no readiness: last night's
+  since its sport and movements are unknown); your planned session today,
+  Garmin Coach's included (a movement note asks for review; an excluded
+  sport is labelled). A leading session's headline names the day from
+  Garmin's call (push "A harder day fits", steady "A steady day fits", easy
+  or rest "An easier day may fit", none "Planned for today") and the session
+  itself goes to Today's session; no readiness: last night's
   sleep against its need; limits: no training suggestion; "Not today" for the
   day's suggestion: nothing else; Garmin's push call: training is an option, to
   plan, dismissable; otherwise an easier or steady day naming the worst
   Garmin-rated readiness factor. Each lead carries a stable id (dismissals key
   on it), its action and the gates it passed (kept in the view for tests and
   diagnostics; Today shows one reason line from Garmin's inputs instead).
+- **Today's session**: described only from verified fields. A Garmin Coach
+  session: strength (`strength_training`) says "gym" or "bodyweight" when
+  `workoutPhrase` starts `STRENGTH_` and ends `_GENERIC_GYM` or
+  `_GENERIC_BODYWEIGHT`; cardio (`other`) adds the target heart rate when
+  `workoutDescription` is exactly "<n>bpm" (30–230); both add Garmin's
+  estimated duration ("about 45 min"). Garmin's effect label is said in plain
+  words with Garmin's label beside it: Recovery "Recovery: very easy",
+  Aerobic base "Easy aerobic base: steady, conversational effort", Lactate
+  threshold "Threshold: hard, sustained effort". `POOREST_SLEEP_RECOVERY`
+  adds "Coach eased this after a short night". The source names Garmin's
+  `weekId` and `durationInWeeks` ("Garmin Coach · week 1 of 4"). The fit
+  line compares the label's intensity (recovery below aerobic base below
+  threshold, on the effort scale's rest, easy and steady) with today's
+  suggested effort and says only "Harder than today's suggested effort",
+  never a prescription; it is absent when the session fits, without a label
+  or without a call. Unknown phrases, sports and labels leave only the name
+  and duration. A Garmin calendar workout shows its name only; your session
+  its name, time, sport and duration.
 - **Today's choice**: Keep records one of today's sessions (yours, open and
   dated today, or Garmin's scheduled workout today by name) as the day's
   choice; it leads over the day's other sessions in the same gate and lasts
@@ -1195,6 +1237,17 @@ next pending wind-down while signed in.
   and skin temperature; absent/unknown capabilities do not mean unsupported.
   An overdue sleep upload belongs only in the upload card, not the unsupported
   metrics explanation.
+- **Night vitals on Today**: last night's Sleep HR is Health Status's HR
+  against its baseline when Garmin sends one, otherwise the sleep record's
+  overnight average (`avgHeartRate`) against the Normal range fallback of
+  the last 30 recorded nights' overnight averages; never resting HR. HRV is
+  the vitals card's nightly HRV against Garmin's baseline. Inside the range
+  it is "Within usual"; outside, the difference from the range's middle in
+  the metric's own units, rounded ("6 above usual"); an onboarding Health
+  Status is "Garmin calibrating"; no range is "Usual not set yet". Higher
+  Sleep HR and lower HRV outside the range are fair-toned; everything else is
+  neutral. Shown for the displayed night in the morning and day phases only,
+  not while that night hasn't synced.
 - **Suggested effort**: Garmin's readiness feedback, rephrased. The level sets
   push, steady or easy; a high load ratio caps it at steady.
 - **Biggest drag**: the readiness factor Garmin rates worst, its percentage
@@ -1212,8 +1265,15 @@ next pending wind-down while signed in.
   Garmin's alignment status for last night when present (behind: keep a steady
   wake time rather than forcing one early night), otherwise the usual wake
   time; it never just says to go to bed earlier.
-- **Wind-down**: the window's start (or Raring's asleep-by time) minus the
-  lead from Settings. The reminder fires once per night, keyed by the morning
+- **Time to fall asleep and in bed**: Garmin's window and need stay
+  Garmin's; the asleep-by time (the window's end, or Raring's estimate) is
+  when to be asleep. Raring adds the time to fall asleep from Settings
+  (default 15 min, 0–60 in 5-minute steps): in bed by is the asleep-by time
+  minus it, and time in bed tonight is the need plus it ("7:50 asleep, so
+  about 8:05 in bed"), from in bed to the expected wake (asleep-by plus the
+  need). In bed by and time in bed are labelled Raring's.
+- **Wind-down**: the earlier of the window's start and the in-bed time
+  (without a window, the in-bed time) minus the lead from Settings. The reminder fires once per night, keyed by the morning
   the night ends, between the wind-down and asleep-by times; it is skipped
   when no recorded sleep (a duration, start or end) has synced for the
   current day. Times are local wall-clock times, so the platform reschedules

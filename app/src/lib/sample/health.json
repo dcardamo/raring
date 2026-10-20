@@ -3,6 +3,32 @@
     "missing": [],
     "unavailable": []
   },
+  "nightVitals": {
+    "sleepHr": {
+      "value": 58,
+      "unit": "bpm",
+      "usual": [
+        52,
+        62
+      ],
+      "rangeSource": "garmin",
+      "state": "within",
+      "delta": null,
+      "tone": "neutral"
+    },
+    "hrv": {
+      "value": 58,
+      "unit": "ms",
+      "usual": [
+        48,
+        62
+      ],
+      "rangeSource": "garmin",
+      "state": "within",
+      "delta": null,
+      "tone": "neutral"
+    }
+  },
   "date": "2025-10-16",
   "bodyWeight": {
     "value": 72.4,

@@ -99,7 +99,94 @@ impl Lead {
             activity: None,
             intention: None,
             reasons: self.reasons,
+            session: None,
         }
+    }
+}
+
+/// The day's headline when a session leads: about the day, from Garmin's
+/// effort call, never the session's name.
+fn day_headline(call: Option<Effort>) -> &'static str {
+    match call {
+        Some(Effort::Push) => "A harder day fits",
+        Some(Effort::Steady) => "A steady day fits",
+        Some(Effort::Easy | Effort::Rest) => "An easier day may fit",
+        None => "Planned for today",
+    }
+}
+
+fn minutes(m: u32) -> String {
+    if m >= 90 && m.is_multiple_of(30) { format!("about {} h", m as f64 / 60.) } else { format!("about {m} min") }
+}
+
+/// A Garmin Coach session in plain words (Rules: Today's session).
+pub(crate) fn coach_session(c: &CoachSession, week: Option<&CoachWeek>, call: Option<Effort>) -> TodaySession {
+    let phrase = c.phrase.as_deref().unwrap_or_default();
+    let mut what = vec![];
+    match c.kind {
+        Some(CoachKind::Strength) => {
+            what.push("Strength".to_owned());
+            if phrase.starts_with("STRENGTH_") && phrase.ends_with("_GENERIC_GYM") {
+                what.push("gym".into());
+            } else if phrase.starts_with("STRENGTH_") && phrase.ends_with("_GENERIC_BODYWEIGHT") {
+                what.push("bodyweight".into());
+            }
+        }
+        Some(CoachKind::Cardio) => what.push("Cardio".into()),
+        _ => {}
+    }
+    what.extend(c.duration_min.map(minutes));
+    if c.kind == Some(CoachKind::Cardio) {
+        what.extend(c.target_hr.map(|hr| format!("target {hr} bpm")));
+    }
+    // Only Garmin's three shown labels carry an intensity; the rest are unknown.
+    let (effect, level) = match c.effect.as_deref() {
+        Some("Recovery") => (Some("Recovery: very easy"), Some(0)),
+        Some("Aerobic base") => (Some("Easy aerobic base: steady, conversational effort"), Some(1)),
+        Some("Lactate threshold") => (Some("Threshold: hard, sustained effort"), Some(2)),
+        _ => (None, None),
+    };
+    let suggested = call.map(|e| match e {
+        Effort::Rest => 0,
+        Effort::Easy => 1,
+        Effort::Steady => 2,
+        Effort::Push => 3,
+    });
+    let source_label = match (c.week, week.and_then(|w| w.weeks)) {
+        (Some(n), Some(of)) if n <= of => format!("Garmin Coach · week {n} of {of}"),
+        (Some(n), _) => format!("Garmin Coach · week {n}"),
+        _ => "Garmin Coach".into(),
+    };
+    TodaySession {
+        name: c.name.clone(),
+        source: SessionSource::Coach,
+        source_label,
+        time: None,
+        what: (!what.is_empty()).then(|| what.join(" · ")),
+        effect: effect.map(str::to_owned),
+        garmin_effect: effect.and(c.effect.clone()),
+        note: (phrase == "POOREST_SLEEP_RECOVERY").then(|| "Coach eased this after a short night".to_owned()),
+        fit: level.zip(suggested).filter(|(l, s)| l > s).map(|_| "Harder than today's suggested effort".to_owned()),
+    }
+}
+
+fn own_session(i: &Intention, name: String) -> TodaySession {
+    let sport = sport_name(i.sport);
+    let mut what = vec![];
+    if name != sport {
+        what.push(sport.to_owned());
+    }
+    what.extend(i.duration_min.map(minutes));
+    TodaySession {
+        name,
+        source: SessionSource::Own,
+        source_label: "Your plan".into(),
+        time: i.time.clone(),
+        what: (!what.is_empty()).then(|| what.join(" · ")),
+        effect: None,
+        garmin_effect: None,
+        note: None,
+        fit: None,
     }
 }
 
@@ -205,8 +292,8 @@ fn choose(
             DayPhase::LateNight => l.done(format!("late:{night_id}"), LeadKind::Sleep, "Rest when you're ready", None, Some(("Tonight's sleep", sleep, false)), false),
             DayPhase::WindDown => {
                 let line = plan.map(|p| match (&p.bedtime_start, p.bedtime_source) {
-                    (Some(start), BedtimeSource::Garmin) => format!("Garmin's window {start}–{}", p.bedtime),
-                    _ => format!("Asleep by {}", p.bedtime),
+                    (Some(start), BedtimeSource::Garmin) => format!("In bed by {} · Garmin's window {start}–{}", p.in_bed, p.bedtime),
+                    _ => format!("In bed by {} · asleep by {}", p.in_bed, p.bedtime),
                 });
                 l.done(format!("wind:{night_id}"), LeadKind::Sleep, "Time to wind down", line, Some(("Tonight's plan", sleep, false)), false)
             }
@@ -274,11 +361,23 @@ fn choose(
         let mut lead = if !state.limits.excluded.is_empty() || note {
             l.gate("Circumstances", "Your limits apply and Raring can't see this workout's sport or movements.");
             l.done(id.clone(), LeadKind::Review, "Review needed", Some(format!("{} · contents unknown to Raring", g.name)), Some(("Review your plan", route("plan"), false)), true)
-        } else if low {
-            l.gate("Garmin guidance", "Garmin suggests an easier day; the session isn't cancelled.");
-            l.done(id.clone(), LeadKind::Garmin, "An easier day may fit", Some(format!("Garmin: {}", g.name)), Some(("Review your plan", route("plan"), false)), true)
         } else {
-            l.done(id.clone(), LeadKind::Garmin, g.name.clone(), Some("Garmin schedule".into()), Some(("Your plan", route("plan"), false)), true)
+            if low {
+                l.gate("Garmin guidance", "Garmin suggests an easier day; the session isn't cancelled.");
+            }
+            let mut lead = l.done(id.clone(), LeadKind::Garmin, day_headline(view.call), None, Some(("Your plan", route("plan"), false)), true);
+            lead.session = Some(TodaySession {
+                name: g.name.clone(),
+                source: SessionSource::Garmin,
+                source_label: "Garmin calendar".into(),
+                time: None,
+                what: None,
+                effect: None,
+                garmin_effect: None,
+                note: None,
+                fit: None,
+            });
+            lead
         };
         lead.kept = is_kept;
         lead.garmin = Some(id);
@@ -292,14 +391,13 @@ fn choose(
             l.done(format!("review:{}", i.id), LeadKind::Review, "Review your session", Some(format!("{name} · your movement note applies")), Some(("Your plan", route("plan"), false)), false)
         } else {
             l.gate("Decisions", "Your own session for today leads.");
-            let headline = match &i.time { Some(t) => format!("{name} at {t}"), None => format!("{name} today") };
-            let line = match (p.coach.is_some(), excluded(i.sport)) {
-                (true, true) => "Garmin Coach · excluded in your limits",
-                (true, false) => "Garmin Coach",
-                (false, true) => "Your plan · excluded in your limits",
-                (false, false) => "Your plan",
-            };
-            l.done(format!("session:{}", i.id), LeadKind::Session, headline, Some(line.into()), Some(("Your plan", route("plan"), false)), false)
+            let line = excluded(i.sport).then(|| "Today's session is excluded in your limits".to_owned());
+            let mut lead = l.done(format!("session:{}", i.id), LeadKind::Session, day_headline(view.call), line, Some(("Your plan", route("plan"), false)), false);
+            lead.session = Some(match &p.coach {
+                Some(c) => coach_session(c, board.coach.as_ref(), view.call),
+                None => own_session(i, name),
+            });
+            lead
         };
         lead.intention = Some(i.id.clone());
         lead.kept = kept == Some(i.id.as_str());
@@ -492,7 +590,9 @@ mod tests {
         act(&store, LocalAction::AddIntention { date: DAY.into(), time: Some("18:30".into()), sport: Sport::Strength, type_key: None, name: None,
             duration_min: None, allocation: Allocation::default(), kind: IntentionKind::Workout, garmin_id: None }, at(13, 8));
         let (_, l) = lead(&store, DayPhase::Day);
-        assert_eq!((l.kind, l.headline.as_str()), (LeadKind::Session, "Strength at 18:30"));
+        assert_eq!((l.kind, l.headline.as_str()), (LeadKind::Session, "A harder day fits"));
+        let s = l.session.unwrap();
+        assert_eq!((s.name.as_str(), s.time.as_deref(), s.source, s.what), ("Strength", Some("18:30"), SessionSource::Own, None));
         act(&store, LocalAction::SetLimits { limits: Limits { excluded: vec![], note: "No overhead pressing".into() } }, at(13, 9));
         let (v, l) = lead(&store, DayPhase::Day);
         assert_eq!((l.kind, l.headline.as_str()), (LeadKind::Review, "Review your session"));
@@ -516,7 +616,9 @@ mod tests {
         store.put("scheduled_workouts", "current", &at(13, 6).to_rfc3339(), &json!({"startDate": "2025-03-10", "endDate": "2025-03-23",
             "entries": [{"calendarDate": DAY, "workoutName": "Threshold intervals"}]})).unwrap();
         let (_, l) = lead(&store, DayPhase::Day);
-        assert_eq!((l.kind, l.headline.as_str(), l.line.as_deref()), (LeadKind::Garmin, "An easier day may fit", Some("Garmin: Threshold intervals")));
+        assert_eq!((l.kind, l.headline.as_str(), l.line), (LeadKind::Garmin, "An easier day may fit", None));
+        let s = l.session.unwrap();
+        assert_eq!((s.name.as_str(), s.source, s.source_label.as_str(), s.what, s.fit), ("Threshold intervals", SessionSource::Garmin, "Garmin calendar", None, None), "nothing is inferred from a calendar name");
     }
 
     #[test]
@@ -525,8 +627,44 @@ mod tests {
         let fetched = at(13, 8).to_rfc3339();
         store.put("coach_plans", "current", &fetched, &json!({"trainingPlanList": [{"trainingPlanId": 42, "trainingPlanCategory": "FBT_ADAPTIVE", "trainingStatus": {"statusKey": "Scheduled"}}]})).unwrap();
         store.put("coach_adaptive", "current", &fetched, &serde_json::from_str::<serde_json::Value>(include_str!("../tests/fixtures/coach_adaptive.json")).unwrap()).unwrap();
-        let (_, l) = lead(&store, DayPhase::Day);
-        assert_eq!((l.kind, l.headline.as_str(), l.line.as_deref(), l.intention.as_deref()), (LeadKind::Session, "Threshold today", Some("Garmin Coach"), Some("coach:2025-03-13:1")));
+        let (v, l) = lead(&store, DayPhase::Day);
+        assert_eq!((l.kind, l.line.as_deref(), l.intention.as_deref()), (LeadKind::Session, None, Some("coach:2025-03-13:1")));
+        assert!(!l.headline.contains("Threshold"), "the headline is about the day: {}", l.headline);
+        let s = l.session.unwrap();
+        assert_eq!((s.name.as_str(), s.source, s.source_label.as_str()), ("Threshold", SessionSource::Coach, "Garmin Coach · week 1 of 6"));
+        assert_eq!((s.what.as_deref(), s.effect.as_deref(), s.garmin_effect.as_deref()), (Some("Cardio · about 45 min · target 152 bpm"), Some("Threshold: hard, sustained effort"), Some("Lactate threshold")));
+        assert_eq!(s.fit.is_some(), matches!(v.call, Some(Effort::Rest | Effort::Easy | Effort::Steady)), "{:?}", v.call);
+    }
+
+    fn coach(kind: CoachKind, phrase: &str, effect: Option<&str>, hr: Option<u32>) -> CoachSession {
+        CoachSession { id: "coach:x:1".into(), date: DAY.into(), name: "Base Builder 1".into(), kind: Some(kind), duration_min: Some(60), effect: effect.map(Into::into),
+            rest_day: false, garmin_status: None, phrase: Some(phrase.into()), target_hr: hr, week: Some(2) }
+    }
+
+    #[test]
+    fn a_coach_session_is_described_from_verified_fields_only() {
+        // (kind, phrase, label, target, call) -> (what, effect, note, fit)
+        type Row = (CoachKind, &'static str, Option<&'static str>, Option<u32>, Option<Effort>, &'static str, Option<&'static str>, Option<&'static str>, Option<&'static str>);
+        let rows: [Row; 8] = [
+            (CoachKind::Strength, "STRENGTH_BASE_BUILDER_13_GENERIC_GYM", None, None, Some(Effort::Easy), "Strength · gym · about 60 min", None, None, None),
+            (CoachKind::Strength, "STRENGTH_CORE_STABILITY_4_GENERIC_BODYWEIGHT", None, None, None, "Strength · bodyweight · about 60 min", None, None, None),
+            (CoachKind::Strength, "SOMETHING_NEW", None, None, None, "Strength · about 60 min", None, None, None),
+            (CoachKind::Cardio, "BASE", Some("Aerobic base"), Some(129), Some(Effort::Easy), "Cardio · about 60 min · target 129 bpm", Some("Easy aerobic base: steady, conversational effort"), None, None),
+            (CoachKind::Cardio, "LACTATE_THRESHOLD", Some("Lactate threshold"), Some(153), Some(Effort::Easy), "Cardio · about 60 min · target 153 bpm", Some("Threshold: hard, sustained effort"), None, Some("Harder than today's suggested effort")),
+            (CoachKind::Cardio, "LACTATE_THRESHOLD", Some("Lactate threshold"), None, Some(Effort::Push), "Cardio · about 60 min", Some("Threshold: hard, sustained effort"), None, None),
+            (CoachKind::Cardio, "BASE", Some("Aerobic base"), None, Some(Effort::Rest), "Cardio · about 60 min", Some("Easy aerobic base: steady, conversational effort"), None, Some("Harder than today's suggested effort")),
+            (CoachKind::Cardio, "POOREST_SLEEP_RECOVERY", Some("Recovery"), Some(117), Some(Effort::Rest), "Cardio · about 60 min · target 117 bpm", Some("Recovery: very easy"), Some("Coach eased this after a short night"), None),
+        ];
+        for (kind, phrase, label, hr, call, what, effect, note, fit) in rows {
+            let s = coach_session(&coach(kind, phrase, label, hr), None, call);
+            assert_eq!((s.what.as_deref(), s.effect.as_deref(), s.note.as_deref(), s.fit.as_deref()), (Some(what), effect, note, fit), "{phrase}");
+            assert_eq!((s.name.as_str(), s.source_label.as_str()), ("Base Builder 1", "Garmin Coach · week 2"));
+        }
+        // An unknown sport and phrase fall back to the name and duration.
+        let mut c = coach(CoachKind::Unknown, "WHATEVER", None, Some(140));
+        c.duration_min = None;
+        let s = coach_session(&c, None, Some(Effort::Easy));
+        assert_eq!((s.what, s.effect, s.note, s.fit), (None, None, None, None));
     }
 
     #[test]
@@ -540,10 +678,10 @@ mod tests {
         add(Sport::Running, "07:00");
         let lift = add(Sport::Strength, "18:00");
         let (_, l) = lead(&store, DayPhase::Day);
-        assert_eq!((l.headline.as_str(), l.kept), ("Run at 07:00", false));
+        assert_eq!((l.session.as_ref().map(|s| (s.name.as_str(), s.time.as_deref(), s.source_label.as_str())), l.kept), (Some(("Run", Some("07:00"), "Your plan")), false));
         act(&store, LocalAction::KeepToday { plan_id: lift.clone() }, at(13, 9));
         let (_, l) = lead(&store, DayPhase::Day);
-        assert_eq!((l.headline.as_str(), l.kept, l.intention.as_deref()), ("Strength at 18:00", true, Some(lift.as_str())));
+        assert_eq!((l.session.as_ref().map(|s| s.name.as_str()), l.kept, l.intention.as_deref()), (Some("Strength"), true, Some(lift.as_str())));
         assert!(local::apply(&store, &LocalAction::KeepToday { plan_id: "garmin:2025-03-14:Intervals".into() }, at(13, 9), Weekday::Mon, &[], None).is_err());
         assert!(local::apply(&store, &LocalAction::KeepToday { plan_id: "i-none".into() }, at(13, 9), Weekday::Mon, &[], None).is_err());
         // Keeping Garmin's session puts it ahead of your own.

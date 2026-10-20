@@ -6,4 +6,8 @@ export type CoachWeek = { name: string, state: PlannedState,
 /**
  * This plan week's Coach sessions and rest days, by date.
  */
-sessions: Array<CoachSession>, };
+sessions: Array<CoachSession>, 
+/**
+ * Garmin's `durationInWeeks`.
+ */
+weeks: number | null, };

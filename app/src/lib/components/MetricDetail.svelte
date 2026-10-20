@@ -25,6 +25,9 @@
  let vital=$derived(source==='health'?(data as HealthView).vitals.readings.find(v=>v.kind===metric):null);
  let training=$derived(source==='training'?data as TrainingView:null);
  let trainingValue=$derived(training?({vo2max:training.vo2max,endurance:training.enduranceScore,hill:training.hillScore,runningTolerance:training.runningToleranceKm,acuteLoad:training.acute?.value??null} as Record<string,number|null>)[metric]:null);
+ // Sleep HR is Garmin's overnight average, against its own usual range; never resting HR.
+ let sleepHr=$derived(metric==='sleepHr'?(data as HealthView).nightVitals?.sleepHr??null:null);
+ const usualWords:Record<string,string>={within:'Within usual',above:'Above usual',below:'Below usual',unset:'Usual range not set yet',calibrating:'Garmin is still building this baseline'};
  let decimals=$derived(metric==='skinTemp'||metric==='respiration'?1:0);
  let initial=$derived(metric==='heartRate'?(data as HealthView).heartRateDay:null);
  let heartRate=$state<HeartRateDay|null>(null);
@@ -57,6 +60,10 @@
  {:else if battery}
   <Gauge size={210} stroke={15} value={battery.now} caption="Latest synced" color={battery.now!=null?batteryColor(battery.now):colors.secondary}/>
   {#if (data as TodayView).bodyBatteryWhy}<WhySheet why={(data as TodayView).bodyBatteryWhy!} label={battery.now!=null?`Why ${num(battery.now)}?`:'Why?'}/>{/if}
+ {:else if metric==='sleepHr'}
+  <div class="metric-value n" style:color={sleepHr?toneColor(sleepHr.tone):null}>{num(sleepHr?.value??null)}<span class="unit">bpm</span></div>
+  <p class="small">{dateLabel((data as HealthView).date)} · Garmin’s overnight average</p>
+  {#if sleepHr && sleepHr.value!=null}<span class="pill" style:color={toneColor(sleepHr.tone)}>{usualWords[sleepHr.state]}{sleepHr.usual?` · ${num(sleepHr.usual[0])}–${num(sleepHr.usual[1])} bpm`:''}</span>{/if}
  {:else if vital}
   <div class="metric-value n" style:color={toneColor(vital.tone)}>{num(vital.value,decimals)}<span class="unit">{vital.unit}</span></div>
   <p class="small">{dateLabel((data as HealthView).date)} · latest synced</p>
@@ -80,10 +87,12 @@
  {:else if battery}
   <Card title="Daily high"><HistoryChart values={[]} endDate={(data as TodayView).date} label="Highest Body Battery" metric="bodyBattery" initialRange="days30"/></Card>
   <Card title="Today"><div class="battery-totals"><div><b class="big n">{num(battery.charged)}</b><span>Charged</span></div><div><b class="big n">{num(battery.drained)}</b><span>Drained</span></div></div></Card>
+ {:else if metric==='sleepHr'}
+  <Card title="Nightly history"><HistoryChart values={[]} endDate={(data as HealthView).date} label="Sleep HR" unit="bpm" band={sleepHr?.usual??null} bandLabel={sleepHr?.rangeSource==='garmin'?'Garmin’s Health Status baseline':'Raring usual range'} nights metric="sleepHr" initialRange="days30"/></Card>
  {:else if vital}
   <Card title="Nightly history">
    {#key metric}
-    <HistoryChart values={vital.trend} endDate={(data as HealthView).date} label={vitalName(vital)} unit={vital.unit} {decimals} band={vital.normal} bandLabel={'Current '+rangeName(vital)} nights metric={vitalTrend(vital)}/>
+    <HistoryChart values={vital.trend} endDate={(data as HealthView).date} label={vitalName(vital)} unit={vital.unit} {decimals} band={vital.normal} bandLabel={'Current '+rangeName(vital)} nights metric={vitalTrend(vital)} initialRange="days30"/>
    {/key}
   </Card>
   <Card title={rangeName(vital)}>
@@ -94,7 +103,7 @@
  {:else if training && metric==='vo2max' && training.vo2maxTrend.some(v=>v!=null)}
   <Card title="History"><HistoryChart values={[]} label="VO₂ max" metric="vo2max" initialRange="year"/></Card>
  {/if}
- <Card title="About this metric"><p class="metric-copy">{vital && isSleepHr(vital) ? 'Garmin’s average heart rate during sleep, compared with its Health Status baseline. Your daily resting heart rate is on the heart-rate page.' : metricDescriptions[metric]}</p></Card>
+ <Card title="About this metric"><p class="metric-copy">{(vital && isSleepHr(vital)) || metric==='sleepHr' ? 'Garmin’s average heart rate during sleep, compared with its Health Status baseline when Garmin sends one, otherwise with the middle 80% of your last 30 recorded nights. Your daily resting heart rate is on the heart-rate page.' : metricDescriptions[metric]}</p></Card>
 </div>
 <style>
  .hr-days{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 4px;color:var(--text2);font-size:12px}

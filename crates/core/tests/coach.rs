@@ -67,6 +67,28 @@ fn coach_sessions_are_read_only_planned_work_and_rest_days_are_not_items() {
 }
 
 #[test]
+fn coach_sessions_keep_garmins_phrase_target_and_week() {
+    let f = fx("phrase", adaptive());
+    let b = board(&f);
+    let coach = b.coach.as_ref().unwrap();
+    assert_eq!(coach.weeks, Some(6));
+    let s = |d: &str| coach.sessions.iter().find(|s| s.date == d).unwrap();
+    assert_eq!((s("2025-03-10").phrase.as_deref(), s("2025-03-10").target_hr, s("2025-03-10").week), (Some("BASE"), Some(128), Some(1)));
+    assert_eq!((s("2025-03-11").phrase.as_deref(), s("2025-03-11").target_hr), (Some("STRENGTH_BASE_BUILDER_2_GENERIC_GYM"), None));
+    assert_eq!(s("2025-03-12").phrase.as_deref(), Some("FORCED_REST"));
+    // A description that isn't "<n>bpm", or an odd phrase, is no target and no phrase.
+    let mut plan = fixture();
+    plan["taskList"][0]["taskWorkout"]["workoutDescription"] = json!("Run easy for 30 min");
+    plan["taskList"][1]["taskWorkout"]["workoutPhrase"] = json!("strength <b>");
+    plan["taskList"][3]["taskWorkout"]["workoutDescription"] = json!("999bpm");
+    f.store.put("coach_adaptive", "current", &at(13, 8).to_rfc3339(), &plan).unwrap();
+    let b = board(&f);
+    let coach = b.coach.as_ref().unwrap();
+    let s = |d: &str| coach.sessions.iter().find(|s| s.date == d).unwrap();
+    assert_eq!((s("2025-03-10").target_hr, s("2025-03-11").phrase.as_deref(), s("2025-03-13").target_hr), (None, None, None));
+}
+
+#[test]
 fn garmins_status_is_not_completion_and_recordings_match_by_kind() {
     let f = fx("match", adaptive());
     // Monday: Garmin says not complete and nothing was recorded.

@@ -21,4 +21,17 @@ effect: string | null, restDay: boolean,
 /**
  * Garmin's own status, shown as Garmin's; never taken as completion.
  */
-garminStatus: string | null, };
+garminStatus: string | null, 
+/**
+ * Garmin's `workoutPhrase` code, such as `BASE` or
+ * `STRENGTH_BASE_BUILDER_13_GENERIC_GYM`.
+ */
+phrase: string | null, 
+/**
+ * Target heart rate, when Garmin's `workoutDescription` is "<n>bpm".
+ */
+targetHr: number | null, 
+/**
+ * Garmin's plan week (`weekId`), from 1.
+ */
+week: number | null, };

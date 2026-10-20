@@ -146,7 +146,7 @@ fn bedtime_notification_uses_shared_plan() {
         .unwrap();
     assert_eq!(
         bedtime.body,
-        "Aim to be asleep by 23:15 (Raring's estimate) · need 8h 00m"
+        "In bed by 23:00 · aim to be asleep by 23:15 (Raring's estimate) · need 8h 00m"
     );
 }
 

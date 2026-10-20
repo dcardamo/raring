@@ -9,6 +9,7 @@ import type { FitnessAgeCard } from "./FitnessAgeCard";
 import type { Gauge } from "./Gauge";
 import type { HeartRateDay } from "./HeartRateDay";
 import type { HrvCard } from "./HrvCard";
+import type { NightVitals } from "./NightVitals";
 import type { PlanWeek } from "./PlanWeek";
 import type { PlannedTraining } from "./PlannedTraining";
 import type { Reconciliation } from "./Reconciliation";
@@ -73,4 +74,9 @@ adapt: AdaptState | null,
 /**
  * The calendar day on one axis; only for the live day.
  */
-day: DayTimeline | null, };
+day: DayTimeline | null, 
+/**
+ * Last night's Sleep HR and HRV against their usual ranges, for the
+ * morning and the day; none from the evening on or before the night syncs.
+ */
+nightVitals: NightVitals | null, };

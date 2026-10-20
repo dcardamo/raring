@@ -191,9 +191,11 @@ pub fn focus(input: &PhaseInput) -> TodayFocus {
         return overview(None);
     };
     let night = input.plan.and_then(|plan| {
-        let start = plan.bedtime_start_at.as_deref().unwrap_or(&plan.bedtime_at);
+        let start = parse(plan.bedtime_start_at.as_deref().unwrap_or(&plan.bedtime_at))?;
+        // In bed can come before Garmin's window opens; the evening leads from the earlier.
+        let start = parse(&plan.in_bed_at).map_or(start, |b| b.min(start));
         Some(Night {
-            promote: parse(start)? - Duration::minutes(PROMOTE_MIN),
+            promote: start - Duration::minutes(PROMOTE_MIN),
             wind_down: parse(&plan.wind_down_at)?,
             end: parse(&plan.bedtime_at)?,
             wake: next,

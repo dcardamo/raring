@@ -2,6 +2,7 @@
 import type { LeadAction } from "./LeadAction";
 import type { LeadKind } from "./LeadKind";
 import type { LeadReason } from "./LeadReason";
+import type { TodaySession } from "./TodaySession";
 
 export type TodayLead = { 
 /**
@@ -27,4 +28,9 @@ activity: string | null,
 /**
  * Your session it concerns.
  */
-intention: string | null, reasons: Array<LeadReason>, };
+intention: string | null, reasons: Array<LeadReason>, 
+/**
+ * Today's session, described below the day's headline (Rules: Today's
+ * session). Keep and Choose another act on it.
+ */
+session: TodaySession | null, };

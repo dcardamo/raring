@@ -177,6 +177,9 @@ pub fn coach_week(store: &Store, from: &str, to: &str, now: DateTime<Utc>) -> Op
                 effect,
                 rest_day,
                 garmin_status: (w["adaptiveCoachingWorkoutStatus"] == "NOT_COMPLETE").then(|| "Not complete".into()),
+                phrase: w["workoutPhrase"].as_str().filter(|p| !p.is_empty() && p.len() <= 80 && p.bytes().all(|b| b.is_ascii_uppercase() || b.is_ascii_digit() || b == b'_')).map(str::to_owned),
+                target_hr: w["workoutDescription"].as_str().and_then(target_hr),
+                week: positive(&t["weekId"]),
             })
         })
         .collect();
@@ -185,7 +188,15 @@ pub fn coach_week(store: &Store, from: &str, to: &str, now: DateTime<Utc>) -> Op
     if state != PlannedState::Available {
         sessions.clear();
     }
-    Some(CoachWeek { name: title(&v, &["trainingPlanName", "planName", "name"]).unwrap_or_else(|| "Garmin Coach".into()), state, sessions })
+    Some(CoachWeek { name: title(&v, &["trainingPlanName", "planName", "name"]).unwrap_or_else(|| "Garmin Coach".into()), state, sessions, weeks: positive(&v["durationInWeeks"]) })
+}
+fn positive(v: &Value) -> Option<u32> {
+    v.as_u64().filter(|n| (1..=520).contains(n)).map(|n| n as u32)
+}
+/// A Coach `workoutDescription` of the form "129bpm"; anything else is not a target.
+fn target_hr(s: &str) -> Option<u32> {
+    let n = s.trim().strip_suffix("bpm")?.trim_end();
+    (!n.is_empty() && n.bytes().all(|b| b.is_ascii_digit())).then(|| n.parse().ok()).flatten().filter(|n| (30..=230).contains(n))
 }
 /// Every cached scheduled workout from `from` to `to`, by date and name only.
 /// Unknown or unfamiliar entries make the whole list unknown, as for the next session.

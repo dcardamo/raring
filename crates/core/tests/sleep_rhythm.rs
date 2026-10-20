@@ -214,6 +214,34 @@ fn tonights_window_wins_over_the_optimal_window() {
 }
 
 #[test]
+fn time_to_fall_asleep_moves_in_bed_and_an_earlier_wind_down_reminder() {
+    let store = Store::open(":memory:").unwrap();
+    // Garmin's window is 22:30–22:40 tonight; its need ends at 06:10.
+    let v = with_next(
+        night(DATE, "23:00", "07:00"),
+        json!({
+            "calendarDate": day(1), "actual": 450, "baseline": 450,
+            "recommendedBedtimeStartMins": 1350, "recommendedBedtimeEndMins": 1360,
+        }),
+    );
+    put(&store, DATE, &v);
+    reminders_on(&store, 45);
+    for (fall_asleep, in_bed, wind_down) in [(0, "22:40", "21:45"), (15, "22:25", "21:40"), (60, "21:40", "20:55")] {
+        let mut settings = store.settings();
+        settings.fall_asleep_min = fall_asleep;
+        store.set_settings(&settings).unwrap();
+        let plan = screens::today(&store, DATE).sleep_plan.unwrap();
+        // Garmin's window and need are unchanged.
+        assert_eq!((plan.bedtime_start.as_deref(), plan.bedtime.as_str(), plan.need_min), (Some("22:30"), "22:40", 450.));
+        assert_eq!((plan.in_bed.as_str(), plan.wind_down.as_str(), plan.in_bed_min), (in_bed, wind_down, 450. + f64::from(fall_asleep)), "{fall_asleep} min");
+        assert_eq!(plan.wake_at, format!("{}T06:10:00", day(1)));
+        let reminder = notifications::bedtime(&store, at(DATE, "20:00")).unwrap();
+        assert_eq!((reminder.at, reminder.night.as_str()), (at(DATE, wind_down), day(1).as_str()), "the reminder fires at the same wind-down, for the same night");
+        assert!(reminder.body.starts_with(&format!("In bed by {in_bed} · ")), "{}", reminder.body);
+    }
+}
+
+#[test]
 fn reminder_follows_the_plan_lead_and_fires_once_per_night() {
     let store = Store::open(":memory:").unwrap();
     let v = with_next(
@@ -235,7 +263,7 @@ fn reminder_follows_the_plan_lead_and_fires_once_per_night() {
     assert_eq!(reminder.night, day(1));
     assert_eq!(
         reminder.body,
-        "Garmin's bedtime window: 22:30–23:30 · need 7h 30m"
+        "In bed by 23:15 · Garmin's bedtime window: 22:30–23:30 · need 7h 30m"
     );
     let local = |t: NaiveDateTime| t.and_local_timezone(chrono::Local).earliest().unwrap();
     // The hourly sync only posts once the wind-down time has come.

@@ -388,8 +388,9 @@ pub(crate) fn sleep_plan(store: &Store, date: &str) -> Option<SleepPlan> {
             )
         }
     };
-    let lead = store.settings().bedtime_lead_min;
-    let wind_down_at = start_at.unwrap_or(bedtime_at) - Duration::minutes(lead.into());
+    let settings = store.settings();
+    let lead = settings.bedtime_lead_min;
+    let (in_bed_at, wind_down_at, wake_at) = rules::bed_times(start_at, bedtime_at, need_min, settings.fall_asleep_min, lead);
     let wake_time = rules::bedtime(&wakes, 0.);
     let baseline_min = num(next, &[&["baseline"]]).filter(|_| tonight);
     let adjustments = if tonight {
@@ -404,6 +405,11 @@ pub(crate) fn sleep_plan(store: &Store, date: &str) -> Option<SleepPlan> {
         bedtime: bedtime_at.format("%H:%M").to_string(),
         bedtime_start: start_at.map(|t| t.format("%H:%M").to_string()),
         bedtime_source,
+        in_bed: in_bed_at.format("%H:%M").to_string(),
+        in_bed_at: iso(in_bed_at),
+        fall_asleep_min: settings.fall_asleep_min,
+        in_bed_min: need_min + f64::from(settings.fall_asleep_min),
+        wake_at: iso(wake_at),
         wind_down: wind_down_at.format("%H:%M").to_string(),
         wind_down_lead_min: lead,
         wind_down_at: iso(wind_down_at),
@@ -1107,6 +1113,53 @@ fn garmin_tone(status: &str) -> Tone {
         "ABOVE_RANGE" | "BELOW_RANGE" | "OUT_OF_RANGE" => Tone::Poor,
         _ => Tone::Neutral,
     }
+}
+/// One night's reading against its usual range: within, or the difference
+/// from the range's middle (Rules: Night vitals on Today).
+fn night_reading(value: Option<f64>, unit: &str, usual: Option<[f64; 2]>, source: VitalRangeSource, calibrating: bool, higher_is_worse: bool) -> NightReading {
+    let usual = usual.filter(|_| !calibrating);
+    let (state, delta) = match (value, usual) {
+        _ if calibrating => (UsualState::Calibrating, None),
+        (Some(v), Some([lo, hi])) if v > hi => (UsualState::Above, Some((v - (lo + hi) / 2.).round())),
+        (Some(v), Some([lo, hi])) if v < lo => (UsualState::Below, Some((v - (lo + hi) / 2.).round())),
+        (Some(_), Some(_)) => (UsualState::Within, None),
+        _ => (UsualState::Unset, None),
+    };
+    let unwelcome = if higher_is_worse { state == UsualState::Above } else { state == UsualState::Below };
+    NightReading {
+        value,
+        unit: unit.into(),
+        usual,
+        range_source: if usual.is_some() { source } else { VitalRangeSource::None },
+        state,
+        delta,
+        tone: if unwelcome { Tone::Fair } else { Tone::Neutral },
+    }
+}
+/// Last night's Sleep HR and HRV. Sleep HR is Health Status's HR with its
+/// baseline when Garmin sends it, otherwise the sleep record's overnight
+/// average against the last 30 nights' (never resting HR); HRV is the
+/// vitals card's, against Garmin's baseline.
+fn night_vitals(store: &Store, date: &str, vitals: &VitalsCard) -> NightVitals {
+    let metric = health_metric(store, VitalKind::RestingHr, date);
+    let sleep_hr = if let Some(m) = metric {
+        let calibrating = m["status"].as_str() == Some("ONBOARDING");
+        night_reading(finite_number(&m["value"]), "bpm", garmin_range(&m), VitalRangeSource::Garmin, calibrating, true)
+    } else {
+        let night = |d: &str| store.get("sleep", d).and_then(|v| night_value(&v, Night::HeartRate));
+        let history: Vec<f64> = (0..30).filter_map(|i| night(&date_sub(date, i))).collect();
+        night_reading(night(date), "bpm", rules::normal(&history), VitalRangeSource::Raring, false, true)
+    };
+    let hrv = vitals.readings.iter().find(|r| r.kind == VitalKind::Hrv);
+    let hrv = night_reading(
+        hrv.and_then(|r| r.value),
+        "ms",
+        hrv.and_then(|r| r.normal),
+        hrv.map_or(VitalRangeSource::None, |r| r.range_source),
+        hrv.is_some_and(|r| r.status.as_deref() == Some("ONBOARDING")),
+        false,
+    );
+    NightVitals { sleep_hr, hrv }
 }
 pub fn vitals(store: &Store, date: &str) -> VitalsCard {
     let mut readings = vec![];
@@ -1967,7 +2020,12 @@ pub fn today_at_calendar(store: &Store, date: &str, now: DateTime<FixedOffset>, 
         lead: None,
         adapt: None,
         day: None,
+        night_vitals: None,
     };
+    let night_phase = matches!(view.focus.phase, DayPhase::Evening | DayPhase::WindDown | DayPhase::LateNight);
+    if !night_phase && !view.focus.sleep_missing {
+        view.night_vitals = Some(night_vitals(store, date, &view.vitals));
+    }
     view.readiness_why = explain::readiness_why(&r, &view.factors, rl.as_deref());
     view.body_battery_why =
         explain::body_battery_why(b, &summary, view.body_battery.now, &view.stress);
@@ -2802,6 +2860,7 @@ pub fn health(store: &Store, date: &str) -> HealthView {
 /// Live Health retains its sleep-day vitals while the private journal follows
 /// the actual local calendar day, as planned Training does.
 pub fn health_at_calendar(store: &Store, date: &str, calendar: &str) -> HealthView {
+    let vitals = vitals(store, date);
     let body_weight = body_weight(store, date);
     let v = store.get("fitness_age", date).unwrap_or(Value::Null);
     let drivers: Vec<Driver> = [
@@ -2915,7 +2974,8 @@ pub fn health_at_calendar(store: &Store, date: &str, calendar: &str) -> HealthVi
         fitness_age: age(store, date),
         lever,
         drivers,
-        vitals: vitals(store, date),
+        night_vitals: Some(night_vitals(store, date, &vitals)),
+        vitals,
         stress: stress(store, date),
         heart_rate_day: heart_rate_day(store, date),
         body_weight,
