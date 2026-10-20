@@ -37,3 +37,6 @@ base64 = "0.22"
 [target.'cfg(not(target_os = "android"))'.dependencies]
 rfd = { version = "0.17", default-features = false, features = ["gtk3"] }
 tauri-plugin-notification = "2.7"
+
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+zbus = "5"

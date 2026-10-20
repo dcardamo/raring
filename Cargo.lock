@@ -3084,6 +3084,7 @@ dependencies = [
  "tauri-plugin-log",
  "tauri-plugin-notification",
  "tokio",
+ "zbus",
 ]
 
 [[package]]

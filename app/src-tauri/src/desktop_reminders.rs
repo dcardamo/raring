@@ -44,6 +44,26 @@ fn signed_in(app: &AppHandle) -> bool {
     crate::load_tokens(app).is_ok_and(|tokens| tokens.is_some())
 }
 
+/// Linux posts through the session D-Bus notification server. The Tauri
+/// plugin dispatches on a background task and discards the server's error, so
+/// a session without a server would mark a reminder that nobody can see.
+#[cfg(all(unix, not(target_os = "macos")))]
+fn notification_server() -> Result<(), String> {
+    let connection = zbus::blocking::Connection::session().map_err(|e| e.to_string())?;
+    let bus = zbus::blocking::fdo::DBusProxy::new(&connection).map_err(|e| e.to_string())?;
+    let name = zbus::names::BusName::try_from("org.freedesktop.Notifications")
+        .map_err(|e| e.to_string())?;
+    match bus.name_has_owner(name).map_err(|e| e.to_string())? {
+        true => Ok(()),
+        false => Err("no desktop notification service".into()),
+    }
+}
+
+#[cfg(any(windows, target_os = "macos"))]
+fn notification_server() -> Result<(), String> {
+    Ok(())
+}
+
 fn supported(app: &AppHandle) -> bool {
     app.try_state::<tauri_plugin_notification::Notification<tauri::Wry>>()
         .is_some()
@@ -73,6 +93,12 @@ pub fn deliver_due(
     let due = core.notifications(now);
     if due.is_empty() {
         return Ok(());
+    }
+    if let Err(reason) = notification_server() {
+        if let Ok(mut last) = LAST_ERROR.lock() {
+            *last = Some(reason.clone());
+        }
+        return Err(reason);
     }
     let delivery = core
         .deliver_notifications(&due, now, |item| show(app, item))
