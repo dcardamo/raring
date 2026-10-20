@@ -1,7 +1,8 @@
 // Contrast of rendered text, including translucent cards, tiles and chips over the page ink.
 // Return every failing label so the UI regression can identify its screen and width.
-export async function contrastFailures(page) {
- return page.evaluate(() => {
+// The site regression passes its own selector; the app's text is inside .phone.
+export async function contrastFailures(page, selector = '.phone *') {
+ return page.evaluate(selector => {
   const parse = c => {
    const m = c.match(/rgba?\(([^)]+)\)/);
    if (!m) return null;
@@ -14,6 +15,7 @@ export async function contrastFailures(page) {
    return .2126*v[0]+.7152*v[1]+.0722*v[2];
   };
   const ratio = (a,b) => {const [high,low]=[lum(a),lum(b)].sort((x,y)=>y-x);return (high+.05)/(low+.05)};
+  const root=parse(getComputedStyle(document.documentElement).backgroundColor),ground=root?.[3]===1?root:[11,15,26,1];
   const background = el => {
    const layers=[],box=el.getBoundingClientRect(),cx=box.x+box.width/2,cy=box.y+box.height/2;
    for(let e=el;e && e!==document.documentElement;e=e.parentElement){
@@ -22,11 +24,11 @@ export async function contrastFailures(page) {
     const bg=parse(getComputedStyle(e).backgroundColor);
     if(bg && bg[3]>0){layers.push(bg);if(bg[3]===1)break}
    }
-   return layers.reverse().reduce((base,top)=>over(top,base),[11,15,26,1]);
+   return layers.reverse().reduce((base,top)=>over(top,base),ground);
   };
   const opacity = el => {let o=1;for(let e=el;e;e=e.parentElement)o*=+getComputedStyle(e).opacity;return o};
   const failures=[];
-  for(const el of document.querySelectorAll('.phone *')){
+  for(const el of document.querySelectorAll(selector)){
    if(![...el.childNodes].some(n=>n.nodeType===3 && n.textContent.trim()))continue;
    const r=el.getBoundingClientRect(),cs=getComputedStyle(el);
    if(!r.width||!r.height||cs.visibility==='hidden'||cs.display==='none'||el.closest('.sr-only, [hidden]'))continue;
@@ -40,5 +42,5 @@ export async function contrastFailures(page) {
    if(actual<needed)failures.push(`${actual.toFixed(2)} < ${needed} (${size}px) ${JSON.stringify(el.textContent.trim().slice(0,35))}`);
   }
   return [...new Set(failures)];
- });
+ }, selector);
 }

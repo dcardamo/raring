@@ -4,6 +4,7 @@ import {mkdir,readFile} from 'node:fs/promises';
 import {createServer} from 'node:http';
 import {extname,resolve,sep} from 'node:path';
 import {chromium} from 'playwright';
+import {contrastFailures} from './contrast.mjs';
 
 const root=resolve('../site'),output=resolve('../.data/screens/site');
 const types={'.html':'text/html; charset=utf-8','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.woff2':'font/woff2'};
@@ -46,9 +47,11 @@ try{
     assert.equal(await page.locator('.free-note').textContent(),'Free to use. No subscription.');
     const free=await page.locator('.free-note').boundingBox();
     assert.ok(free && free.y+free.height<=900,`${width}: free-to-use message is above the fold`);
-    assert.deepEqual(await page.locator('.spotlight img').evaluateAll(images=>images.map(img=>img.getAttribute('src'))),['assets/sleep.png','assets/training.png','assets/workout.png','assets/stress.png','assets/health.png']);
-    assert.deepEqual(await page.locator('.benefits h3').allTextContents(),['Readiness','Sleep','Training','Workouts','Stress','Health']);
-    assert.deepEqual(await page.locator('.highlights strong').allTextContents(),['Readiness','Sleep','Training','Stress']);
+    assert.deepEqual(await page.locator('.spotlight img').evaluateAll(images=>images.map(img=>img.getAttribute('src'))),['assets/plan.png','assets/sleep.png','assets/training.png','assets/strength-workout.png','assets/health.png','assets/review.png']);
+    assert.deepEqual(await page.locator('.benefits h3').allTextContents(),['Today','Plan','Sleep','Training','Strength','Health','Progress','Adapt','On your phone']);
+    assert.deepEqual(await page.locator('.highlights strong').allTextContents(),['Today','Plan','Training','Health','Progress']);
+    // App screenshots are synthetic; each says so to screen readers too.
+    assert.ok(await page.locator('.phone-frame img').evaluateAll(images=>images.length===7 && images.every(img=>img.alt.endsWith('All readings are sample data.'))),'app screenshots are labelled as sample data');
    }
    if(path==='/compatibility.html'){
     const tested=page.locator('tbody tr').filter({hasText:'Forerunner 970'});
@@ -64,6 +67,7 @@ try{
    const layout=await page.evaluate(()=>({width:innerWidth,body:document.body.scrollWidth,document:document.documentElement.scrollWidth}));
    assert.ok(layout.body<=width && layout.document<=width,`${width}${path}: overflow ${JSON.stringify(layout)}`);
    assert.ok(await page.locator('img').evaluateAll(images=>images.every(img=>img.complete && img.naturalWidth>0)),'images load');
+   assert.deepEqual(await contrastFailures(page,'body *'),[],`${width}${path}: text contrast`);
    for(const href of await page.locator('a[href]').evaluateAll(anchors=>anchors.map(a=>a.href)))links.add(href);
    if(width===390 || width===1280)await page.screenshot({path:resolve(output,`${width}-${path==='/'?'home':path.slice(1,-5)}.png`),fullPage:true});
   }
@@ -97,7 +101,7 @@ try{
  assert.deepEqual(unexpected,[],'no third-party resource requests');
  assert.deepEqual(failures,[],'no broken resources');
  assert.deepEqual(errors,[],'no browser errors');
- console.log('Static site: 320–1280px layouts, free-to-use copy, benefits, feature spotlights, assets, links, install/privacy navigation and no third-party requests passed with JavaScript disabled.');
+ console.log('Static site: 320–1280px layouts, text contrast, free-to-use copy, benefits, feature spotlights, sample-data screenshots, assets, links, install/privacy navigation and no third-party requests passed with JavaScript disabled.');
 }finally{
  await browser?.close();
  await new Promise(resolve=>server.close(resolve));

@@ -2,13 +2,13 @@
 .compat-page h1{font-size:clamp(42px,5vw,64px)}
 .compat-page .lead{max-width:640px}
 .tiers{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;list-style:none;padding:0;margin:36px 0 56px}
-.tiers li{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px}
+.tiers li{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px}
 .tiers p{font-size:14px;margin-top:12px}
 .tier{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;line-height:1.4;white-space:nowrap}
 .tier::before{content:'';flex:none;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;color:var(--bg)}
-.tier.tested{color:var(--mint)}.tier.tested::before{content:'✓';background:var(--mint)}
+.tier.tested{color:var(--good)}.tier.tested::before{content:'✓';background:var(--good)}
 .tier.expected{color:var(--text)}.tier.expected::before{background:linear-gradient(90deg,var(--text) 50%,transparent 50%);box-shadow:inset 0 0 0 2px var(--text)}
-.tier.partial{color:var(--text)}.tier.partial::before{content:'✓';color:var(--mint);box-shadow:inset 0 0 0 2px var(--mint)}
+.tier.partial{color:var(--text)}.tier.partial::before{content:'✓';color:var(--good);box-shadow:inset 0 0 0 2px var(--good)}
 .compat .limit{display:block;max-width:520px;margin-top:6px;font-size:13px;line-height:1.45;color:var(--muted)}
 .tier.unknown{color:var(--quiet)}.tier.unknown::before{content:'?';color:var(--quiet);box-shadow:inset 0 0 0 2px var(--quiet)}
 .compat-section{padding-top:56px}
@@ -17,14 +17,14 @@
 .needs li{border-top:2px solid var(--line);padding-top:16px}
 .needs h3{font-size:20px}
 .needs p{font-size:14px;margin-top:8px}
-.compat{width:100%;border-collapse:separate;border-spacing:0;margin-top:40px;background:var(--card);border:1px solid var(--line);border-radius:20px;overflow:hidden}
+.compat{width:100%;border-collapse:separate;border-spacing:0;margin-top:40px;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
 .compat caption{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 .compat th,.compat td{padding:18px 20px;text-align:left;vertical-align:middle;border-top:1px solid var(--line)}
-.compat thead th{border-top:0;font-size:11px;font-weight:650;letter-spacing:.14em;text-transform:uppercase;color:var(--quiet)}
-.compat tbody th{font:600 18px/1.3 Outfit,system-ui,sans-serif;color:var(--text);width:32%}
-.compat tbody th small{display:block;margin-top:4px;font:400 13px/1.45 Inter,system-ui,sans-serif;color:var(--quiet)}
+.compat thead th{border-top:0;font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--quiet)}
+.compat tbody th{font:600 18px/1.3 Inter,system-ui,sans-serif;letter-spacing:-.02em;color:var(--text);width:32%}
+.compat tbody th small{display:block;margin-top:4px;font:400 13px/1.45 Inter,system-ui,sans-serif;letter-spacing:0;color:var(--quiet)}
 .compat-note{margin-top:18px}
-.report{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:48px;align-items:center;padding:40px;margin:8px 0 40px;border:1px solid #275043;background:linear-gradient(125deg,#122c25,#11232b);border-radius:24px}
+.report{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:48px;align-items:center;padding:40px;margin:8px 0 40px;border:1px solid var(--line);background:var(--card);border-radius:24px}
 .report p:not(.eyebrow){margin-top:16px;font-size:15px}
 .report-action p.quiet{font-size:13px}
 @media(max-width:900px){
@@ -38,7 +38,7 @@
  .compat,.compat tbody,.compat tr,.compat th,.compat td{display:block;width:auto}
  .compat{background:none;border:0;border-radius:0}
  .compat thead{display:none}
- .compat tr{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:6px 18px;margin-top:14px}
+ .compat tr{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:6px 18px;margin-top:14px}
  .compat tbody th{width:auto;border-top:0;padding:14px 0 12px}
  .compat td{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:4px 12px;padding:12px 0}
  .compat .limit{flex-basis:100%;margin-top:2px}

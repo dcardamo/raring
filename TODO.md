@@ -72,6 +72,10 @@ In priority order; the redesign shipped (Done, item 26) without them.
 - Review the refined tokens on main's new Today/Sleep components: the four
   morning stats, separate session card, 24-hour clock and recent-nights chart.
   They are integrated in the prototype; their layout and data remain main's.
+- The launcher icon (`app/src-tauri/icons/raring.svg`, also the website's
+  favicon and brand mark) keeps the earlier navy and mint gradient, while the
+  app and raring.app now use warm graphite and an ink brand ring. Decide
+  whether the icon follows; a new icon needs every generated size.
 
 ### Chart colour follow-ups
 
@@ -498,6 +502,9 @@ faces, screens, sensors and audio prompts stay in Connect.
       tokens; the core takes a caller-owned `Client`.
     - "Waiting for watch sync" ends only after a normal sync stores a newer
       device detail; the log doesn't fetch it on its own.
+    - The website's privacy page and the README say the app only reads from
+      Garmin and never sends goals or plans there. Rewrite both with the
+      first shipped write.
 22. **Strength workout builder**: after the write rules, start with a
     workout-push spike on the Forerunner 970: create and schedule a strength
     workout, confirm it reaches the watch, do it and read the sets back.
