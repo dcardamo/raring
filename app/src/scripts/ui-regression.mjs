@@ -818,7 +818,6 @@ try {
   const left=week.getByRole('group',{name:'Left this week'});
   assert.equal(await left.getByRole('button',{name:'Do it today'}).count(),1,'This week and what is left share one card');
   assert.equal(await left.getByText('Excluded by your limits').count(),1,'an excluded backlog item says why, as in Choose');
-  await dayPage.getByText('That’s today.',{exact:true}).waitFor();
   const length=await dayPage.evaluate(()=>{const el=document.querySelector('main.scroll');return el.scrollHeight/el.clientHeight});
   console.log(`Today at 390×844 is ${length.toFixed(2)} viewports`);
   await left.getByRole('button',{name:'Do it today'}).first().click();
@@ -880,7 +879,7 @@ try {
   const empty={...sample,activities:[],day:{...sample.day,sleep:[],asleepMin:null,bodyBattery:[],bodyBatteryNow:null,stress:[],stressAverage:null,heartRate:[],restingHr:null,events:[],uploadMin:null}};
   await blank.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(empty)}`}));
   await blank.goto(`${url}/#today`);
-  await blank.getByText('That’s today.',{exact:true}).waitFor();
+  await blank.locator('#lead-h').waitFor();
   assert.equal(await blank.locator('.your-day').count(),0,'an empty Your day is hidden');
   assert.equal(await blank.locator('.card.recorded').count(),0);
   // Without intraday levels the row still shows the day's latest Body Battery, so cutting Right now loses nothing.
@@ -940,8 +939,13 @@ try {
   const tops=await stats.evaluateAll(els=>els.map(e=>Math.round(e.getBoundingClientRect().top)));
   assert.equal(new Set(tops).size,1,'one row at 360 px');
   const text=await sp.locator('.morning').textContent();
-  for(const t of ['7:48','Score 84','82','High','57','6 above usual','44','11 below usual'])assert.ok(text.includes(t),`${t} in ${text}`);
+  for(const t of ['84','Good · 7:48','82','High','57','6 above usual','44','11 below usual'])assert.ok(text.includes(t),`${t} in ${text}`);
   assert.equal(await sp.getByRole('button',{name:'Sleep HR 57 bpm, 6 above usual, usual 48–54 bpm'}).count(),1);
+  // Sleep is Garmin's score in a ring like Readiness; each rating word takes its tone colour.
+  assert.equal(await sp.locator('.sleep-fact .gauge').count(),1,'the sleep ring is the score');
+  assert.equal(await sp.getByRole('button',{name:'Last night’s sleep, score 84, Good, 7:48 asleep'}).count(),1);
+  const good='rgb(96, 211, 160)',fair='rgb(242, 184, 94)';
+  assert.deepEqual(await sp.locator('.morning small').evaluateAll(els=>els.map(e=>getComputedStyle(e).color)),[good,good,fair,fair]);
   assert.deepEqual(await contrastFailures(sp),[],'stats contrast');
   await sp.screenshot({path:resolve(output,'today-stats-360.png')});
   for(const [name,route] of [['Sleep HR','metric/sleepHr'],['HRV','metric/hrv'],['Readiness','readiness'],['Last night','sleep/last']]){
@@ -952,8 +956,17 @@ try {
   // The neutral wait shows no stale values; missing readings say so.
   const waitPage=await open({...sample,nightVitals:null,focus:{...sample.focus,sleepMissing:true,effort:false,lastNight:null},lead:{id:'wait:2025-10-16',kind:'waiting',headline:'Last night hasn’t synced yet',line:null,action:null,dismissable:false,kept:false,garmin:null,activity:null,intention:null,reasons:[]}});
   const waitText=await waitPage.locator('.morning').textContent();
-  assert.ok(!/7:48|Score 84|\b82\b|\b58\b/.test(waitText) && waitText.includes('Not synced yet') && waitText.includes('Waiting'),waitText);
+  assert.ok(!/7:48|\b84\b|\b82\b|\b58\b/.test(waitText) && waitText.includes('Not synced yet') && waitText.includes('Waiting'),waitText);
   await waitPage.close();
+  // Within the usual range is green, as on Health's vitals and the charts.
+  const within=await open(sample);
+  assert.deepEqual(await within.locator('.hr-fact small, .hrv-fact small').evaluateAll(els=>els.map(e=>[e.textContent,getComputedStyle(e).color])),[['Within usual',good],['Within usual',good]]);
+  await within.close();
+  // A night without a score shows its time asleep, without a ring.
+  const unscored=await open({...sample,sleep:null});
+  assert.equal(await unscored.locator('.sleep-fact .gauge').count(),0);
+  assert.ok((await unscored.locator('.sleep-fact').textContent()).includes('7:48') && (await unscored.locator('.sleep-fact').textContent()).includes('No score'));
+  await unscored.close();
   const missing=await open({...sample,nightVitals:{sleepHr:{...nightVitals.sleepHr,value:null,state:'unset',delta:null,usual:null,tone:'neutral'},hrv:{...nightVitals.hrv,state:'unset',usual:null,delta:null,tone:'neutral'}}});
   const missingText=await missing.locator('.morning').textContent();
   assert.ok(missingText.includes('Not recorded') && missingText.includes('Usual not set yet'),missingText);

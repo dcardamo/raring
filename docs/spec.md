@@ -155,22 +155,23 @@ optional after sign-in.
 
 ### Today
 
-A briefing with an ending, in this order:
+A briefing, in this order:
 
 - **Last night and readiness**: four compact stats in one row (two by two
-  at large text), each opening its detail: **Sleep** (time asleep in a ring
-  against Garmin's need, the Sleep Score under it; opens Last night),
-  **Readiness** (Garmin's score in a ring in its tone, the level word under
-  it), **Sleep HR** and **HRV** (last night's value with ▲ or ▼ and "6
-  above usual", "Within usual", "Usual not set yet" or "Garmin calibrating";
-  they open their metric detail at 30 days; Rules: Night vitals on Today). A
-  tone colour appears only with its words, when Garmin rates a reading low
-  or it is outside its usual range in the unwelcome direction. A watch that
+  at large text), each opening its detail: **Sleep** (Garmin's Sleep Score
+  in a ring in its level's colour, its level word and the time asleep under
+  it, "Good · 7:33"; opens Last night), **Readiness** (Garmin's score in a
+  ring in its tone, the level word under it), **Sleep HR** and **HRV** (last
+  night's value with ▲ or ▼ and "6 above usual", "Within usual", "Usual not
+  set yet" or "Garmin calibrating"; they open their metric detail at 30
+  days; Rules: Night vitals on Today). Each rating word takes its tone
+  colour: Garmin's level for Sleep and Readiness, green within the usual
+  range and amber outside it for Sleep HR and HRV. A watch that
   can't record readiness says so. While the displayed night hasn't synced
   all four wait neutrally: no earlier score, readiness, vitals, chips or
   reconciliation shown as this morning's. A missing reading is a dash and
-  "Not recorded". From the evening on only Sleep and Readiness stay. A score
-  without a duration is labelled as one.
+  "Not recorded". From the evening on only Sleep and Readiness stay. A night
+  without a score shows its time asleep and says "No score".
 - **The lead**: one headline, at most one line and one action, chosen by the
   gates in Rules: Today's lead; a suggestion can be dismissed with "Not
   today". When Garmin's readiness allows, the **effort** strip (Rest, Easy,
@@ -217,8 +218,7 @@ A briefing with an ending, in this order:
   since" its first month.
 - Watch-upload and missing-reading notices sit above last night and
   readiness; Today explains only the readings it shows (readiness and the
-  sleep score). The ending
-  says "That's today." The plan-your-week prompt appears on root pages when
+  sleep score). The plan-your-week prompt appears on root pages when
   due (Rules: Plan prompt). Settings → Today → "Follow my day" keeps a fixed
   order for irregular schedules (Rules: Time of day).
 
@@ -1339,10 +1339,11 @@ next pending wind-down while signed in.
   the vitals card's nightly HRV against Garmin's baseline. Inside the range
   it is "Within usual"; outside, the difference from the range's middle in
   the metric's own units, rounded ("6 above usual"); an onboarding Health
-  Status is "Garmin calibrating"; no range is "Usual not set yet". Higher
-  Sleep HR and lower HRV outside the range are fair-toned; everything else is
-  neutral. Shown for the displayed night in the morning and day phases only,
-  not while that night hasn't synced.
+  Status is "Garmin calibrating"; no range is "Usual not set yet". Inside
+  the range is good-toned and outside it fair-toned in either direction
+  (attention, not a rating), as on Health's vitals and the charts;
+  calibrating and no range are neutral. Shown for the displayed night in
+  the morning and day phases only, not while that night hasn't synced.
 - **Suggested effort**: Garmin's readiness feedback, rephrased. The level sets
   push, steady or easy; a high load ratio caps it at steady.
 - **Biggest drag**: the readiness factor Garmin rates worst, its percentage

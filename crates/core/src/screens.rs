@@ -1175,8 +1175,9 @@ fn garmin_tone(status: &str) -> Tone {
     }
 }
 /// One night's reading against its usual range: within, or the difference
-/// from the range's middle (Rules: Night vitals on Today).
-fn night_reading(value: Option<f64>, unit: &str, usual: Option<[f64; 2]>, source: VitalRangeSource, calibrating: bool, higher_is_worse: bool) -> NightReading {
+/// from the range's middle (Rules: Night vitals on Today). Toned like
+/// Health's vitals: good inside the range, fair outside it either way.
+fn night_reading(value: Option<f64>, unit: &str, usual: Option<[f64; 2]>, source: VitalRangeSource, calibrating: bool) -> NightReading {
     let usual = usual.filter(|_| !calibrating);
     let (state, delta) = match (value, usual) {
         _ if calibrating => (UsualState::Calibrating, None),
@@ -1185,7 +1186,6 @@ fn night_reading(value: Option<f64>, unit: &str, usual: Option<[f64; 2]>, source
         (Some(_), Some(_)) => (UsualState::Within, None),
         _ => (UsualState::Unset, None),
     };
-    let unwelcome = if higher_is_worse { state == UsualState::Above } else { state == UsualState::Below };
     NightReading {
         value,
         unit: unit.into(),
@@ -1193,7 +1193,11 @@ fn night_reading(value: Option<f64>, unit: &str, usual: Option<[f64; 2]>, source
         range_source: if usual.is_some() { source } else { VitalRangeSource::None },
         state,
         delta,
-        tone: if unwelcome { Tone::Fair } else { Tone::Neutral },
+        tone: match state {
+            UsualState::Within => Tone::Good,
+            UsualState::Above | UsualState::Below => Tone::Fair,
+            UsualState::Unset | UsualState::Calibrating => Tone::Neutral,
+        },
     }
 }
 /// Last night's Sleep HR and HRV. Sleep HR is Health Status's HR with its
@@ -1204,11 +1208,11 @@ fn night_vitals(store: &Store, date: &str, vitals: &VitalsCard) -> NightVitals {
     let metric = health_metric(store, VitalKind::RestingHr, date);
     let sleep_hr = if let Some(m) = metric {
         let calibrating = m["status"].as_str() == Some("ONBOARDING");
-        night_reading(finite_number(&m["value"]), "bpm", garmin_range(&m), VitalRangeSource::Garmin, calibrating, true)
+        night_reading(finite_number(&m["value"]), "bpm", garmin_range(&m), VitalRangeSource::Garmin, calibrating)
     } else {
         let night = |d: &str| sleep_row(store, d).and_then(|v| night_value(&v, Night::HeartRate));
         let history: Vec<f64> = (0..30).filter_map(|i| night(&date_sub(date, i))).collect();
-        night_reading(night(date), "bpm", rules::normal(&history), VitalRangeSource::Raring, false, true)
+        night_reading(night(date), "bpm", rules::normal(&history), VitalRangeSource::Raring, false)
     };
     let hrv = vitals.readings.iter().find(|r| r.kind == VitalKind::Hrv);
     let hrv = night_reading(
@@ -1217,7 +1221,6 @@ fn night_vitals(store: &Store, date: &str, vitals: &VitalsCard) -> NightVitals {
         hrv.and_then(|r| r.normal),
         hrv.map_or(VitalRangeSource::None, |r| r.range_source),
         hrv.is_some_and(|r| r.status.as_deref() == Some("ONBOARDING")),
-        false,
     );
     NightVitals { sleep_hr, hrv }
 }

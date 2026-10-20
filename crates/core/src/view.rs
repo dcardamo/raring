@@ -309,8 +309,8 @@ pub struct NightReading {
     pub state: UsualState,
     /// Outside the range: the value minus the range's middle, whole units.
     pub delta: Option<f64>,
-    /// Fair only outside the range in the unwelcome direction (higher Sleep
-    /// HR, lower HRV); otherwise neutral.
+    /// Good inside the range, fair outside it either way (attention, not a
+    /// rating); neutral without a range.
     pub tone: Tone,
 }
 
