@@ -44,9 +44,11 @@ import {weightFixtures} from './sample/weight';
 import type { ProgressView } from './generated/ProgressView';
 import type { Period } from './generated/Period';
 import sampleProgress from './sample/progress.json';
+import type { ImportPreview } from './generated/ImportPreview';
 export const previewOnly = !isTauri();
 
 export type { Settings } from './generated/Settings';
+export type { ImportPreview } from './generated/ImportPreview';
 export type SettingsPatch = Partial<Settings>;
 export const supportsStatusSurfaces = (isTauri() && /Android/.test(navigator.userAgent)) || new URLSearchParams(location.search).get('fixture')==='status-offer';
 export const defaultSettings = {notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,notifyStatus:false,statusOfferSeen:false,bedtimeLeadMin:30,adaptiveToday:true,journalEnabled:false,planPrompt:true} satisfies Settings;
@@ -119,6 +121,23 @@ export const open_garmin_connect = ():Promise<boolean> => call('open_garmin_conn
 export const begin_sign_in = ():Promise<void> => call('begin_sign_in',undefined,undefined);
 export const sign_out = ():Promise<void> => call('sign_out',undefined,undefined);
 export const export_archive = ():Promise<string> => call('export_archive',undefined,'Preview: no file created');
+// The browser preview shows a realistic export; only the core validates and imports one.
+const sampleImport:ImportPreview = {exportedAt:'2025-10-19T08:12:00+02:00',appVersion:'0.1.30',from:'2024-11-04',to:'2025-11-04',rows:[
+ {kind:'Goals',added:2,replaced:1,kept:0},
+ {kind:'Your sessions',added:3,replaced:0,kept:1},
+ {kind:'Plan links',added:4,replaced:0,kept:2},
+ {kind:'Rest, pauses and limits',added:5,replaced:1,kept:3},
+ {kind:'Plan-week prompts',added:6,replaced:0,kept:2},
+ {kind:'Events',added:1,replaced:0,kept:0},
+ {kind:'Routines',added:2,replaced:0,kept:4},
+ {kind:'Weekly plan history',added:9,replaced:0,kept:2},
+ {kind:'Sleep plan snapshots',added:14,replaced:0,kept:0},
+ {kind:'Plan prompt preference',added:0,replaced:0,kept:1}],skipped:[
+ {what:'Garmin data and journal logs',reason:"Not imported: a sync downloads Garmin data for this phone, and journal reads stay this phone's own choice."},
+ {what:'Milestones and records',reason:"Not imported: they are awarded again from this phone's Garmin recordings."},
+ {what:'Notification settings',reason:'Not imported: this phone keeps its own choices.'}]};
+export const choose_import = ():Promise<ImportPreview> => call('choose_import',undefined,sampleImport);
+export const apply_import = ():Promise<ImportPreview> => call('apply_import',undefined,sampleImport);
 export const request_notification_permission = ():Promise<boolean> => call('request_notification_permission',undefined,true);
 export const get_settings = ():Promise<Settings> => call('get_settings',undefined,previewSettings);
 export const patch_settings = (patch:SettingsPatch):Promise<void> => {if(!isTauri()){previewSettings={...previewSettings,...copy(patch)};return Promise.resolve()}return invoke<void>('patch_settings',{patch})};

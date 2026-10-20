@@ -29,7 +29,7 @@ pub enum ExportError {
 
 // Never copy credentials from a future Garmin response or a new settings key.
 // The denylist is applied at every depth, before any value reaches either JSON or CSV.
-fn credential_key(key: &str) -> bool {
+pub(crate) fn credential_key(key: &str) -> bool {
     let key: String = key
         .chars()
         .filter(|c| c.is_ascii_alphanumeric())
@@ -157,6 +157,35 @@ fn write_bound_snapshot(
         db.execute_batch("ROLLBACK")?;
         result
     })?
+}
+
+/// The active account both markers agree on, read inside the export's own
+/// snapshot. None when the account is suspended, unbound or unverifiable.
+fn verified_identity(db: &Connection) -> Option<String> {
+    let session: Option<String> = db
+        .query_row("SELECT value FROM settings WHERE key='account_session'", [], |r| r.get(0))
+        .optional()
+        .ok()
+        .flatten();
+    let identity = session
+        .as_deref()
+        .and_then(|s| serde_json::from_str::<Value>(s).ok())
+        .filter(|s| s["active"] == true)
+        .and_then(|s| s["identity"].as_str().map(str::to_owned))
+        .filter(|id| crate::account::valid_identity(id));
+    let profile: Option<String> = db
+        .query_row("SELECT json FROM raw WHERE endpoint='profile' AND key='me'", [], |r| r.get(0))
+        .optional()
+        .ok()
+        .flatten();
+    let cached = profile
+        .as_deref()
+        .and_then(|s| serde_json::from_str::<Value>(s).ok())
+        .and_then(|p| crate::account::profile_identity(&p));
+    match (identity, cached) {
+        (Some(bound), Some(profile)) if bound == profile => Some(bound),
+        _ => None,
+    }
 }
 
 fn write_snapshot(db: &Connection, path: &Path, version: &str) -> Result<(), ExportError> {
@@ -304,6 +333,9 @@ fn write_snapshot(db: &Connection, path: &Path, version: &str) -> Result<(), Exp
     entry(&mut zip, "manifest.json", serde_json::to_string_pretty(&json!({
         "exported_at": Utc::now().to_rfc3339(), "app_version": version,
         "raw_responses": count, "daily_rows": days,
+        // The account is a numeric identifier, never a credential; an import
+        // refuses a file that names another account.
+        "archive": {"format": "raring-export", "version": crate::import::FORMAT_VERSION, "account": verified_identity(db)},
         "format": "raw/index.csv maps Garmin response keys to raw/*.json; daily/index.csv maps daily CSV tables to endpoint names. Settings are local Raring settings only. Credential fields are excluded."
     }))?.as_bytes())?;
     zip.finish()?;

@@ -33,3 +33,6 @@ jni = "0.21"
 
 [dev-dependencies]
 base64 = "0.22"
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
+rfd = { version = "0.17", default-features = false, features = ["gtk3"] }

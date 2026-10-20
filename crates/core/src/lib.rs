@@ -6,6 +6,7 @@ pub mod demo;
 mod export;
 pub mod garmin;
 mod gear;
+pub mod import;
 pub mod lead;
 pub mod ledger;
 pub mod local;
@@ -359,6 +360,31 @@ impl Raring {
     /// in the same SQLite snapshot used for all archive contents.
     pub fn export_for_account(&self, path: &Path, app_version: &str, expected: &str) -> std::result::Result<(), export::ExportError> {
         export::write_for_account(&self.store, path, app_version, expected)
+    }
+    /// Validate a chosen export and preview what importing it would change.
+    /// Read-only, under the account barrier, and refused for another account.
+    pub fn import_preview(&self, path: &Path, expected: Option<String>) -> std::result::Result<view::ImportPreview, import::ImportError> {
+        let _write = status::WRITE_LOCK.lock().unwrap();
+        let identity = self.session_identity();
+        if expected.is_some() && expected != identity {
+            return Err(import::ImportError::AccountChanged);
+        }
+        import::preview(&self.store, path, identity.as_deref())
+    }
+    /// Apply a chosen export once, in one transaction under the account
+    /// barrier, and refresh the offline status snapshot afterwards.
+    pub fn import_settings(&self, path: &Path, expected: Option<String>) -> std::result::Result<view::ImportPreview, import::ImportError> {
+        let signed_out = self.snapshot_state.lock().unwrap();
+        let _write = status::WRITE_LOCK.lock().unwrap();
+        let identity = self.session_identity().ok_or(import::ImportError::NotSignedIn)?;
+        if expected.is_some_and(|id| id != identity) {
+            return Err(import::ImportError::AccountChanged);
+        }
+        let preview = import::apply(&self.store, path, &identity)?;
+        // Imported rest, pauses and limits change the native surfaces; a
+        // failed publication is retried offline and never undoes the import.
+        let _ = self.write_status_snapshot(Local::now(), *signed_out);
+        Ok(preview)
     }
     pub fn settings(&self) -> view::Settings {
         self.store.settings()
