@@ -174,4 +174,40 @@ export async function planProgressChecks({browser,url,errors}){
   await page.close();
  }
  console.log('Progress: readable totals, one comparison, dated records, per-week goals, current period marked: passed');
+ // Plan's week card gathers what needs you: reviews name the recording and open
+ // the session; not-recorded sessions are one row with Reschedule and Let it go
+ // (PP-M1, M2); a recording that may be a session says so (PP-B15).
+ {
+  const board=structuredClone(samples.plan_board);
+  const base2=board.items[1];
+  const rec={...board.recordings[0],id:'r-run',date:'2025-10-15',name:'Morning Run',startLocal:'2025-10-15T06:12:00',durationMin:52,icon:'run'};
+  board.recordings.push(rec);
+  const item=(id,date,state,extra={})=>({...base2,state,recording:null,matchedBy:null,candidates:[],coach:null,...extra,intention:{...base2.intention,id,date,sport:'running',name:null,time:null,durationMin:null,status:'open',...(extra.intention??{})}});
+  board.items.push(item('i-a','2025-10-15','review',{candidates:['r-run'],intention:{durationMin:45}}),item('i-b','2025-10-15','review',{candidates:['r-run'],intention:{time:'18:00'}}),
+   item('i-c','2025-10-13','notRecorded'),item('i-d','2025-10-14','notRecorded',{intention:{name:'Hill ride',sport:'cycling'}}));
+  const page=await mocked(browser,errors,{...base,plan_board:board});
+  await page.goto(`${url}/#plan`);
+  const needs=page.getByRole('group',{name:'Needs you'});
+  await needs.waitFor();
+  const asks=await needs.getByRole('button',{name:/^Needs review/}).allTextContents();
+  assert.deepEqual(asks.map(t=>t.trim()),['Needs review Run (45 min), Wed 15 Oct: Morning Run 06:12?','Needs review Run 18:00, Wed 15 Oct: Morning Run 06:12?'],asks.join('|'));
+  await needs.getByRole('button',{name:/^Needs review Run 18:00/}).click();
+  await page.getByRole('dialog',{name:'Run'}).getByRole('button',{name:/^This was my session/}).waitFor();
+  await page.keyboard.press('Escape');
+  await needs.getByRole('button',{name:/^2 not recorded · Mon, Tue/}).click();
+  await needs.locator('.nr-row',{hasText:'Hill ride'}).getByRole('button',{name:'Let it go'}).click();
+  assert.deepEqual(await page.evaluate(()=>window.actions.at(-1)),{action:'setIntentionStatus',id:'i-d',status:'letGo'});
+  await page.getByRole('button',{name:/^Wednesday 15 Oct/}).click();
+  const loose=page.locator('.row-item',{hasText:'Morning Run'});
+  assert.ok((await loose.textContent()).includes('Needs review · may be Run or Run 18:00'),await loose.textContent());
+  await loose.click();
+  await page.getByRole('dialog',{name:'Run'}).waitFor();
+  await page.keyboard.press('Escape');
+  // An event is removed only after confirming.
+  page.once('dialog',d=>d.dismiss());
+  await page.getByRole('button',{name:/^Remove /}).first().click();
+  assert.notEqual((await page.evaluate(()=>window.actions.at(-1))).action,'removeEvent','dismissing keeps the event');
+  await page.close();
+ }
+ console.log('Plan: one Needs you place, recordings named, not-recorded sessions handled inline, candidates labelled: passed');
 }

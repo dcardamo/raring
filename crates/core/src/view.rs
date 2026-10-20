@@ -2223,7 +2223,8 @@ pub struct GoalLedger {
     /// Target minus recorded and planned; None when unknown or paused.
     pub remaining: Option<f64>,
     pub reached: bool,
-    /// Plan items for this goal that need review.
+    /// Recordings to review for this goal: each counted once, however many
+    /// of its sessions could be it.
     pub review: u32,
     /// Why `recorded` is unknown.
     pub unavailable: Option<String>,

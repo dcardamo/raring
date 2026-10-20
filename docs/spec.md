@@ -401,22 +401,28 @@ local goals, your sessions and Garmin's planned work (Rules: Local records to
 Backlog, Garmin Coach).
 
 - **Week**: dates, a pause or illness note, the nested week ring and one line
-  per goal: recorded of target, placed, to review, left or reached; a change
-  during the week shows the starting target. Sleep Score is a Garmin reading
-  against its target. Missing evidence says so instead of a number. Below it
-  sit the sessions that need review, an event's week (Rules: Event week) and
-  this week of a Garmin Coach plan, grouped under the plan's name.
+  per goal: recorded of target, then placed, recordings to review and left,
+  or only reached once it is; a change during the week shows the starting
+  target on a second line. Sleep Score is a Garmin reading against its target.
+  Missing evidence says so instead of a number. Below it, one place for what
+  needs you: each session needing review, naming its day and the recordings
+  it may be, opens its sheet; sessions not recorded are one row (how many and
+  which days) that opens them with Reschedule and Let it go. This week of a
+  Garmin Coach plan is one read-only line with how many are done; its
+  sessions are in the days.
 - **Goals** (`#plan/commitments`): steppers for strength sessions, Zone 2,
   Zone 4–5 and intensity minutes (Garmin's weekly goal until changed), sleep
   timing (asleep by or wind down at a chosen time) and an average Sleep Score.
   Zero turns a goal off. Saves apply as the Local records rule says.
 - **Days**: day cells with rings and a row of marks (an outlined dot per
   session still planned, a muted hollow dot for one not recorded, ◇ for
-  Garmin's); a day lists your sessions and Garmin Coach
-  sessions with one state word (Done, Needs review, Planned, Not recorded,
-  Awaiting data, Marked missed), Garmin Coach rest days, recordings not in
-  your plan, and Garmin's scheduled workouts by name, read-only and not
-  counted. Add a session for today or a later day of the plan week (Plan
+  Garmin's, ☾ for a Garmin Coach rest day); a day lists your sessions (an
+  unnamed one by sport and time) and Garmin Coach sessions with one state word
+  (Done, Needs review, Planned, Not recorded, Awaiting data, Marked missed),
+  Garmin Coach rest days (said beside your sessions that day), recordings not
+  in your plan (or, when a session may be one, the sessions it may be, opening
+  the choice), and Garmin's scheduled workouts by name, read-only and not
+  counted. Durations are minutes ("52 min"), never clock-shaped. Add a session for today or a later day of the plan week (Plan
   shows one week; Move and Reschedule offer the same days), named on the
   button ("Place on Sun 19 Oct").
 - **A session** opens a sheet: its recording when done, with "Not this
@@ -425,9 +431,13 @@ Backlog, Garmin Coach).
   missed (passed days only) or Remove; Reopen; its history. Send to Garmin is
   shown disabled and labelled not yet available. Garmin's sessions open a
   read-only sheet (Rules: Garmin Coach).
-- **Left this week**: the backlog with Do it today, or a paused note with
-  nothing to catch up.
-- **Events**: local races or events with a countdown, and Garmin's next race.
+- **Left this week**: the backlog with Do it today (a draft of one session
+  or a share of the minutes: 45 of Zone 2, 20 of Zone 4–5, 30 of intensity,
+  or the whole remainder when under ten minutes would be left), or a paused
+  note with nothing to catch up.
+- **Events**: local races or events with a countdown (removing one asks
+  first), and Garmin's next race; an event with an event week (Rules: Event
+  week) shows that sport's recorded minutes this week.
 - A migrated sleep-timing observation is explained once, with Review timing.
 
 ### Progress
@@ -748,7 +758,8 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   migrated observation nights asleep on time against their saved plan.
   Planned is the allocation of sessions still Planned (today or later), never
   a duration converted to zone minutes; a session needing review is neither
-  planned nor a second count. Remaining is target − recorded − planned, at
+  planned nor a second count, and to review counts the recordings in question
+  (one recording that may be two sessions is one). Remaining is target − recorded − planned, at
   least zero, and unknown while evidence is incomplete or the week has a pause
   through today. Reached means recorded ≥ target (never for the observation).
   A change during the week shows the week's starting target beside the new one.
@@ -841,9 +852,10 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   percentile (linear interpolation) and the median; fewer, no band.
 - **Event week**: in the current plan week, the soonest event with a sport
   (a local event; Garmin's race has no verified sport and only counts down)
-  that has your sessions of that sport not let go groups them under it, with
-  that sport's recorded minutes this week through today. Grouping changes
-  nothing in the ledger: a session counts toward each weekly goal once.
+  that has your sessions of that sport not let go tags them in their days
+  ("For Harbour 10K") and shows that sport's recorded minutes this week
+  through today on the event's line. Tagging changes nothing in the ledger: a
+  session counts toward each weekly goal once.
 - **Plan prompt**: for people who have chosen goals before, while the setting
   is on and the week isn't answered: at the start of a week (its first two
   days) after a week with goals, it offers last week's review then planning;

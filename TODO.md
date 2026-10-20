@@ -371,6 +371,17 @@ faces, screens, sensors and audio prompts stay in Connect.
   and month are outlined, counts get whole-number ticks and measured zeros a
   label; the causal copy, Latest readings tiles and the Strength bests and
   lift charts (Training · Strength has them) are cut.
+  Commit "Gather what needs you on Plan": the week card keeps the rings, goal
+  lines (once reached, only "reached"; "was 2" on a second line; "to review"
+  counts recordings) and one Needs you place: review rows name the day and
+  recording and open the session, not-recorded sessions are one row with
+  Reschedule and Let it go; the event and Garmin Coach groups shrink to the
+  event's line in Events and one Coach line, so Days is back above the fold.
+  A recording that may be a session says which; unnamed sessions read "Run
+  18:00"; Coach cardio has a neutral icon; a Coach rest day is marked and said
+  beside your session; durations read "52 min"; removing an event asks
+  first; Do it today leaves no crumbs; inputs fit at large text; explainer
+  copy is cut.
 
 - **21. Write rules** (commit "Add the Garmin write rules and a log of
   recent changes"). One core write path (`crates/core/src/writes.rs`): only

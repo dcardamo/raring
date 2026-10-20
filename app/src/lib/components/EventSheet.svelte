@@ -29,6 +29,6 @@
  .grab{display:block;width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.18);margin:0 auto 16px}
  .sheet-h{display:flex;justify-content:space-between;align-items:center;gap:12px}
  .close{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:none;display:grid;place-items:center;color:var(--text2)}
- .field{display:grid;gap:6px;margin-top:12px;font-size:13px;color:var(--text2)}.field input{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:10px;font:500 15px Inter}
+ .field{display:grid;gap:6px;margin-top:12px;font-size:13px;color:var(--text2)}.field input{width:100%;min-width:0;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:10px;font:500 15px Inter}
  .chips2{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}.chips2 button{min-height:40px;padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:none;color:var(--text2);font:600 13px Inter}.chips2 button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
 </style>

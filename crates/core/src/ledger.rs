@@ -455,7 +455,12 @@ pub fn board_with(store: &Store, local: &LocalRecords, anchor: NaiveDate, today:
                     planned,
                     remaining,
                     reached: !observation && recorded.is_some_and(|r| r >= target),
-                    review: items.iter().filter(|p| p.state == ItemState::Review && allocated(&p.intention.allocation, kind) > 0.).count() as u32,
+                    review: items
+                        .iter()
+                        .filter(|p| p.state == ItemState::Review && allocated(&p.intention.allocation, kind) > 0.)
+                        .flat_map(|p| p.candidates.iter())
+                        .collect::<std::collections::BTreeSet<_>>()
+                        .len() as u32,
                     unavailable: unavailable.map(str::to_owned),
                     observation,
                 })

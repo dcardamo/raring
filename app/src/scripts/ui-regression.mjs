@@ -1015,7 +1015,7 @@ try {
   await wp.close();
  }
  console.log('Workout detail: aligned streams, effects in plain words, recorded fields only: passed');
- // An event groups this week's sessions of its sport; each still counts toward weekly goals.
+ // An event's line in Events shows its sport's minutes this week; its sessions are tagged in their days.
  {
   const ep=await browser.newPage({viewport:{width:390,height:844}});
   ep.on('pageerror',e=>errors.push(e.message));
@@ -1025,22 +1025,24 @@ try {
   board.eventWeek={event:board.events[0],sport:'running',items:['i-run'],recordedMin:52};
   await ep.route(u=>u.pathname==='/src/lib/sample/board.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(board)}`}));
   await ep.goto(`${url}/#plan`);
-  const group=ep.getByRole('group',{name:'Harbour 10K this week'});
-  await group.waitFor();
-  assert.ok((await group.textContent()).includes('Run this week: 52 min recorded'),await group.textContent());
-  assert.equal(await group.getByRole('button',{name:/Tempo run/}).count(),1,'the run is grouped under the event');
-  assert.equal(await group.getByRole('button',{name:/Easy ride/}).count(),0,'other sports are not');
-  assert.ok((await group.textContent()).includes('once per goal'));
-  assert.deepEqual(await contrastFailures(ep),[],'Event group contrast');
+  const card=ep.locator('.event',{hasText:'Harbour 10K'});
+  await card.waitFor();
+  assert.ok((await card.textContent()).includes('Run this week: 52 min recorded'),await card.textContent());
+  assert.equal(await ep.locator('.wk').getByRole('group',{name:/this week$/}).count(),0,'no event group in the week card');
+  await ep.getByRole('button',{name:/^Saturday 18 Oct/}).click();
+  assert.ok((await ep.locator('.row-item',{hasText:'Tempo run'}).textContent()).includes('For Harbour 10K'),'the run is tagged in its day');
+  await ep.getByRole('button',{name:/^Friday 17 Oct/}).click();
+  assert.ok(!(await ep.locator('.row-item',{hasText:'Easy ride'}).textContent()).includes('For Harbour'),'other sports are not');
+  assert.deepEqual(await contrastFailures(ep),[],'Event week contrast');
   await ep.close();
   const plain=await browser.newPage({viewport:{width:390,height:844}});
   await plain.goto(`${url}/#plan`);
   await plain.getByText('Harbour 10K',{exact:true}).first().waitFor();
-  assert.equal(await plain.getByRole('group',{name:/this week$/}).count(),0,'without its sessions the event only counts down');
+  assert.equal(await plain.locator('.ev-week').count(),0,'without its sessions the event only counts down');
   await plain.close();
  }
- console.log('Event week: sessions of its sport grouped, others not, countdown only otherwise: passed');
- // Garmin Coach: read-only planned work grouped under the plan, rest days shown, Garmin's status never completion.
+ console.log('Event week: the sport\'s minutes on the event, its sessions tagged, countdown only otherwise: passed');
+ // Garmin Coach: one read-only line in the week card, sessions and rest days in their days, Garmin's status never completion.
  {
   const cp=await browser.newPage({viewport:{width:390,height:844}});
   cp.on('pageerror',e=>errors.push(e.message));
@@ -1054,13 +1056,15 @@ try {
   board.items.push(asItem(lift,'planned'),asItem(run,'planned'));
   await cp.route(u=>u.pathname==='/src/lib/sample/board.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(board)}`}));
   await cp.goto(`${url}/#plan`);
-  const group=cp.getByRole('group',{name:'Synthetic Coach this week'});
-  await group.waitFor();
-  assert.ok((await group.textContent()).includes('Garmin Coach · read-only') && (await group.textContent()).includes('0 of 2 done'));
-  assert.ok((await group.textContent()).includes('plan no zone or intensity minutes'));
+  const line=cp.locator('.coach-line');
+  await line.waitFor();
+  assert.ok((await line.textContent()).includes('Synthetic Coach · Garmin Coach · read-only') && (await line.textContent()).includes('0 of 2 done'),await line.textContent());
   await cp.getByRole('button',{name:/^Friday 17 Oct/}).click();
-  assert.ok((await cp.locator('.days').textContent()).includes('Rest day'),'Garmin Coach rest day is listed');
-  await group.getByRole('button',{name:/Threshold/}).click();
+  assert.ok((await cp.locator('.days').textContent()).includes('Garmin Coach rests today'),'a Garmin Coach rest day beside your session says so');
+  assert.equal(await cp.getByRole('button',{name:/^Friday 17 Oct/}).locator('.marks .gm',{hasText:'☾'}).count(),1,'the rest day is marked on its cell');
+  await cp.getByRole('button',{name:/^Saturday 18 Oct/}).click();
+  assert.equal(await cp.locator('.row-item',{hasText:'Threshold'}).locator('.ico path').first().getAttribute('d'),'M3 12h4l2.5-5 4 10 2.5-5H21','Coach cardio uses the neutral cardio icon');
+  await cp.locator('.row-item',{hasText:'Threshold'}).click();
   const sheet=cp.getByRole('dialog',{name:'Threshold'});
   await sheet.waitFor();
   const text=await sheet.textContent();
@@ -1069,7 +1073,7 @@ try {
   assert.deepEqual(await contrastFailures(cp),[],'Coach contrast');
   await cp.close();
  }
- console.log('Garmin Coach: grouped read-only sessions, rest day, Garmin status not completion: passed');
+ console.log('Garmin Coach: one read-only line, sessions and rest days in their days, Garmin status not completion: passed');
  // Profile: Garmin's facts with dates, limitations into Adapt's limits, gear, Settings; no Garmin writes.
  {
   const pp=await browser.newPage({viewport:{width:390,height:844}});
