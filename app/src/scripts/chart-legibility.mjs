@@ -16,12 +16,17 @@ const todaySample=u=>u.pathname==='/src/lib/sample/today.json';
 const sample=JSON.parse(await readFile(resolve('src/lib/sample/today.json'),'utf8'));
 const windDownToday={...sample,focus:{...sample.focus,phase:'windDown',cards:['sleepPlan','focus'],until:'2025-10-16T23:06:00'}};
 const eveningToday={...sample,focus:{...sample.focus,phase:'evening',cards:['sleepPlan','focus'],until:'2025-10-16T22:00:00'}};
+// The morning stats with long usual-range lines, and today's session card below the day.
+const statsToday={...sample,call:'easy',nightVitals:{sleepHr:{value:57,unit:'bpm',usual:[48,54],rangeSource:'raring',state:'above',delta:6,tone:'fair'},hrv:{value:44,unit:'ms',usual:[48,62],rangeSource:'garmin',state:'below',delta:-11,tone:'fair'}},
+ lead:{id:'session:coach:2025-10-16:1',kind:'session',headline:'An easier day may fit',line:null,action:{label:'Your plan',route:'plan',adapt:false},dismissable:false,kept:false,garmin:null,activity:null,intention:'coach:2025-10-16:1',reasons:[],
+  session:{name:'Base Builder 1',source:'coach',sourceLabel:'Garmin Coach · week 1 of 4',time:null,what:'Cardio · about 45 min · target 152 bpm',effect:'Threshold: hard, sustained effort',garminEffect:'Lactate threshold',note:'Coach eased this after a short night',fit:"Harder than today's suggested effort"}}};
 
 // [name, hash or query, local clock, Today override, section tab to open]
 const pages=[
  ['today','#today','2025-10-16T14:05:00'],
  ['today-evening','#today','2025-10-16T20:10:00',eveningToday],
  ['today-wind-down','#today','2025-10-16T22:12:00',windDownToday],
+ ['today-morning-stats','#today','2025-10-16T07:50:00',statsToday],
  ['readiness','#readiness'],
  ['sleep-last','#sleep/last'],
  ['sleep-tonight','#sleep/tonight','2025-10-16T21:56:00'],
@@ -41,7 +46,7 @@ const pages=[
  ['plan','#plan'],
  ['review','#review/latest'],
  ...['Cardio','Strength','Long-term'].map(tab=>[`progress-${tab.toLowerCase()}`,'#progress',undefined,undefined,tab]),
- ...['bodyBattery','stress','heartRate','restingHr','hrv','respiration','spo2','skinTemp','vo2max','endurance','hill','runningTolerance','acuteLoad'].map(m=>[`metric-${m}`,`#metric/${m}`]),
+ ...['bodyBattery','stress','heartRate','restingHr','sleepHr','hrv','respiration','spo2','skinTemp','vo2max','endurance','hill','runningTolerance','acuteLoad'].map(m=>[`metric-${m}`,`#metric/${m}`]),
 ];
 const widths=[360,390,720,1100];
 const scales=[1,1.3,2];
@@ -81,7 +86,7 @@ function spills(cards){
   // Horizontally scrolled strips (chips, tabs) may run past the edge by design.
   if(el.closest('[data-scroll], .exchips, .tabs-scroll')||[...ancestors(el)].some(a=>/(auto|scroll)/.test(getComputedStyle(a).overflowX)&&a.scrollWidth>a.clientWidth))continue;
   const range=document.createRange();range.selectNodeContents(node);
-  const card=el.closest('.card,.your-day,.morning')?.getBoundingClientRect();
+  const card=el.closest('.card,.your-day,.morning .stat,.session')?.getBoundingClientRect();
   for(const r of range.getClientRects()){
    if(r.width<=0.5)continue;
    if(r.right>innerWidth+1||r.left<-1){out.push(`"${node.data.trim().slice(0,40)}" runs off the screen`);break;}

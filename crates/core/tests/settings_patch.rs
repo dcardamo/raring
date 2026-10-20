@@ -167,6 +167,7 @@ fn patches_reject_unknown_names_wrong_types_and_changed_accounts_atomically() {
         json!({"journalEnabled":"false"}), json!({"journalEnabled":null}),
         json!({"bedtimeLeadMin":false}), json!({"bedtimeLeadMin":-1}),
         json!({"bedtimeLeadMin":1.5}), json!({"bedtimeLeadMin":4294967296_u64}),
+        json!({"fallAsleepMin":65}), json!({"fallAsleepMin":7}), json!({"fallAsleepMin":-5}), json!({"fallAsleepMin":"15"}),
         json!({"notifyVitals":false,"unknownSetting":true}),
     ] {
         assert!(save(&core, value).is_err());
@@ -179,6 +180,11 @@ fn patches_reject_unknown_names_wrong_types_and_changed_accounts_atomically() {
     assert_eq!(core.settings(), before);
     save(&core, json!({"bedtimeLeadMin":45,"adaptiveToday":false})).unwrap();
     assert_eq!(core.settings().bedtime_lead_min, 45);
+    assert_eq!(before.fall_asleep_min, 15, "15 minutes by default");
+    for minutes in [0, 5, 60] {
+        save(&core, json!({"fallAsleepMin":minutes})).unwrap();
+        assert_eq!(core.settings().fall_asleep_min, minutes);
+    }
     assert!(!core.settings().adaptive_today);
     assert_eq!(core.settings().notify_status, before.notify_status);
     drop(core); fs::remove_dir_all(dir).unwrap();

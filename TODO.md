@@ -180,6 +180,25 @@ From the chart legibility pass, in priority order.
 - The check compares text with other text and with `data-mark` markers, not
   with bars, points or bands; mark more shapes as charts change.
 
+### Today session and morning stats follow-ups
+
+From the session card and morning stats, in priority order.
+
+- Check the stats row and session card on the maintainer's phone with a
+  Coach strength day and a Coach cardio day, at the largest Android font.
+- Coach `workoutPhrase` codes beyond those seen (`BASE`,
+  `LACTATE_THRESHOLD`, `POOREST_SLEEP_RECOVERY`, `FORCED_REST`, strength
+  codes ending `_GENERIC_GYM`/`_GENERIC_BODYWEIGHT`) fall back to the name
+  and duration; record new codes and their meaning when seen. Whether a
+  completed Coach task keeps its phrase is unverified.
+- Evaluate the lowest overnight heart rate (a minimum of Garmin's two-minute
+  sleep samples) as a Today stat; it would be new Raring math sensitive to
+  artifacts, so it needs a rule and a real-night comparison first.
+- On an account without Health Status, compare Today's Sleep HR range (the
+  sleep record's 30-night fallback) with Garmin Connect's sleep heart rate.
+- Time to fall asleep: confirm on a phone that changing it moves tonight's
+  reminder and Today's wind-down without a sync.
+
 ### Today and Sleep review follow-ups
 
 From the Today and Sleep review's remainder, in priority order.
@@ -496,6 +515,39 @@ faces, screens, sensors and audio prompts stay in Connect.
   unchanged. A token parity/contrast test prevents the CSS and chart palettes
   from drifting. Private research and synthetic before/after captures stay
   ignored. Review and phone checks remain above; no release in this lane.
+
+- **Tonight as a sleep clock** (commit "Draw tonight's plan as a 24-hour
+  sleep clock"), from the maintainer's phone (v0.1.41): the horizontal
+  Tonight timeline is replaced by a 24-hour ring (midnight at the top) with
+  the planned sleep from asleep-by to the expected wake, the minutes to fall
+  asleep lighter before it, the wind-down softer, Garmin's window as a short
+  outer segment and a now dot; inside only the need, "In bed" and "Up".
+  The facts sit below once, with the time-to-fall-asleep setting. "Last 7
+  nights against need" becomes "Recent nights vs tonight's window": 14
+  nights of recorded sleep on a clock axis against tonight's bedtime band
+  and wake, missing nights marked, plus one below-need line. Today's
+  evening and wind-down cards use the same clock, compact.
+
+- **Today's session, morning stats and time to fall asleep** (commit
+  "Separate today's session from the day and add the morning stats"), from
+  the maintainer's phone (v0.1.41). Today's hero is about the day (the
+  headline from Garmin's call, the effort strip with its reason under it);
+  today's session is its own card below with its source (◇ Garmin Coach ·
+  week N of M, ◇ Garmin calendar, Your plan), what it is from verified Coach
+  fields (`workoutPhrase` gym/bodyweight, `workoutDescription` "<n>bpm",
+  Garmin's effect label in plain words, "Coach eased this after a short
+  night") and a fit line against the suggested effort, with Keep · Choose
+  another inside it. The `coach_week` projection now keeps `workoutPhrase`,
+  the parsed target, `weekId` and `durationInWeeks` from the stored payload
+  (no new request). The last-night/readiness card is four compact stats:
+  Sleep, Readiness, Sleep HR (Health Status HR, else the sleep record's
+  overnight average against its own 30-night range, never resting HR) and
+  HRV against Garmin's baseline, each opening its detail (a new
+  `metric/sleepHr` page). Settings and the core gain "Time to fall asleep"
+  (default 15, 0–60): in bed by = asleep-by − it, wind-down leads the earlier
+  of Garmin's window and in bed, and the reminder, Today's wind-down line
+  and the notification say "In bed by". Garmin's window and need are
+  unchanged.
 
 - **Today and Sleep minors** (commit "Drop disclaimers and key Tonight's
   missing nights"), from the Today and Sleep review (m1–m6, plus a

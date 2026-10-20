@@ -271,7 +271,8 @@ try {
  assert.equal(await page.getByRole('tab',{name:'Tonight'}).getAttribute('aria-selected'),'true','the tonight line opens the Tonight tab');
  const plan=page.locator('.tonight-plan');
  assert.ok((await plan.textContent()).includes('22:30–23:06'));
- assert.equal(await plan.getByRole('img',{name:/^Tonight: now/}).count(),1,'a timeline from the evening to the usual wake');
+ assert.equal(await plan.getByRole('img',{name:/^Tonight on a 24-hour clock: in bed 22:51, asleep by 23:06, up 06:56/}).count(),1,'a 24-hour clock from in bed to the expected wake');
+ assert.ok((await plan.textContent()).includes('so about 8:05 in bed with 15 min to fall asleep'),'the time in bed sits beside the need');
  assert.ok((await plan.textContent()).includes('Wind down22:00'),'the plan leads with the wind-down time');
  assert.ok((await plan.textContent()).includes('Garmin plan'));
  assert.ok((await plan.textContent()).includes("Garmin added 20 min for today's activity and load."));
@@ -279,12 +280,12 @@ try {
  const evidence=await plan.locator('.evidence').textContent();
  assert.ok(evidence.includes("Garmin's recommendation for tonight.") && evidence.includes("Training: today's activity and load") && evidence.includes('30 min before the window starts'),evidence);
  const recentNights=page.locator('.tonight-nights');
- assert.ok((await recentNights.textContent()).includes('2 of 6 recorded nights below Garmin’s need.'),await recentNights.textContent());
+ assert.ok((await recentNights.textContent()).includes('2 of 6 recorded nights in the last 7 were below Garmin’s need for that night.'),await recentNights.textContent());
  assert.equal(await recentNights.getByRole('img').count(),0,'the nights are a group of buttons, not one image');
- const nightButtons=recentNights.getByRole('group',{name:/^Hours asleep, last 7 nights/}).getByRole('button');
- assert.equal(await nightButtons.count(),7,'each night is reachable by assistive tech');
- assert.equal(await recentNights.getByRole('button',{name:'Open Sun 12 Oct: not recorded',exact:true}).count(),1,'a missing night is labelled, not zero');
- assert.equal(await recentNights.getByRole('button',{name:/^Open Thu 16 Oct: 7:48 asleep, need 7:30$/}).count(),1);
+ const nightButtons=recentNights.getByRole('group',{name:/^Recorded sleep, last 14 nights/}).getByRole('button');
+ assert.equal(await nightButtons.count(),14,'each night is reachable by assistive tech');
+ assert.equal(await recentNights.getByRole('button',{name:'Open Thu 16 Oct: asleep 22:31 to 06:39',exact:true}).count(),1);
+ for(const key of ['Asleep','Tonight’s bedtime','Tonight’s wake'])await recentNights.locator('.key').getByText(key,{exact:true}).waitFor();
  assert.equal(await page.locator('.tonight-goals').count(),1);
  await page.getByRole('tab',{name:'Last night'}).click();await waitRoute('sleep/last');
  assert.equal(await page.locator('.tonight-plan').count(),0);
@@ -762,7 +763,8 @@ try {
   // B7: limits exclude cycling, so a backlog item that still names it says why it can't be taken.
   board.backlog=[{kind:'zone2',amount:10,sport:'running'},{kind:'intensity',amount:26,sport:'cycling'}];
   const nap=sample.day.events.find(e=>e.kind==='nap');nap.bodyBatteryChange=6;
-  const session={...sample,lead:{id:'session:i-today',kind:'session',headline:'Hill run at 18:00',line:'Your plan',action:{label:'Your plan',route:'plan',adapt:false},dismissable:false,kept:false,garmin:null,activity:null,intention:'i-today',reasons:[]},
+  const session={...sample,lead:{id:'session:i-today',kind:'session',headline:'A harder day fits',line:null,action:{label:'Your plan',route:'plan',adapt:false},dismissable:false,kept:false,garmin:null,activity:null,intention:'i-today',reasons:[],
+   session:{name:'Hill run',source:'own',sourceLabel:'Your plan',time:'18:00',what:'Run · about 60 min',effect:null,garminEffect:null,note:null,fit:null}},
    adapt:{rest:false,pause:null,limits:{excluded:['cycling'],note:''},label:'Limits on',reviewDue:false,blocked:false,routines:[]}};
   await dayPage.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(session)}`}));
   await dayPage.route(u=>u.pathname==='/src/lib/sample/board.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(board)}`}));
@@ -781,7 +783,11 @@ try {
   assert.equal(await dayPage.locator('.dashboard').getByRole('button',{name:/^Body Battery/}).count(),0,'Your day replaces the separate Body Battery card');
   const recorded=dayPage.locator('.card').filter({hasText:'Recorded today'});
   assert.ok((await recorded.textContent()).includes('Body Battery +6'),'the nap row shows its Body Battery change');
-  assert.equal(await dayPage.getByRole('button',{name:'Keep',exact:true}).count(),1);
+  const card=dayPage.getByRole('region',{name:/^Hill run/});
+  assert.equal(await card.getByRole('button',{name:'Keep',exact:true}).count(),1,'Keep sits inside the session card');
+  assert.equal(await card.getByRole('button',{name:'Choose another'}).count(),1);
+  assert.ok((await card.textContent()).includes('Your plan') && (await card.textContent()).includes('Run · about 60 min'));
+  assert.equal(await dayPage.locator('.hero').getByRole('button',{name:'Keep',exact:true}).count(),0,'the day headline has no session buttons');
   const week=dayPage.locator('.week-card');
   const left=week.getByRole('group',{name:'Left this week'});
   assert.equal(await left.getByRole('button',{name:'Do it today'}).count(),1,'This week and what is left share one card');
@@ -858,6 +864,77 @@ try {
   await blank.close();
  }
  console.log('Your day timeline, nap Body Battery and Keep / Choose another: passed');
+ // Today's session sits below the day's context: the headline is about the day, the card says what the session is.
+ {
+  const sample=JSON.parse(await readFile(resolve('src/lib/sample/today.json'),'utf8'));
+  const lead=(session,call)=>({...sample,call,focus:{...sample.focus,phase:'day',effort:true},
+   lead:{id:'session:coach:2025-10-16:1',kind:'session',headline:call==='easy'?'An easier day may fit':'A steady day fits',line:null,action:{label:'Your plan',route:'plan',adapt:false},dismissable:false,kept:false,garmin:null,activity:null,intention:'coach:2025-10-16:1',reasons:[],session}});
+  const coach={source:'coach',sourceLabel:'Garmin Coach · week 1 of 4',time:null,garminEffect:null,note:null,fit:null,effect:null};
+  for(const [name,view,expect,absent] of [
+   ['coach-strength',lead({...coach,name:'Base Builder 1',what:'Strength · gym · about 60 min'},'steady'),['A steady day fits','Base Builder 1','◇ Garmin Coach · week 1 of 4 · read-only','Strength · gym · about 60 min'],['Harder than']],
+   ['coach-cardio',lead({...coach,name:'Threshold',what:'Cardio · about 45 min · target 152 bpm',effect:'Threshold: hard, sustained effort',garminEffect:'Lactate threshold',fit:"Harder than today's suggested effort"},'easy'),['An easier day may fit','target 152 bpm','Threshold: hard, sustained effort','Garmin: Lactate threshold',"Harder than today's suggested effort"],[]],
+   ['own-plan',lead({name:'Hill run',source:'own',sourceLabel:'Your plan',time:'18:00',what:'Run · about 50 min',effect:null,garminEffect:null,note:null,fit:null},'steady'),['A steady day fits','Hill run','18:00','Your plan','Run · about 50 min'],['◇','read-only']],
+  ]){
+   const sp=await browser.newPage({viewport:{width:390,height:844}});
+   sp.on('pageerror',e=>errors.push(e.message));
+   await sp.route(u=>u.pathname==='/src/lib/sample/today.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(view)}`}));
+   await sp.goto(`${url}/#today`);
+   const card=sp.locator('.session');
+   await card.waitFor();
+   const text=await card.textContent();
+   for(const t of expect.slice(1))assert.ok(text.includes(t),`${name}: ${t} in ${text}`);
+   for(const t of absent)assert.ok(!text.includes(t),`${name}: no ${t}`);
+   const hero=await sp.locator('.hero').textContent();
+   assert.ok(hero.includes(expect[0]) && !hero.includes(view.lead.session.name),`${name}: the headline is about the day (${hero})`);
+   assert.equal(await card.getByRole('button',{name:'Keep',exact:true}).count(),1,`${name}: Keep is in the session card`);
+   // The effort strip and its reason come before the session.
+   const order=await sp.evaluate(()=>[...document.querySelectorAll('.hero .effort, .session')].map(e=>e.className.split(' ')[0]));
+   assert.deepEqual(order,['effort','session'],name);
+   assert.deepEqual(await contrastFailures(sp),[],`${name} contrast`);
+   await sp.screenshot({path:resolve(output,`today-session-${name}.png`),fullPage:false});
+   await sp.close();
+  }
+ }
+ console.log('Today’s session: a day headline, then a session card with what it is and Keep inside: passed');
+ // Four compact stats lead Today: Sleep, Readiness, Sleep HR and HRV, each opening its detail.
+ {
+  const sample=JSON.parse(await readFile(resolve('src/lib/sample/today.json'),'utf8'));
+  const nightVitals={sleepHr:{value:57,unit:'bpm',usual:[48,54],rangeSource:'raring',state:'above',delta:6,tone:'fair'},hrv:{value:44,unit:'ms',usual:[48,62],rangeSource:'garmin',state:'below',delta:-11,tone:'fair'}};
+  const open=async(view,width=360)=>{
+   const p=await browser.newPage({viewport:{width,height:844}});p.on('pageerror',e=>errors.push(e.message));
+   await p.route(u=>u.pathname==='/src/lib/sample/today.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(view)}`}));
+   await p.goto(`${url}/#today`);await p.locator('.morning .stat').first().waitFor();return p;
+  };
+  const sp=await open({...sample,nightVitals});
+  const stats=sp.locator('.morning .stat');
+  assert.equal(await stats.count(),4);
+  const tops=await stats.evaluateAll(els=>els.map(e=>Math.round(e.getBoundingClientRect().top)));
+  assert.equal(new Set(tops).size,1,'one row at 360 px');
+  const text=await sp.locator('.morning').textContent();
+  for(const t of ['7:48','Score 84','82','High','57','6 above usual','44','11 below usual'])assert.ok(text.includes(t),`${t} in ${text}`);
+  assert.equal(await sp.getByRole('button',{name:'Sleep HR 57 bpm, 6 above usual, usual 48–54 bpm'}).count(),1);
+  assert.deepEqual(await contrastFailures(sp),[],'stats contrast');
+  await sp.screenshot({path:resolve(output,'today-stats-360.png')});
+  for(const [name,route] of [['Sleep HR','metric/sleepHr'],['HRV','metric/hrv'],['Readiness','readiness'],['Last night','sleep/last']]){
+   await sp.locator('.morning .stat').filter({hasText:name==='Last night'?'Sleep':name}).first().click();
+   await sp.waitForURL(`**/#${route}`);await sp.goBack();await sp.waitForURL('**/#today');
+  }
+  await sp.close();
+  // The neutral wait shows no stale values; missing readings say so.
+  const waitPage=await open({...sample,nightVitals:null,focus:{...sample.focus,sleepMissing:true,effort:false,lastNight:null},lead:{id:'wait:2025-10-16',kind:'waiting',headline:'Last night hasn’t synced yet',line:null,action:null,dismissable:false,kept:false,garmin:null,activity:null,intention:null,reasons:[]}});
+  const waitText=await waitPage.locator('.morning').textContent();
+  assert.ok(!/7:48|Score 84|\b82\b|\b58\b/.test(waitText) && waitText.includes('Not synced yet') && waitText.includes('Waiting'),waitText);
+  await waitPage.close();
+  const missing=await open({...sample,nightVitals:{sleepHr:{...nightVitals.sleepHr,value:null,state:'unset',delta:null,usual:null,tone:'neutral'},hrv:{...nightVitals.hrv,state:'unset',usual:null,delta:null,tone:'neutral'}}});
+  const missingText=await missing.locator('.morning').textContent();
+  assert.ok(missingText.includes('Not recorded') && missingText.includes('Usual not set yet'),missingText);
+  await missing.close();
+  // From the evening on, tonight leads: only last night's sleep and readiness stay.
+  const evening=await open({...sample,nightVitals:null,focus:{...sample.focus,phase:'evening',effort:false,planOpen:true,cards:['sleepPlan','day','focus']}});
+  assert.equal(await evening.locator('.morning .stat').count(),2);
+  await evening.close();
+ }
+ console.log('Today’s stats: Sleep, Readiness, Sleep HR and HRV in one row, each opening its detail; neutral wait and evening: passed');
  // Sleep · Last night (review M6, M11, M15, m8, m9, m16, m18): stage changes are neutral, the totals sit in
  // Stages, overnight tiles open their metric with clock ends and lows/highs, history is Sleep score with one
  // Time asleep overlay and round ticks, and naps say whether they were never checked or failed.
@@ -894,11 +971,15 @@ try {
   await lp.getByText('Couldn’t read naps from Garmin.',{exact:true}).waitFor();
   // Tonight (m1, m3–m6): no disclaimers, a credible usual wake says so, a missing night is a dotted gap in the
   // key, the darker below-need bars are keyed, and the reminder is a switch.
+  const gapNight=u=>u.pathname==='/src/lib/sample/sleep.json';
+  await lp.route(gapNight,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify({...sleepSample,consistency:sleepSample.consistency.filter(n=>n.date!=='2025-10-12')})}`}));
   await lp.goto(`${url}/?tonight#sleep/tonight`);
   const nights=lp.locator('.tonight-nights');
   await nights.waitFor();
-  assert.equal(await nights.locator('.gap').count(),sleepSample.recent.filter(n=>n.asleepMin==null).length);
-  for(const key of ['Below need','Not recorded'])await nights.locator('.key').getByText(key,{exact:true}).waitFor();
+  assert.equal(await nights.locator('.gap').count(),1,'the missing night is marked');
+  assert.equal(await nights.getByRole('button',{name:'Open Sun 12 Oct: not recorded',exact:true}).count(),1,'a missing night is labelled, not zero');
+  await nights.locator('.key').getByText('Not recorded',{exact:true}).waitFor();
+  await lp.unroute(gapNight);
   assert.ok(!(await nights.textContent()).includes('—'),'a missing night is not a dash');
   await lp.getByRole('checkbox',{name:'Remind me to wind down'}).waitFor();
   await lp.getByRole('button',{name:'Why this plan'}).click();
@@ -1406,7 +1487,7 @@ try {
   const advice=await phasePage.locator('.dashboard > :not(.week-card)').allTextContents();
   assert.equal(await phasePage.locator('.week-card').count(),['winddown','late'].includes(name)?0:1,`${name}: no goal remainders during sleep phases`);
   assert.ok(!/\bin \d+ ?(min|h)\b|left\b/i.test(advice.join(' ')),`${name}: no countdown`);
-  if(name==='evening')assert.equal(await phasePage.locator('.sleep-plan .strip-bar u').count(),1,'the strip marks now against the window');
+  if(name==='evening')assert.equal(await phasePage.locator('.sleep-plan [data-mark="now"]').count(),1,'the clock marks now against the window');
   // m2: the card opens Tonight, so its footer says so.
   if(name==='evening')assert.ok((await phasePage.locator('.sleep-plan .foot').textContent()).includes('Tonight’s plan'));
   if(name==='late')assert.ok(text.includes("Tonight's window was"));

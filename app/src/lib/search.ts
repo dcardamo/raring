@@ -38,7 +38,7 @@ const ALSO: Record<string, string[]> = {
  */
 export function searchIndex(sleepHr: boolean | null): SearchEntry[] {
   const metrics: SearchEntry[] = Object.entries(metricNames)
-    .filter(([id]) => id !== 'restingHr' && id !== 'heartRate')
+    .filter(([id]) => id !== 'restingHr' && id !== 'heartRate' && id !== 'sleepHr')
     .map(([id, name]) => ({name, route: 'metric/' + id, also: ALSO[id]}));
   const heart: SearchEntry[] = sleepHr === false
     ? [{name: 'Resting heart rate', route: 'metric/restingHr', also: ['rhr']}]

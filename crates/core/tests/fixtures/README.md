@@ -14,5 +14,6 @@ catalog (`connect.garmin.com/web-data/exercises/Exercises.json`).
 `coach_adaptive.json` is invented, in the shape of
 `/trainingplan-service/trainingplan/fbt-adaptive/{trainingPlanId}` checked by
 a read-only call: plan fields and `taskList` (one task per day of the current
-week, each with `calendarDate`, `workoutOrder` and `taskWorkout`). Names,
-ids, dates and durations are invented.
+week, each with `calendarDate`, `weekId`, `workoutOrder` and `taskWorkout`,
+including `workoutPhrase` codes and "<n>bpm" `workoutDescription`s in the
+shapes seen). Names, ids, dates, durations and heart rates are invented.

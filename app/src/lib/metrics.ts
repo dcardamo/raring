@@ -4,7 +4,7 @@ export const vitalNames: Record<string, string> = {
 };
 
 export const metricNames: Record<string, string> = {
-  ...vitalNames, bodyBattery: 'Body Battery', stress: 'Stress', heartRate: 'Heart rate', vo2max: 'VO₂ max',
+  ...vitalNames, sleepHr: 'Sleep HR', bodyBattery: 'Body Battery', stress: 'Stress', heartRate: 'Heart rate', vo2max: 'VO₂ max',
   endurance: 'Endurance', hill: 'Hill score', runningTolerance: 'Running tolerance', acuteLoad: 'Acute load',
 };
 

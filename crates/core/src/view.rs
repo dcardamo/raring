@@ -284,6 +284,46 @@ pub struct VitalReading {
     pub range_source: VitalRangeSource,
 }
 
+/// A night's reading against its own usual range (Rules: Night vitals on Today).
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum UsualState {
+    Within,
+    Above,
+    Below,
+    /// No usual range yet (too few nights, or none from Garmin).
+    Unset,
+    /// Garmin is still building the baseline.
+    Calibrating,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct NightReading {
+    pub value: Option<f64>,
+    pub unit: String,
+    pub usual: Option<[f64; 2]>,
+    pub range_source: VitalRangeSource,
+    pub state: UsualState,
+    /// Outside the range: the value minus the range's middle, whole units.
+    pub delta: Option<f64>,
+    /// Fair only outside the range in the unwelcome direction (higher Sleep
+    /// HR, lower HRV); otherwise neutral.
+    pub tone: Tone,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct NightVitals {
+    /// Garmin's overnight average heart rate (Health Status HR when sent).
+    pub sleep_hr: NightReading,
+    /// Last night's average HRV against Garmin's baseline.
+    pub hrv: NightReading,
+}
+
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -490,6 +530,10 @@ pub struct TodayView {
     /// The calendar day on one axis; only for the live day.
     #[serde(default)]
     pub day: Option<DayTimeline>,
+    /// Last night's Sleep HR and HRV against their usual ranges, for the
+    /// morning and the day; none from the evening on or before the night syncs.
+    #[serde(default)]
+    pub night_vitals: Option<NightVitals>,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
@@ -588,8 +632,23 @@ pub struct SleepPlan {
     /// Start of Garmin's recommended bedtime window, HH:MM, when Garmin sends one.
     pub bedtime_start: Option<String>,
     pub bedtime_source: BedtimeSource,
-    /// Time to start winding down, HH:MM: the lead before the window starts
-    /// (or before the asleep-by time without Garmin's window).
+    /// Time to be in bed, HH:MM: the asleep-by time minus the time to fall
+    /// asleep (Raring's, from Settings).
+    #[serde(default)]
+    pub in_bed: String,
+    #[serde(default)]
+    pub in_bed_at: String,
+    /// The time to fall asleep the plan allows, minutes.
+    #[serde(default)]
+    pub fall_asleep_min: u32,
+    /// The need plus the time to fall asleep: time in bed tonight, minutes.
+    #[serde(default)]
+    pub in_bed_min: f64,
+    /// When tonight's sleep should end: the asleep-by time plus the need.
+    #[serde(default)]
+    pub wake_at: String,
+    /// Time to start winding down, HH:MM: the lead before the earlier of
+    /// Garmin's window start and the in-bed time.
     pub wind_down: String,
     pub wind_down_lead_min: u32,
     /// Local wall-clock times, ISO 8601 without offset, so screens and
@@ -1340,6 +1399,9 @@ pub struct HealthView {
     /// Health Status's Sleep HR baseline, which measures something else.
     #[serde(default)]
     pub resting_hr_range: Option<[f64; 2]>,
+    /// That night's Sleep HR and HRV against their usual ranges, as on Today.
+    #[serde(default)]
+    pub night_vitals: Option<NightVitals>,
     /// A past day's detail an explicit open can fetch.
     #[serde(default)]
     pub detail: DayDetail,
@@ -1428,6 +1490,10 @@ pub struct Settings {
     /// Minutes between the wind-down reminder and the bedtime window.
     #[serde(default = "default_bedtime_lead")]
     pub bedtime_lead_min: u32,
+    /// Time to fall asleep, 0–60 in 5-minute steps: in bed this long before
+    /// the asleep-by time.
+    #[serde(default = "default_fall_asleep")]
+    pub fall_asleep_min: u32,
     /// Let Today's leading card follow the time of day; off for shift work.
     #[serde(default = "default_adaptive_today")]
     pub adaptive_today: bool,
@@ -1500,6 +1566,9 @@ pub struct GarminChange {
 fn default_bedtime_lead() -> u32 {
     30
 }
+fn default_fall_asleep() -> u32 {
+    15
+}
 fn default_adaptive_today() -> bool {
     true
 }
@@ -1519,6 +1588,7 @@ impl Default for Settings {
             notify_status: false,
             status_offer_seen: false,
             bedtime_lead_min: default_bedtime_lead(),
+            fall_asleep_min: default_fall_asleep(),
             adaptive_today: default_adaptive_today(),
             journal_enabled: false,
             plan_prompt: default_plan_prompt(),
@@ -2521,6 +2591,45 @@ pub struct TodayLead {
     /// Your session it concerns.
     pub intention: Option<String>,
     pub reasons: Vec<LeadReason>,
+    /// Today's session, described below the day's headline (Rules: Today's
+    /// session). Keep and Choose another act on it.
+    #[serde(default)]
+    pub session: Option<TodaySession>,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum SessionSource {
+    /// Garmin Coach's adaptive plan.
+    Coach,
+    /// Garmin's calendar (a scheduled workout).
+    Garmin,
+    /// Your plan.
+    Own,
+}
+
+/// What today's session is, in plain words from verified fields only.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct TodaySession {
+    pub name: String,
+    pub source: SessionSource,
+    /// "Garmin Coach · week 1 of 4", "Garmin calendar" or "Your plan".
+    pub source_label: String,
+    /// Planned time, HH:MM.
+    pub time: Option<String>,
+    /// Kind, equipment, duration and target: "Strength · gym · about 60 min".
+    pub what: Option<String>,
+    /// Garmin's training effect in plain words.
+    pub effect: Option<String>,
+    /// Garmin's own label for that effect.
+    pub garmin_effect: Option<String>,
+    /// Garmin Coach's own reason for the session, rephrased.
+    pub note: Option<String>,
+    /// Against today's suggested effort; none when it fits or is unknown.
+    pub fit: Option<String>,
 }
 
 /// Today's circumstances, for the Adapt control on every root page.
@@ -3294,6 +3403,16 @@ pub struct CoachSession {
     pub rest_day: bool,
     /// Garmin's own status, shown as Garmin's; never taken as completion.
     pub garmin_status: Option<String>,
+    /// Garmin's `workoutPhrase` code, such as `BASE` or
+    /// `STRENGTH_BASE_BUILDER_13_GENERIC_GYM`.
+    #[serde(default)]
+    pub phrase: Option<String>,
+    /// Target heart rate, when Garmin's `workoutDescription` is "<n>bpm".
+    #[serde(default)]
+    pub target_hr: Option<u32>,
+    /// Garmin's plan week (`weekId`), from 1.
+    #[serde(default)]
+    pub week: Option<u32>,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
@@ -3304,6 +3423,9 @@ pub struct CoachWeek {
     pub state: PlannedState,
     /// This plan week's Coach sessions and rest days, by date.
     pub sessions: Vec<CoachSession>,
+    /// Garmin's `durationInWeeks`.
+    #[serde(default)]
+    pub weeks: Option<u32>,
 }
 
 /// One goal's share from a workout (docs/spec.md, Rules: How it counted).

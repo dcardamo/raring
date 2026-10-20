@@ -7,6 +7,7 @@ import type { HeartRateDay } from "./HeartRateDay";
 import type { IntensityCard } from "./IntensityCard";
 import type { JournalDay } from "./JournalDay";
 import type { Lever } from "./Lever";
+import type { NightVitals } from "./NightVitals";
 import type { StressCard } from "./StressCard";
 import type { VitalsCard } from "./VitalsCard";
 
@@ -25,6 +26,10 @@ intensity: IntensityCard | null,
  * Health Status's Sleep HR baseline, which measures something else.
  */
 restingHrRange: [number, number] | null, 
+/**
+ * That night's Sleep HR and HRV against their usual ranges, as on Today.
+ */
+nightVitals: NightVitals | null, 
 /**
  * A past day's detail an explicit open can fetch.
  */

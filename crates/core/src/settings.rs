@@ -23,6 +23,10 @@ impl SettingsPatch {
             if !same_type { return Err(Error::InvalidSetting); }
             fields.insert(name, value);
         }
-        serde_json::from_value(merged).map_err(|_| Error::InvalidSetting)
+        let settings: Settings = serde_json::from_value(merged).map_err(|_| Error::InvalidSetting)?;
+        if settings.fall_asleep_min > 60 || !settings.fall_asleep_min.is_multiple_of(5) {
+            return Err(Error::InvalidSetting);
+        }
+        Ok(settings)
     }
 }

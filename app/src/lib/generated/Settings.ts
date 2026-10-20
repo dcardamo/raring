@@ -15,6 +15,11 @@ notifyMetricChanges: boolean, notifyVitals: boolean, notifyTrainingStatus: boole
  */
 bedtimeLeadMin: number, 
 /**
+ * Time to fall asleep, 0–60 in 5-minute steps: in bed this long before
+ * the asleep-by time.
+ */
+fallAsleepMin: number, 
+/**
  * Let Today's leading card follow the time of day; off for shift work.
  */
 adaptiveToday: boolean, 
