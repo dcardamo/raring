@@ -354,7 +354,8 @@ pub enum DayPhase {
     LateNight,
 }
 
-/// Today's advice cards. Metric cards follow them in a fixed order.
+/// Today's advice cards and where Your day sits among them. Metric cards
+/// follow them in a fixed order.
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -366,6 +367,10 @@ pub enum TodayCard {
     SleepPlan,
     /// Vitals, moved up when two or more are outside their range.
     Vitals,
+    /// Your day and recorded today. Before any other card (bar the focus
+    /// and vitals) it stays with the hero; after tonight's plan it follows
+    /// it in a compact form.
+    Day,
 }
 
 /// The displayed night's recorded sleep.
@@ -386,7 +391,7 @@ pub struct LastNight {
 #[ts(export)]
 pub struct TodayFocus {
     pub phase: DayPhase,
-    /// Advice cards in order; the first one leads.
+    /// Today's cards in order; the first advice card leads.
     pub cards: Vec<TodayCard>,
     /// When the phase next changes, local ISO 8601 without offset; Today is
     /// read again then.

@@ -141,7 +141,7 @@ pub fn focus(input: &PhaseInput) -> TodayFocus {
         effort: false,
         sleep_missing: true,
         last_night: None,
-        ..focus(DayPhase::Wake, &[TodayCard::Focus], until)
+        ..focus(DayPhase::Wake, &[TodayCard::Focus, TodayCard::Day], until)
     };
     if input.now >= stale_from {
         return waiting(Some(handover));
@@ -151,7 +151,7 @@ pub fn focus(input: &PhaseInput) -> TodayFocus {
         note: note.map(str::to_owned),
         ..focus(
             DayPhase::Overview,
-            &[TodayCard::Focus, TodayCard::SleepPlan],
+            &[TodayCard::Focus, TodayCard::Day, TodayCard::SleepPlan],
             Some(stale_from),
         )
     };
@@ -199,13 +199,13 @@ pub fn focus(input: &PhaseInput) -> TodayFocus {
     let now = input.now;
     use TodayCard::*;
     if now < wake_end {
-        focus(DayPhase::Wake, &[Focus, SleepPlan], Some(wake_end))
+        focus(DayPhase::Wake, &[Focus, Day, SleepPlan], Some(wake_end))
     } else if now < night.promote {
-        focus(DayPhase::Day, &[Now, Focus, SleepPlan], Some(night.promote))
+        focus(DayPhase::Day, &[TodayCard::Day, Now, Focus, SleepPlan], Some(night.promote))
     } else if now < night.wind_down {
         TodayFocus {
             plan_open: true,
-            ..focus(DayPhase::Evening, &[SleepPlan, Focus], Some(night.wind_down))
+            ..focus(DayPhase::Evening, &[SleepPlan, Day, Focus], Some(night.wind_down))
         }
     } else {
         let (phase, until) = if now < night.end {
@@ -217,7 +217,7 @@ pub fn focus(input: &PhaseInput) -> TodayFocus {
         TodayFocus {
             plan_open: true,
             effort: false,
-            ..focus(phase, &[SleepPlan, Focus], Some(until))
+            ..focus(phase, &[SleepPlan, Day, Focus], Some(until))
         }
     }
 }

@@ -87,10 +87,12 @@ fn one_leading_card_per_phase_with_stable_metrics_after_it() {
     let plan = plan();
     let cards = |now| phase::focus(&input(now, Some(&plan), &WAKES)).cards;
     use TodayCard::*;
-    assert_eq!(cards("2025-03-12T07:00"), [Focus, SleepPlan]);
-    assert_eq!(cards("2025-03-12T13:00"), [Now, Focus, SleepPlan]);
-    assert_eq!(cards("2025-03-12T21:00"), [SleepPlan, Focus]);
-    assert_eq!(cards("2025-03-12T23:30"), [SleepPlan, Focus]);
+    assert_eq!(cards("2025-03-12T07:00"), [Focus, Day, SleepPlan]);
+    assert_eq!(cards("2025-03-12T13:00"), [Day, Now, Focus, SleepPlan]);
+    // From the evening on, tonight's plan comes before Your day.
+    assert_eq!(cards("2025-03-12T21:00"), [SleepPlan, Day, Focus]);
+    assert_eq!(cards("2025-03-12T22:20"), [SleepPlan, Day, Focus]);
+    assert_eq!(cards("2025-03-12T23:30"), [SleepPlan, Day, Focus]);
     // The plan is folded until it leads.
     let f = |now| phase::focus(&input(now, Some(&plan), &WAKES));
     assert!(!f("2025-03-12T13:00").plan_open);
@@ -98,7 +100,7 @@ fn one_leading_card_per_phase_with_stable_metrics_after_it() {
     // Two outside-range vitals go above everything.
     let mut i = input("2025-03-12T21:00", Some(&plan), &WAKES);
     i.vitals_off = 2;
-    assert_eq!(phase::focus(&i).cards, [Vitals, SleepPlan, Focus]);
+    assert_eq!(phase::focus(&i).cards, [Vitals, SleepPlan, Day, Focus]);
 }
 
 #[test]
@@ -108,7 +110,7 @@ fn unsynced_night_is_neutral_and_drops_yesterdays_effort() {
     let f = phase::focus(&input("2025-03-13T07:30", Some(&plan), &WAKES));
     assert_eq!(f.phase, DayPhase::Wake);
     assert!(f.sleep_missing && !f.effort && f.last_night.is_none());
-    assert_eq!(f.cards, [TodayCard::Focus]);
+    assert_eq!(f.cards, [TodayCard::Focus, TodayCard::Day]);
     // Three hours after the credible usual wake (07:00) the calendar day takes over.
     assert_eq!(f.until.as_deref(), Some("2025-03-13T10:00:00"));
     assert_eq!(
@@ -133,7 +135,7 @@ fn fixed_layout_without_a_credible_schedule() {
         assert_eq!(f.phase, DayPhase::Overview);
         assert_eq!(f.note.is_some(), note);
         assert!(f.plan_open && f.effort);
-        assert_eq!(f.cards, [TodayCard::Focus, TodayCard::SleepPlan]);
+        assert_eq!(f.cards, [TodayCard::Focus, TodayCard::Day, TodayCard::SleepPlan]);
     };
     let mut off = input("2025-03-12T21:00", Some(&plan), &WAKES);
     off.adaptive = false;
@@ -311,7 +313,7 @@ fn every_fallback_waits_neutrally_at_the_new_morning() {
         assert_eq!(view.call, Some(raring_core::view::Effort::Push), "{name}: Garmin's call is stored");
         let f = &view.focus;
         assert_eq!((f.phase, f.effort, f.sleep_missing), (DayPhase::Wake, false, true), "{name}");
-        assert!(f.last_night.is_none() && f.cards == [TodayCard::Focus], "{name}");
+        assert!(f.last_night.is_none() && f.cards == [TodayCard::Focus, TodayCard::Day], "{name}");
         assert_eq!(view.headline, "Waiting for last night's sleep", "{name}");
         assert_eq!(f.until.as_deref(), Some(handover), "{name}");
         // Today hands over to the calendar day exactly when the focus says.
@@ -515,4 +517,59 @@ fn stored_wake_clusters_ordinary_and_broad() {
     assert!(view.focus.note.unwrap().contains("vary too much"));
     drop(core);
     let _ = std::fs::remove_file(path);
+}
+
+/// A reported evening: Garmin's window 23:10–23:30, wind-down 22:40 and
+/// readiness present. From the evening on tonight's plan comes before Your
+/// day, with or without a run recorded today, and the run never leads.
+#[test]
+fn tonights_plan_leads_your_day_late_in_the_evening() {
+    let offset = local_offset("2026-10-19T12:00");
+    for run in [false, true] {
+        let (core, path) = raring_with(&format!("late-evening-{run}"), |store| {
+            for i in 1..14 {
+                put_night(store, &day("2026-10-19", i), "07:30", offset, json!(null));
+            }
+            put_night(
+                store,
+                "2026-10-19",
+                "07:30",
+                offset,
+                json!({"actual": 480, "recommendedBedtimeStartMins": 1390, "recommendedBedtimeEndMins": 1410}),
+            );
+            put_ready(store, "2026-10-19");
+            if run {
+                store.put("activity", "71", "synthetic", &json!({"activityId": 71, "activityName": "Evening Run",
+                    "activityTypeDTO": {"typeKey": "running"},
+                    "summaryDTO": {"startTimeLocal": "2026-10-19 18:00:00", "duration": 1800}})).unwrap();
+            }
+        });
+        let at = |t: &str| {
+            let now = local(t);
+            let date = core.current_date(now);
+            (date.clone(), core.today_live_at(&date, now))
+        };
+        use TodayCard::*;
+        for (t, phase, effort) in [
+            ("2026-10-19T21:30", DayPhase::Evening, true),
+            ("2026-10-19T22:50", DayPhase::WindDown, false),
+            ("2026-10-19T23:21", DayPhase::WindDown, false),
+            ("2026-10-20T01:30", DayPhase::LateNight, false),
+        ] {
+            let (date, view) = at(t);
+            assert_eq!(date, "2026-10-19", "{t}: the night isn't over");
+            assert_eq!((view.focus.phase, view.focus.effort), (phase, effort), "{t}");
+            assert_eq!(view.focus.cards, [SleepPlan, Day, Focus], "{t}");
+            let lead = view.lead.unwrap();
+            assert_eq!(lead.kind, raring_core::view::LeadKind::Sleep, "{t}: {run}");
+            assert!(lead.activity.is_none(), "{t}: the run stays in recorded today");
+            let plan = view.sleep_plan.unwrap();
+            assert_eq!((plan.wind_down.as_str(), plan.bedtime_start.as_deref(), plan.bedtime.as_str()), ("22:40", Some("23:10"), "23:30"));
+        }
+        let (_, view) = at("2026-10-19T23:21");
+        assert_eq!(view.lead.unwrap().headline, "Time to wind down");
+        assert!(view.day.is_some(), "Your day still follows the plan");
+        drop(core);
+        let _ = std::fs::remove_file(path);
+    }
 }

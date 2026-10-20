@@ -128,13 +128,14 @@ A briefing with an ending, in this order:
   quiet line.
 - **Your day**: sleep stages, Body Battery, stress, heart rate and recorded
   activities and naps on one 00–24 axis with a now marker (Rules: Your day).
-  Each row opens its detail.
+  Each row opens its detail. From the evening on it follows tonight's plan,
+  compact: sleep, Body Battery and recordings.
 - **Recorded today**: up to two activities with Garmin's benefit and training
   effect, naps with their Body Battery change, and a link to all of today's
-  activities.
+  activities. Compact after tonight's plan: without the effect labels.
 - **This week**: the week's rings and one line per goal beside **Left this
   week** with Do it today, over the day cells; hidden during wind-down and
-  late night.
+  late night, with the weekly check-in link and the plan-your-week prompt.
 - While older history is still downloading, the upload line adds "History
   since" its first month.
 - Watch-upload and missing-reading notices sit above the lead. The ending
@@ -1077,8 +1078,9 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   no verdict. After the handover the calendar day shows with its missing
   night stated. Advice order: after waking, this morning then the one-line
   plan; during the day, right now, today's focus, the one-line plan; from
-  the evening on, the plan then today's focus. Two or more outside-range
-  vitals go first in every phase. The fixed layout (today's focus, then the
+  the evening on, the plan, then Your day and recorded today (compact), then
+  today's focus. Before the evening Your day stays under the lead. Two or
+  more outside-range vitals go first in every phase. The fixed layout (today's focus, then the
   full plan) applies when the setting is off, with fewer than four recorded
   wake times in 14 nights, a usual-wake spread over three hours, Garmin's
   jet-lag rating for a recorded night, the phone's UTC offset more than an

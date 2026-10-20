@@ -333,6 +333,16 @@ faces, screens, sensors and audio prompts stay in Connect.
 
 ## Done
 
+- **Tonight's plan above Your day** (commit "Lead the night with tonight's
+  plan, above Your day"). v0.1.33 computed wind-down correctly but always drew
+  Your day with the hero, above every leading card, so at 23:21 the Wind down
+  card sat under Your day and recorded today, beside Monday's check-in link.
+  The core's card order now places Your day (`TodayCard::Day`): with the hero
+  before the evening, after tonight's plan (compact) from then on. Wind-down
+  and late night also hide the check-in link. Core and UI regressions cover a
+  23:10–23:30 window with a 22:40 wind-down at 21:30, 22:50, 23:21 and 01:30,
+  with and without a run.
+
 - **21. Write rules** (commit "Add the Garmin write rules and a log of
   recent changes"). One core write path (`crates/core/src/writes.rs`): only
   from an explicit action (only `writes` can create the proof

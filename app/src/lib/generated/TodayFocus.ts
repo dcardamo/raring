@@ -8,7 +8,7 @@ import type { TodayCard } from "./TodayCard";
  */
 export type TodayFocus = { phase: DayPhase, 
 /**
- * Advice cards in order; the first one leads.
+ * Today's cards in order; the first advice card leads.
  */
 cards: Array<TodayCard>, 
 /**

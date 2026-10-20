@@ -1238,6 +1238,7 @@
     "phase": "wake",
     "cards": [
       "focus",
+      "day",
       "sleepPlan"
     ],
     "until": "2025-10-16T09:39:00",
