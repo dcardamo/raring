@@ -3,6 +3,7 @@
  import type {HeartRateDay} from '../generated/HeartRateDay';
  import {colors,stressColors,stressLevel,stressNames} from '../charts';
  import {num} from '../format';
+ import {declutter} from '../declutter';
  let {stress,heartRate,compact=false}:{stress?:StressCard,heartRate?:HeartRateDay,compact?:boolean}=$props();
  const W=320;
  let timeline=$derived(heartRate?.timeline??stress?.timeline??[]);
@@ -10,7 +11,7 @@
  let sleep=$derived(heartRate?.sleep??(stress?.sleep?[stress.sleep]:[]));
  let step=$derived(heartRate?2:3);
  let dayMinutes=$derived(heartRate?.durationMin??1440);
- let left=$derived(compact?0:26),width=$derived(W-left),top=$derived(compact?2:20),h=$derived(compact?44:120);
+ let left=$derived(compact?0:26),width=$derived(W-left),top=$derived(compact?2:26),h=$derived(compact?44:120);
  const x=(minute:number)=>left+minute/dayMinutes*width;
  let low=$derived(heartRate?40:0),high=$derived(heartRate?180:100);
  const y=(value:number)=>top+h-Math.max(0,Math.min(1,(value-low)/(high-low)))*h;
@@ -57,16 +58,16 @@
 {#if compact}
 <svg viewBox="0 0 {W} {top+h+2}" class="compact" role="img" aria-label={heartRate?'Heart rate through the day':'Stress through the day'}>{@render plot()}</svg>
 {:else}
-<svg viewBox="0 0 {W} {top+h+22}" role="slider" tabindex="0" aria-label={heartRate?'Heart rate through the day. Gaps are missing or off-wrist readings.':'Stress through the day. Gaps are times without a reading.'} aria-valuemin={0} aria-valuemax={Math.max(0,timeline.length-1)} aria-valuenow={Math.max(0,slot)} aria-valuetext={label} onclick={select} onkeydown={key}>{@render plot()}</svg>
+<svg viewBox="0 0 {W} {top+h+22}" role="slider" tabindex="0" aria-label={heartRate?'Heart rate through the day. Gaps are missing or off-wrist readings.':'Stress through the day. Gaps are times without a reading.'} aria-valuemin={0} aria-valuemax={Math.max(0,timeline.length-1)} aria-valuenow={Math.max(0,slot)} aria-valuetext={label} onclick={select} onkeydown={key} {@attach declutter}>{@render plot()}</svg>
 {/if}
 {#snippet plot()}
- {#each sleep as [a,b]}<rect x={x(a)} y={top-(compact?2:8)} width={Math.max(0,x(b)-x(a))} height={h+(compact?4:8)} rx="6" fill={colors.ink} opacity=".09"/>{#if !compact}<text x={x(a)>W-60?x(a)-46:x(a)+6} y={top+4} fill={colors.ink} font-size="10">Asleep</text>{/if}{/each}
- {#if !compact}{#each heartRate?[60,100,140]:[25,50,75] as level}<line x1={left} x2={W} y1={y(level)} y2={y(level)} stroke="currentColor" opacity=".07"/><text x="0" y={y(level)+3} fill="#8E98AC" font-size="9">{level}</text>{/each}{/if}
+ {#each sleep as [a,b]}<rect x={x(a)} y={top-(compact?2:8)} width={Math.max(0,x(b)-x(a))} height={h+(compact?4:8)} rx="6" fill={colors.ink} opacity=".09"/>{#if !compact}<text x={x(a)>W-60?x(a)-50:x(a)+4} y={top-12} fill={colors.ink} font-size="12">Asleep</text>{/if}{/each}
+ {#if !compact}{#each heartRate?[60,100,140]:[25,50,75] as level}<line x1={left} x2={W} y1={y(level)} y2={y(level)} stroke="currentColor" opacity=".07"/><text data-thin="2" x="0" y={y(level)+4} fill="#8E98AC" font-size="11">{level}</text>{/each}{/if}
  {#each ranges as [a,b]}<rect x={x(a)} y={top+h-(compact?4:6)} width={Math.max(1.5,x(b)-x(a))} height={compact?4:6} rx="2" fill={colors.secondary} opacity=".85"/>{/each}
  {#if compact}<line x1="0" x2={W} y1={top+h+.5} y2={top+h+.5} stroke="currentColor" opacity=".12"/>{/if}
  {#each Object.entries(paths) as [level,d]}{#if d}<path {d} fill={heartRate?colors.ink:stressColors[level]} opacity=".9"/>{/if}{/each}
  {#if !compact && slot>=0}<line x1={x(slot*step+step/2)} x2={x(slot*step+step/2)} y1={top-8} y2={top+h} stroke="currentColor" opacity=".4" stroke-dasharray="2 3"/>{/if}
- {#if !compact}{#each [0,1,2,3,4] as i}{@const m=heartRate?dayMinutes*i/4:i*360}<text x={x(m)} y={top+h+16} fill="#8E98AC" font-size="10" text-anchor={i===0?'start':i===4?'end':'middle'}>{heartRate?elapsed(m):i===4?'24:00':time(m)}</text>{/each}{/if}
+ {#if !compact}{#each [0,1,2,3,4] as i}{@const m=heartRate?dayMinutes*i/4:i*360}<text data-thin={i===0||i===4?1:''} x={x(m)} y={top+h+16} fill="#8E98AC" font-size="11" text-anchor={i===0?'start':i===4?'end':'middle'}>{heartRate?elapsed(m):i===4?'24:00':time(m)}</text>{/each}{/if}
 {/snippet}
 {#if !compact}
  {#if heartRate}<p class="axis-note">Elapsed hours from day start · not local clock time</p>{/if}
@@ -78,8 +79,8 @@
  .readout{display:flex;align-items:baseline;gap:8px;min-height:30px;margin-bottom:6px;font-size:13px;color:var(--text2)}
  .readout b{font-size:26px;font-weight:600}
  .readout em{font-style:normal}
- .axis-note{margin:4px 0 0;font-size:10px;color:var(--text2)}
- .legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;font-size:10px;color:var(--text2)}
+ .axis-note{margin:4px 0 0;font-size:12px;color:var(--text2)}
+ .legend{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:12px;font-size:12px;color:var(--text2)}
  .legend span{display:inline-flex;align-items:center;gap:5px}
  .legend i{width:7px;height:7px;border-radius:2px}
 </style>

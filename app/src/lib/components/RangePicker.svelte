@@ -11,7 +11,7 @@
 </div>
 <style>
  .rp{display:flex;flex-wrap:wrap;gap:3px;padding:3px;border:1px solid var(--line);border-radius:13px;max-width:100%;min-width:0}
- button{flex:1;min-width:34px;min-height:44px;border:0;border-radius:10px;background:none;color:var(--text2);font:600 12px Inter;padding:0 7px}
+ button{flex:1 0 auto;min-width:34px;min-height:44px;border:0;border-radius:10px;background:none;color:var(--text2);font:600 12px Inter;padding:0 7px}
  button.active{background:var(--ink);color:var(--bg)}
  button:disabled{cursor:default}
 </style>

@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {nightStrip,phaseEnded} from './tonight';
+import {nightStrip,phaseEnded,tonightLine} from './tonight';
 import type {SleepPlan} from './generated/SleepPlan';
 import type {TodayView} from './generated/TodayView';
 
@@ -16,6 +16,26 @@ describe('nightStrip',()=>{
   const strip=nightStrip({...plan,bedtimeStartAt:null},new Date('2025-03-12T15:00:00'))!;
   expect(strip.now).toBeNull();
   expect(strip.start).toBe(strip.end);
+ });
+});
+
+describe('tonightLine',()=>{
+ const full={...plan,wakeTime:'06:30',needMin:480} as SleepPlan;
+ it('runs from an hour before wind-down to past the usual wake, ticking even hours',()=>{
+  const line=tonightLine(full,new Date('2025-03-12T21:30:00'))!;
+  expect(line.ticks.map(t=>t.label)).toEqual(['22','00','02','04','06']);
+  expect(line.ticks[0].left).toBeCloseTo(10);
+  expect(line.now).toBeCloseTo(5);
+  expect(line.wake).toBeCloseTo(95);
+  // Eight hours of need ending at 06:30 starts at 22:30.
+  expect(line.needFrom).toBeCloseTo(15);
+ });
+ it('ends after the asleep-by time without a wake time and hides now in the day',()=>{
+  const line=tonightLine({...full,wakeTime:null},new Date('2025-03-12T13:00:00'))!;
+  expect(line.wake).toBeNull();
+  expect(line.needFrom).toBeNull();
+  expect(line.now).toBeNull();
+  expect(line.ticks.map(t=>t.label)).toEqual(['22','00']);
  });
 });
 

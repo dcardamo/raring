@@ -1,43 +1,40 @@
 <script lang="ts">
  import type {SleepAlignment} from '../generated/SleepAlignment';
- import {toneColor,colors} from '../charts';
+ import {toneColor} from '../charts';
  import {minuteClock,rhythmAxis,rhythmTicks} from '../rhythm';
  import Card from './Card.svelte';
+ import {declutter} from '../declutter';
  let {alignment}:{alignment:SleepAlignment}=$props();
  let latest=$derived(alignment.latest);
  let rows=$derived(alignment.state==='unavailable'?[]:alignment.history.filter(n=>n.window||n.sleep));
  let axis=$derived(rhythmAxis([...(latest?[latest]:[]),...rows]));
  let ticks=$derived(rhythmTicks(axis));
- // Labels left, the overnight plot in the middle, Garmin's status word right.
- const left=40,width=222;
- const x=(m:number)=>left+(m-axis[0])/(axis[1]-axis[0])*width;
- const span=(r:[number,number])=>Math.max(2,x(r[1])-x(r[0]));
+ // Labels left, the overnight plot in the middle, Garmin's status word right; HTML rows
+ // grow with the system font size instead of colliding.
+ const pct=(m:number)=>(m-axis[0])/(axis[1]-axis[0])*100;
+ const span=(r:[number,number])=>Math.max(1,pct(r[1])-pct(r[0]));
  const weekday=(date:string)=>new Date(`${date}T12:00:00`).toLocaleDateString('en-GB',{weekday:'short'});
- const top=72,step=20;
- let height=$derived(rows.length>1?top+16+rows.length*step:72);
 </script>
 
 <Card title="Sleep alignment" extra="alignment">
  {#snippet aside()}{#if latest?.status}<span class="pill" style:color={toneColor(latest.tone)}>{latest.status}</span>{:else}<span class="pill">{alignment.state==='calibrating'?'Calibrating':'Unavailable'}</span>{/if}{/snippet}
  {#if latest && (latest.window || latest.sleep)}
-  <svg viewBox="0 0 326 {height}" class="timeline" role="img" aria-label="Sleep against Garmin's optimal sleep window">
-   {#each ticks as t}<line x1={x(t)} x2={x(t)} y1="2" y2={height-18} stroke="rgba(255,255,255,.06)"/><text x={x(t)} y={height-4} text-anchor="middle" fill="#8E98AC" font-size="11">{minuteClock(t)}</text>{/each}
-   <text x="0" y="20" fill="#8E98AC" font-size="11">Optimal</text>
-   {#if latest.window}<rect class="optimal" x={x(latest.window[0])} y="8" width={span(latest.window)} height="16" rx="8" fill="none" stroke={colors.ink} stroke-width="1.5" stroke-dasharray="4 3"/>{/if}
-   <text x="0" y="48" fill="#8E98AC" font-size="11">Slept</text>
-   {#if latest.sleep}<rect class="slept" x={x(latest.sleep[0])} y="36" width={span(latest.sleep)} height="16" rx="8" fill={colors.ink}/>{/if}
+  <div class="timeline" role="img" aria-label="Sleep against Garmin's optimal sleep window" data-chart="alignment" {@attach declutter}>
+   {#snippet grid()}{#each ticks as t}<b class="gl" style:left={pct(t)+'%'}></b>{/each}{/snippet}
+   <div class="ar"><span class="al">Optimal</span><span class="at">{@render grid()}{#if latest.window}<i class="optimal" style:left={pct(latest.window[0])+'%'} style:width={span(latest.window)+'%'}></i>{/if}</span><span></span></div>
+   <div class="ar"><span class="al">Slept</span><span class="at">{@render grid()}{#if latest.sleep}<i class="slept" style:left={pct(latest.sleep[0])+'%'} style:width={span(latest.sleep)+'%'}></i>{/if}</span><span></span></div>
    {#if rows.length>1}
-    <line x1="0" x2="326" y1={top-6} y2={top-6} stroke="rgba(255,255,255,.08)"/>
-    {#each rows as n,i}
-     <g class="night" data-date={n.date}>
-      <text x="0" y={top+10+i*step} fill="#8E98AC" font-size="11">{weekday(n.date)}</text>
-      {#if n.window}<rect x={x(n.window[0])} y={top+i*step} width={span(n.window)} height="12" rx="6" fill="none" stroke={colors.ink} stroke-opacity=".6" stroke-dasharray="3 3"/>{/if}
-      {#if n.sleep}<rect x={x(n.sleep[0])} y={top+3+i*step} width={span(n.sleep)} height="6" rx="3" fill={colors.ink} opacity=".75"/>{/if}
-      <text x="326" y={top+10+i*step} text-anchor="end" font-size="11" font-weight="600" fill={n.status?toneColor(n.tone):'#8E98AC'}>{n.status ?? '—'}</text>
-     </g>
+    <hr>
+    {#each rows as n}
+     <div class="ar night" data-date={n.date}>
+      <span class="al">{weekday(n.date)}</span>
+      <span class="at past">{@render grid()}{#if n.window}<i class="window" style:left={pct(n.window[0])+'%'} style:width={span(n.window)+'%'}></i>{/if}{#if n.sleep}<i class="sleep" style:left={pct(n.sleep[0])+'%'} style:width={span(n.sleep)+'%'}></i>{/if}</span>
+      <span class="st" style:color={n.status?toneColor(n.tone):'var(--text2)'}>{n.status ?? '—'}</span>
+     </div>
     {/each}
    {/if}
-  </svg>
+   <div class="ar"><span></span><span class="ticks">{#each ticks as t}<span data-thin style:left={pct(t)+'%'}>{minuteClock(t)}</span>{/each}</span><span></span></div>
+  </div>
   <div class="times">
    {#if latest.window}<span>Optimal <b class="n">{minuteClock(latest.window[0])}–{minuteClock(latest.window[1])}</b></span>{/if}
    {#if latest.sleep}<span>Slept <b class="n">{minuteClock(latest.sleep[0])}–{minuteClock(latest.sleep[1])}</b></span>{/if}
@@ -48,7 +45,21 @@
 </Card>
 
 <style>
- .timeline{display:block;width:100%}
+ .timeline{display:grid;grid-template-columns:max-content minmax(0,1fr) max-content;gap:6px 8px;align-items:center;font-size:12px;color:var(--text2)}
+ .ar{display:contents}
+ .al{min-width:32px}
+ .st{font-weight:600;text-align:right}
+ hr{grid-column:1/-1;width:100%;margin:2px 0;border:0;border-top:1px solid rgba(255,255,255,.08)}
+ .at{position:relative;height:16px}
+ .at.past{height:12px}
+ .gl{position:absolute;top:-3px;bottom:-3px;width:1px;background:rgba(255,255,255,.06)}
+ .at i{position:absolute;top:0;bottom:0;border-radius:8px;box-sizing:border-box}
+ .optimal{border:1.5px dashed var(--ink)}
+ .slept{background:var(--ink)}
+ .window{border:1px dashed color-mix(in srgb,var(--ink) 60%,transparent)}
+ .at .sleep{top:3px;bottom:3px;border-radius:3px;background:var(--ink);opacity:.75}
+ .ticks{position:relative;height:1.4em;font-size:11px}
+ .ticks span{position:absolute;transform:translateX(-50%);white-space:nowrap}
  .times{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;font-size:12px;color:var(--text2)}
  .times b{color:var(--text);font-weight:500;margin-left:4px}
  p{font-size:12px;line-height:1.5;color:var(--text2);margin-top:12px}

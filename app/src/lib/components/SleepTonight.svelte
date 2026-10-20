@@ -1,12 +1,13 @@
 <script lang="ts">
  import Card from './Card.svelte';
  import Icon from './Icon.svelte';
- import TonightDial from './TonightDial.svelte';
+ import TonightLine from './TonightLine.svelte';
  import SleepPlanEvidence from './SleepPlanEvidence.svelte';
+ import {declutter} from '../declutter';
  import type {SleepView} from '../generated/SleepView';
  import type {PlanBoard} from '../generated/PlanBoard';
  import type {LocalAction} from '../generated/LocalAction';
- import {clock, dateLabel, duration, readAt} from '../format';
+ import {dateLabel, duration, readAt} from '../format';
  // Tonight as a plan: when to wind down and be asleep from Garmin's window or
  // need and the usual wake, the week's sleep goal, and recent nights against
  // Garmin's need as plain facts. No sleep debt is computed.
@@ -15,7 +16,6 @@
  let plan = $derived(sleep.sleepPlan);
  let garmin = $derived(plan?.bedtimeSource === 'garmin');
  let why = $state(false);
- let hhmm = $derived(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
  // Only tonight's window can have passed; an older plan is labelled stale by the core.
  let passed = $derived.by(() => { const t = plan?.bedtimeAt ? new Date(plan.bedtimeAt).getTime() : NaN; return now.getTime() > t && now.getTime() - t < 12 * 3600_000; });
  let goals = $derived(board?.goals?.targets ?? null);
@@ -29,20 +29,21 @@
  let nights = $derived(sleep.recent);
  let recorded = $derived(nights.filter(n => n.asleepMin != null));
  let below = $derived(recorded.filter(n => n.needMin != null && n.asleepMin! < n.needMin));
- let top = $derived(Math.max(9 * 60, ...nights.flatMap(n => [n.asleepMin ?? 0, n.needMin ?? 0])) + 30);
+ // A whole number of hours, even so the gridlines fall every two hours.
+ let topH = $derived(Math.ceil(Math.max(9 * 60, ...nights.flatMap(n => [n.asleepMin ?? 0, n.needMin ?? 0])) / 120) * 2);
+ let top = $derived(topH * 60);
  const h = (m: number) => `${Math.floor(m / 60)}:${String(Math.round(m % 60)).padStart(2, '0')}`;
 </script>
 {#if plan}
  <Card title="Tonight" extra="tonight-plan" help="sleep-tonight">
   {#snippet aside()}<span class="pill"><Icon name="moon" size={13}/> {dateLabel(plan.night)} · {garmin ? 'Garmin plan' : 'Raring estimate'}</span>{/snippet}
   <div class="tn">
-   <TonightDial now={hhmm} windDown={plan.windDown} windowStart={plan.bedtimeStart ?? plan.bedtime} windowEnd={plan.bedtime} estimate={!garmin} wake={plan.wakeTime}
-    lastBed={sleep.startLocal ? clock(sleep.startLocal) : null} lastWake={sleep.endLocal ? clock(sleep.endLocal) : null} need={duration(plan.needMin)} size={124}/>
+   <TonightLine {plan} {now} {garmin}/>
    <dl class="facts">
-    <dt><i style:background="#FFB547"></i>Wind down</dt><dd class="n">{ownTime && goals?.sleepKind === 'windDown' ? ownTime : plan.windDown}<small>{ownTime && goals?.sleepKind === 'windDown' ? 'your goal' : 'suggested'}</small></dd>
-    <dt><i style:background="#A9C8FF"></i>{garmin ? 'Bedtime' : 'Asleep by'}</dt><dd class="n">{ownTime && goals?.sleepKind === 'asleepBy' ? ownTime : plan.bedtimeStart ? `${plan.bedtimeStart}–${plan.bedtime}` : plan.bedtime}<small>{ownTime && goals?.sleepKind === 'asleepBy' ? 'your goal' : garmin ? 'Garmin window' : 'need before wake'}</small></dd>
-    {#if plan.wakeTime}<dt><i style:background="#EEF1F7"></i>Wake</dt><dd class="n">{plan.wakeTime}<small>{plan.wakeNights === 14 ? 'usual' : 'reference'}</small></dd>{/if}
-    <dt>Need</dt><dd class="n">{duration(plan.needMin)}<small>Garmin{plan.needReadAt ? ` · read ${readAt(plan.needReadAt, now)}` : ''}</small></dd>
+    <div><dt><i style:background="#FFB547"></i>Wind down</dt><dd class="n">{ownTime && goals?.sleepKind === 'windDown' ? ownTime : plan.windDown}<small>{ownTime && goals?.sleepKind === 'windDown' ? 'your goal' : 'suggested'}</small></dd></div>
+    <div><dt><i style:background="#A9C8FF"></i>{garmin ? 'Bedtime' : 'Asleep by'}</dt><dd class="n">{ownTime && goals?.sleepKind === 'asleepBy' ? ownTime : plan.bedtimeStart ? `${plan.bedtimeStart}–${plan.bedtime}` : plan.bedtime}<small>{ownTime && goals?.sleepKind === 'asleepBy' ? 'your goal' : garmin ? 'Garmin window' : 'need before wake'}</small></dd></div>
+    {#if plan.wakeTime}<div><dt><i style:background="#EEF1F7"></i>Wake</dt><dd class="n">{plan.wakeTime}<small>{plan.wakeNights === 14 ? 'usual' : 'reference'}</small></dd></div>{/if}
+    <div><dt>Need</dt><dd class="n">{duration(plan.needMin)}<small>Garmin{plan.needReadAt ? ` · read ${readAt(plan.needReadAt, now)}` : ''}</small></dd></div>
    </dl>
   </div>
   <p class="small">{plan.stale ? 'No sleep has synced today; this estimate uses older nights.' : passed ? 'The window has passed. Rest when you’re ready.' : plan.reason ?? (garmin ? 'Garmin’s bedtime window and sleep need for tonight.' : 'Your usual wake minus Garmin’s sleep need.')}</p>
@@ -66,15 +67,16 @@
  <button class="link" onclick={() => navigate('plan/commitments')}>{timing || board?.sleepScore ? 'Change goals' : 'Choose a sleep goal'}</button>
 </Card>
 <Card title="Last 7 nights against need" extra="tonight-nights">
- <div class="nights" role="img" aria-label={`Hours asleep, last 7 nights: ${nights.map(n => `${dateLabel(n.date)} ${n.asleepMin != null ? h(n.asleepMin) : 'not recorded'}${n.needMin != null ? `, need ${h(n.needMin)}` : ''}`).join('; ')}`}>
-  <span class="yl"><i>{Math.round(top / 60)} h</i><i>0</i></span>
+ <!-- A group, not an image: each night is a button assistive tech can reach, labelled with its hours. -->
+ <div class="nights" data-chart="nights" {@attach declutter} role="group" aria-label="Hours asleep, last 7 nights, against Garmin’s need">
+  <span class="yl" aria-hidden="true">{#each Array.from({length: topH / 2 + 1}, (_, i) => i * 2) as t}<i data-thin={t && t < topH ? 2 : 3} style:bottom={t / topH * 100 + '%'}>{t ? `${t} h` : '0'}</i>{/each}</span>
   {#each nights as n}
-   <button class="col" aria-label={`Open ${dateLabel(n.date)}`} onclick={() => navigate('sleep/' + n.date)}>
-    <div class="bar-area">
-     {#if n.asleepMin != null}<b class="bar" class:below={n.needMin != null && n.asleepMin < n.needMin} style:height={n.asleepMin / top * 100 + '%'}><em class="n">{h(n.asleepMin)}</em></b>{:else}<span class="gap">—</span>{/if}
+   <button class="col" aria-label={`Open ${dateLabel(n.date)}: ${n.asleepMin != null ? `${h(n.asleepMin)} asleep` : 'not recorded'}${n.needMin != null ? `, need ${h(n.needMin)}` : ''}`} onclick={() => navigate('sleep/' + n.date)}>
+    <div class="bar-area" style:--step={200 / topH + '%'}>
+     {#if n.asleepMin != null}<b class="night-bar" class:below={n.needMin != null && n.asleepMin < n.needMin} style:height={n.asleepMin / top * 100 + '%'}></b>{:else}<span class="gap">—</span>{/if}
      {#if n.needMin != null}<u style:bottom={n.needMin / top * 100 + '%'}></u>{/if}
     </div>
-    <small>{new Date(n.date + 'T12:00:00Z').toLocaleDateString('en-GB', {weekday: 'short', timeZone: 'UTC'})}</small>
+    <small><span data-thin="1">{new Date(n.date + 'T12:00:00Z').toLocaleDateString('en-GB', {weekday: 'short', timeZone: 'UTC'})}</span><span class="n" data-thin>{n.asleepMin != null ? h(n.asleepMin) : '—'}</span></small>
    </button>
   {/each}
  </div>
@@ -82,24 +84,23 @@
  <p class="small">{recorded.length ? `${below.length} of ${recorded.length} recorded nights below Garmin’s need.` : 'No recorded nights this week.'} No running debt is computed. Open a night for its stages.</p>
 </Card>
 <style>
- .tn{display:flex;gap:14px;align-items:center;margin:4px 0 6px}
- .facts{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;margin:0;flex:1;min-width:0;font-size:13px}
+ .tn{display:grid;gap:14px;margin:4px 0 6px}
+ /* Each time wraps under its name rather than leaving the card at large text. */
+ .facts{display:grid;gap:6px;margin:0;min-width:0;font-size:13px}.facts>div{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 10px}
  .facts dt{display:flex;gap:6px;align-items:center;color:var(--text2);font-weight:600}.facts dt i{width:8px;height:8px;border-radius:50%}
- .facts dd{margin:0;text-align:right;font-weight:600;font-size:15px}.facts dd small{display:block;font:500 10.5px Inter;color:var(--text2)}
+ .facts dd{margin:0 0 0 auto;text-align:right;font-weight:600;font-size:15px;white-space:nowrap}.facts dd small{display:block;font:500 12px Inter;color:var(--text2);white-space:normal}
  .btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}.btns .secondary{width:auto;flex:1 1 160px;margin:0}
  .link{background:none;border:0;color:var(--ink);font:600 13px Inter;min-height:44px;padding:0 4px}
  .why{background:none;border:0;color:var(--text2);font:600 12px Inter;min-height:40px;padding:0}
  .goal{margin:4px 0;font-size:14px}
- .nights{position:relative;display:grid;grid-template-columns:28px repeat(7,minmax(0,1fr));gap:4px;height:150px;align-items:end;padding-bottom:18px}
- .yl{position:relative;height:100%;display:flex;flex-direction:column;justify-content:space-between;font:500 10px Inter;color:var(--text2);padding-bottom:0}.yl i{font-style:normal}
+ .nights{position:relative;display:grid;grid-template-columns:auto repeat(7,minmax(0,1fr));gap:4px;height:150px;align-items:end;font-size:11px;padding-bottom:calc(2.6em + 6px)}
+ .yl{position:relative;height:100%;min-width:2.6em;font:500 11px Inter;color:var(--text2)}.yl i{position:absolute;right:2px;transform:translateY(50%);font-style:normal;white-space:nowrap}
  .col{position:relative;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;border:0;padding:0;background:none;color:inherit;font:inherit;cursor:pointer}
- .bar-area{position:relative;width:100%;height:100%;display:flex;align-items:flex-end;justify-content:center;border-bottom:1px solid var(--line)}
- .bar{position:relative;display:block;width:70%;max-width:30px;border-radius:5px 5px 0 0;background:#5C9BFF}.bar.below{background:#3E6FC2}
- .bar em{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);font:600 10px Inter;font-style:normal;color:var(--text);white-space:nowrap;margin-bottom:2px}
+ .bar-area{position:relative;width:100%;height:100%;display:flex;align-items:flex-end;justify-content:center;border-bottom:1px solid var(--line);background:repeating-linear-gradient(to top,transparent 0 calc(var(--step) - 1px),rgba(255,255,255,.07) calc(var(--step) - 1px) var(--step))}
+ .night-bar{position:relative;display:block;width:70%;max-width:30px;border-radius:5px 5px 0 0;background:#5C9BFF}.night-bar.below{background:#3E6FC2}
  .bar-area u{position:absolute;left:8%;right:8%;height:0;border-top:2px dashed #EEF1F7;opacity:.8}
  .gap{color:var(--text2);font-size:12px;margin-bottom:4px}
- .col small{position:absolute;bottom:-18px;font:500 10.5px Inter;color:var(--text2)}
- .key{display:flex;gap:14px;font-size:11px;color:var(--text2);margin:8px 0 0}.key span{display:inline-flex;gap:5px;align-items:center}
+ .col small{position:absolute;top:100%;margin-top:3px;display:grid;justify-items:center;line-height:1.3;font:500 11px Inter;color:var(--text2)}.col small .n{font:600 12px Outfit,Inter;color:var(--text)}
+ .key{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--text2);margin:8px 0 0}.key span{display:inline-flex;gap:5px;align-items:center}
  .k-bar{width:10px;height:8px;border-radius:2px;background:#5C9BFF}.k-need{width:12px;border-top:2px dashed #EEF1F7}
- @container(max-width:330px){.tn{flex-direction:column;align-items:stretch}.tn :global(.dial){align-self:center}}
 </style>

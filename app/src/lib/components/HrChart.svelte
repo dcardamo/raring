@@ -1,6 +1,7 @@
 <script lang="ts">
  import type {HrSample} from '../generated/HrSample';
  import {colors} from '../charts';
+ import {declutter} from '../declutter';
  // Heart rate over the workout: a zone-coloured trace on a bpm axis, each
  // zone's floor labelled, the average marked, and round minute ticks. Drawn
  // at its real width so text keeps its size.
@@ -19,19 +20,19 @@
  let minutes=$derived.by(()=>{const m=maxT/60,step=[1,2,5,10,15,20,30,60].find(s=>m/s<=6)??120,out:number[]=[];for(let t=0;t<=m;t+=step)out.push(t);return out});
  let shownFloors=$derived(zoned?floors.map((f,i)=>({f,zone:i+2})).filter(z=>z.f>lo && z.f<hi):[]);
 </script>
-<div class="hr" bind:clientWidth={w}>
+<div class="hr" bind:clientWidth={w} data-chart="hr" {@attach declutter}>
 <svg width={w} height={H} role="img" aria-label={`Heart rate over ${Math.round(maxT/60)} minutes, ${lo}–${hi} bpm${avg!=null?`, average ${Math.round(avg)}`:''}`}>
  <defs>
   <linearGradient id="hr-zones" x1="0" y1="0" x2="0" y2={H} gradientUnits="userSpaceOnUse">
    {#each stops as floor,i}{@const offset=Math.max(0,Math.min(1,y(floor)/H))}<stop {offset} stop-color={colors.z[4-i]}/><stop {offset} stop-color={colors.z[3-i]}/>{/each}
   </linearGradient>
  </defs>
- {#each ticks as t}<line x1={L} x2={w-R} y1={y(t)} y2={y(t)} stroke="rgba(255,255,255,.06)"/><text class="t" x={L-5} y={y(t)+4} text-anchor="end">{t}</text>{/each}
- <text class="t" x="2" y="10">bpm</text>
- {#each shownFloors as z}<line x1={L} x2={w-R} y1={y(z.f)} y2={y(z.f)} stroke={colors.z[z.zone-1]} stroke-opacity=".55" stroke-dasharray="3 4"/><text class="z" x={w-R-2} y={y(z.f)-3} text-anchor="end" fill={colors.z[z.zone-1]}>Z{z.zone} {z.f}</text>{/each}
- {#if avg!=null && avg>lo && avg<hi}<line x1={L} x2={w-R} y1={y(avg)} y2={y(avg)} stroke={colors.ink} stroke-opacity=".7" stroke-dasharray="6 3"/><text class="z" x={L+4} y={y(avg)-3} fill={colors.ink}>avg {Math.round(avg)}</text>{/if}
+ {#each ticks as t}<line x1={L} x2={w-R} y1={y(t)} y2={y(t)} stroke="rgba(255,255,255,.06)"/><text class="t" data-thin="2" x={L-5} y={y(t)+4} text-anchor="end">{t}</text>{/each}
+ <text class="u" x="2" y="12">bpm</text>
+ {#each shownFloors as z}<line x1={L} x2={w-R} y1={y(z.f)} y2={y(z.f)} stroke={colors.z[z.zone-1]} stroke-opacity=".55" stroke-dasharray="3 4"/><text class="z" data-thin="1" x={w-R-2} y={y(z.f)-3} text-anchor="end" fill={colors.z[z.zone-1]}>Z{z.zone} {z.f}</text>{/each}
+ {#if avg!=null && avg>lo && avg<hi}<line x1={L} x2={w-R} y1={y(avg)} y2={y(avg)} stroke={colors.ink} stroke-opacity=".7" stroke-dasharray="6 3"/><text class="z" data-thin="3" x={L+4} y={y(avg)-3} fill={colors.ink}>avg {Math.round(avg)}</text>{/if}
  {#if d}<path class="hr-trace" {d} fill="none" stroke={zoned?'url(#hr-zones)':colors.ink} stroke-width="2.2" stroke-linejoin="round"/>{/if}
- {#if axis}{#each minutes as m,i}<text class="t" x={x(m*60)} y={H-4} text-anchor={i===0?'start':'middle'}>{m}{i===minutes.length-1?' min':''}</text>{/each}{/if}
+ {#if axis}{#each minutes as m,i}<text class="t" data-thin={i===0?undefined:'1'} x={x(m*60)} y={H-4} text-anchor={i===0?'start':'middle'}>{m}{i===minutes.length-1?' min':''}</text>{/each}{/if}
 </svg>
 </div>
-<style>.hr{width:100%}svg{display:block}.t{font:500 11px Inter;fill:#8E98AC}.z{font:600 11px Inter;paint-order:stroke;stroke:#0B0F1A;stroke-width:3px}</style>
+<style>.hr{width:100%}svg{display:block}.t{font:500 11px Inter;fill:#8E98AC}.u{font:500 12px Inter;fill:#8E98AC}.z{font:600 12px Inter;paint-order:stroke;stroke:#0B0F1A;stroke-width:3px}</style>
