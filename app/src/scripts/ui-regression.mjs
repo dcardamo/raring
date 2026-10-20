@@ -380,6 +380,9 @@ try {
  assert.equal(await page.locator('.heat-card').count(),0,'the 12-week heatmap is replaced by the muscle range');
  await page.getByRole('button',{name:'Barbell Bench Press',exact:true}).click();
  assert.equal(await page.locator('.card h3',{hasText:'Barbell Bench Press'}).count(),1);
+ await page.getByRole('button',{name:'Bicycle Crunch',exact:true}).click();
+ await page.locator('.card h3',{hasText:'Most reps in a set'}).waitFor();
+ assert.equal(await page.locator('.rec .n').first().textContent(),'26','bodyweight bests are labelled as reps');
  const muscleRange=page.getByRole('group',{name:'Muscle range'});
  await muscleRange.getByRole('button',{name:'7 days'}).click();
  assert.equal(await muscleRange.getByRole('button',{name:'7 days'}).getAttribute('aria-pressed'),'true');

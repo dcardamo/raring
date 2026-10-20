@@ -80,7 +80,8 @@
      {#each chart.months as m}<text x={m.x} y={H-3} text-anchor="middle" class="axis">{m.label}</text>{/each}
     </svg>{/if}{/each}
    </section>
-   <section class="card"><h3>Best at each rep count <small class="h-note">in available history</small></h3><div class="recs">{#each exercise.bests as b}{@const fresh=b.date!=null && b.date===latest?.date && latest.record}<div class="rec" class:new={fresh}><span>{b.reps} rep{b.reps>1?'s':''}</span><b class="n">{weight(b.weight)}</b><small>{b.date?(b.date>=view.weekStart?dateLabel(b.date).split(' ')[0]:short(b.date)):''}</small></div>{/each}</div><p class="note">{unit} · at least that many reps</p></section>
+   {@const weighted=exercise.bests.some(b=>b.weight!=null)}
+   <section class="card"><h3>{weighted?'Best at each rep count':'Most reps in a set'} <small class="h-note">in available history</small></h3><div class="recs">{#if weighted}{#each exercise.bests as b}{@const fresh=b.date!=null && b.date===latest?.date && latest.record}<div class="rec" class:new={fresh}><span>{b.reps} rep{b.reps>1?'s':''}</span><b class="n">{weight(b.weight)}</b><small>{b.date?(b.date>=view.weekStart?dateLabel(b.date).split(' ')[0]:short(b.date)):''}</small></div>{/each}{/if}{#if exercise.repsBest}<div class="rec" aria-label={`Most reps in one set: ${exercise.repsBest.reps}, ${dateLabel(exercise.repsBest.date)}`}><span>Most reps</span><b class="n">{exercise.repsBest.reps}</b><small>{exercise.repsBest.date>=view.weekStart?dateLabel(exercise.repsBest.date).split(' ')[0]:short(exercise.repsBest.date)}</small></div>{/if}</div><p class="note">{weighted?`${unit} · at least that many reps`:'Reps · one set, no weight'}{#if weighted && exercise.repsBest} · bodyweight sets count reps, not weight{/if}</p></section>
    <section class="card"><h3><span>Sessions</span><span class="h-note">{exercise.sessions.length} in 12 weeks</span></h3>{#each allSessions?exercise.sessions:exercise.sessions.slice(0,SESSIONS) as s}<button class="ses" onclick={()=>navigate('workout/'+s.activityId)}><span>{dateLabel(s.date)}</span><b class="n">{weight(s.top?.weight??null)}<small>{s.top?.weight!=null?unit:''}</small></b><span class="n rr">{s.reps.map(r=>r??'—').join(' · ')}</span><span class="pr">{#if s.record}<Icon name="star" size={13}/>{/if}</span></button>{/each}{#if exercise.sessions.length>SESSIONS}<button class="more" aria-expanded={allSessions} onclick={()=>allSessions=!allSessions}>{allSessions?'Show fewer':`Show all ${exercise.sessions.length} sessions`}</button>{/if}</section>
   {/if}
  </div>
@@ -110,7 +111,7 @@
  .trend{display:block;width:100%;height:auto}
  .trend.wide{display:none}
  .axis{fill:var(--text3);font:500 11px Inter}
- .recs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+ .recs{display:grid;grid-template-columns:repeat(auto-fit,minmax(52px,1fr));gap:6px}
  .rec{background:rgba(255,255,255,.03);border-radius:13px;padding:10px 2px;text-align:center}
  .rec span{font:500 11px Inter;color:var(--text3)}
  .rec b{display:block;font:600 20px Outfit;margin:2px 0}

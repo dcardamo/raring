@@ -202,6 +202,14 @@ fn evidence(store: &Store, local: &LocalRecords, today: NaiveDate, history: Opti
             route: Some(format!("workout/{}", b.activity)), activity: Some(b.activity), ..Default::default()
         });
     }
+    for b in strength::all_time_reps_bests(store, &today.to_string()) {
+        let id = format!("reps:{}", b.key);
+        records.push(MilestoneRecord {
+            id, value: f64::from(b.reps), date: b.date, kind: Some(MilestoneKind::Reps),
+            title: format!("{} · most reps in a set", b.name),
+            route: Some(format!("workout/{}", b.activity)), activity: Some(b.activity), ..Default::default()
+        });
+    }
     if let Some(h) = history {
         let all = activities(store, h, today);
         let mut longest: BTreeMap<Sport, (&Activity, u32)> = BTreeMap::new();
@@ -342,6 +350,7 @@ fn present(store: &Store, records: Vec<MilestoneRecord>, current: bool) -> Vec<M
         let value = if m.withdrawn { "Evidence no longer available".into() } else {
             match kind {
                 MilestoneKind::Best => format!("{:.1} {}", strength::weight(Some(m.value), unit)?, if unit == WeightUnit::Lb { "lb" } else { "kg" }).replace(".0 ", " "),
+                MilestoneKind::Reps => format!("{} reps", m.value as u32),
                 MilestoneKind::Longest => format!("{:.1} km", m.value),
                 MilestoneKind::GoalWeek => format!("Week ending {}", m.date),
             }

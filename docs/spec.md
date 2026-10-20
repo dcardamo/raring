@@ -264,7 +264,8 @@ Opened from Training → Strength: lifts and muscles.
   desktop): Max weight or Volume each session over a chosen range (Rules:
   Lift volume), the best weight in available history at 1,
   3, 5, 8 and 10 reps, and its sessions (heaviest set, reps of every set,
-  record star), each opening its workout. Show-all controls expose every
+  record star), each opening its workout. Bodyweight exercises show their
+  most reps in one set instead of a weight (Rules: Records and bests). Show-all controls expose every
   exercise session and workout in the supplied history, not just the initial
   six sessions or eight workouts. The strength workout list starts at the
   same first-week boundary as the chart and filters by sport before any
@@ -791,7 +792,8 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   and overnight HRV, and the latest VO₂ max and Fitness Age estimates dated in
   it. Nothing is interpolated.
 - **Milestones**: in available history: an exercise's heaviest set for 1, 3,
-  5, 8 or 10 reps (Records and bests eligibility), the longest recorded
+  5, 8 or 10 reps (Records and bests eligibility), an exercise's most reps
+  in one bodyweight set, the longest recorded
   distance for a known sport family recorded at least three times, and the first
   completed, counted week with every action goal met. Mixed unknown sports are
   not combined into a distance record. A week with a revision or pause cannot
@@ -1200,6 +1202,11 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   as heavy for at least as many reps. A best at N reps is the heaviest set
   with at least N reps. A session's top set is its heaviest set, then most
   reps. Only named, weighted sets that aren't flagged for reps count.
+  Bodyweight sets (Garmin weight 0 or null) have no weight to compare, so
+  they earn no weighted record or best; instead each named exercise's best
+  is the most reps in one counted bodyweight set in available history
+  (same exclusions and earliest-on-a-tie rule), shown labelled reps. The
+  weighted and reps bests are separate awards on the same stable identity.
 - **Sessions with sets**: require at least one active set with a named
   exercise or positive reps. Timer-only sessions add nothing to set, muscle
   or record aggregates, even in a week containing full set workouts. The

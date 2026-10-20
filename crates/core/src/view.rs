@@ -1146,6 +1146,15 @@ pub struct RepBest {
     pub date: Option<String>,
 }
 
+/// The most reps in one set of a bodyweight exercise (no weight to compare).
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct RepCountBest {
+    pub reps: u32,
+    pub date: String,
+}
+
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -1157,6 +1166,9 @@ pub struct ExerciseHistory {
     pub sessions: Vec<ExerciseSession>,
     /// Across all stored sessions.
     pub bests: Vec<RepBest>,
+    /// Bodyweight work has no weight to compare; its best is the most reps in
+    /// one counted set, across all stored sessions.
+    pub reps_best: Option<RepCountBest>,
 }
 
 /// Strength history: the last 12 weeks.
@@ -2624,6 +2636,8 @@ pub struct GoalWeek {
 pub enum MilestoneKind {
     /// The heaviest set at a rep count for one exercise.
     Best,
+    /// The most reps in one bodyweight set for one exercise.
+    Reps,
     /// The longest recorded distance for a sport.
     Longest,
     /// The first counted week with every goal met.

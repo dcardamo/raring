@@ -6,7 +6,7 @@ use crate::{
     store::Store,
     view::{
         ActivityCard, ExerciseHistory, LiftPoint, LiftSeries, MuscleRange, TrendRange, ExerciseSession, Figure, Lift, Muscle, MuscleSets,
-        RepBest, SetFlag, StrengthActivity, StrengthExercise, StrengthSession, StrengthSet,
+        RepBest, RepCountBest, SetFlag, StrengthActivity, StrengthExercise, StrengthSession, StrengthSet,
         StrengthView, StrengthWeek, WeekMuscles, WeightUnit,
     },
 };
@@ -339,6 +339,14 @@ fn flags(session: &Session) -> Vec<Vec<SetFlag>> {
 fn counts_for_records(set: &Set, flags: &[SetFlag]) -> bool {
     set.key.is_some()
         && set.grams.is_some()
+        && set.reps.is_some_and(|r| r > 0)
+        && !flags.contains(&SetFlag::Doubled)
+}
+/// Bodyweight sets (Garmin weight 0 or null) have no weight to compare: the
+/// same rules pick the most reps in one set instead.
+fn counts_for_reps(set: &Set, flags: &[SetFlag]) -> bool {
+    set.key.is_some()
+        && set.grams.is_none()
         && set.reps.is_some_and(|r| r > 0)
         && !flags.contains(&SetFlag::Doubled)
 }
@@ -698,10 +706,24 @@ pub fn history(store: &Store, date: &str, workouts: Vec<ActivityCard>) -> Option
                     }
                 })
                 .collect();
+            let mut reps_best: Option<(u32, &str)> = None;
+            for a in &list {
+                for (i, s) in a.session.sets.iter().enumerate() {
+                    if s.active && s.key.as_ref() == Some(&key) && counts_for_reps(s, &a.flags[i]) {
+                        let reps = s.reps.unwrap_or(0);
+                        // A tie keeps the earliest set.
+                        if reps_best.is_none_or(|(r, _)| reps > r) {
+                            reps_best = Some((reps, a.session.date()));
+                        }
+                    }
+                }
+            }
+            let reps_best = reps_best.map(|(reps, date)| RepCountBest { reps, date: date.to_owned() });
             Some(ExerciseHistory {
                 name: display_name(&key),
                 muscles: catalog.muscles(&key),
                 key,
+                reps_best,
                 sessions,
                 bests,
             })
@@ -866,6 +888,37 @@ pub(crate) fn all_time_bests(store: &Store, through: &str) -> Vec<AllTimeBest> {
         .collect()
 }
 
+
+/// One exercise's most reps in one bodyweight set over all stored sessions,
+/// by the bodyweight best rule (named, unweighted, not flagged).
+pub(crate) struct AllTimeRepsBest {
+    pub key: String,
+    pub name: String,
+    pub reps: u32,
+    pub date: String,
+    pub activity: String,
+}
+
+pub(crate) fn all_time_reps_bests(store: &Store, through: &str) -> Vec<AllTimeRepsBest> {
+    let all = analyse(recorded_sessions(store).into_iter().filter(|s| s.date() <= through).collect());
+    let mut best: BTreeMap<String, (u32, String, String)> = BTreeMap::new();
+    for a in &all {
+        for (i, s) in a.session.sets.iter().enumerate() {
+            if !s.active || !counts_for_reps(s, &a.flags[i]) {
+                continue;
+            }
+            let (Some(key), Some(reps)) = (&s.key, s.reps) else { continue };
+            let e = best.entry(key.clone()).or_insert((0, String::new(), String::new()));
+            // Ties keep the earliest set.
+            if reps > e.0 {
+                *e = (reps, a.session.date().to_owned(), a.session.id.clone());
+            }
+        }
+    }
+    best.into_iter()
+        .map(|(key, (reps, date, activity))| AllTimeRepsBest { name: display_name(&key), key, reps, date, activity })
+        .collect()
+}
 
 #[cfg(test)]
 mod tests {

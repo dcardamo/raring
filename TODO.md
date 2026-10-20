@@ -134,8 +134,6 @@ From item 11, in priority order.
 - **Exercise display names**: Raring title-cases Garmin's keys
   ("One Arm Dumbbell Row"). Look for Garmin's own localized names before
   adding a table.
-- **Bodyweight exercises**: bests and records need a weight, so bodyweight
-  sets (Garmin's weight 0 or null) get none. Consider most reps instead.
 - The weekly plan's strength target (item 7) counts Garmin strength
   activities, including ones timed without sets. `StrengthWeek.strengthActivities`
   is distinct from `sessionsWithSets`; missing lap presses must not reduce
@@ -331,6 +329,17 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **8a bodyweight bests** (commit "Give bodyweight sets a most-reps best").
+  Bodyweight sets (Garmin weight 0 or null) earn no weighted record or best;
+  each named exercise's best is now its most reps in one counted set in
+  available history, with the same exclusions, earliest-on-a-tie rule and
+  correction/no-repeat-award behaviour as weighted bests. Strength's exercise
+  detail shows it as "Most reps" (or "Most reps in a set" when the exercise
+  has no weighted sets) and Progress records it as "… most reps in a set"
+  with a `reps` milestone kind. Core tests cover flags, unnamed and weighted
+  sets, ties and a Garmin edit; the browser preview and UI test include a
+  bodyweight exercise.
 
 - **7a shared date labels** (commit "Build shared date labels by hand so
   Android and desktop match"). `format.ts` builds the weekday, day and month

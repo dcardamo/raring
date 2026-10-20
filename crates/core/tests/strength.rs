@@ -202,6 +202,33 @@ fn records_need_an_earlier_session_and_no_set_as_heavy_for_as_many_reps() {
 }
 
 #[test]
+fn bodyweight_sets_get_a_most_reps_best_not_a_weight_record() {
+    let store = with_catalog();
+    let crunch = |reps| set("CORE", Some("BICYCLE_CRUNCH"), Some(reps), 0.);
+    session(&store, "1", "2025-03-03T18:00:00", vec![crunch(20), crunch(18)]);
+    session(&store, "2", "2025-03-05T18:00:00", vec![crunch(30), crunch(30)]);
+    // 40 is flagged (1.8 × the 20-rep median of its others); the unnamed
+    // 100-rep set has no exercise to belong to.
+    session(
+        &store,
+        "3",
+        "2025-03-07T18:00:00",
+        vec![crunch(20), crunch(20), crunch(40), set("CORE", None, Some(100), 0.)],
+    );
+    let history = screens::strength(&store, "2025-03-08").unwrap();
+    let core = history.exercises.iter().find(|e| e.key == "CORE/BICYCLE_CRUNCH").unwrap();
+    assert_eq!(core.reps_best.as_ref().map(|b| (b.reps, b.date.as_str())), Some((30, "2025-03-05")));
+    assert!(core.bests.iter().all(|b| b.weight.is_none()), "no weight, no weighted best");
+    let workout = screens::workout(&store, "2").unwrap().strength.unwrap();
+    assert_eq!(workout.records, 0, "bodyweight sets never award a weighted record");
+    // Garmin's weight 0 and a missing weight are the same bodyweight set.
+    session(&store, "4", "2025-03-09T18:00:00", vec![set("CORE", Some("BICYCLE_CRUNCH"), Some(35), 0.)]);
+    let history = screens::strength(&store, "2025-03-10").unwrap();
+    let core = history.exercises.iter().find(|e| e.key == "CORE/BICYCLE_CRUNCH").unwrap();
+    assert_eq!(core.reps_best.as_ref().map(|b| b.reps), Some(35));
+}
+
+#[test]
 fn weeks_units_and_figure_follow_garmin_settings() {
     let store = with_catalog();
     store

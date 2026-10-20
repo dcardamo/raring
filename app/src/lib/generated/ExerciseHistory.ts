@@ -2,6 +2,7 @@
 import type { ExerciseSession } from "./ExerciseSession";
 import type { Muscle } from "./Muscle";
 import type { RepBest } from "./RepBest";
+import type { RepCountBest } from "./RepCountBest";
 
 export type ExerciseHistory = { key: string, name: string, muscles: Array<Muscle>, 
 /**
@@ -11,4 +12,9 @@ sessions: Array<ExerciseSession>,
 /**
  * Across all stored sessions.
  */
-bests: Array<RepBest>, };
+bests: Array<RepBest>, 
+/**
+ * Bodyweight work has no weight to compare; its best is the most reps in
+ * one counted set, across all stored sessions.
+ */
+repsBest: RepCountBest | null, };
