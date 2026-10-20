@@ -378,7 +378,7 @@ mod tests {
         store
     }
     fn act(store: &Store, action: LocalAction, when: DateTime<Local>) {
-        local::apply(store, &action, when, Weekday::Mon, &[]).unwrap();
+        local::apply(store, &action, when, Weekday::Mon, &[], None).unwrap();
     }
     fn view(store: &Store, phase: DayPhase) -> TodayView {
         let mut v = screens::today_at(store, DAY, at(13, 12).fixed_offset());
@@ -543,8 +543,8 @@ mod tests {
         act(&store, LocalAction::KeepToday { plan_id: lift.clone() }, at(13, 9));
         let (_, l) = lead(&store, DayPhase::Day);
         assert_eq!((l.headline.as_str(), l.kept, l.intention.as_deref()), ("Strength at 18:00", true, Some(lift.as_str())));
-        assert!(local::apply(&store, &LocalAction::KeepToday { plan_id: "garmin:2025-03-14:Intervals".into() }, at(13, 9), Weekday::Mon, &[]).is_err());
-        assert!(local::apply(&store, &LocalAction::KeepToday { plan_id: "i-none".into() }, at(13, 9), Weekday::Mon, &[]).is_err());
+        assert!(local::apply(&store, &LocalAction::KeepToday { plan_id: "garmin:2025-03-14:Intervals".into() }, at(13, 9), Weekday::Mon, &[], None).is_err());
+        assert!(local::apply(&store, &LocalAction::KeepToday { plan_id: "i-none".into() }, at(13, 9), Weekday::Mon, &[], None).is_err());
         // Keeping Garmin's session puts it ahead of your own.
         store.put("scheduled_workouts", "current", &at(13, 6).to_rfc3339(), &json!({"startDate": "2025-03-10", "endDate": "2025-03-23",
             "entries": [{"calendarDate": DAY, "workoutName": "Tempo"}]})).unwrap();

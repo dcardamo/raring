@@ -27,7 +27,7 @@
 <section class="your-day" class:compact aria-label="Your day on one timeline">
  <div class="yd-h"><h2>Your day <HelpButton topic="today"/></h2>{#if day.uploadMin!=null}<span>Watch upload {hm(day.uploadMin)}</span>{:else}<span>No watch upload today</span>{/if}</div>
  {#if day.clockChange}<p class="clock" role="note">Clocks changed by an hour today, so Body Battery, stress and heart rate are in their details.</p>{/if}
- <button class="row" onclick={()=>navigate('sleep')} aria-label={day.sleep.length?`Sleep until ${hm(Math.max(...day.sleep.map(s=>s.endMin)))}, ${duration(day.asleepMin)} asleep`:'Sleep: no recorded night yet'}>
+ <button class="row" onclick={()=>navigate('sleep/last')} aria-label={day.sleep.length?`Sleep until ${hm(Math.max(...day.sleep.map(s=>s.endMin)))}, ${duration(day.asleepMin)} asleep`:'Sleep: no recorded night yet'}>
   <span class="lab"><Icon name="moon" size={15}/><b>Sleep</b></span>
   <span class="track sleep">{#each day.sleep as s}<i style:left={pct(s.startMin)+'%'} style:width={pct(s.endMin)-pct(s.startMin)+'%'} style:background={STAGE[s.stage]}></i>{/each}{#if !day.sleep.length}<em class="none">No recorded night yet</em>{/if}{#if now!=null}<u style:left={pct(now)+'%'}></u>{/if}</span>
   <span class="val n">{day.asleepMin!=null?duration(day.asleepMin):'—'}</span>
@@ -51,7 +51,7 @@
  {/if}
  <div class="row ev" role="group" aria-label="Recorded activities and naps">
   <span class="lab"><Icon name="run" size={15}/><b>Recorded</b></span>
-  <span class="track events">{#each placed as e}<button class="evb" class:nap={e.kind==='nap'} style:left={pct(e.startMin!)+'%'} style:width={`max(26px, ${pct(e.endMin??e.startMin!)-pct(e.startMin!)}%)`} aria-label={`${e.name} ${hm(e.startMin!)}${e.durationMin!=null?`, ${Math.round(e.durationMin)} min`:''}${e.bodyBatteryChange!=null?`, Body Battery ${e.bodyBatteryChange>=0?'+':''}${e.bodyBatteryChange}`:''}`} onclick={()=>navigate(e.id?'workout/'+e.id:'sleep')}><Icon name={e.icon} size={12}/></button>{/each}{#if !placed.length}<em class="none">Nothing recorded yet</em>{/if}{#if now!=null}<u style:left={pct(now)+'%'}></u>{/if}</span>
+  <span class="track events">{#each placed as e}<button class="evb" class:nap={e.kind==='nap'} style:left={pct(e.startMin!)+'%'} style:width={`max(26px, ${pct(e.endMin??e.startMin!)-pct(e.startMin!)}%)`} aria-label={`${e.name} ${hm(e.startMin!)}${e.durationMin!=null?`, ${Math.round(e.durationMin)} min`:''}${e.bodyBatteryChange!=null?`, Body Battery ${e.bodyBatteryChange>=0?'+':''}${e.bodyBatteryChange}`:''}`} onclick={()=>navigate(e.id?'workout/'+e.id:'sleep/last')}><Icon name={e.icon} size={12}/></button>{/each}{#if !placed.length}<em class="none">Nothing recorded yet</em>{/if}{#if now!=null}<u style:left={pct(now)+'%'}></u>{/if}</span>
   <span class="val n">{day.events.filter(e=>e.kind==='activity').length||''}</span>
  </div>
  <div class="row axis" aria-hidden="true"><span></span><span class="track ticks">{#each [0,6,12,18,24] as h}<i style:left={h/24*100+'%'}>{String(h).padStart(2,'0')}</i>{/each}{#if now!=null}<b style:left={pct(now)+'%'}>Now {hm(now)}</b>{/if}</span><span></span></div>

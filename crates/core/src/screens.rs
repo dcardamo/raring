@@ -2145,6 +2145,7 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
             .collect(),
         tonight_first: false,
         wound_down: false,
+        wind_down_open: false,
     }
 }
 fn hour(s: &str) -> Option<f64> {

@@ -158,10 +158,23 @@ impl Raring {
         let mut view = self.sleep(&date);
         let phase = self.today_at(&date, now).focus.phase;
         view.tonight_first = matches!(phase, view::DayPhase::Evening | view::DayPhase::WindDown | view::DayPhase::LateNight);
-        // A report before noon belongs to the evening before.
-        let evening = if now.hour() < 12 { now.date_naive() - chrono::Duration::days(1) } else { now.date_naive() };
+        let (evening, open) = self.wind_down_evening(now);
         view.wound_down = local::load(&self.store).circumstances.wind_downs.iter().any(|w| w.date == evening.to_string());
+        view.wind_down_open = open;
         view
+    }
+    /// The evening whose wind-down Tonight shows: the evening before its
+    /// plan's night ends. It can be reported from two hours before that
+    /// night's window (the evening phase's start) until the plan moves on.
+    /// Without a plan, a report before noon belongs to the evening before.
+    fn wind_down_evening(&self, now: DateTime<Local>) -> (chrono::NaiveDate, bool) {
+        let planned = screens::sleep_plan(&self.store, &self.current_date(now).to_string()).and_then(|plan| {
+            let night = chrono::NaiveDate::parse_from_str(&plan.night, "%Y-%m-%d").ok()?;
+            let start = plan.bedtime_start_at.as_deref().unwrap_or(&plan.bedtime_at);
+            let start = NaiveDateTime::parse_from_str(start, "%Y-%m-%dT%H:%M:%S").ok()?;
+            Some((night - chrono::Duration::days(1), now.naive_local() >= start - chrono::Duration::minutes(phase::PROMOTE_MIN)))
+        });
+        planned.unwrap_or_else(|| (if now.hour() < 12 { now.date_naive() - chrono::Duration::days(1) } else { now.date_naive() }, true))
     }
     pub fn training(&self, date: &str) -> view::TrainingView {
         screens::training(&self.store, date)
@@ -277,7 +290,15 @@ impl Raring {
     /// The plan week containing `date`, measured on the phone's calendar day.
     pub fn plan_board(&self, date: &str, now: DateTime<Local>) -> Result<view::PlanBoard> {
         let anchor = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d").map_err(|_| Error::InvalidLocal("date"))?;
-        Ok(ledger::board(&self.store, anchor, now.date_naive(), now.with_timezone(&Utc)))
+        let mut board = ledger::board(&self.store, anchor, now.date_naive(), now.with_timezone(&Utc));
+        // Never in wind-down or late night, whichever page asks (Rules: Plan prompt).
+        if board.prompt.is_some() {
+            let phase = self.today_at(&self.current_date(now), now).focus.phase;
+            if matches!(phase, view::DayPhase::WindDown | view::DayPhase::LateNight) {
+                board.prompt = None;
+            }
+        }
+        Ok(board)
     }
     /// Garmin facts, gear and your limits, from local data only.
     pub fn profile(&self, now: DateTime<Local>) -> view::ProfileView {
@@ -348,7 +369,14 @@ impl Raring {
                 .unwrap_or_default(),
             _ => vec![],
         };
-        local::apply(&self.store, action, now, first, &proposals)?;
+        let evening = match action {
+            view::LocalAction::ReportWindDown => match self.wind_down_evening(now) {
+                (evening, true) => Some(evening),
+                (_, false) => return Err(Error::InvalidLocal("wind-down opens two hours before tonight's window")),
+            },
+            _ => None,
+        };
+        local::apply(&self.store, action, now, first, &proposals, evening)?;
         // Surfaces follow rest, pauses and limits without waiting for a sync;
         // a failed publication is retried offline and never undoes the change.
         let _ = self.write_status_snapshot(now, *signed_out);

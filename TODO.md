@@ -330,6 +330,18 @@ faces, screens, sensors and audio prompts stay in Connect.
 
 ## Done
 
+- **Today and Tonight at the day boundary** (commit "Keep the unsynced
+  morning and Tonight's report on the right night"), from the Today and
+  Sleep review (B2–B4, B6, B8, M13) and Plan review PP-B4. While last night
+  hasn't synced the hero shows no earlier score, readiness, chips or
+  reconciliation; Recorded today is the calendar day's, so yesterday's run
+  is gone after midnight; last-night taps (tile, moon chip, Your day, naps,
+  search, the widget's Sleep tile) open Last night; "I wound down" belongs to
+  the night Tonight shows and opens two hours before its window; the need's
+  read time carries its weekday unless today; beside tonight's plan card the
+  hero keeps only its headline; the plan prompt is gated by Today's phase in
+  the core (`plan_board`), so opening Plan at night hides it too.
+
 - **Status surfaces follow Today's lead** (commit "Choose the status focus
   with Today's lead"). The persistent notification and widgets take their
   focus from the live Today's lead gates (`status::snapshot` runs

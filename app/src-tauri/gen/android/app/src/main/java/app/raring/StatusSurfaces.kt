@@ -25,7 +25,7 @@ import java.io.File
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
-internal fun safeStatusTarget(route: String) = route.takeIf { it in setOf("today", "readiness", "sleep", "metric/bodyBattery", "metric/stress") } ?: "today"
+internal fun safeStatusTarget(route: String) = route.takeIf { it in setOf("today", "readiness", "sleep", "sleep/last", "metric/bodyBattery", "metric/stress") } ?: "today"
 internal fun shouldPostStatus(enabled: Boolean, granted: Boolean) = enabled && granted
 
 internal object StatusSurfaces {
@@ -71,7 +71,7 @@ internal object StatusSurfaces {
             view.setTextViewText(R.id.status_battery, status?.battery?.display ?: "")
             view.setTextViewText(R.id.status_stress, status?.stress?.display ?: "")
             view.setOnClickPendingIntent(R.id.status_tile_readiness, pending(context, "readiness"))
-            view.setOnClickPendingIntent(R.id.status_tile_sleep, pending(context, "sleep"))
+            view.setOnClickPendingIntent(R.id.status_tile_sleep, pending(context, "sleep/last"))
             view.setOnClickPendingIntent(R.id.status_tile_battery, pending(context, "metric/bodyBattery"))
             view.setOnClickPendingIntent(R.id.status_tile_stress, pending(context, "metric/stress"))
         } else {

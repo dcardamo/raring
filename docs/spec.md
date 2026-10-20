@@ -117,7 +117,9 @@ A briefing with an ending, in this order:
 
 - **Last night and readiness**: time asleep against Garmin's need (with the
   Sleep Score), and the readiness gauge, which opens Readiness. A watch that
-  can't record readiness says so.
+  can't record readiness says so. While the displayed night hasn't synced
+  both wait neutrally: no earlier score, readiness, chips or reconciliation
+  shown as this morning's. A score without a duration is labelled as one.
 - **The lead**: one headline, at most one line and one action, chosen by the
   gates in Rules: Today's lead. A planned session offers **Keep · Choose
   another** (Rules: Today's choice); a suggestion can be dismissed with "Not
@@ -126,13 +128,15 @@ A briefing with an ending, in this order:
   Garmin's inputs. It is a display, not buttons. There is no effort scale
   beside a recorded workout (the day can finish) or from the evening on.
   Evening, wind-down and late night lead with tonight's sleep and keep any
-  session still planned as a quiet line.
+  session still planned as a quiet line; beside tonight's plan card the hero
+  keeps only the headline, since the card carries the window and opens
+  Tonight.
 - **Your day**: sleep stages, Body Battery, stress, heart rate and recorded
   activities and naps on one 00–24 axis with a now marker (Rules: Your day).
   Each row opens its detail. From the evening on it follows tonight's plan,
   compact: sleep, Body Battery and recordings.
-- **Recorded today**: up to two activities with Garmin's benefit and training
-  effect, naps with their Body Battery change, and a link to all of today's
+- **Recorded today**: the calendar day's (Your day's) activities, up to two,
+  with Garmin's benefit and training effect, naps with their Body Battery change, and a link to all of today's
   activities. Compact after tonight's plan: without the effect labels.
 - **This week**: the week's rings and one line per goal beside **Left this
   week** with Do it today, over the day cells; hidden during wind-down and
@@ -830,7 +834,7 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   is on and the week isn't answered: at the start of a week (its first two
   days) after a week with goals, it offers last week's review then planning;
   otherwise only while this week has nothing placed. Never in wind-down or late
-  night. Plan now, Not this week and turning it off are answers.
+  night, on any page. Plan now, Not this week and turning it off are answers.
 - **Events**: local events from today and Garmin's next race (Planned
   training) count down by calendar date; an event date is not proof of
   preparation or completion.
@@ -946,9 +950,14 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   `sleep/tonight`; switching replaces the page, never stacks). A plain `sleep`
   link opens Tonight when Today's phase is evening, wind-down or late night,
   otherwise Last night; the bedtime reminder and Today's tonight line open
-  Tonight. Tonight shows the saved sleep plan (wind-down, Garmin's window or
-  the asleep-by estimate, usual wake, Garmin's need), the week's sleep goals,
-  a self-reported "I wound down" for tonight's evening, and the seven nights
+  Tonight. Anything showing last night (Today's last-night tile and moon
+  chip, Your day's sleep row, naps, the widget's Sleep tile, search's "Last
+  night's sleep") opens Last night. Tonight shows the saved sleep plan
+  (wind-down, Garmin's window or the asleep-by estimate, usual wake, Garmin's
+  need, with when Raring read it, its weekday unless today), the week's sleep
+  goals, a self-reported "I wound down" for the evening before the night the
+  plan describes (open from two hours before that night's window; without a
+  plan, a report before noon is the evening before), and the seven nights
   ending last night against each night's own Garmin need: how many recorded
   nights were below it, never a running debt. A missing night is labelled,
   not zero.

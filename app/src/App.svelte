@@ -156,14 +156,17 @@
   const day=new Date().toDateString();
   if(day!==cacheDay){clearViews();cacheDay=day}
  }
+ // Sleep's routes read one view, so the prefetched Sleep serves Last night and Tonight.
+ const viewKey=(route:string)=>route.startsWith('sleep')?'sleep':route;
  function cached(current:string){
   checkDay();
-  const view=views.get(current)??null;
+  const view=views.get(viewKey(current))??null;
   // A Today whose phase has ended would swap its leading card right after showing.
   if(current==='today' && view && phaseEnded(view as TodayView)){views.delete(current);return null}
   return view;
  }
- async function readView(current:string):Promise<PageData>{
+ async function readView(route:string):Promise<PageData>{
+  const current=viewKey(route);
   for(;;){
    checkDay();
    const generation=cacheGeneration,selection=progressRevision;
@@ -197,7 +200,8 @@
  let rootControls=$derived({onSearch:()=>search=true,onProfile:()=>navigate('profile'),onAdapt:()=>adaptOpen=true,adapt:adaptState?.label,below:prompt?promptCard:undefined});
  function answerPrompt(choice:'planned'|'dismissed'){if(weekBoard)act({action:'setPromptWeek',week:weekBoard.start,choice},choice==='planned'?()=>navigate('plan'):undefined)}
  // Every root header shows today's circumstances; they come with the live Today.
- function readAdapt(){void readView('today').then(v=>{adaptState=(v as TodayView).adapt??null}).catch(()=>{})}
+ // It also brings Today's phase, which gates the plan prompt on every page.
+ function readAdapt(){void readView('today').then(v=>{adaptState=(v as TodayView).adapt??null;lastPhase=(v as TodayView).focus.phase}).catch(()=>{})}
  let activeTab=$derived([...trail].reverse().find(r=>(tabs as readonly string[]).includes(r))??'today');
  let parentLabel=$derived.by(()=>{const parent=trail.at(-2);if(!parent)return 'Today';if(parent.startsWith('workout/'))return 'Workout';if(parent.startsWith('help/'))return 'Help';return ({today:'Today',sleep:'Sleep',training:'Training',health:'Health',readiness:'Readiness',plan:'Plan',progress:'Progress',profile:'Profile',activities:'Activities','plan/commitments':'Goals',strength:'Strength',help:'Help',settings:'Settings'} as Record<string,string>)[parent]??'Back'});
  // Keep Progress's selection with its cached page, not a component that is
@@ -406,7 +410,9 @@
   return session;
  }
  let todayData=$derived(route==='today'||route==='readiness'?data as TodayView|null:null),sleepData=$derived(route.startsWith('sleep')?data as SleepView|null:null),trainingData=$derived(route==='training'?data as TrainingView|null:null),workoutData=$derived(route.startsWith('workout/')?data as WorkoutView|null:null),strengthData=$derived(route==='strength'?data as StrengthPage|null:null),healthData=$derived(route==='health'?data as HealthView|null:null),checkinData=$derived(route.startsWith('review/')?data as CheckinView|null:null),boardData=$derived(route==='plan'||route==='plan/commitments'?data as PlanBoard|null:null),progressData=$derived(route==='progress'?data as ProgressPage|null:null),profileData=$derived(route==='gear'||route==='activities'?data as TrainingView|null:null),profilePage=$derived(route==='profile'?data as ProfileView|null:null);
- let shownActivities=$derived((todayData?.activities??[]).filter(a=>a.id!==todayData?.lead?.activity));
+ // Recorded today is the calendar day's (Your day's), not the displayed night's day: after midnight yesterday's run isn't today's.
+ let todaysActivities=$derived((todayData?.activities??[]).filter(a=>a.startLocal.slice(0,10)===(todayData?.day?.date??todayData?.date)));
+ let shownActivities=$derived(todaysActivities.filter(a=>a.id!==todayData?.lead?.activity));
  // The core orders Today's cards; Your day stays with the hero until a card such as tonight's plan comes first.
  let dayInHero=$derived(todayData?.focus.cards.find(c=>c!=='focus' && c!=='vitals')==='day');
  // Wind-down and late night: nothing about the week competes with tonight's plan.
@@ -416,9 +422,9 @@
  let checkinExtra=$derived(checkinData?[...(checkinData.timing?['timing']:[]),...(checkinData.intensity?['intensity']:[])]:[]);
  let checkinPages=$derived(checkinData?checkinData.cards.length+checkinExtra.length:0);
  let checkinPage=$derived(checkinData?checkinExtra[checkinIndex-checkinData.cards.length]:undefined);
- let glow=$derived(route==='today' && todayData?.readiness?toneColor(todayData.readiness.tone):route.startsWith('sleep') && sleepData?.score?toneColor(sleepData.score.tone):route==='training' && trainingData?.acute?toneColor(trainingData.acute.tone):route==='health' && healthData?.fitnessAge.fitnessAge!=null && healthData.fitnessAge.chronologicalAge!=null?fitnessAgeColor(healthData.fitnessAge.fitnessAge,healthData.fitnessAge.chronologicalAge):null);
+ let glow=$derived(route==='today' && todayData?.readiness && todayData.lead?.kind!=='waiting'?toneColor(todayData.readiness.tone):route.startsWith('sleep') && sleepData?.score?toneColor(sleepData.score.tone):route==='training' && trainingData?.acute?toneColor(trainingData.acute.tone):route==='health' && healthData?.fitnessAge.fitnessAge!=null && healthData.fitnessAge.chronologicalAge!=null?fitnessAgeColor(healthData.fitnessAge.fitnessAge,healthData.fitnessAge.chronologicalAge):null);
 </script>
-{#snippet recordedToday(compact:boolean)}{#if shownActivities.length || todayNaps.length}<Card title="Recorded today">{#each shownActivities.slice(0,2) as a}<ActivityRow activity={a} open={()=>navigate('workout/'+a.id)}/>{#if !compact && (a.aerobicTe!=null || a.benefit)}<div class="tags">{#if a.aerobicTe!=null}<span class="pill">Aerobic {a.aerobicTe} · {a.aerobicLabel}</span>{/if}{#if a.benefit}<span class="pill">{a.benefit}</span>{/if}</div>{/if}{/each}{#each todayNaps as n}<button class="activity" onclick={()=>navigate('sleep')}><span class="act-ico"><Icon name="moon" size={24}/></span><span class="act-main"><b>Nap</b><small>{n.startMin!=null?minuteClock(n.startMin):'Start not recorded'}{n.endMin!=null?`–${minuteClock(n.endMin)}`:''}{n.durationMin!=null?` · ${Math.round(n.durationMin)} min`:''}</small><small>{n.bodyBatteryChange!=null?`Body Battery ${n.bodyBatteryChange>=0?'+':''}${n.bodyBatteryChange} · `:''}separate from last night</small></span></button>{/each}{#if todayData!.activities.length>2}<button class="link-row" onclick={()=>navigate('activities')}>All today’s activities ({todayData!.activities.length})<Icon name="chevron" size={15}/></button>{/if}</Card>{/if}{/snippet}
+{#snippet recordedToday(compact:boolean)}{#if shownActivities.length || todayNaps.length}<Card title="Recorded today">{#each shownActivities.slice(0,2) as a}<ActivityRow activity={a} open={()=>navigate('workout/'+a.id)}/>{#if !compact && (a.aerobicTe!=null || a.benefit)}<div class="tags">{#if a.aerobicTe!=null}<span class="pill">Aerobic {a.aerobicTe} · {a.aerobicLabel}</span>{/if}{#if a.benefit}<span class="pill">{a.benefit}</span>{/if}</div>{/if}{/each}{#each todayNaps as n}<button class="activity" onclick={()=>navigate('sleep/last')}><span class="act-ico"><Icon name="moon" size={24}/></span><span class="act-main"><b>Nap</b><small>{n.startMin!=null?minuteClock(n.startMin):'Start not recorded'}{n.endMin!=null?`–${minuteClock(n.endMin)}`:''}{n.durationMin!=null?` · ${Math.round(n.durationMin)} min`:''}</small><small>{n.bodyBatteryChange!=null?`Body Battery ${n.bodyBatteryChange>=0?'+':''}${n.bodyBatteryChange} · `:''}separate from last night</small></span></button>{/each}{#if todaysActivities.length>2}<button class="link-row" onclick={()=>navigate('activities')}>All today’s activities ({todaysActivities.length})<Icon name="chevron" size={15}/></button>{/if}</Card>{/if}{/snippet}
 {#snippet promptCard()}{#if prompt}<section class="card prompt-card" aria-label="Plan your week"><b>Plan your week</b><p class="small">{prompt.review?'See how last week went, then choose this week’s sessions.':'Nothing is placed this week yet.'}</p><div class="acts">{#if prompt.review}<button class="primary" onclick={()=>navigate('review/'+prompt!.review)}>Review last week</button>{/if}<button class={prompt.review?'secondary':'primary'} onclick={()=>answerPrompt('planned')}>Plan now</button><button class="secondary" onclick={()=>answerPrompt('dismissed')}>Not this week</button></div><button class="linkish" onclick={()=>void patchSettings({planPrompt:false}).then(ok=>{if(ok){clearViews();void refresh(true)}})}>Don’t offer this again</button></section>{/if}{/snippet}
 <div class="phone"><div class="glow" style:--glow={glow?`color-mix(in srgb, ${glow} 12%, transparent)`:'transparent'}></div><main class="scroll" bind:this={scroll} ontouchstart={(e)=>{touching=true;startY=e.touches[0].clientY;startedAtTop=e.currentTarget.scrollTop===0}} ontouchend={pullEnd} ontouchcancel={finishTouch}><div class="page" class:reading={route.startsWith('review/')||route==='onboarding'||route==='plan/commitments'}>
 {#if error && (data || route==='settings')}<p class="warning" role="status">{error}</p>{/if}

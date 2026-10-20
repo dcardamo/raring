@@ -752,9 +752,14 @@ pub struct SleepView {
     /// Live read in the evening, wind-down or late night: Tonight opens first.
     #[serde(default)]
     pub tonight_first: bool,
-    /// Live read: a wind-down was reported for tonight's evening.
+    /// Live read: a wind-down was reported for the evening of the night
+    /// Tonight shows.
     #[serde(default)]
     pub wound_down: bool,
+    /// Live read: that evening's wind-down can be reported (from two hours
+    /// before the night's window).
+    #[serde(default)]
+    pub wind_down_open: bool,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]

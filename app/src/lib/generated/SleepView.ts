@@ -46,6 +46,12 @@ recent: Array<NightNeed>,
  */
 tonightFirst: boolean, 
 /**
- * Live read: a wind-down was reported for tonight's evening.
+ * Live read: a wind-down was reported for the evening of the night
+ * Tonight shows.
  */
-woundDown: boolean, };
+woundDown: boolean, 
+/**
+ * Live read: that evening's wind-down can be reported (from two hours
+ * before the night's window).
+ */
+windDownOpen: boolean, };

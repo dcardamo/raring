@@ -17,6 +17,11 @@
  let asleep = $derived(night?.asleepMin ?? null);
  let need = $derived(night?.needMin ?? null);
  let effort = $derived(today.call && today.focus.effort ? today.call : null);
+ // Waiting for last night: the previous day's readiness and score stay off the hero, not shown as this morning's.
+ let waiting = $derived(lead ? lead.kind === 'waiting' : today.focus.sleepMissing && !today.focus.effort && today.focus.phase === 'wake');
+ let readiness = $derived(waiting ? null : today.readiness);
+ // Tonight's plan card below already carries the window and opens Tonight.
+ let planCard = $derived(lead?.kind === 'sleep' && !!today.sleepPlan && today.focus.planOpen);
  let showReason = $derived(!!effort && (!lead || ['suggest', 'easy', 'session', 'garmin', 'done', 'fixed'].includes(lead.kind)));
  let recognised = $derived(lead?.activity ? today.activities.find(a => a.id === lead!.activity) : undefined);
  // Keep · Choose another for a session that leads today; Rest is inside Choose.
@@ -29,20 +34,20 @@
  }
 </script>
 <section class="morning" aria-label="Last night and readiness">
- <button class="sleep-fact" onclick={() => navigate('sleep')} aria-label="Last night’s sleep">
+ <button class="sleep-fact" onclick={() => navigate('sleep/last')} aria-label="Last night’s sleep">
   <span class="ml"><Icon name="moon" size={15}/>Last night</span>
-  <b class="n">{asleep != null ? duration(asleep) : today.sleep ? today.sleep.value : '—'}</b>
+  <b class="n">{asleep != null ? duration(asleep) : '—'}</b>
   {#if asleep != null && need}<span class="need-bar"><i style:width={Math.min(100, asleep / need * 100) + '%'}></i></span>{/if}
-  <small>{asleep != null ? `${need ? `Need ${duration(need)}` : 'Need not recorded'}${today.sleep ? ` · score ${today.sleep.value}` : ''}` : today.focus.sleepMissing ? 'Not synced yet' : 'No recorded night'}</small>
+  <small>{asleep != null ? `${need ? `Need ${duration(need)}` : 'Need not recorded'}${today.sleep ? ` · score ${today.sleep.value}` : ''}` : today.focus.sleepMissing ? 'Not synced yet' : today.sleep && !waiting ? `Score ${today.sleep.value} · duration not recorded` : 'No recorded night'}</small>
  </button>
- <button class="ready-fact" onclick={() => navigate('readiness')} aria-label={`Readiness ${today.readiness?.value ?? 'unavailable'}`}>
-  <Gauge value={today.readiness?.value ?? null} max={today.readiness?.max ?? 100} size={66} stroke={6} color={today.readiness ? toneColor(today.readiness.tone) : undefined}/>
-  <span><b>Readiness</b><small>{today.readiness?.label ?? (today.missingMetricReasons.readiness ? 'Not on this watch' : 'Waiting')}</small></span>
+ <button class="ready-fact" onclick={() => navigate('readiness')} aria-label={`Readiness ${readiness?.value ?? (waiting ? 'waiting for last night' : 'unavailable')}`}>
+  <Gauge value={readiness?.value ?? null} max={readiness?.max ?? 100} size={66} stroke={6} color={readiness ? toneColor(readiness.tone) : undefined}/>
+  <span><b>Readiness</b><small>{readiness?.label ?? (today.missingMetricReasons.readiness && !waiting ? 'Not on this watch' : 'Waiting')}</small></span>
  </button>
 </section>
 <section class="hero" aria-labelledby="lead-h">
  <h2 id="lead-h">{lead?.headline ?? today.headline ?? 'Your day is taking shape'}</h2>
- {#if lead?.line}<p class="line">{lead.line}</p>{/if}
+ {#if lead?.line && !planCard}<p class="line">{lead.line}</p>{/if}
  {#if today.focus.note && lead?.kind !== 'fixed'}<p class="reason"><Icon name="clock" size={13}/> {today.focus.note}</p>{/if}
  {#if showReason && today.readinessWhy}<p class="reason">{today.readinessWhy.summary}</p>{/if}
  {#if effort}
@@ -51,9 +56,9 @@
  {/if}
  {#if lead?.kind === 'sleep'}{#each stillPlanned as s}<button class="still" onclick={() => navigate('plan')}>{s.name}{s.time ? ` ${s.time}` : ''} · still in your plan<Icon name="chevron" size={14}/></button>{/each}{/if}
  {#if recognised}<div class="recognised"><ActivityRow activity={recognised} open={() => navigate('workout/' + recognised!.id)}/></div>{/if}
- {#if today.chips.length && !['sleep', 'waiting'].includes(lead?.kind ?? '')}<div class="chips">{#each today.chips as chip}<Chip {chip} label={chip.icon === 'moon' ? 'View sleep' : chip.icon === 'hrv' ? 'View HRV' : 'View training'} onclick={() => navigate(chip.icon === 'moon' ? 'sleep' : chip.icon === 'hrv' ? 'metric/hrv' : 'training')}/>{/each}</div>{/if}
- {#if today.reconcile}<Reconcile reconcile={today.reconcile}/>{/if}
- {#if lead && (lead.action || lead.dismissable || ['session', 'garmin', 'review'].includes(lead.kind))}
+ {#if today.chips.length && !['sleep', 'waiting'].includes(lead?.kind ?? '')}<div class="chips">{#each today.chips as chip}<Chip {chip} label={chip.icon === 'moon' ? 'View sleep' : chip.icon === 'hrv' ? 'View HRV' : 'View training'} onclick={() => navigate(chip.icon === 'moon' ? 'sleep/last' : chip.icon === 'hrv' ? 'metric/hrv' : 'training')}/>{/each}</div>{/if}
+ {#if today.reconcile && !waiting}<Reconcile reconcile={today.reconcile}/>{/if}
+ {#if lead && !planCard && (lead.action || lead.dismissable || ['session', 'garmin', 'review'].includes(lead.kind))}
   <div class="acts">
    {#if keepId}<button class="primary" aria-pressed={lead.kept} onclick={() => { if (!lead!.kept) act({action: 'keepToday', planId: keepId!}); }}>{lead.kept ? 'Kept for today' : 'Keep'}</button>{#if choose}<button class="secondary" onclick={choose}>Choose another</button>{/if}
    {:else if lead.action && !recognised}<button class="primary" onclick={run}>{lead.action.label}</button>{/if}
