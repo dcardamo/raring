@@ -112,9 +112,6 @@ From item 11, in priority order.
   planned training (item 15) or the workout builder (item 22).
 - Offline help pages "How targets count" and "Rest days and paused weeks"
   when the Help screen ships.
-- The shared `dateLabel` reads "Mon, 5 Oct" on Android's WebView (Chrome
-  124) but "Mon 5 Oct" in desktop browsers; build it by hand as `plan.ts`
-  does for week ranges.
 
 ### 8a. Strength follow-ups
 
@@ -334,6 +331,13 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **7a shared date labels** (commit "Build shared date labels by hand so
+  Android and desktop match"). `format.ts` builds the weekday, day and month
+  from a calendar date instead of `toLocaleDateString`, including en-GB's
+  "Sept", and `plan.ts` reuses it, so the "Mon, 5 Oct" WebView difference is
+  gone everywhere the app labels a date. Unit tests cover the labels, the
+  short month and invalid dates.
 
 - **26. A focused, adaptive Raring experience** (commits "Rebuild Raring
   around the weekly plan: Today, Plan, Training, Health, Progress", "Time
