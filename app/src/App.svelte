@@ -182,17 +182,31 @@
  let touching=false,pendingSwap:{route:string;data:PageData}|null=null;
  const views=new Map<string,PageData>();
  const pendingViews=new Map<string,Promise<PageData>>();
+ // How long a tap keeps the shown page while the next is read; past it the next opens empty and fills in.
+ const HOLD_MS=200;
  let cacheDay=new Date().toDateString();
  // An explicit open asks Garmin once per page; retry clears the record for that page.
  let openedAttempts=new Set<string>(),detailState=$state<{kind:'loading'|'failed';message:string}|null>(null);
- function clearViews(){views.clear();pendingViews.clear();pendingSwap=null;prefetched=false;cacheGeneration++;openedAttempts.clear();detailState=null}
+ // A sync keeps cached views, which still open at once and are read again as they open. A local change, a new
+ // day or sign-out drops them: they would show the page before the change, another day or another account.
+ function clearViews(keepCached=false){if(!keepCached)views.clear();pendingViews.clear();pendingSwap=null;prefetched=false;cacheGeneration++;openedAttempts.clear();detailState=null}
  const scrollPositions=new Map<string,number>();
  function checkDay(){
   const day=new Date().toDateString();
   if(day!==cacheDay){clearViews();cacheDay=day}
  }
- // Sleep's undated routes read one view, so the prefetched Sleep serves Last night and Tonight; a dated night keeps its own.
- const viewKey=(route:string)=>['sleep/last','sleep/tonight'].includes(route)?'sleep':route;
+ // These pages read their tab's view, so the prefetched tab serves them: Sleep's Last night and Tonight,
+ // Readiness and Today's metrics, Gear and Training's metrics, Health's metrics, and the weekly goals.
+ function viewKey(route:string){
+  if(route==='sleep/last'||route==='sleep/tonight')return 'sleep';
+  if(route==='readiness')return 'today';
+  if(route==='gear')return 'training';
+  if(route==='plan/commitments')return 'plan';
+  const metric=/^metric\/(\w+)$/.exec(route);
+  return metric?metricSource(metric[1]):route;
+ }
+ // Settings, Help and the review and milestone lists load their own parts rather than one view.
+ const readsView=(route:string)=>!['onboarding','settings','help','reviews','progress/milestones'].includes(route) && !route.startsWith('help/');
  function cached(current:string){
   checkDay();
   const view=views.get(viewKey(current))??null;
@@ -225,7 +239,7 @@
   if(prefetched)return;
   prefetched=true;
   const generation=cacheGeneration;
-  void tick().then(()=>{if(generation===cacheGeneration)return Promise.allSettled([...tabs,'sleep'].filter(tab=>tab!==route).map(tab=>readView(tab)))});
+  void tick().then(()=>{if(generation===cacheGeneration)return Promise.allSettled([...tabs,'sleep'].filter(tab=>viewKey(tab)!==viewKey(route)).map(tab=>readView(tab)))});
  }
  const fixture=new URLSearchParams(location.search).get('fixture');
  const live=isTauri() && fixture===null;
@@ -309,7 +323,7 @@
      // A queued or slow Android sync can succeed after the foreground wait ends.
      if(lastSyncAttempt!==null && nextStatus.lastSync && Date.parse(nextStatus.lastSync)>=lastSyncAttempt && !nextStatus.lastError)syncError='';
      const changedSync=status!==null && status.lastSync!==nextStatus.lastSync;
-     if(changedSync)clearViews();
+     if(changedSync)clearViews(true);
      status=nextStatus;
      checkDay();
      if(live){
@@ -332,7 +346,7 @@
     reviewRows=null;void api.reviews().then(r=>{if(request===requestId)reviewRows=r}).catch(e=>error=String(e));
    }else if(current==='progress/milestones'){
     milestoneRows=null;void api.milestone_archive().then(r=>{if(request===requestId)milestoneRows=r}).catch(e=>error=String(e));
-   }else if(current!=='onboarding' && current!=='help' && !current.startsWith('help/')){
+   }else if(readsView(current)){
     let next=await readView(current);
     if(request!==requestId)return;
     if(fixture==='missing' && current==='today'){
@@ -366,7 +380,7 @@
  async function syncNow(){
   if(syncing || status?.syncing)return;
   syncing=true;syncError='';lastSyncAttempt=Date.now();
-  try{await api.sync_now();clearViews();await refresh(true,true)}catch(e){syncError=String(e)}
+  try{await api.sync_now();clearViews(true);await refresh(true,true)}catch(e){syncError=String(e)}
   finally{syncing=false}
  }
  onMount(()=>{
@@ -374,7 +388,7 @@
   // A link this version can't open says so instead of silently showing Today.
   const unknownLink=()=>{const h=location.hash;if(h.length>1&&!knownRoute(h))invalidLink=h.slice(1)};
   unknownLink();window.addEventListener('hashchange',unknownLink);
-  navigation=createNavigation(next=>{
+  const show=(next:string[])=>{
    const from=route;
    if(next[next.length-1]!=='today')invalidLink=null;
    const changed=next[next.length-1]!==route;
@@ -390,6 +404,15 @@
    void refresh(false,status===null || from==='onboarding' && route!=='onboarding').then(async()=>{
     if(changed && !available){await tick();restoreScroll(next)}
    });
+  };
+  // An uncached page is read before it replaces the shown one, for up to HOLD_MS: most reads end sooner,
+  // so the page opens whole instead of empty. A later navigation supersedes a held one.
+  let navigations=0;
+  navigation=createNavigation(next=>{
+   const target=next[next.length-1],token=++navigations;
+   if(target===route || route==='onboarding' || !hasRendered || !readsView(target) || cached(target))return show(next);
+   const hold=new Promise(done=>window.setTimeout(done,HOLD_MS));
+   void Promise.race([readView(target).catch(()=>{}),hold]).then(()=>{if(token===navigations)show(next)});
   });
   navigation.start();
   const nativeWindow=window as Window & {__raringBack?:()=>boolean};

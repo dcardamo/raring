@@ -2474,6 +2474,45 @@ function trendFixture(q){
  await cached.waitForFunction(previous=>window.testViews.completed.sleep>previous,pollReads);
  assert.equal(await cached.evaluate(()=>window.testViews.syncCalls),1,'day rollover never needs a Garmin sync');
 
+ // Readiness reads Today's view, so it opens from the cached Today before its own read finishes.
+ await hold('today');
+ await cached.evaluate(()=>document.querySelector('.morning .ready-fact').click());
+ await pending('today');
+ await cached.waitForURL('**/#readiness');
+ assert.equal(await cached.getByRole('heading',{name:'Readiness',exact:true}).isVisible(),true,'Readiness opens from the cached Today');
+ assert.equal(await cached.getByText('Preparing this view…').count(),0,'Readiness never waits for its own read');
+ await release('today');
+ await tabCached('Today');await cached.locator('.morning').waitFor();
+
+ // A sync keeps cached views: a tab opens at once with what it had, then shows the synced reading.
+ await hold('health');
+ await cached.evaluate(()=>{const s=window.testViews.samples;s.health.fitnessAge.fitnessAge=38;s.status.lastSync='2026-10-18T14:00:30Z';window.dispatchEvent(new Event('raring:resume'))});
+ await pending('health');
+ await tabCached('Health');
+ assert.equal(await cached.locator('.age-number').textContent({timeout:2000}),'39','after a sync the cached Health opens at once');
+ await release('health');
+ await cached.waitForFunction(()=>document.querySelector('.age-number')?.textContent==='38');
+ await tabCached('Today');await cached.locator('.morning').waitFor();
+
+ // An uncached page is read before it replaces the shown one, so a quick read opens it whole.
+ await cached.evaluate(()=>{
+  window.sawPreparing=false;
+  new MutationObserver(records=>{for(const r of records){const nodes=r.type==='characterData'?[r.target]:[...r.addedNodes];if(nodes.some(n=>n.textContent?.includes('Preparing this view')))window.sawPreparing=true}})
+   .observe(document.body,{subtree:true,childList:true,characterData:true});
+ });
+ await cached.getByRole('button',{name:'Profile and settings'}).first().click();
+ await cached.getByRole('heading',{name:'Profile',exact:true}).waitFor();
+ assert.equal(await cached.evaluate(()=>window.sawPreparing),false,'a quick read opens the page whole');
+ await tabCached('Today');await cached.locator('.morning').waitFor();
+ // A read slower than the hold opens the page loading, then fills it in.
+ await hold('workout');
+ await cached.locator('.activity').first().click();
+ await pending('workout');
+ await cached.getByText('Preparing this view…').waitFor();
+ await release('workout');
+ await cached.getByRole('heading',{name:'Morning Run'}).waitFor();
+ await tabCached('Today');await cached.locator('.morning').waitFor();
+
  // Navigation must not discard a concurrent status read or its sign-in gate.
  const healthReads=await cached.evaluate(()=>window.testViews.completed.health);
  await cached.evaluate(()=>{const s=window.testViews.samples;s.health.fitnessAge.fitnessAge=37;s.status.lastSync='2026-10-18T14:01:00Z'});

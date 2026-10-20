@@ -1790,17 +1790,29 @@ next pending wind-down while signed in.
   battery/radio cost and Doze delivery remain phone checks.
 - **View cache**: after the first view renders, the five tabs and Sleep are
   prefetched and cached by route for the current day, from local data only.
+  Pages built from a tab's view share its cache: Sleep's Last night and
+  Tonight, Readiness and Today's metric pages, Gear and Training's metric
+  pages, Health's metric pages and the weekly goals. A cached page opens at
+  once and is read again behind it. A page that isn't cached is read before
+  it replaces the shown page, for up to 200 ms, so a quick read opens it
+  whole; a slower one opens with "Preparing this view…" until its read
+  arrives, and a later tap supersedes the wait.
   A dated past day, dated metric or old workout is never prefetched; it is
   read when opened, and its one explicit detail fetch follows that open.
   A local change (goals, sessions, Adapt, routines) clears the cache and
   rereads the visible page and the header's Adapt state. Training's and
   Progress's chosen sections are kept for the session; Progress's domain
-  views and the milestone archive are read when first shown. A completed sync, a
-  changed sync timestamp or a local day rollover invalidates in-flight reads
-  and the cache without clearing the visible view. Status is read on start,
+  views and the milestone archive are read when first shown. A completed
+  sync or a changed sync timestamp invalidates in-flight reads and prefetches
+  the tabs again, but keeps cached views: until a page is read again it opens
+  with what it had, so a sync never empties one. A local day rollover
+  invalidates in-flight reads and clears the cache without clearing the
+  visible view. Status is read on start,
   resume and sync, not before every navigation, and is applied independently
   of navigation so a tab switch can't discard a newer sync or sign-out. View
-  commands read SQLite off the WebView thread. Progress keeps its selected
+  commands read SQLite off the WebView thread. They parse stored nights
+  without their per-sample arrays, except the one night whose overnight
+  charts Sleep draws. Progress keeps its selected
   period and historical anchor with the cached page across detail/Back and
   resume/sync refreshes. Selection revisions reject older in-flight results;
   sign-out resets the selection. Its local calendar date remains separate from

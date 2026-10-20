@@ -234,6 +234,19 @@ From the Today and Sleep review's remainder, in priority order.
   layouts pass at font scales 1.0/1.3/1.5. Reaching 11 sp needs a different
   minimum-size layout (fewer labels or a larger minimum), proven by that test.
 
+### Instant page opens follow-ups
+
+From the instant page opens, in priority order.
+
+- Check on the maintainer's phone (release build): tap through the tabs,
+  Readiness, metrics, a workout, Strength, Profile and a weekly review, also
+  right after a sync and after a local change, and note any "Preparing this
+  view…" and how long it shows. The timings above are desktop only.
+- If a page still waits on the phone, the next costs are rows read more than
+  once within one view (Today reads its 14 recent nights several times) and
+  30-day vitals and stress histories parsed whole. A per-read row memo, or
+  SQLite `json_extract` as the trend charts use, would remove them.
+
 ## Next
 
 ### 7a. Weekly plan follow-ups
@@ -516,6 +529,25 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Instant page opens** (commits "Read stored nights without their
+  samples" and "Open pages whole and keep cached views through a sync"),
+  from the maintainer seeing "Preparing this view…" after taps. View reads
+  parsed whole stored nights (about 150 KB each, almost all per-sample
+  arrays) up to 30 at a time and several times over: Today parsed 33 MB of
+  JSON, the weekly review 88 MB. Nights are now read without their samples
+  except the one night whose overnight charts Sleep draws; Your day and the
+  weekly review no longer build whole Sleep pages, and an activity's type
+  reads the list pages only when its detail lacks one. On a copy of the
+  full-history database (37 MB, desktop release build, median read):
+  Today 104 → 21 ms, Sleep 95 → 25, Training 49 → 19, Health 31 → 12,
+  Plan 10 → 2, Progress 26 → 8, weekly review 280 → 11, a workout 11 → 3.
+  Every view's JSON was identical before and after (491 views at five clock
+  times, on two databases). In the app, Readiness, Gear, weekly goals and the
+  metric pages open from their tab's prefetched view; a sync keeps cached
+  views (each opens at once and is read again) instead of emptying them; and
+  a page that isn't cached is read for up to 200 ms before it replaces the
+  shown one, so a quick read opens it whole. No Garmin requests changed.
 
 - **Sleep stage comparison copy** (commit "Say the sleep stage comparison once").
   One subheading explains the 30-night average and recorded-night coverage;
