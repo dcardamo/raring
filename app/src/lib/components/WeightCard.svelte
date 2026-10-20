@@ -4,57 +4,88 @@
  import type {TrendRange} from '../generated/TrendRange';
  import * as api from '../api';
  import {dateLabel,num} from '../format';
+ import {colors} from '../charts';
+ import {masonry} from '../masonry';
  import RangePicker from './RangePicker.svelte';
+ import MetricSummary from './MetricSummary.svelte';
  import WeightChart from './WeightChart.svelte';
  import Sparkline from './Sparkline.svelte';
+ import HelpButton from './HelpButton.svelte';
+ import Card from './Card.svelte';
  import Icon from './Icon.svelte';
- // The approved two-line card: Garmin scale weight and Raring's labelled
- // trend, with neutral changes. All metric math and freshness come from Rust.
- // On Health (`navigate` given) it is a 30-day summary that opens the detail; the detail has every range and change.
+ // Garmin scale weight and Raring's labelled trend, laid out like every other history card in the neutral blue.
+ // All metric math and freshness come from Rust. On Health (`navigate` given) it is the compact card that opens
+ // the detail; the detail adds every range, each change and body composition.
  let {range=$bindable('days30'),initial,navigate}:{range?:TrendRange,initial?:WeightView,navigate?:(route:string)=>void}=$props();
  let compact=$derived(!!navigate);
- let wanted=$derived<TrendRange>(compact?'days30':range);
- let view=$state<WeightView|null>(untrack(()=>initial??null)),busy=$state(false),error=$state(''),help=$state(false);
+ let view=$state<WeightView|null>(untrack(()=>initial??null)),busy=$state(false),error=$state('');
  const generation=getContext<()=>number>('trend-generation')??(()=>0);
- const color='#8FA8FF';
+ const color=colors.neutral;
  $effect(()=>{
-  generation();const read=wanted;let active=true;busy=true;error='';
+  generation();const read=range;let active=true;busy=true;error='';
   api.weight_trend(read).then(v=>{if(active){view=v;busy=false}}).catch(e=>{if(active){error=String(e);busy=false}});
   return()=>{active=false};
  });
  // Rounded before signing: a change that rounds to nothing reads 0.0, never −0.0.
  const sign=(v:number|null)=>{if(v==null)return '—';const r=Math.round(v*10)/10;return `${r>0?'+':r<0?'−':''}${Math.abs(r).toFixed(1)}`};
  const WORD={losing:'Losing',gaining:'Gaining',steady:'Steady'} as const;
+ const DAYS:Partial<Record<TrendRange,number>>={days7:7,days14:14,days30:30,days90:90};
+ // The period's direction word, where the core has one for a change that long.
+ let direction=$derived.by(()=>{const v=view;return v?v.changes.find(c=>c.days===DAYS[v.range]) ?? null:null});
+ let ready=$derived(!!view?.unit && view.trend!=null);
+ const ago=(days:number|null)=>days==null?'':days===0?'today':days===1?'1 day ago':`${days} days ago`;
 </script>
-<section class="card weight-card" class:compact aria-label="Weight" aria-busy={busy} style:--weight={color}>
- <div class="heading"><h3>{compact?'Weight':'Scale and trend'}</h3><button class="help" aria-label="About trend weight" aria-expanded={help} onclick={()=>help=!help}><Icon name="help" size={19}/></button></div>
- {#if help}<p class="explain">Scale values are Garmin weigh-ins. Raring’s trend smooths them: each daily weigh-in moves the trend a tenth of the way toward it; after a gap the adjustment uses the days between weigh-ins. The trend holds between measurements and stops at the last one. Small changes are labelled Steady; no weight goal or judgement is applied.</p>{/if}
+{#snippet history()}
  {#if error}<p class="warning" role="status">{error}</p>{/if}
  {#if view}
   {#if view.unit && view.trend!=null}
-   <div class="weight-head"><small><i class="trend-key"></i>Trend weight · Raring</small><b class="n">{num(view.trend,1)}<span>{view.unit}</span></b><p><i class="scale-key"></i>Scale {num(view.scale,1)} {view.unit}</p></div>
-   <p class="fresh" class:stale={view.freshness.stale}>{#if view.freshness.stale}<Icon name="clock" size={14}/>{/if}Last measured {dateLabel(view.freshness.recordedOn!)} · {view.freshness.ageDays===0?'today':`${view.freshness.ageDays} days ago`}{view.freshness.stale?' · older than 7 days':''}</p>
-   <div class="summary"><span><small>Average trend</small><b class="n">{num(view.average,1)}<em>{view.unit}</em></b></span><span><small>Trend change</small><b class="n">{sign(view.change)}<em>{view.unit}</em></b></span></div>
-   {#if !compact}<RangePicker value={range} onchange={r=>range=r} label="Weight range"/>{/if}
-   <p class="small dates">{dateLabel(view.from!)} {view.from!.slice(0,4)} – {dateLabel(view.to!)} {view.to!.slice(0,4)}</p>
-   <WeightChart points={view.points} unit={view.unit} {color}/>
+   <div class="period-summary">
+    <p class="period-source">Garmin weigh-ins · {dateLabel(view.from!)} {view.from!.slice(0,4)} – {dateLabel(view.to!)} {view.to!.slice(0,4)}</p>
+    <div class="summary-pair">
+     {#if compact}<MetricSummary label="Trend weight" value={num(view.trend,1)} unit={view.unit} context="Raring trend"/>{:else}<MetricSummary label="Average trend" value={num(view.average,1)} unit={view.unit} context="Raring trend"/>{/if}
+     <MetricSummary label="Trend change" value={sign(view.change)} unit={view.unit} context={direction?.direction?WORD[direction.direction]+(direction.perWeek!=null?` · ${sign(direction.perWeek)} ${view.unit}/wk`:''):''}/>
+    </div>
+    <p class="fresh" class:stale={view.freshness.stale}>{#if view.freshness.stale}<Icon name="clock" size={14}/>{/if}Last weigh-in {dateLabel(view.freshness.recordedOn!)} · {ago(view.freshness.ageDays)}{view.freshness.stale?' · older than 7 days':''}</p>
+   </div>
+   <WeightChart points={view.points} unit={view.unit} {compact} {color}/>
   {:else}<p class="small">{view.note??'No weigh-ins yet'}</p>{/if}
  {:else}<p class="small">Loading stored weigh-ins…</p>{/if}
- {#if view?.unit && view.changes.length}
-  <h4>Trend change · ending {dateLabel(view.to!)}</h4>
-  <!-- Under a week, a sparkline's own scale turns a steady 0.1 into a steep line. -->
-  <ul class="changes">{#each view.changes.filter(c=>!compact || c.days===7 || c.days===30) as c}<li><span>{c.days} {c.days===1?'day':'days'}</span><span class="spark">{#if c.days>=7}<Sparkline values={c.spark} w={56} h={24} {color} fill={false}/>{/if}</span><b class="n">{sign(c.change)}{#if c.change!=null}<small>{view.unit}</small>{/if}</b><span class="direction">{c.direction?WORD[c.direction]:'Not enough history'}{#if c.perWeek!=null}<small>{sign(c.perWeek)} {view.unit}/wk</small>{/if}</span></li>{/each}</ul>
-  {#if !compact && (view.bodyFat!=null || view.bmi!=null)}<div class="summary body"><span>{#if view.bodyFat!=null}<small>Body fat</small><b class="n">{num(view.bodyFat,1)}<em>%</em></b>{/if}</span><span>{#if view.bmi!=null}<small>BMI</small><b class="n">{num(view.bmi,1)}</b>{/if}</span></div>{/if}
+{/snippet}
+{#if compact}
+ <section class="card weight-card" aria-label="Weight" aria-busy={busy}>
+  <h3><span>Weight</span><span class="card-actions"><HelpButton topic="trend-weight"/></span></h3>
+  <div class="picker"><RangePicker value={range} onchange={r=>range=r} label="Weight range" only={['days7','days30','days90','year']}/></div>
+  {@render history()}
+  <button class="link-row history-more" onclick={()=>navigate?.('health/weight')}>Changes and body composition<Icon name="chevron" size={15}/></button>
+ </section>
+{:else}
+ {#if ready && view}
+  <div class="metric-hero"><div class="metric-value n" style:color={color}>{num(view.trend,1)}<span class="unit">{view.unit}</span></div><p class="small">Raring trend weight · Garmin scale {num(view.scale,1)} {view.unit}</p></div>
  {/if}
- {#if navigate}<button class="more" onclick={()=>navigate('health/weight')}>All ranges, changes and body composition<Icon name="chevron" size={14}/></button>{/if}
-</section>
+ <div class="dashboard" {@attach masonry}>
+  <section class="card weight-card" aria-label="Weight" aria-busy={busy}>
+   <h3><span>Scale and trend</span><span class="card-actions"><HelpButton topic="trend-weight"/></span></h3>
+   <div class="picker"><RangePicker value={range} onchange={r=>range=r} label="Weight range"/></div>
+   {@render history()}
+  </section>
+  {#if ready && view?.changes.length}
+   <Card title={`Trend change · ending ${dateLabel(view.to!)}`} extra="weight-changes">
+    <!-- Under a week, a sparkline's own scale turns a steady 0.1 into a steep line. -->
+    <ul class="changes">{#each view.changes as c}<li><span>{c.days} {c.days===1?'day':'days'}</span><span class="spark">{#if c.days>=7}<Sparkline values={c.spark} w={56} h={24} {color} fill={false}/>{/if}</span><b class="n">{sign(c.change)}{#if c.change!=null}<small>{view.unit}</small>{/if}</b><span class="direction">{c.direction?WORD[c.direction]:'Not enough history'}{#if c.perWeek!=null}<small>{sign(c.perWeek)} {view.unit}/wk</small>{/if}</span></li>{/each}</ul>
+   </Card>
+  {/if}
+  {#if ready && view && (view.bodyFat!=null || view.bmi!=null)}
+   <Card title="Body composition"><div class="body">{#if view.bodyFat!=null}<MetricSummary small label="Body fat · Garmin" value={num(view.bodyFat,1)} unit="%"/>{/if}{#if view.bmi!=null}<MetricSummary small label="BMI · Garmin" value={num(view.bmi,1)}/>{/if}</div></Card>
+  {/if}
+ </div>
+{/if}
 <style>
- .weight-card{background:linear-gradient(160deg,rgba(143,168,255,.1),var(--card) 55%)}.heading{display:flex;justify-content:space-between;align-items:center}.heading h3{margin:0}.help{display:grid;place-items:center;width:40px;height:40px;background:none;border:0;border-radius:50%;color:var(--text2)}
- .weight-head small{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--text2)}.weight-head b{display:block;font-size:30px;font-weight:600;color:var(--weight)}.weight-head b span{font:500 13px Inter;color:var(--text2);margin-left:4px}.weight-head p{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--text2)}
- .trend-key,.scale-key{display:inline-block;width:14px;height:3px;border-radius:2px;background:var(--weight);flex:none}.scale-key{height:2px;opacity:.45}
- .fresh{display:flex;align-items:center;gap:5px;margin:6px 0;font-size:12px;color:var(--text2)}.fresh.stale{color:var(--fair)}
- .summary{display:flex;gap:24px;margin:8px 0 0}.summary small{display:block;font-size:12px;color:var(--text2)}.summary b{font-size:22px;font-weight:600}.summary em{font:500 12px Inter;color:var(--text2);margin-left:3px;font-style:normal}.summary.body{margin-top:12px}
- h4{font:600 12px Inter;color:var(--text2);margin:16px 0 4px}.changes{list-style:none;margin:0;padding:0}.changes li{display:grid;grid-template-columns:58px 56px minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 0;border-top:1px solid var(--line);font-size:12px;color:var(--text2)}.changes b{font-size:15px;color:var(--text);text-align:right;white-space:nowrap}.changes b small{font:500 11px Inter;margin-left:3px;color:var(--text2)}.direction{text-align:right;color:var(--weight);font-weight:600}.direction small{display:block;color:var(--text2);font-size:11px;font-weight:500}
- .more{display:flex;gap:6px;align-items:center;min-height:40px;margin-top:8px;background:none;border:0;color:var(--text);font-weight:600}.explain{font-size:13px;color:var(--text2);margin:6px 0 12px}
+ .picker{display:flex;min-width:0}
+ .period-summary{margin:16px 0}
+ .period-source{font:400 12px/1.5 Inter;color:var(--text2);margin:0 0 10px;overflow-wrap:anywhere}
+ .fresh{display:flex;align-items:center;gap:5px;margin:8px 0 0;font-size:12px;color:var(--text2)}.fresh.stale{color:var(--fair);font-weight:600}
+ .summary-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(130px,100%),1fr));gap:12px}
+ .changes{list-style:none;margin:0;padding:0}.changes li{display:grid;grid-template-columns:58px 56px minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 0;border-top:1px solid var(--line);font-size:12px;color:var(--text2)}.changes li:first-child{border-top:0}.changes b{font-size:15px;color:var(--text);text-align:right;white-space:nowrap}.changes b small{font:500 11px Inter;margin-left:3px;color:var(--text2)}.direction{text-align:right;color:var(--text);font-weight:600}.direction small{display:block;color:var(--text2);font-size:11px;font-weight:500}
+ .body{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(130px,100%),1fr));gap:12px}
  @container(max-width:330px){.changes li{grid-template-columns:58px 1fr auto}.spark{display:none}}
 </style>

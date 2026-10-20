@@ -8,8 +8,9 @@ import type {HealthView} from './generated/HealthView';
 export function rangeStatus(value: number | null, range: [number, number] | null, kind?: VitalReading['kind']): {label: string; tone: Tone} {
   if (value == null) return {label: 'Not recorded', tone: 'neutral'};
   if (!range) return {label: 'Building baseline', tone: 'neutral'};
-  if (value < range[0]) return {label: kind==='hrv'?'Below baseline':'Below usual', tone: 'poor'};
-  if (value > range[1]) return {label: kind==='hrv'?'Above baseline':'Above usual', tone: 'poor'};
+  // Outside a usual range is worth attention, not a poor rating.
+  if (value < range[0]) return {label: kind==='hrv'?'Below baseline':'Below usual', tone: 'fair'};
+  if (value > range[1]) return {label: kind==='hrv'?'Above baseline':'Above usual', tone: 'fair'};
   return {label: 'Within range', tone: 'good'};
 }
 
@@ -39,7 +40,7 @@ export const rangeName = (v: VitalReading) => v.rangeSource==='garmin' || v.stat
 export function vitalSummary(vitals: VitalsCard) {
   const recorded = vitals.readings.filter(v => v.value != null);
   const compared = recorded.filter(v => vitalStatus(v).tone !== 'neutral');
-  const outside = recorded.filter(v => vitalStatus(v).tone === 'poor').length;
+  const outside = recorded.filter(v => vitalStatus(v).tone === 'fair').length;
   const complete = compared.length === vitals.readings.length && compared.length > 0;
   const headline = outside
     ? `${outside} outside your ranges`

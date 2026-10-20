@@ -28,6 +28,9 @@ describe('personal range presentation',()=>{
   expect(rangeStatus(0,[0,0]).tone).toBe('good');
   expect(rangeStatus(40,[44,52]).label).toBe('Below usual');
   expect(rangeStatus(60,[44,52]).label).toBe('Above usual');
+  // Outside a usual range is attention (amber), as on the charts, not a poor rating.
+  expect(rangeStatus(40,[44,52]).tone).toBe('fair');
+  expect(rangeStatus(60,[44,52]).tone).toBe('fair');
  });
  it('distinguishes a nightly HRV comparison from Garmin’s seven-day status',()=>{
   expect(rangeStatus(40,[48,62],'hrv').label).toBe('Below baseline');
@@ -36,7 +39,7 @@ describe('personal range presentation',()=>{
  it('uses Garmin status instead of reclassifying by its displayed bounds',()=>{
   expect(vitalStatus({...vital(60,[44,52]),status:'IN_RANGE',tone:'good',rangeSource:'garmin'}))
     .toEqual({label:'Within Garmin range',tone:'good'});
-  expect(vitalStatus({...vital(48,[44,52]),status:'ABOVE_RANGE',tone:'poor',rangeSource:'garmin'}).tone).toBe('poor');
+  expect(vitalStatus({...vital(48,[44,52]),status:'ABOVE_RANGE',tone:'fair',rangeSource:'garmin'}).tone).toBe('fair');
   expect(vitalStatus({...vital(48,[44,52]),status:'ONBOARDING',rangeSource:'none'}).tone).toBe('neutral');
   expect(vitalStatus({...vital(48,[44,52]),status:'NEW_STATUS',rangeSource:'garmin'}).tone).toBe('neutral');
  });

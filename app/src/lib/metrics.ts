@@ -6,6 +6,7 @@ export const vitalNames: Record<string, string> = {
 export const metricNames: Record<string, string> = {
   ...vitalNames, sleepHr: 'Sleep HR', bodyBattery: 'Body Battery', stress: 'Stress', heartRate: 'Heart rate', vo2max: 'VO₂ max',
   endurance: 'Endurance', hill: 'Hill score', runningTolerance: 'Running tolerance', acuteLoad: 'Acute load',
+  fitnessAge: 'Fitness Age',
 };
 
 export const metricDescriptions: Record<string, string> = {
@@ -21,6 +22,7 @@ export const metricDescriptions: Record<string, string> = {
   endurance: 'Garmin’s endurance score describes your ability to sustain prolonged effort across activities.',
   hill: 'Garmin’s hill score describes your ability to run uphill, based on your training and fitness.',
   acuteLoad: 'Garmin’s acute load: a 7-day weighted sum of your training load. Each day shows Garmin’s Training Status value for that day; the latest matches Training.',
+  fitnessAge: 'Garmin’s estimate of how fit you are for your age, from VO₂ max, resting heart rate, body composition and vigorous activity. Each estimate is compared with your age now: below the dashed line is younger than you, above it older.',
   runningTolerance: 'Garmin’s running tolerance is the running distance your body is currently prepared to handle. It is not a Raring training target.',
 };
 

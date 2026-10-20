@@ -58,14 +58,17 @@ synthetic data. `design/mockup/index.html` shows the app before the redesign.
   are; color says how it's going:
   - **Status**: mint green good (`#60D3A0`), ochre fair (`#F2B85E`), coral
     poor (`#F17E78`), always with a word, symbol or labelled key. Missing data
-    is a gap, never a zero.
+    is a gap, never a zero. Amber is attention, such as a reading outside its
+    usual range; coral is a poor rating.
   - **Effort**: heart-rate zones run gray, blue, yellow, orange, red. Red
     means hard.
-  - **Amount**: one muted blue (`#76ACEE`), faint to strong, for counts
-    without a judgement, such as sets per muscle.
-  - **Ink**: everything else, including charts without a verdict. Primary
-    buttons use warm-white ink as their fill with dark text; selected controls
-    use a raised neutral surface. Time-range pickers keep a light selected
+  - **Neutral**: one muted blue (`#76ACEE`), faint to strong, for amounts and
+    readings without a verdict, such as sets per muscle, weight, VO₂ max and
+    time asleep. A chart's readings take status colours or this blue, never
+    ink (Rules: Chart colours).
+  - **Ink**: text, controls and reference marks such as your age, goals and
+    the period before. Primary buttons use warm-white ink as their fill with
+    dark text; selected controls use a raised neutral surface. Time-range pickers keep a light selected
     segment with dark text. The selected bottom tab has an icon backing,
     a stronger label and an accessible current-page state, not color alone.
 - Text is at least 4.5:1 against its surface, including large text. Text on a
@@ -94,8 +97,8 @@ synthetic data. `design/mockup/index.html` shows the app before the redesign.
   level raised and marked; it is never shaped like buttons. All segments share
   one rail and aligned seams; a separate cap raises the selected level without
   moving its neighbours or their labels.
-- Weight uses one neutral accent; its changes are directions, never good or
-  bad colours.
+- Weight is a neutral metric: the neutral blue, laid out like every other
+  history card; its changes are directions, never good or bad colours.
 - Every chart has axes, units and labelled values; a usual range is a band,
   a goal a dashed line. Amount rows share a zero origin and scale, with the
   value outside the bar, a labelled tick for a comparison mean or an outlined
@@ -103,7 +106,8 @@ synthetic data. `design/mockup/index.html` shows the app before the redesign.
   stays zero. Duration rows name the clock format instead of adding percentages
   with an unclear denominator. Period plots use round ticks; count ticks are
   integers. Gaps are drawn as gaps. Shared single-metric charts use
-  2 px main traces, quiet 1 px gridlines and neutral range bands; goal lanes
+  2 px main traces, quiet 1 px gridlines and green-tinted usual-range bands
+  with dashed edges; goal lanes
   keep their labelled goal color. Owned line icons use a 1.75-unit stroke.
 - Chart text is at least 11 px for axis ticks and 12 px for other labels on a
   390 px phone, never overlaps other text or a marker, and stays inside the
@@ -435,8 +439,8 @@ Questions go to GitHub; the address is shown as text.
 
 ### Health
 
-In this order: long-term health (Fitness Age with its history, and its
-drivers with the biggest lever), this morning's vitals, then resting heart
+In this order: long-term health (Fitness Age against your age, opening its
+history, and its drivers with the biggest lever), this morning's vitals, then resting heart
 rate, overnight HRV, average stress and Body Battery's daily high as compact
 range charts with the usual band, weight, intensity minutes and the journal.
 Health summarises: each chart keeps its own metric, offers 7D, 30D, 90D and
@@ -487,23 +491,30 @@ says so on its chart (Rules: Reading freshness).
   sync under its request budget; older days are fetched only when opened and
   kept, including empty days. Retry failures and 429s follow the shared
   backoff. Older days open from the previous/next day controls on the detail.
-- **Weight and body composition**: a Health card and canonical `health/weight`
-  detail (`metric/weight` alias) show Garmin scale weight beside Raring's trend,
-  range average/change, neutral 1–90-day changes with sparklines (7 days and
-  longer), the last weigh-in's date/age and recorded BMI/body fat as labelled
-  values. The Health card summarises the last 30 days with the 7- and 30-day
-  changes and opens the detail, which has every range and change. Scale and
-  trend use one accent with distinct lines and dated markers; 7D–Max ranges,
-  axes with the unit, and a keyboard reading selector expose the evidence.
-  Help explains smoothing. Adding a weight lives on Profile only (Profile and
+- **Weight and body composition**: laid out like Health's other history
+  cards, in the neutral blue. The Health card has 7D, 30D, 90D and 1Y, the
+  period's dates, trend weight and the period's trend change with its
+  direction, the last weigh-in's date/age, the chart with a tap-to-read
+  weigh-in (scale and trend), a key and one link to the canonical
+  `health/weight` detail (`metric/weight` alias). The detail leads with trend
+  weight, then the chart with 7D–Max, the range average/change and a reading
+  slider; neutral 1–90-day changes with sparklines (7 days and longer); and
+  Garmin's recorded BMI/body fat as labelled values. Scale weigh-ins are dots
+  on a faint line, the trend a solid line, axes name the unit.
+  Help ("?") explains smoothing. Adding a weight lives on Profile only (Profile and
   Settings). Weight follows Garmin's
   measurement system (kg/lb), not activity-set units in isolation. Missing
   measurements stay gaps, never zero; no notifications or unsolicited weight
   targets. Until the account units sync, the card waits rather than guessing.
 - **Fitness Age**: large number labelled as Garmin's estimate with its date,
-  years younger or older than your age with that age printed (no arbitrary
-  age ruler), its change in years against a year ago, and its history as a compact
-  chart (90D, 1Y, Max) that opens on the latest estimate.
+  years younger or older than your age, its change in years against a year
+  ago, and a bar from 20 to 70 (widened in tens when an age falls outside) with
+  a YOU mark for the estimate above it and an AGE mark for your age below it:
+  the bar is green younger than your age and coral older, and YOU takes its
+  status colour. The bar and a "Fitness Age history" link open
+  `metric/fitnessAge`: the estimate, your age and the difference, then the full
+  history chart (opening on the latest estimate) with your age now as a dashed
+  line and each estimate coloured against it (Rules: Chart colours).
 - **Drivers**: VO2max, resting heart rate, BMI or body fat, and vigorous
   minutes as tiles with range bars, Garmin's target in words ("Target ≥ 150
   min/wk") and Met or how far off it is; no trend arrows. The driver that would
@@ -554,9 +565,12 @@ Fitness Age) open on the latest estimate rather than an empty latest day.
   deduplicated estimate cadence is inferred. Current bands print their bounds and source. Readiness, Sleep
   Score, stress and Body Battery use a fixed 0–100 domain on either axis;
   other metrics keep round, adaptive ticks.
-- Garmin rates days, not averages: only daily readiness bars take Garmin's
-  level colors, and the current baseline band shows only on daily ranges.
-  Averages, overlays and changes are ink, with no verdict and no new score.
+- Colours follow Rules: Chart colours. Garmin's levels colour days and
+  weekly or monthly averages alike, which sit on the same scale. The current
+  usual band shows, and colours readings in or out of it, only on daily
+  ranges; it is today's range, not each past day's, and is labelled so.
+  Without it a range metric's readings are the neutral blue. Overlays, the
+  previous period and changes stay neutral, with no new score.
 
 ### Plan
 
@@ -636,8 +650,8 @@ Four sections, the choice kept across a detail and Back:
 
 Follow-through and measured change stay apart; nothing is a grade. Domain
 charts key the outlined current period, dashed weekly goal and hatched/dotted
-coverage marks. Monthly physiological traces are neutral, not colored as a
-verdict from their direction. Resting heart rate opens the daily resting-HR
+coverage marks. Monthly physiological traces are the neutral blue, not
+colored as a verdict from their direction. Resting heart rate opens the daily resting-HR
 page, never the overnight Sleep HR detail.
 
 ### Profile and Settings
@@ -1260,7 +1274,7 @@ next pending wind-down while signed in.
   7 days also show `change × 7 / N` per week. Absolute change strictly below
   `max(0.2 kg, 0.05 kg × N / 7)` is Steady, otherwise Losing/Gaining. These
   words are neutral directions, not goals, verdicts or physiological claims.
-  The card uses one metric accent, never good/bad direction colours.
+  Weight uses the neutral blue, never good/bad direction colours.
 - **Weight chart ranges**: 7D, 14D, 30D, 90D, 1Y (365 days), Max (all stored
   readings), ending at the last weigh-in. Average is the mean of daily trend
   values in the shown window, not of plot buckets; change uses the same N-day
@@ -1427,8 +1441,9 @@ next pending wind-down while signed in.
   never reconstructs a comparator from the delta. This is a descriptive
   comparison, not a score, target or favorable direction.
 - **Normal range and vitals off**: use Garmin Health Status's per-day
-  baseline bounds and status first. A reported outside-range status counts
-  toward the two-vitals warning and notification; `ONBOARDING`, unknown
+  baseline bounds and status first. A reported outside-range status is
+  fair-toned (amber, as on the charts) and counts toward the two-vitals
+  warning and notification; `ONBOARDING`, unknown
   statuses and missing values are neutral, even if provisional bounds exist.
   When Garmin has no Health Status metric, use the middle 80% of the last 30
   recorded nights (at least 14) and count readings outside that fallback
@@ -1477,6 +1492,22 @@ next pending wind-down while signed in.
   drawing an empty range.
 - **Body Battery color**: good at 70 and above, fair from 30, poor below 30.
   Garmin rates no level, so only the display color is bucketed.
+- **Chart colours**: every metric chart is in one of four categories, named in
+  its key, and a line changes colour exactly where it crosses a threshold.
+  - Garmin's levels: readiness (Low/Poor under 50, Moderate 50–74,
+    High/Prime 75+), Sleep Score (Poor under 60, Fair 60–79, Good 80+),
+    stress (rest and low 0–50 good, medium 51–75 fair, high 76+ poor) and
+    Body Battery's color.
+  - Usual ranges: HRV, resting HR, Sleep HR, respiration, SpO₂ and skin
+    temperature are good inside the shown range (bounds included) and fair
+    outside it either way: attention, not a rating. Acute load against
+    Garmin's optimal range is good inside it, fair below and poor above, as
+    on Training's gauge.
+  - Your age: a Fitness Age estimate below your age now is good, equal fair,
+    above poor.
+  - Neutral: weight, VO₂ max, time asleep, Progress's monthly averages, sleep's
+    overnight curves and lift history, and range metrics without a shown
+    band, in the neutral blue.
 - **Plan week**: Garmin's intensity-minutes week, taken from the dates of its
   weekly intensity rows (Monday until they sync). Garmin's intensity week
   can differ from the account's start-of-week setting; following

@@ -11,6 +11,7 @@
  import {vitalStatus,rangeName,vitalName,vitalTrend,isSleepHr,trendBand} from '../signals';
  import HistoryChart from './HistoryChart.svelte';
  import {toneColor,batteryColor,colors,stressColors,stressNames} from '../charts';
+ import {fitnessAgeColor} from '../fitness';
  import Card from './Card.svelte';
  import Gauge from './Gauge.svelte';
  import RangeBar from './RangeBar.svelte';
@@ -23,6 +24,7 @@
  let stress=$derived(metric==='stress'?(data as TodayView|HealthView).stress:null);
  let isDay=$derived(dayDate!=null);
  let vital=$derived(source==='health'?(data as HealthView).vitals.readings.find(v=>v.kind===metric):null);
+ let age=$derived(metric==='fitnessAge'?(data as HealthView).fitnessAge:null);
  let training=$derived(source==='training'?data as TrainingView:null);
  let trainingValue=$derived(training?({vo2max:training.vo2max,endurance:training.enduranceScore,hill:training.hillScore,runningTolerance:training.runningToleranceKm,acuteLoad:training.acute?.value??null} as Record<string,number|null>)[metric]:null);
  // Sleep HR is Garmin's overnight average, against its own usual range; never resting HR.
@@ -60,6 +62,10 @@
  {:else if battery}
   <Gauge size={210} stroke={15} value={battery.now} caption="Latest synced" color={battery.now!=null?batteryColor(battery.now):colors.secondary}/>
   {#if (data as TodayView).bodyBatteryWhy}<WhySheet why={(data as TodayView).bodyBatteryWhy!} label={battery.now!=null?`Why ${num(battery.now)}?`:'Why?'}/>{/if}
+ {:else if age}
+  <div class="metric-value n" style:color={age.fitnessAge!=null?fitnessAgeColor(age.fitnessAge,age.chronologicalAge):undefined}>{num(age.fitnessAge)}<span class="unit">years</span></div>
+  <p class="small">Garmin estimate{age.recordedOn?` · ${dateLabel(age.recordedOn)}`:''}{age.chronologicalAge!=null?` · Your age ${num(age.chronologicalAge)}`:''}</p>
+  {#if age.fitnessAge!=null && age.chronologicalAge!=null}<span class="pill" style:color={fitnessAgeColor(age.fitnessAge,age.chronologicalAge)}>{age.fitnessAge===age.chronologicalAge?'The same as your age':`${num(Math.abs(age.chronologicalAge-age.fitnessAge))} years ${age.fitnessAge<age.chronologicalAge?'younger':'older'} than your age`}</span>{/if}
  {:else if metric==='sleepHr'}
   <div class="metric-value n" style:color={sleepHr?toneColor(sleepHr.tone):null}>{num(sleepHr?.value??null)}<span class="unit">bpm</span></div>
   <p class="small">{dateLabel((data as HealthView).date)} · Garmin’s overnight average</p>
@@ -82,11 +88,13 @@
   {#if stress.timeline.length}<Card title="Through the day"><StressTimeline {stress}/></Card>{:else}<Card title="Through the day"><p class="small">Garmin has no stress readings for this day.</p></Card>{/if}
   {#if stress.time.length}<Card title="Time in each level"><AmountRows label="Garmin stress durations" unit="h:mm" format={duration} rows={[...stress.time.map(t=>({label:stressNames[t.level],value:t.seconds/60,text:duration(t.seconds/60),color:stressColors[t.level]})),...(stress.activeS!=null?[{label:'Active · not rated',value:stress.activeS/60,text:duration(stress.activeS/60),color:colors.secondary}]:[])]}/></Card>{/if}
   <Card title="Daily average">
-   <HistoryChart values={stress.trend} endDate={(data as TodayView|HealthView).date} label="Average stress" color={colors.ink} metric="stress"/>
+   <HistoryChart values={stress.trend} endDate={(data as TodayView|HealthView).date} label="Average stress" metric="stress"/>
   </Card>
  {:else if battery}
   <Card title="Daily high"><HistoryChart values={[]} endDate={(data as TodayView).date} label="Highest Body Battery" metric="bodyBattery" initialRange="days30"/></Card>
   <Card title="Today"><div class="battery-totals"><div><b class="big n">{num(battery.charged)}</b><span>Charged</span></div><div><b class="big n">{num(battery.drained)}</b><span>Drained</span></div></div></Card>
+ {:else if age}
+  <Card title="History"><HistoryChart values={[]} endDate={(data as HealthView).date} label="Fitness Age" unit="years" metric="fitnessAge" initialRange="year" age={age.chronologicalAge}/></Card>
  {:else if metric==='sleepHr'}
   <Card title="Nightly history"><HistoryChart values={[]} endDate={(data as HealthView).date} label="Sleep HR" unit="bpm" band={sleepHr?.usual??null} bandLabel={sleepHr?.rangeSource==='garmin'?'Garmin’s Health Status baseline':'Raring usual range'} nights metric="sleepHr" initialRange="days30"/></Card>
  {:else if vital}

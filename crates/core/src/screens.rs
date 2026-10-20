@@ -1109,10 +1109,12 @@ fn garmin_range(metric: &Value) -> Option<[f64; 2]> {
     let hi = finite_number(&metric["baselineUpperLimit"])?;
     (lo <= hi).then_some([lo, hi])
 }
+/// Outside a usual range is worth attention (fair), not a poor rating; the
+/// charts colour those readings the same way.
 fn garmin_tone(status: &str) -> Tone {
     match status {
         "IN_RANGE" => Tone::Good,
-        "ABOVE_RANGE" | "BELOW_RANGE" | "OUT_OF_RANGE" => Tone::Poor,
+        "ABOVE_RANGE" | "BELOW_RANGE" | "OUT_OF_RANGE" => Tone::Fair,
         _ => Tone::Neutral,
     }
 }
@@ -1248,7 +1250,7 @@ pub fn vitals(store: &Store, date: &str) -> VitalsCard {
             garmin_tone(status)
         } else {
             match (value, normal) {
-                (Some(v), Some([lo, hi])) if v < lo || v > hi => Tone::Poor,
+                (Some(v), Some([lo, hi])) if v < lo || v > hi => Tone::Fair,
                 (Some(_), Some(_)) => Tone::Good,
                 _ => Tone::Neutral,
             }
@@ -1276,7 +1278,7 @@ pub fn vitals(store: &Store, date: &str) -> VitalsCard {
             trend,
         });
     }
-    let off_count = readings.iter().filter(|r| r.tone == Tone::Poor).count() as u32;
+    let off_count = readings.iter().filter(|r| r.tone == Tone::Fair).count() as u32;
     let baseline_ready = readings
         .iter()
         .any(|r| r.value.is_some() && r.normal.is_some() && r.tone != Tone::Neutral);

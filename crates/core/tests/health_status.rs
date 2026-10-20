@@ -39,7 +39,7 @@ fn garmin_status_and_bounds_override_local_percentiles() {
         .iter()
         .find(|r| r.kind == VitalKind::Spo2)
         .unwrap();
-    assert_eq!(spo2.tone, Tone::Poor);
+    assert_eq!(spo2.tone, Tone::Fair);
     assert_eq!(spo2.status.as_deref(), Some("BELOW_RANGE"));
     let temp = card
         .readings
@@ -47,7 +47,7 @@ fn garmin_status_and_bounds_override_local_percentiles() {
         .find(|r| r.kind == VitalKind::SkinTemp)
         .unwrap();
     assert_eq!(temp.value, Some(0.8)); // Celsius, not the duplicate Fahrenheit metric.
-    assert_eq!(temp.tone, Tone::Poor);
+    assert_eq!(temp.tone, Tone::Fair);
 }
 
 #[test]

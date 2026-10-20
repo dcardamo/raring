@@ -48,8 +48,10 @@ In priority order; the redesign shipped (Done, item 26) without them.
   largest system text on a phone. Browser geometry checks are not a physical
   WebView or screen-reader check.
 - Historical baseline bands need each day's actual Garmin bounds/status in
-  the trend contract; the prototype explicitly labels the current range and
-  never applies it as a historical rating. No account requests in this lane.
+  the trend contract. Daily points are now coloured against the current
+  range (Rules: Chart colours), which is labelled as current; with per-day
+  bounds each past day could be rated against its own range, so a 90D chart's
+  early days don't borrow today's. No account requests in this lane.
 - Decide whether Trends should suppress previous-period changes for unequal
   coverage. Current comparisons show both recorded-day counts, without a
   significance or favorable-direction claim; no new coverage threshold.
@@ -70,6 +72,23 @@ In priority order; the redesign shipped (Done, item 26) without them.
 - Review the refined tokens on main's new Today/Sleep components: the four
   morning stats, separate session card, 24-hour clock and recent-nights chart.
   They are integrated in the prototype; their layout and data remain main's.
+
+### Chart colour follow-ups
+
+From the chart colour pass, in priority order.
+
+- Live with it on the maintainer's phone: days outside the usual ranges
+  (amber), a stressful week, a low Body Battery, the Fitness Age bar with
+  Garmin's real estimate cadence and the weight card with real weigh-ins;
+  TalkBack on the age bar and the weight chart.
+- Fitness Age history compares every estimate with your age now. Stored
+  `fitness_age` rows carry Garmin's `chronologicalAge`; the trend could carry
+  it so an older estimate is compared with the age then.
+- Remaining ink data marks: all-day heart rate (detail and Your day), sleep
+  consistency bars, load focus bars and the training lanes' line. Decide for
+  each: neutral blue, a zone colour, or ink as a reference mark.
+- The Fitness Age detail offers 7D–30D, which Garmin's sparse estimates
+  usually leave empty (as on VO₂ max); consider 90D, 1Y and Max only.
 
 ### Time-of-day follow-ups
 
@@ -516,6 +535,25 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Chart colours, Fitness Age bar and weight layout** (commit "Colour charts
+  by range, restore the Fitness Age bar and align weight"), from the
+  maintainer's phone. Charts are no longer ink on ink: each metric is in one
+  category, keyed on the chart. Garmin's levels (readiness, Sleep Score,
+  stress, Body Battery) colour days and averages; usual ranges are a
+  green-tinted band, readings inside green and outside amber; acute load is
+  amber below and coral above Garmin's optimal range; Fitness Age is green
+  under your age and coral over it; weight, VO₂ max, time asleep, monthly
+  averages and range metrics without a shown band are one neutral blue. A
+  line changes colour where it crosses a threshold. Health vitals outside
+  their range are amber (core tone fair, still counted for the warning and
+  notification), matching the charts. Health's Fitness Age card is the
+  YOU/AGE bar again, green younger and coral older; it and a link open the
+  new `metric/fitnessAge` page with the full history and your age as a
+  dashed line. Weight uses Health's history-card layout (ranges on the card,
+  period, trend weight and change, chart, reading, key, one link) and the
+  detail leads with trend weight, then chart, changes and body composition.
+  Intensity minutes' ring uses the intensity goal colour until met.
 
 - **Sleep stage comparison copy** (commit "Say the sleep stage comparison once").
   One subheading explains the 30-night average and recorded-night coverage;
