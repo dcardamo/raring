@@ -51,15 +51,14 @@ From item 4, in priority order.
   and the one-hour offset change must not switch to the fixed layout.
 - Check travel on a real trip: more than an hour of offset change should
   show the fixed layout until a night is recorded in the new zone.
-- Without enough recorded nights, Garmin's own sleep schedule (`userSleep`
-  in `/userprofile-service/userprofile/user-settings`, verified readable)
-  could anchor the phases instead of the fixed layout.
+- Garmin's weekday sleep windows (`userSleepWindows`, `MONDAY`…`SUNDAY`
+  beside `DAILY`): whether a weekday names the night's bedtime day or its
+  wake day is unverified; Raring reads the displayed day's. Check against a
+  schedule that differs by weekday, and whether the windows carry Garmin's
+  defaults when `userSleep` does.
 - On desktop widths the masonry columns can place the leading card beside a
   notice rather than first in reading order; check it once desktop ships.
 - "Timing history" opens Sleep at its top; scroll it to Consistency.
-- Item 9's notification applies item 26's rest, illness and limits
-  suppression from the same records, but still chooses its focus with the
-  `TodayFocus` phase rules rather than Today's lead gates; align the two.
 
 ### Sleep rhythm follow-ups
 
@@ -266,10 +265,7 @@ Each is a tile or detail in an existing screen first.
 18a. **Journal populated-shape follow-up**: when a consenting account has
      entries, compare Garmin's actual fields/units with the community example,
      then expand only verified display values. Never create an entry for QA.
-19. **Women's health (opt-in)**: cycle and pregnancy views
-    (`/periodichealth-service/menstrualcycle/…`) as context on readiness and
-    vitals. Sensitive: off by default, excluded from notifications unless
-    chosen.
+19. Women's health: parked (see Parked).
 
 ## Later: changing Garmin settings
 
@@ -353,6 +349,14 @@ faces, screens, sensors and audio prompts stay in Connect.
     changed in Connect, and explain what was rejected (see
     `design/mockup/NOTES.md` and the `fix` mockup).
 
+## Parked
+
+- **Women's health (opt-in)**, formerly item 19: cycle and pregnancy views
+  (`/periodichealth-service/menstrualcycle/…`) as context on readiness and
+  vitals; sensitive, off by default, excluded from notifications unless
+  chosen. Not started until someone using Raring with cycle data can verify
+  it.
+
 ## Not planned
 
 - AI-written insights: they often restate the numbers and would need a
@@ -377,7 +381,57 @@ faces, screens, sensors and audio prompts stay in Connect.
   (M7, M8). Every chart's ticks are at least 11 px and labels 12 px at 390 px,
   units sit outside the plots, and tick labels thin rather than collide
   (`declutter.ts`). `chart-legibility.mjs` (in `npm run test:ui`) measures
-  31 pages at 360/390/720/1100 px and 1/1.3/2× text. UI only; no core change.
+  31 pages at 360/390/720/1100 px and 1/1.3/2× text. The seven-night chart
+  is a labelled group of per-night buttons, not an image, so each night is
+  reachable by assistive tech. UI only; no core change.
+
+- **Garmin's sleep schedule anchors Today's phases** (commit "Anchor Today on
+  Garmin's sleep schedule until nights are recorded"). With fewer than four
+  recorded wakes in 14 nights, the displayed day's scheduled wake (weekday
+  window, else `DAILY`, else `userSleep`) replaces the fixed layout and Today
+  names "Garmin sleep schedule"; Garmin's defaults never anchor. The weekly
+  settings read now keeps the schedule, is also due daily while it's needed
+  and once for a row stored before it was kept. Verified read-only on one
+  account (shape only): `userSleep` is top level with `sleepTime`,
+  `wakeTime` (integer seconds after local midnight, 0–86400),
+  `defaultSleepTime`, `defaultWakeTime` (booleans); `userSleepWindows` is 8
+  objects with `startSleepTimeSecondsFromMidnight`,
+  `endSleepTimeSecondsFromMidnight` and `sleepWindowFrequency` (`DAILY`,
+  `MONDAY`…`SUNDAY`). The Sleep header on Tonight names the evening and
+  window instead of last night's times. Women's health is parked.
+
+- **Today and Tonight at the day boundary** (commit "Keep the unsynced
+  morning and Tonight's report on the right night"), from the Today and
+  Sleep review (B2–B4, B6, B8, M13) and Plan review PP-B4. While last night
+  hasn't synced the hero shows no earlier score, readiness, chips or
+  reconciliation; Recorded today is the calendar day's, so yesterday's run
+  is gone after midnight; last-night taps (tile, moon chip, Your day, naps,
+  search, the widget's Sleep tile) open Last night; "I wound down" belongs to
+  the night Tonight shows and opens two hours before its window; the need's
+  read time carries its weekday unless today; beside tonight's plan card the
+  hero keeps only its headline; the plan prompt is gated by Today's phase in
+  the core (`plan_board`), so opening Plan at night hides it too.
+
+- **Status surfaces follow Today's lead** (commit "Choose the status focus
+  with Today's lead"). The persistent notification and widgets take their
+  focus from the live Today's lead gates (`status::snapshot` runs
+  `lead::apply`), keeping the private circumstance lines; the evening now
+  reads "Make room for sleep" as Today does, a recorded workout reads
+  "Activity recorded today", and the reason is Today's own line from
+  Garmin's inputs instead of "biggest drag" (review M12). Today's waiting
+  gate also covers the phase's neutral wait, so yesterday's readiness no
+  longer suggests training between the usual wake and the handover (B1). No
+  effort scale beside a recorded workout or from the evening on (M3).
+
+- **Tonight's plan above Your day** (commit "Lead the night with tonight's
+  plan, above Your day"). v0.1.33 computed wind-down correctly but always drew
+  Your day with the hero, above every leading card, so at 23:21 the Wind down
+  card sat under Your day and recorded today, beside Monday's check-in link.
+  The core's card order now places Your day (`TodayCard::Day`): with the hero
+  before the evening, after tonight's plan (compact) from then on. Wind-down
+  and late night also hide the check-in link. Core and UI regressions cover a
+  23:10–23:30 window with a 22:40 wind-down at 21:30, 22:50, 23:21 and 01:30,
+  with and without a run.
 
 - **Desktop reminders** (commit "Show desktop reminders while the app runs").
   A desktop sync used to mark every notification as sent without showing it.

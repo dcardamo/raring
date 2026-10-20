@@ -44,7 +44,7 @@
    {#if mode==='windDown'}<small>Sleep need <b class="n">{duration(plan.needMin)}</b></small>{/if}
   </div>
   {@render stripView()}
-  <p>{mode==='windDown'?'A suggestion, not an alarm.':'Rest when you\'re ready. Tomorrow\'s plan follows your next sleep.'}</p>
+  <p>{mode==='windDown'?'A suggestion, not an alarm.':'Tomorrow\'s plan follows your next sleep.'}</p>
   <div class="foot"><span>Timing history</span><Icon name="arrow-right" size={16}/></div>
  </Card>
 {:else}

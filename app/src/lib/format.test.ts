@@ -1,6 +1,12 @@
 import {describe,it,expect} from 'vitest';
-import {duration,elapsed,pace,clock,dateLabel,monthLabel,shortMonth,signed,num} from './format';
+import {duration,elapsed,pace,clock,dateLabel,monthLabel,shortMonth,signed,num,readAt} from './format';
 describe('Garmin formatting',()=>{
+ it('dates a read time unless it was today',()=>{
+  const now=new Date('2025-10-16T21:00:00');
+  expect(readAt(new Date('2025-10-16T09:05:00').toISOString(),now)).toBe('09:05');
+  expect(readAt(new Date('2025-10-12T09:05:00').toISOString(),now)).toBe('Sun 09:05');
+  expect(readAt('nonsense',now)).toBe('—');
+ });
  it('renders durations and times',()=>{expect(duration(468)).toBe('7:48');expect(duration(null)).toBe('—');expect(elapsed(3134)).toBe('52:14');expect(elapsed(5050)).toBe('1:24:10');expect(clock('2025-10-16T06:12:00')).toBe('06:12')});
  it('renders paces and deltas',()=>{expect(pace(307)).toBe('5:07/km');expect(signed(-4,'m')).toBe('−4m');expect(signed(1)).toBe('+1');expect(signed(0)).toBe('');expect(signed(0.8,'m')).toBe('');expect(signed(1.714285)).toBe('+1.7');expect(num(null)).toBe('—')});
  it('renders a local calendar date without UTC rollover',()=>{expect(dateLabel('2025-10-16')).toBe('Thu 16 Oct');expect(dateLabel('')).toBe('Date unavailable')});

@@ -257,7 +257,11 @@ try {
  assert.ok(evidence.includes("Garmin's recommendation for tonight.") && evidence.includes("Training: today's activity and load") && evidence.includes('30 min before the window starts'),evidence);
  const recentNights=page.locator('.tonight-nights');
  assert.ok((await recentNights.textContent()).includes('2 of 6 recorded nights below Garmin’s need.'),await recentNights.textContent());
- assert.ok((await recentNights.getByRole('img').getAttribute('aria-label')).includes('Sun 12 Oct not recorded'),'a missing night is labelled, not zero');
+ assert.equal(await recentNights.getByRole('img').count(),0,'the nights are a group of buttons, not one image');
+ const nightButtons=recentNights.getByRole('group',{name:/^Hours asleep, last 7 nights/}).getByRole('button');
+ assert.equal(await nightButtons.count(),7,'each night is reachable by assistive tech');
+ assert.equal(await recentNights.getByRole('button',{name:'Open Sun 12 Oct: not recorded',exact:true}).count(),1,'a missing night is labelled, not zero');
+ assert.equal(await recentNights.getByRole('button',{name:/^Open Thu 16 Oct: 7:48 asleep, need 7:30$/}).count(),1);
  assert.equal(await page.locator('.tonight-goals').count(),1);
  await page.getByRole('tab',{name:'Last night'}).click();await waitRoute('sleep/last');
  assert.equal(await page.locator('.tonight-plan').count(),0);
@@ -756,8 +760,25 @@ try {
   await sp.goto(`${url}/#sleep`);
   await sp.getByRole('tab',{name:'Tonight'}).waitFor();
   assert.equal(await sp.getByRole('tab',{name:'Tonight'}).getAttribute('aria-selected'),'true','evening opens Tonight');
+  // The header names tonight's evening and window on Tonight, last night's times on Last night.
+  assert.equal(await sp.locator('.eyebrow').first().textContent(),'Thu 16 Oct · 22:30–23:06','Tonight header');
+  await sp.getByRole('tab',{name:'Last night'}).click();
+  await sp.waitForFunction(()=>document.querySelector('.eyebrow')?.textContent==='22:31 – 06:39');
+  await sp.getByRole('tab',{name:'Tonight'}).click();
+  await sp.waitForFunction(()=>document.querySelector('.eyebrow')?.textContent?.startsWith('Thu 16 Oct'));
   const wound=sp.getByRole('button',{name:/Wound down · self-reported/});
   assert.ok(await wound.isDisabled(),'a reported wind-down is shown, once');
+  {
+   // Before the evening Tonight's night can't be reported yet.
+   const early=await browser.newPage({viewport:{width:390,height:844}});
+   early.on('pageerror',e=>errors.push(e.message));
+   await early.route(u=>u.pathname==='/src/lib/sample/sleep.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify({...sleepSample,woundDown:false,windDownOpen:false})}`}));
+   await early.goto(`${url}/#sleep/tonight`);
+   const closed=early.getByRole('button',{name:'I wound down · from the evening'});
+   await closed.waitFor();
+   assert.ok(await closed.isDisabled(),'the morning cannot report tonight');
+   await early.close();
+  }
   for(const width of [320,700,1100]){
    await sp.setViewportSize({width,height:900});
    assert.equal(await sp.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`Tonight fits ${width}px`);
@@ -1103,13 +1124,13 @@ try {
  base.reconcile=differ.reconcile;
  const night={asleepMin:468,needMin:450,woke:'06:39'};
  const phases=[
-  ['wake','07:10',{phase:'wake',cards:['focus','sleepPlan'],until:'2025-10-16T09:39:00',effort:true,planOpen:false},'Ready to push','.plan-line'],
-  ['day','14:20',{phase:'day',cards:['now','focus','sleepPlan'],until:'2025-10-16T20:30:00',effort:true,planOpen:false},'Ready to push','.now-card'],
-  ['evening','20:45',{phase:'evening',cards:['sleepPlan','focus'],until:'2025-10-16T22:00:00',effort:true,planOpen:true},'Wind down at 22:00','.sleep-plan'],
-  ['winddown','22:10',{phase:'windDown',cards:['sleepPlan','focus'],until:'2025-10-16T23:06:00',effort:false,planOpen:true},'Time to wind down','.sleep-plan'],
-  ['late','23:40',{phase:'lateNight',cards:['sleepPlan','focus'],until:'2025-10-17T06:36:00',effort:false,planOpen:true},"Rest when you're ready",'.sleep-plan'],
-  ['missing','2025-10-17T07:30',{phase:'wake',cards:['focus'],until:'2025-10-17T12:00:00',effort:false,planOpen:false,sleepMissing:true,lastNight:null},"Waiting for last night's sleep",null],
-  ['overview','14:20',{phase:'overview',cards:['focus','sleepPlan'],until:null,effort:true,planOpen:true,note:'Fixed layout: your wake times vary too much to plan the day around.'},'Ready to push','.sleep-plan'],
+  ['wake','07:10',{phase:'wake',cards:['focus','day','sleepPlan'],until:'2025-10-16T09:39:00',effort:true,planOpen:false},'Ready to push','.plan-line'],
+  ['day','14:20',{phase:'day',cards:['day','now','focus','sleepPlan'],until:'2025-10-16T20:30:00',effort:true,planOpen:false},'Ready to push','.now-card'],
+  ['evening','20:45',{phase:'evening',cards:['sleepPlan','day','focus'],until:'2025-10-16T22:00:00',effort:false,planOpen:true},'Wind down at 22:00','.sleep-plan'],
+  ['winddown','22:10',{phase:'windDown',cards:['sleepPlan','day','focus'],until:'2025-10-16T23:06:00',effort:false,planOpen:true},'Time to wind down','.sleep-plan'],
+  ['late','23:40',{phase:'lateNight',cards:['sleepPlan','day','focus'],until:'2025-10-17T06:36:00',effort:false,planOpen:true},"Rest when you're ready",'.sleep-plan'],
+  ['missing','2025-10-17T07:30',{phase:'wake',cards:['focus','day'],until:'2025-10-17T12:00:00',effort:false,planOpen:false,sleepMissing:true,lastNight:null},"Waiting for last night's sleep",null],
+  ['overview','14:20',{phase:'overview',cards:['focus','day','sleepPlan'],until:null,effort:true,planOpen:true,note:'Fixed layout: your wake times vary too much to plan the day around.'},'Ready to push','.sleep-plan'],
  ];
  const phasePage=await browser.newPage({viewport:{width:390,height:844},hasTouch:true});
  phasePage.on('pageerror',e=>errors.push(e.message));
@@ -1132,8 +1153,9 @@ try {
   heroTop??=top;
   assert.equal(top,heroTop,`${name}: the scores stay where they are`);
   const pill=phasePage.getByRole('button',{name:differ.reconcile.label});
-  await pill.click();
-  await phasePage.getByText(differ.reconcile.line).waitFor();
+  // Waiting for the night, yesterday's readiness isn't explained as today's.
+  if(name==='missing')assert.equal(await pill.count(),0,'missing: no reconciliation of yesterday\'s readiness');
+  else{await pill.click();await phasePage.getByText(differ.reconcile.line).waitFor()}
   assert.equal(await phasePage.locator('.hero .effort').count(),focus.effort?1:0,`${name}: effort call ${focus.effort?'shown':'hidden'}`);
   assert.equal(await phasePage.locator('.planned-session').count(),0,`${name}: Garmin's next session isn't repeated on Today`);
   assert.equal(await phasePage.locator('.week-card').count(),['winddown','late'].includes(name)?0:1,`${name}: no week card during sleep phases`);
@@ -1144,10 +1166,16 @@ try {
   assert.ok(!/\bin \d+ ?(min|h)\b|left\b/i.test(advice.join(' ')),`${name}: no countdown`);
   if(name==='evening')assert.equal(await phasePage.locator('.sleep-plan .strip-bar u').count(),1,'the strip marks now against the window');
   if(name==='late')assert.ok(text.includes("Tonight's window was"));
-  if(name==='missing'){const all=await phasePage.locator('main').textContent();assert.ok(all.includes('Not synced yet') && !all.includes('holds it back'),'an unsynced night is neutral')}
+  if(name==='missing'){
+   const all=await phasePage.locator('main').textContent();assert.ok(all.includes('Not synced yet') && !all.includes('holds it back'),'an unsynced night is neutral');
+   // Yesterday's score and readiness stay off the hero: neither reads as this morning's.
+   const morning=await phasePage.locator('.morning').textContent();
+   assert.ok(!/\b84\b|\b82\b|High/.test(morning) && morning.includes('Waiting'),`no previous readings as current: ${morning}`);
+  }
   if(name==='day')assert.ok(text.includes('As of watch sync') && text.includes('Done today'),'the day card is labeled as synced data');
   if(name==='overview')await phasePage.getByText(focus.note).waitFor();
   if(['wake','day'].includes(name))await phasePage.locator('.plan-line').waitFor();
+  assert.equal(await phasePage.locator('.page-hero .your-day').count(),['evening','winddown','late'].includes(name)?0:1,`${name}: Your day ${['evening','winddown','late'].includes(name)?'follows tonight\'s plan':'stays with the hero'}`);
   assert.deepEqual(await contrastFailures(phasePage),[],`${name}: text contrast`);
   for(const width of [390,...(['day','evening'].includes(name)?[700,1100]:[])]){
    await phasePage.setViewportSize({width,height:844});
@@ -1159,6 +1187,81 @@ try {
  }
  await phasePage.close();
  console.log('Today through the day: one leading card, stable hero and pill, calm nights at 390/700/1100: passed');
+
+ // A reported evening: Garmin's window 23:10–23:30, wind-down 22:40, a run recorded, readiness, the Monday
+ // check-in and a due plan prompt. Tonight's plan comes before Your day; at night nothing about the week is around it.
+ {
+  const night=await browser.newPage({viewport:{width:390,height:844},hasTouch:true});
+  night.on('pageerror',e=>errors.push(e.message));
+  const plan={...base.sleepPlan,bedtime:'23:30',bedtimeStart:'23:10',windDown:'22:40',windDownAt:'2025-10-16T22:40:00',bedtimeStartAt:'2025-10-16T23:10:00',bedtimeAt:'2025-10-16T23:30:00'};
+  const lead=(id,headline,line)=>({id,kind:'sleep',headline,line,action:{label:'Tonight’s plan',route:'sleep/tonight',adapt:false},dismissable:false,kept:false,garmin:null,activity:null,intention:null,reasons:[]});
+  const board=JSON.parse(await readFile(resolve('src/lib/sample/board.json'),'utf8'));
+  board.prompt={review:null};
+  await night.route(u=>u.pathname==='/src/lib/sample/board.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(board)}`}));
+  const cases=[
+   ['21:30','evening','2025-10-16T22:40:00',false,lead('evening:2025-10-17','Make room for sleep','Wind down from 22:40')],
+   ['22:50','windDown','2025-10-16T23:30:00',false,lead('wind:2025-10-17','Time to wind down',"Garmin's window 23:10–23:30")],
+   ['23:21','windDown','2025-10-16T23:30:00',false,lead('wind:2025-10-17','Time to wind down',"Garmin's window 23:10–23:30")],
+   ['2025-10-17T01:30','lateNight','2025-10-17T06:36:00',false,lead('late:2025-10-17',"Rest when you're ready",null)],
+  ];
+  for(const [time,phase,until,effort,l] of cases){
+   const clock=new Date(time.includes('T')?time:`2025-10-16T${time}:00`);
+   // After midnight Your day and Recorded today are the new calendar day's, which has nothing yet.
+   const next=time.includes('T');
+   const view={...structuredClone(base),sleepPlan:plan,lead:l,checkinReady:true,watchLastUpload:new Date(clock.getTime()-15*60_000).toISOString(),
+    focus:{...base.focus,phase,cards:['sleepPlan','day','focus'],until,effort,planOpen:true,schedule:time==='21:30'?'Garmin sleep schedule':null},
+    day:next?{...base.day,date:'2025-10-17',nowMin:90,sleep:[],asleepMin:null,events:[],bodyBattery:[],stress:[],heartRate:[]}:base.day};
+   await night.clock.setFixedTime(clock);
+   await night.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(view)}`}));
+   await night.goto(`${url}/?night=${time}#today`);await night.getByRole('heading',{name:l.headline}).waitFor();
+   const first=await night.locator('.dashboard > *').first().evaluate(el=>el.className);
+   assert.ok(first.includes('sleep-plan') && first.includes('lead'),`${time}: tonight's plan leads the cards (${first})`);
+   assert.equal(await night.locator('.page-hero .your-day').count(),0,`${time}: Your day isn't above tonight's plan`);
+   const top=async sel=>night.locator(sel).first().evaluate(el=>el.getBoundingClientRect().top);
+   const main=await night.locator('main').textContent();
+   const recorded=night.locator('.dashboard .card',{hasText:'Recorded today'});
+   assert.ok(await top('.sleep-plan')<await top('.dashboard .your-day.compact'),`${time}: plan, then Your day`);
+   assert.equal(await night.locator('.your-day .row',{hasText:'Heart rate'}).count(),0,`${time}: Your day is compact`);
+   if(next)assert.equal(await recorded.count(),0,`${time}: yesterday's run isn't recorded today`);
+   else{
+    assert.ok(await top('.dashboard .your-day')<await recorded.evaluate(el=>el.getBoundingClientRect().top),`${time}: then recorded today`);
+    assert.equal(await recorded.locator('.pill').count(),0,`${time}: recorded today is compact`);
+   }
+   // The plan card carries the window and opens Tonight; the hero doesn't repeat either.
+   assert.equal(await night.locator('.hero .acts').count(),0,`${time}: no second Tonight's plan button`);
+   assert.ok(!/window|Wind down from/.test(await night.locator('.hero').textContent()),`${time}: the window is said once`);
+   if(phase==='lateNight')assert.equal((main.match(/Rest when you.re ready/g)??[]).length,1,'late night says it once');
+   assert.equal(await night.locator('.hero .effort').count(),effort&&base.call?1:0,`${time}: effort only before wind-down`);
+   const calm=phase!=='evening';
+   assert.equal(await night.locator('.week-card').count(),calm?0:1,`${time}: This week`);
+   for(const text of ['Left this week','Do it today','Weekly check-in','Plan your week'])assert.equal(main.includes(text),!calm,`${time}: ${text} ${calm?'hidden':'shown'}`);
+   if(calm)assert.ok(!/holds it back|Ready to push|Training is an option/.test(await night.locator('.hero').textContent()),`${time}: the hero's reason is about sleep`);
+   if(time==='23:21')await night.screenshot({path:resolve(output,'390-today-night-2321.png'),fullPage:true});
+   assert.equal((await night.locator('.hero').textContent()).includes('Timed by your Garmin sleep schedule'),time==='21:30',`${time}: the schedule's source is named when it anchors the day`);
+   if(time==='21:30'){
+    // Last night's facts open Last night, even though Sleep opens Tonight in the evening.
+    const sleepSample=JSON.parse(await readFile(resolve('src/lib/sample/sleep.json'),'utf8'));
+    await night.route(u=>u.pathname==='/src/lib/sample/sleep.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify({...sleepSample,tonightFirst:true})}`}));
+    for(const target of [night.getByRole('button',{name:'Last night’s sleep'}),night.locator('.your-day .row').first()]){
+     await target.click();
+     await night.getByRole('tab',{name:'Last night'}).waitFor();
+     assert.ok(night.url().endsWith('#sleep/last') && await night.getByRole('tab',{name:'Last night'}).getAttribute('aria-selected')==='true',`last-night tap opens Last night (${night.url()})`);
+     await night.goBack();await night.getByRole('heading',{name:l.headline}).waitFor();
+    }
+   }
+   await night.unroute(todaySample);
+  }
+  // Opened straight onto Plan (a resume or a notification): the prompt follows Today's phase there too.
+  for(const [phase,shown] of [['day',1],['lateNight',0]]){
+   await night.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify({...structuredClone(base),focus:{...base.focus,phase}})}`}));
+   await night.goto(`${url}/?night=plan-${phase}#plan`);await night.getByRole('heading',{name:'Plan'}).first().waitFor();
+   if(shown)await night.getByRole('region',{name:'Plan your week'}).waitFor();else await night.waitForTimeout(500);
+   assert.equal(await night.getByRole('region',{name:'Plan your week'}).count(),shown,`plan prompt on Plan in ${phase}`);
+   await night.unroute(todaySample);
+  }
+  await night.close();
+  console.log('Today at night: tonight’s plan before a compact Your day, no week content in wind-down or late night at 21:30/22:50/23:21/01:30: passed');
+ }
 
  const samples={};
  for(const name of ['today','sleep','training','health','status','workout','profile'])samples[name]=JSON.parse(await readFile(resolve(`src/lib/sample/${name}.json`),'utf8'));
@@ -1737,7 +1840,7 @@ function trendFixture(q){
  await live.evaluate(()=>{window.testBackend.holdToday=true;window.dispatchEvent(new Event('raring:resume'))});
  await live.waitForFunction(()=>window.testBackend.pendingToday!==null);
  await openSleep(live);
- await live.waitForURL('**/#sleep');await live.locator('.sleep-hero').waitFor();
+ await live.waitForURL('**/#sleep/last');await live.locator('.sleep-hero').waitFor();
  await live.evaluate(()=>{window.testBackend.pendingToday();window.testBackend.holdToday=false});
  await live.clock.fastForward(1_000);
  assert.equal(await live.locator('h1').textContent(),'Sleep');
@@ -2140,8 +2243,8 @@ function trendFixture(q){
   const stored={notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,bedtimeLeadMin:30,adaptiveToday:true};
   const state=window.testLayout={stored,saves:[],patches:[],failNext:false};
   const focus=()=>stored.adaptiveToday
-   ?{...samples.today.focus,phase:'day',cards:['now','focus','sleepPlan'],planOpen:false}
-   :{...samples.today.focus,phase:'overview',cards:['focus','sleepPlan'],planOpen:true};
+   ?{...samples.today.focus,phase:'day',cards:['day','now','focus','sleepPlan'],planOpen:false}
+   :{...samples.today.focus,phase:'overview',cards:['focus','day','sleepPlan'],planOpen:true};
   window.isTauri=true;
   window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
     if(command==='check_reminders'||command==='reminders_status')return null;

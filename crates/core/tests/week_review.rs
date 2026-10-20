@@ -213,3 +213,26 @@ fn an_open_week_is_not_counted_and_old_reviews_cannot_rewrite_goal_history() {
     assert!(f.core.local_action(&LocalAction::DecideReview{week:"2025-03-10".into(),accepted:vec![GoalKind::Zone2]},at(3,31,9)).is_err());
     assert_eq!(f.core.local_records().goals.versions.len(),1);
 }
+
+/// The prompt is gated by Today's phase on every page, including Plan opened
+/// directly at night (from a resume or a notification).
+#[test]
+fn the_prompt_waits_through_wind_down_and_late_night() {
+    let f = fx("prompt-night");
+    goals(&f, GoalTargets { strength_sessions: 2, ..Default::default() });
+    // Two weeks of 07:00 wakes and Garmin's window 22:30–23:10 tonight.
+    for day in 4..=17 {
+        let end = at(3, day, 7);
+        let local = end.naive_local().and_utc().timestamp_millis();
+        f.store.put("sleep", &end.date_naive().to_string(), "synthetic", &json!({"dailySleepDTO": {
+            "sleepTimeSeconds": 27000, "sleepStartTimestampLocal": local - 27_000_000, "sleepEndTimestampLocal": local,
+            "sleepEndTimestampGMT": end.timestamp_millis(), "sleepNeed": {"actual": 470},
+            "nextSleepNeed": {"actual": 470, "recommendedBedtimeStartMins": 1350, "recommendedBedtimeEndMins": 1390}}})).unwrap();
+    }
+    let board = |when: DateTime<Local>| f.core.plan_board("2025-03-17", when).unwrap();
+    assert!(board(at(3, 17, 21)).prompt.is_some(), "the evening still offers it");
+    assert!(board(at(3, 17, 22)).prompt.is_none(), "wind-down");
+    assert!(board(at(3, 17, 23)).prompt.is_none(), "late night");
+    assert!(board(at(3, 18, 1)).prompt.is_none(), "late night after midnight");
+    assert!(board(at(3, 18, 12)).prompt.is_some(), "back the next day");
+}

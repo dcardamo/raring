@@ -127,27 +127,33 @@ A briefing with an ending, in this order:
 
 - **Last night and readiness**: time asleep against Garmin's need (with the
   Sleep Score), and the readiness gauge, which opens Readiness. A watch that
-  can't record readiness says so.
+  can't record readiness says so. While the displayed night hasn't synced
+  both wait neutrally: no earlier score, readiness, chips or reconciliation
+  shown as this morning's. A score without a duration is labelled as one.
 - **The lead**: one headline, at most one line and one action, chosen by the
   gates in Rules: Today's lead. A planned session offers **Keep · Choose
   another** (Rules: Today's choice); a suggestion can be dismissed with "Not
   today". When Garmin's readiness allows, the **effort** scale (Rest, Easy,
   Steady, Push) marks the suggested level, with one reason line from
-  Garmin's inputs. It is a display, not buttons. Evening, wind-down and late
-  night lead with tonight's sleep and keep any session still planned as a
-  quiet line.
+  Garmin's inputs. It is a display, not buttons. There is no effort scale
+  beside a recorded workout (the day can finish) or from the evening on.
+  Evening, wind-down and late night lead with tonight's sleep and keep any
+  session still planned as a quiet line; beside tonight's plan card the hero
+  keeps only the headline, since the card carries the window and opens
+  Tonight.
 - **Your day**: sleep stages, Body Battery, stress, heart rate and recorded
   activities and naps on one 00–24 axis with a now marker (Rules: Your day).
   Each row's value sits at its right, with a nap's Body Battery change under
   it; heart rate is drawn against the day's own lowest and highest readings
   and never clipped, with no scale on the plot.
-  Each row opens its detail.
-- **Recorded today**: up to two activities with Garmin's benefit and training
-  effect, naps with their Body Battery change, and a link to all of today's
-  activities.
+  Each row opens its detail. From the evening on it follows tonight's plan,
+  compact: sleep, Body Battery and recordings.
+- **Recorded today**: the calendar day's (Your day's) activities, up to two,
+  with Garmin's benefit and training effect, naps with their Body Battery change, and a link to all of today's
+  activities. Compact after tonight's plan: without the effect labels.
 - **This week**: the week's rings and one line per goal beside **Left this
   week** with Do it today, over the day cells; hidden during wind-down and
-  late night.
+  late night, with the weekly check-in link and the plan-your-week prompt.
 - While older history is still downloading, the upload line adds "History
   since" its first month.
 - Watch-upload and missing-reading notices sit above the lead. The ending
@@ -873,7 +879,7 @@ next pending wind-down while signed in.
   is on and the week isn't answered: at the start of a week (its first two
   days) after a week with goals, it offers last week's review then planning;
   otherwise only while this week has nothing placed. Never in wind-down or late
-  night. Plan now, Not this week and turning it off are answers.
+  night, on any page. Plan now, Not this week and turning it off are answers.
 - **Events**: local events from today and Garmin's next race (Planned
   training) count down by calendar date; an event date is not proof of
   preparation or completion.
@@ -956,7 +962,8 @@ next pending wind-down while signed in.
   minutes, record, ring or goal count. Names never appear in notifications,
   widgets or the status snapshot.
 - **Today's lead**: live Today only (never a historical read), gates in this
-  order, first match leads: a night that hasn't synced waits (no advice);
+  order, first match leads: a night that hasn't synced waits (no advice,
+  even while the previous day's readiness stays on screen);
   evening, wind-down and late night lead with tonight's sleep (no exercise;
   a session still planned today stays as a quiet "still in your plan" line);
   illness or a pause (resume from Adapt); rest; the fixed layout's recorded
@@ -988,9 +995,14 @@ next pending wind-down while signed in.
   `sleep/tonight`; switching replaces the page, never stacks). A plain `sleep`
   link opens Tonight when Today's phase is evening, wind-down or late night,
   otherwise Last night; the bedtime reminder and Today's tonight line open
-  Tonight. Tonight shows the saved sleep plan (wind-down, Garmin's window or
-  the asleep-by estimate, usual wake, Garmin's need), the week's sleep goals,
-  a self-reported "I wound down" for tonight's evening, and the seven nights
+  Tonight. Anything showing last night (Today's last-night tile and moon
+  chip, Your day's sleep row, naps, the widget's Sleep tile, search's "Last
+  night's sleep") opens Last night. Tonight shows the saved sleep plan
+  (wind-down, Garmin's window or the asleep-by estimate, usual wake, Garmin's
+  need, with when Raring read it, its weekday unless today), the week's sleep
+  goals, a self-reported "I wound down" for the evening before the night the
+  plan describes (open from two hours before that night's window; without a
+  plan, a report before noon is the evening before), and the seven nights
   ending last night against each night's own Garmin need: how many recorded
   nights were below it, never a running debt. A missing night is labelled,
   not zero.
@@ -1126,7 +1138,13 @@ next pending wind-down while signed in.
   are never changed and no future dates are fetched.
 - **Time of day**: phases are local wall-clock times anchored to the
   displayed night's recorded wake (otherwise its usual wake) and tonight's
-  shared sleep plan, never fixed clock hours. After waking lasts three hours,
+  shared sleep plan, never fixed clock hours. The usual wake is the recorded
+  wake times' once there are at least four in 14 nights; until then it is
+  the wake time of Garmin's sleep schedule for the displayed day (that
+  weekday's window, otherwise the daily one, otherwise `userSleep`), which
+  counts as credible and is labelled "Garmin sleep schedule" on Today.
+  Garmin's untouched defaults (`defaultSleepTime` or `defaultWakeTime`) are
+  no schedule. After waking lasts three hours,
   or until the plan rises if that comes first; the day runs until two hours
   before Garmin's window starts (Raring's asleep-by time without one); the
   evening until the plan's wind-down time; wind-down until the window ends;
@@ -1137,8 +1155,9 @@ next pending wind-down while signed in.
   no verdict. After the handover the calendar day shows with its missing
   night stated. Advice order: after waking, this morning then the one-line
   plan; during the day, right now, today's focus, the one-line plan; from
-  the evening on, the plan then today's focus. Two or more outside-range
-  vitals go first in every phase. The fixed layout (today's focus, then the
+  the evening on, the plan, then Your day and recorded today (compact), then
+  today's focus. Before the evening Your day stays under the lead. Two or
+  more outside-range vitals go first in every phase. The fixed layout (today's focus, then the
   full plan) applies when the setting is off, with fewer than four recorded
   wake times in 14 nights, a usual-wake spread over three hours, Garmin's
   jet-lag rating for a recorded night, the phone's UTC offset more than an
@@ -1154,16 +1173,19 @@ next pending wind-down while signed in.
   watch's upload time, never the snapshot write or API fetch time; include its
   date so an old reading cannot look like today's. No separate stale-score
   verdict or expiry threshold is added.
-- **Compact focus**: reuse `TodayFocus` and its phase rules. Wake, daytime
-  and fixed layout show the suggested Rest/Easy/Steady/Push effort and the
-  same lowest Garmin-rated factor as Today. Without readiness, wait
-  neutrally; the shared unsynced-night wait has no effort or reason.
-  Evening, wind-down and late night use Today's headline and the shared
-  sleep plan's reason, with no effort after wind-down. Outside those phases,
-  today's circumstances (Rules: Adapt) replace the effort word and reason:
-  "Ill · goals paused", "Training paused", "Rest day", "Training suggestions
-  limited", or "No training suggestion today" after Not today, opening Today.
-  The limits text never reaches a surface. A local change republishes the
+- **Compact focus**: the live Today's lead (Rules: Today's lead) decides,
+  in its gate order. Tonight's sleep uses the lead's headline and the shared
+  sleep plan's reason, opening Sleep. A night that hasn't synced (including
+  the phase's neutral wait, which keeps the previous day's readiness on
+  screen) says "Waiting for last night's sleep" with no effort or reason.
+  Illness, a pause, rest, limits, a review and Not today use a short private
+  line instead of the lead's text: "Ill · goals paused", "Training paused",
+  "Rest day", "Training suggestions limited", or "No training suggestion
+  today", opening Today. A recorded workout says "Activity recorded today",
+  opening Today. Wherever else Today shows Garmin's effort call, the
+  suggested Rest/Easy/Steady/Push effort and Today's reason line from
+  Garmin's inputs; without readiness, "Waiting for readiness". Session, workout and
+  activity names and the limits text never reach a surface. A local change republishes the
   snapshot offline. Native surfaces
   describe the last snapshot, not a live watch reading. Offline widget
   updates, clock changes and sync re-evaluate the phase; Android may defer
@@ -1407,8 +1429,12 @@ next pending wind-down while signed in.
   strength activities found by the history download get their sets after it. Once
   there are sets, weight or a recorded threshold/acclimation response, the
   user settings (`/userprofile-service/userprofile/user-settings`) are read
-  weekly and only the measurement system, time format, start of week and
-  gender (the body-map figure) are stored; the rest of `userData` is discarded.
+  weekly; they are also read daily while fewer than four wake times are
+  recorded in 14 nights (Rules: Time of day), and once (at most daily) for a
+  stored row without the sleep schedule. Only the measurement system, time
+  format, start of week, gender (the body-map figure) and the sleep schedule
+  (`userSleep` times and default flags, `userSleepWindows` start, end and
+  frequency) are stored; the rest is discarded.
   Garmin's public exercise catalog (only when sets exist)
   (`connect.garmin.com/web-data/exercises/Exercises.json`, no credentials) is
   read monthly and only each exercise's primary muscles are kept.

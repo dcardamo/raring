@@ -483,6 +483,7 @@
   ],
   "tonightFirst": false,
   "woundDown": false,
+  "windDownOpen": false,
   "napsState": "available",
   "naps": [
     {

@@ -7,7 +7,7 @@
  import type {SleepView} from '../generated/SleepView';
  import type {PlanBoard} from '../generated/PlanBoard';
  import type {LocalAction} from '../generated/LocalAction';
- import {dateLabel, duration} from '../format';
+ import {dateLabel, duration, readAt} from '../format';
  // Tonight as a plan: when to wind down and be asleep from Garmin's window or
  // need and the usual wake, the week's sleep goal, and recent nights against
  // Garmin's need as plain facts. No sleep debt is computed.
@@ -43,12 +43,12 @@
     <div><dt><i style:background="#FFB547"></i>Wind down</dt><dd class="n">{ownTime && goals?.sleepKind === 'windDown' ? ownTime : plan.windDown}<small>{ownTime && goals?.sleepKind === 'windDown' ? 'your goal' : 'suggested'}</small></dd></div>
     <div><dt><i style:background="#A9C8FF"></i>{garmin ? 'Bedtime' : 'Asleep by'}</dt><dd class="n">{ownTime && goals?.sleepKind === 'asleepBy' ? ownTime : plan.bedtimeStart ? `${plan.bedtimeStart}–${plan.bedtime}` : plan.bedtime}<small>{ownTime && goals?.sleepKind === 'asleepBy' ? 'your goal' : garmin ? 'Garmin window' : 'need before wake'}</small></dd></div>
     {#if plan.wakeTime}<div><dt><i style:background="#EEF1F7"></i>Wake</dt><dd class="n">{plan.wakeTime}<small>{plan.wakeNights === 14 ? 'usual' : 'reference'}</small></dd></div>{/if}
-    <div><dt>Need</dt><dd class="n">{duration(plan.needMin)}<small>Garmin{plan.needReadAt ? ` · read ${new Date(plan.needReadAt).toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'})}` : ''}</small></dd></div>
+    <div><dt>Need</dt><dd class="n">{duration(plan.needMin)}<small>Garmin{plan.needReadAt ? ` · read ${readAt(plan.needReadAt, now)}` : ''}</small></dd></div>
    </dl>
   </div>
   <p class="small">{plan.stale ? 'No sleep has synced today; this estimate uses older nights.' : passed ? 'The window has passed. Rest when you’re ready.' : plan.reason ?? (garmin ? 'Garmin’s bedtime window and sleep need for tonight.' : 'Your usual wake minus Garmin’s sleep need.')}</p>
   <div class="btns">
-   <button class="secondary" aria-pressed={sleep.woundDown} disabled={sleep.woundDown} onclick={() => act({action: 'reportWindDown'})}>{#if sleep.woundDown}<Icon name="check" size={16}/>Wound down · self-reported{:else}I wound down{/if}</button>
+   <button class="secondary" aria-pressed={sleep.woundDown} disabled={sleep.woundDown || !sleep.windDownOpen} onclick={() => act({action: 'reportWindDown'})}>{#if sleep.woundDown}<Icon name="check" size={16}/>Wound down · self-reported{:else if sleep.windDownOpen}I wound down{:else}I wound down · from the evening{/if}</button>
    <button class="link" aria-pressed={reminder} onclick={() => setReminder(!reminder)}>{reminder ? 'Wind-down reminder on' : 'Remind me to wind down'}</button>
   </div>
   <button class="why" aria-expanded={why} onclick={() => why = !why}>Why this plan</button>
@@ -67,10 +67,11 @@
  <button class="link" onclick={() => navigate('plan/commitments')}>{timing || board?.sleepScore ? 'Change goals' : 'Choose a sleep goal'}</button>
 </Card>
 <Card title="Last 7 nights against need" extra="tonight-nights">
- <div class="nights" data-chart="nights" {@attach declutter} role="img" aria-label={`Hours asleep, last 7 nights: ${nights.map(n => `${dateLabel(n.date)} ${n.asleepMin != null ? h(n.asleepMin) : 'not recorded'}${n.needMin != null ? `, need ${h(n.needMin)}` : ''}`).join('; ')}`}>
-  <span class="yl">{#each Array.from({length: topH / 2 + 1}, (_, i) => i * 2) as t}<i data-thin={t && t < topH ? 2 : 3} style:bottom={t / topH * 100 + '%'}>{t ? `${t} h` : '0'}</i>{/each}</span>
+ <!-- A group, not an image: each night is a button assistive tech can reach, labelled with its hours. -->
+ <div class="nights" data-chart="nights" {@attach declutter} role="group" aria-label="Hours asleep, last 7 nights, against Garmin’s need">
+  <span class="yl" aria-hidden="true">{#each Array.from({length: topH / 2 + 1}, (_, i) => i * 2) as t}<i data-thin={t && t < topH ? 2 : 3} style:bottom={t / topH * 100 + '%'}>{t ? `${t} h` : '0'}</i>{/each}</span>
   {#each nights as n}
-   <button class="col" aria-label={`Open ${dateLabel(n.date)}`} onclick={() => navigate('sleep/' + n.date)}>
+   <button class="col" aria-label={`Open ${dateLabel(n.date)}: ${n.asleepMin != null ? `${h(n.asleepMin)} asleep` : 'not recorded'}${n.needMin != null ? `, need ${h(n.needMin)}` : ''}`} onclick={() => navigate('sleep/' + n.date)}>
     <div class="bar-area" style:--step={200 / topH + '%'}>
      {#if n.asleepMin != null}<b class="night-bar" class:below={n.needMin != null && n.asleepMin < n.needMin} style:height={n.asleepMin / top * 100 + '%'}></b>{:else}<span class="gap">—</span>{/if}
      {#if n.needMin != null}<u style:bottom={n.needMin / top * 100 + '%'}></u>{/if}
