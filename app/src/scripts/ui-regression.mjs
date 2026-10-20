@@ -313,11 +313,12 @@ try {
  assert.deepEqual(await page.locator('.over-time').first().getByRole('group',{name:'History period'}).getByRole('button').allTextContents(),['7D','30D','90D','1Y']);
  const restingCard=page.locator('.over-time').first();
  assert.ok((await restingCard.locator('.history-legend').textContent()).includes('Raring usual range'),'resting HR is shaded by its own usual range');
- // Fitness Age is the YOU/AGE bar (green younger, red older); its history is a tap away, not a chart on Health.
+ // Fitness Age is the YOU/AGE bar (green younger; past your age red only when older); its history is a tap away, not a chart on Health.
  const ageCard=page.locator('#fitness-age');
  assert.equal(await ageCard.locator('.history').count(),0,'no history chart on the Health card');
  assert.deepEqual(await ageCard.locator('.age-mark span').allTextContents(),['YOU 39','AGE 46']);
  assert.ok(await ageCard.locator('.age-mark.fit').evaluate(el=>el.offsetLeft<el.parentElement.querySelector('.age-mark.real').offsetLeft),'younger sits left of your age');
+ assert.equal(await ageCard.locator('.agebar').evaluate(el=>el.style.getPropertyValue('--age-older')),'var(--text3)','a younger estimate leaves the older side neutral');
  await ageCard.getByRole('button',{name:'Fitness Age 39, your age 46. Open Fitness Age history'}).click();await waitRoute('metric/fitnessAge');
  const ageHistory=page.locator('.history');await ageHistory.locator('.history-line').waitFor();
  assert.match(await page.locator('.metric-hero').textContent(),/39.*Garmin estimate · Sun 12 Oct · Your age 46.*7 years younger than your age/);

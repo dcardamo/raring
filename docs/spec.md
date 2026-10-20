@@ -517,8 +517,8 @@ says so on its chart (Rules: Reading freshness).
   years younger or older than your age, its change in years against a year
   ago, and a bar from 20 to 70 (widened in tens when an age falls outside) with
   a YOU mark for the estimate above it and an AGE mark for your age below it:
-  the bar is green younger than your age and coral older, and YOU takes its
-  status colour. The bar and a "Fitness Age history" link open
+  the bar is green younger than your age; older is coral when the estimate is
+  older than your age and neutral otherwise, and YOU takes its status colour. The bar and a "Fitness Age history" link open
   `metric/fitnessAge`: the estimate, your age and the difference, then the full
   history chart (opening on the latest estimate) with your age now as a dashed
   line and each estimate coloured against it (Rules: Chart colours).
