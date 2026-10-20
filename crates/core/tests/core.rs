@@ -722,6 +722,8 @@ async fn backfill_includes_yesterday_and_scans_existing_days_to_fill_older_gaps(
         (vec!["2025-01-10", "2025-01-09", "2025-01-08"], "2025-01-07"),
     ] {
         let s = Store::open(":memory:").unwrap();
+        // Garmin's sleep schedule isn't what this checks.
+        s.set_cursor("profile_settings_checked", &Utc::now().timestamp().to_string()).unwrap();
         let now = chrono::NaiveDate::from_ymd_opt(2025, 1, 10)
             .unwrap()
             .and_hms_opt(12, 0, 0)
@@ -823,6 +825,7 @@ async fn backfill_skips_old_health_status_days_and_still_fetches_history_ranges(
     }
     store.put("records", "all", "now", &Value::Null).unwrap();
     store.set_cursor("records_checked", &Utc::now().timestamp().to_string()).unwrap();
+    store.set_cursor("profile_settings_checked", &Utc::now().timestamp().to_string()).unwrap();
     store.put("devices", "me", "now", &json!([])).unwrap();
     store.set_cursor("devices_checked", &Utc::now().timestamp().to_string()).unwrap();
     store.set_cursor("intensity_weeks_checked", &Utc::now().timestamp().to_string()).unwrap();
@@ -1143,6 +1146,7 @@ async fn cycling_or_altitude_alone_fetches_reduced_units_weekly_without_catalog(
         let saved = store.get("profile_settings", "me").unwrap_or_else(|| panic!("no settings after {first:?}; requests: {:?}", seen.lock().unwrap()));
         assert_eq!(saved["measurementSystem"], "metric");
         assert!(saved.get("userData").is_none(), "only reduced preferences are retained");
+        assert_eq!(saved["userSleep"]["wakeTime"], 24000, "Garmin's sleep schedule is kept for Today");
         let metrics = raring_core::screens::training(&store, &now.date_naive().to_string()).thresholds;
         assert_eq!(metrics.iter().find(|m| m.kind == if only == "acclimation" { "altitude" } else { "cyclingFtp" }).unwrap().unit, expected_unit);
         let checked = store.cursor("profile_settings_checked");
@@ -1325,4 +1329,43 @@ async fn rate_limit_returns_backoff() {
         Err(garmin::Error::RateLimited { .. })
     ));
     thread.join().unwrap();
+}
+
+#[test]
+fn garmins_sleep_schedule_is_read_daily_until_nights_are_recorded() {
+    use raring_core::sync::settings_due;
+    let now = chrono::NaiveDate::from_ymd_opt(2025, 1, 10).unwrap()
+        .and_hms_opt(13, 0, 0).unwrap().and_local_timezone(Local).single().unwrap().with_timezone(&Utc);
+    let checked = |store: &Store, ago: Duration| store.set_cursor("profile_settings_checked", &(now - ago).timestamp().to_string()).unwrap();
+    let row = json!({"measurementSystem": "metric", "userSleep": {"wakeTime": 25200}, "userSleepWindows": null});
+    // No recorded nights and no preferences needed: daily, for the schedule.
+    let store = Store::open(":memory:").unwrap();
+    assert!(settings_due(&store, now));
+    store.put("profile_settings", "me", "synthetic", &row).unwrap();
+    checked(&store, Duration::hours(2));
+    assert!(!settings_due(&store, now), "at most daily");
+    checked(&store, Duration::days(1));
+    assert!(settings_due(&store, now), "the next day, not the next week");
+    // Enough recorded nights: nothing without preferences, weekly with them.
+    for back in 0..8 {
+        let date = now.with_timezone(&Local).date_naive() - Duration::days(back);
+        let end = date.and_hms_opt(7, 0, 0).unwrap().and_local_timezone(Local).single().unwrap();
+        store.put("sleep", &date.to_string(), "synthetic", &json!({"dailySleepDTO": {
+            "sleepTimeSeconds": 27000, "sleepEndTimestampLocal": end.naive_local().and_utc().timestamp_millis(),
+            "sleepEndTimestampGMT": end.timestamp_millis()}})).unwrap();
+    }
+    assert!(!settings_due(&store, now));
+    store.put("acclimation", "latest", "synthetic", &json!({"altitudeAcclimation": 850})).unwrap();
+    assert!(!settings_due(&store, now), "weekly for the preferences");
+    checked(&store, Duration::days(7));
+    assert!(settings_due(&store, now));
+    // A row stored before the schedule was kept is read again once, at most daily.
+    store.put("profile_settings", "me", "synthetic", &json!({"measurementSystem": "metric"})).unwrap();
+    checked(&store, Duration::days(2));
+    assert!(settings_due(&store, now), "without waiting for the weekly read");
+    checked(&store, Duration::hours(3));
+    assert!(!settings_due(&store, now));
+    store.put("profile_settings", "me", "synthetic", &json!({"measurementSystem": "metric", "userSleep": null})).unwrap();
+    checked(&store, Duration::days(2));
+    assert!(!settings_due(&store, now), "read once: Garmin sent no schedule");
 }

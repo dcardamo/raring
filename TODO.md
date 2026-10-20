@@ -51,15 +51,14 @@ From item 4, in priority order.
   and the one-hour offset change must not switch to the fixed layout.
 - Check travel on a real trip: more than an hour of offset change should
   show the fixed layout until a night is recorded in the new zone.
-- Without enough recorded nights, Garmin's own sleep schedule (`userSleep`
-  in `/userprofile-service/userprofile/user-settings`, verified readable)
-  could anchor the phases instead of the fixed layout.
+- Garmin's weekday sleep windows (`userSleepWindows`, `MONDAY`…`SUNDAY`
+  beside `DAILY`): whether a weekday names the night's bedtime day or its
+  wake day is unverified; Raring reads the displayed day's. Check against a
+  schedule that differs by weekday, and whether the windows carry Garmin's
+  defaults when `userSleep` does.
 - On desktop widths the masonry columns can place the leading card beside a
   notice rather than first in reading order; check it once desktop ships.
 - "Timing history" opens Sleep at its top; scroll it to Consistency.
-- Item 9's notification applies item 26's rest, illness and limits
-  suppression from the same records, but still chooses its focus with the
-  `TodayFocus` phase rules rather than Today's lead gates; align the two.
 
 ### Sleep rhythm follow-ups
 
@@ -76,9 +75,12 @@ From item 3, in priority order.
 - Sleep alignment on other watches and while Garmin calibrates is unverified;
   Raring treats status codes containing CALIBRAT, NOT_ENOUGH, INSUFFICIENT or
   LEARNING as calibrating. Record real codes when seen.
-- Desktop has no bedtime reminder: its sync marks notifications as sent
-  without showing them. Deliver them (or stop marking them) before calling
-  reminders cross-platform.
+- Check desktop reminders in a real session: Linux with a notification
+  daemon and with Do Not Disturb, plus macOS and Windows. A missing Linux
+  server leaves the reminder pending, but Do Not Disturb still accepts and
+  records one that nobody sees.
+- A desktop notification opens no screen when clicked; Android's tap targets
+  (Today, the review, Sleep · Tonight) have no desktop twin yet.
 - Garmin's average bedtime before midnight: confirm whether
   `averageLocalSleepStartTime` comes back negative or wrapped (Raring accepts
   both).
@@ -90,10 +92,24 @@ From item 11, in priority order.
 - Check the trend charts on a real phone with the full history: each range
   should draw without a visible wait, and the overlay picker should be easy
   to use one-handed.
-- Opening an old day or workout should fetch its per-day detail (sleep
-  stages, stress readings, charts, route) on demand and keep it. Not built:
-  it needs a way to open a past day on Sleep and Stress and an online fetch
-  path for views, larger than item 11.
+- Verify the new opened-day and opened-workout reads on a real account. The
+  read-only `raring day-detail YYYY-MM-DD` and `raring workout-detail ID` run
+  the same core path as the app. Record how far back `dailySleepData`,
+  `dailyStress`, the daily summary, Health Status and an activity's
+  splits/zones/charts answer; Health Status may be the shortest.
+- An opened old day without a Health Status row shows an empty vitals card and
+  offers a Vitals read. If Garmin has no Health Status that far back, fall
+  back to the stored nightly records before offering a fetch (the emulator
+  demo shows this empty card).
+- Naps for an opened older day stay unfetched (naps sync only the last two
+  days), so the nap card reads unavailable. Decide whether the open should
+  read `sleep-service/sleep/naps/{date}` too.
+- An opened older strength workout's sets still arrive from history sync's
+  `strength_without_sets` queue, not from the open; confirm that happens
+  before a person opens the workout, or leave sets to Refresh from Garmin.
+- Android's `fetchDetail` with real credentials is unverified on a device: the
+  demo has no Garmin tokens and refuses before JNI, so only compilation and
+  the credential-less guard were exercised.
 - Weekly trend buckets run Monday to Sunday. Consider aligning them with
   Garmin's reported intensity-week boundary, which the weekly plan already
   uses; a display preference need not match that data window.
@@ -108,7 +124,7 @@ From item 11, in priority order.
 
 - Planning next week ahead: Plan shows one week, so Add, Move and Reschedule
   offer only this plan week's remaining days. Week navigation (‹ ›) could open
-  next week once day routes (opening a past day) land.
+  next week once Plan has a dated route.
 - Check on a watch whose account starts the week on Sunday whether its own
   intensity-minutes widget resets on Monday like Garmin's weekly rows.
 - The mockup's "Next up" strength workout card on the plan screen waits for
@@ -121,11 +137,9 @@ From item 11, in priority order.
 From the UX review (`.data/ux-review/plan-progress.md`), in priority order;
 the rest shipped (Done: Plan and Progress review fixes).
 
-- **PP-B13**: every Progress calendar cell opens this week's Plan, and every
-  Today week cell opens Plan at today. Open the tapped day once day routes
-  (opening a past day) land; until then the tap target stays.
-- **PP-B4**: opening `#plan` directly late at night can show "Plan your week",
-  because the prompt gates on a phase only Today sets (time-of-day work).
+- **PP-B13** (rest): Progress's calendar now opens the tapped day, but Today's
+  week cells still open Plan at today. Plan has no dated route to select a
+  day or another week; add one, then open the tapped day.
 - **PP-N5**: sessions during an illness or pause still read Planned and count
   as placed; show them "On hold", muted and not placed (a Goal ledger rule
   change).
@@ -259,10 +273,7 @@ Each is a tile or detail in an existing screen first.
 18a. **Journal populated-shape follow-up**: when a consenting account has
      entries, compare Garmin's actual fields/units with the community example,
      then expand only verified display values. Never create an entry for QA.
-19. **Women's health (opt-in)**: cycle and pregnancy views
-    (`/periodichealth-service/menstrualcycle/…`) as context on readiness and
-    vitals. Sensitive: off by default, excluded from notifications unless
-    chosen.
+19. Women's health: parked (see Parked).
 
 ## Later: changing Garmin settings
 
@@ -346,6 +357,14 @@ faces, screens, sensors and audio prompts stay in Connect.
     changed in Connect, and explain what was rejected (see
     `design/mockup/NOTES.md` and the `fix` mockup).
 
+## Parked
+
+- **Women's health (opt-in)**, formerly item 19: cycle and pregnancy views
+  (`/periodichealth-service/menstrualcycle/…`) as context on readiness and
+  vitals; sensitive, off by default, excluded from notifications unless
+  chosen. Not started until someone using Raring with cycle data can verify
+  it.
+
 ## Not planned
 
 - AI-written insights: they often restate the numbers and would need a
@@ -403,6 +422,102 @@ faces, screens, sensors and audio prompts stay in Connect.
   beside your session; durations read "52 min"; removing an event asks
   first; Do it today leaves no crumbs; inputs fit at large text; explainer
   copy is cut.
+
+- **Garmin's sleep schedule anchors Today's phases** (commit "Anchor Today on
+  Garmin's sleep schedule until nights are recorded"). With fewer than four
+  recorded wakes in 14 nights, the displayed day's scheduled wake (weekday
+  window, else `DAILY`, else `userSleep`) replaces the fixed layout and Today
+  names "Garmin sleep schedule"; Garmin's defaults never anchor. The weekly
+  settings read now keeps the schedule, is also due daily while it's needed
+  and once for a row stored before it was kept. Verified read-only on one
+  account (shape only): `userSleep` is top level with `sleepTime`,
+  `wakeTime` (integer seconds after local midnight, 0–86400),
+  `defaultSleepTime`, `defaultWakeTime` (booleans); `userSleepWindows` is 8
+  objects with `startSleepTimeSecondsFromMidnight`,
+  `endSleepTimeSecondsFromMidnight` and `sleepWindowFrequency` (`DAILY`,
+  `MONDAY`…`SUNDAY`). The Sleep header on Tonight names the evening and
+  window instead of last night's times. Women's health is parked.
+
+- **Today and Tonight at the day boundary** (commit "Keep the unsynced
+  morning and Tonight's report on the right night"), from the Today and
+  Sleep review (B2–B4, B6, B8, M13) and Plan review PP-B4. While last night
+  hasn't synced the hero shows no earlier score, readiness, chips or
+  reconciliation; Recorded today is the calendar day's, so yesterday's run
+  is gone after midnight; last-night taps (tile, moon chip, Your day, naps,
+  search, the widget's Sleep tile) open Last night; "I wound down" belongs to
+  the night Tonight shows and opens two hours before its window; the need's
+  read time carries its weekday unless today; beside tonight's plan card the
+  hero keeps only its headline; the plan prompt is gated by Today's phase in
+  the core (`plan_board`), so opening Plan at night hides it too.
+
+- **Status surfaces follow Today's lead** (commit "Choose the status focus
+  with Today's lead"). The persistent notification and widgets take their
+  focus from the live Today's lead gates (`status::snapshot` runs
+  `lead::apply`), keeping the private circumstance lines; the evening now
+  reads "Make room for sleep" as Today does, a recorded workout reads
+  "Activity recorded today", and the reason is Today's own line from
+  Garmin's inputs instead of "biggest drag" (review M12). Today's waiting
+  gate also covers the phase's neutral wait, so yesterday's readiness no
+  longer suggests training between the usual wake and the handover (B1). No
+  effort scale beside a recorded workout or from the evening on (M3).
+
+- **Tonight's plan above Your day** (commit "Lead the night with tonight's
+  plan, above Your day"). v0.1.33 computed wind-down correctly but always drew
+  Your day with the hero, above every leading card, so at 23:21 the Wind down
+  card sat under Your day and recorded today, beside Monday's check-in link.
+  The core's card order now places Your day (`TodayCard::Day`): with the hero
+  before the evening, after tonight's plan (compact) from then on. Wind-down
+  and late night also hide the check-in link. Core and UI regressions cover a
+  23:10–23:30 window with a 22:40 wind-down at 21:30, 22:50, 23:21 and 01:30,
+  with and without a run.
+
+- **Desktop reminders** (commit "Show desktop reminders while the app runs").
+  A desktop sync used to mark every notification as sent without showing it.
+  The desktop build now shows the same notifications Android posts through
+  the Tauri notification plugin, with the same wording, settings,
+  rest/illness/limits suppression and night identity. Only an accepted
+  delivery is recorded; a refusal or failure leaves the reminder unmarked and
+  Settings says why, with the next pending wind-down. Desktop has no
+  WorkManager: while the app runs it re-reads the cached plan on its own wall
+  clock, wakes at the pending wind-down and at least every five minutes, and
+  checks again on resume, after a sync and after a notification setting
+  changes, so a reminder whose window passed while the machine slept is
+  dropped rather than fired late. On Linux the check refuses to mark
+  anything when the session has no notification server, because the plugin
+  discards that error; verified under Xvfb with no server: no notify call, no
+  recorded reminder and "no desktop notification service" kept for Settings.
+  Rust tests cover per-notification marking, wake targets and a night already
+  sent; a real notification session remains to check (see follow-ups).
+
+- **Opening an old day or workout** (commits "Fetch a past day or an older
+  workout's detail only when it is opened" and "Open a past day or an older
+  workout from the date that names it"). Past-night
+  (`#sleep/YYYY-MM-DD`), past-day (`#health/YYYY-MM-DD`) and dated stress and
+  heart-rate routes show that date on Sleep's Last night and on Health/Stress,
+  opened from Progress's calendar, a selected trend point and the seven-night
+  chart; Back returns to the page or section that opened each, and the plain
+  `sleep`, `sleep/last`, `sleep/tonight`, `health` and `metric/stress` links
+  keep their meaning. A route whose day or workout has never been read fetches
+  only the missing rows its page shows once (a night's sleep and HRV; a
+  Health day's stress, summary and Health Status; an old activity's
+  summary/splits/zones/charts) through
+  the existing on-demand shape: Android's `SyncGate` and token vault or
+  desktop's `with_desktop_tokens`, a small budget, the shared per-endpoint
+  retry wait and 429 backoff, never from navigation prefetch, and every
+  answer kept, including empty ones. The page says while it loads and when
+  Garmin has nothing for that day; today's data is never shown for a past
+  date. Older workouts listed but not detailed by the history download now
+  fill their route and streams when opened, and nothing else fetches them.
+  The CLI's `day-detail` and `workout-detail` run the same read-only core
+  path. Core mock-client tests cover fetch order, partial and empty answers,
+  unchanged repeats, today/future/unknown keys and 429; browser tests cover
+  the calendar, trend-point and seven-night entries, caller-aware Back, the
+  dated stress and heart-rate pages, and the one-fetch loading and unavailable
+  states. Emulator-5560 (shared; signer-verified in-place debug install,
+  SHA-256 `0d59d1bf…7a63`) showed dated Sleep/Health/stress pages from a
+  calendar day and a seven-night bar; the synthetic demo has no Garmin
+  credentials, so `fetchDetail` refused it locally without a request or a
+  sign-out. The credentialed JNI read is unverified on a device.
 
 - **21. Write rules** (commit "Add the Garmin write rules and a log of
   recent changes"). One core write path (`crates/core/src/writes.rs`): only

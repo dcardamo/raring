@@ -354,7 +354,8 @@ pub enum DayPhase {
     LateNight,
 }
 
-/// Today's advice cards. Metric cards follow them in a fixed order.
+/// Today's advice cards and where Your day sits among them. Metric cards
+/// follow them in a fixed order.
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -366,6 +367,10 @@ pub enum TodayCard {
     SleepPlan,
     /// Vitals, moved up when two or more are outside their range.
     Vitals,
+    /// Your day and recorded today. Before any other card (bar the focus
+    /// and vitals) it stays with the hero; after tonight's plan it follows
+    /// it in a compact form.
+    Day,
 }
 
 /// The displayed night's recorded sleep.
@@ -386,7 +391,7 @@ pub struct LastNight {
 #[ts(export)]
 pub struct TodayFocus {
     pub phase: DayPhase,
-    /// Advice cards in order; the first one leads.
+    /// Today's cards in order; the first advice card leads.
     pub cards: Vec<TodayCard>,
     /// When the phase next changes, local ISO 8601 without offset; Today is
     /// read again then.
@@ -403,6 +408,10 @@ pub struct TodayFocus {
     pub note: Option<String>,
     /// Garmin's recovery time at the latest readiness, hours.
     pub recovery_hours: Option<f64>,
+    /// Where the phases' wake time comes from when it isn't recorded nights:
+    /// "Garmin sleep schedule".
+    #[serde(default)]
+    pub schedule: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
@@ -698,6 +707,30 @@ pub struct JournalDay {
     pub entries: Vec<JournalEntry>,
 }
 
+/// One page's per-day detail that an explicit open can still fetch.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum DayDetailPart {
+    Sleep,
+    Stress,
+    Vitals,
+    Workout,
+}
+
+/// Per-day reads this phone has stored or still needs for an opened day.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct DayDetail {
+    /// Parts with a per-day read this phone has never stored.
+    #[serde(default)]
+    pub missing: Vec<DayDetailPart>,
+    /// Parts Garmin answered with nothing for this day.
+    #[serde(default)]
+    pub unavailable: Vec<DayDetailPart>,
+}
+
 /// One night's recorded sleep against Garmin's need for it.
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -747,9 +780,17 @@ pub struct SleepView {
     /// Live read in the evening, wind-down or late night: Tonight opens first.
     #[serde(default)]
     pub tonight_first: bool,
-    /// Live read: a wind-down was reported for tonight's evening.
+    /// Live read: a wind-down was reported for the evening of the night
+    /// Tonight shows.
     #[serde(default)]
     pub wound_down: bool,
+    /// Live read: that evening's wind-down can be reported (from two hours
+    /// before the night's window).
+    #[serde(default)]
+    pub wind_down_open: bool,
+    /// A past night's detail an explicit open can fetch.
+    #[serde(default)]
+    pub detail: DayDetail,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
@@ -958,6 +999,9 @@ pub struct WorkoutView {
     /// How it counted toward the week's goals; live reads only.
     #[serde(default)]
     pub counted: Option<WorkoutCount>,
+    /// Per-activity reads this phone has never stored for the workout.
+    #[serde(default)]
+    pub detail: DayDetail,
 }
 
 /// Weights follow Garmin's measurement setting.
@@ -1268,6 +1312,9 @@ pub struct HealthView {
     pub body_weight: Option<BodyWeightCard>,
     /// This week's intensity minutes, when Garmin reported any day of it.
     pub intensity: Option<IntensityCard>,
+    /// A past day's detail an explicit open can fetch.
+    #[serde(default)]
+    pub detail: DayDetail,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]

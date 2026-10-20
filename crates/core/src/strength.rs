@@ -246,14 +246,32 @@ impl Catalog {
 }
 
 /// Measurement system, time format, week start and profile figure from Garmin's user
-/// settings. Only these fields are stored.
+/// settings, and the sleep schedule (`userSleep`, `userSleepWindows`, top level, seconds
+/// after local midnight) that anchors Today's phases. Only these fields are stored.
 pub fn reduce_settings(v: &Value) -> Value {
     let data = if v["userData"].is_object() { &v["userData"] } else { v };
+    let sleep = &v["userSleep"];
+    let windows: Option<Vec<Value>> = v["userSleepWindows"].as_array().map(|list| {
+        list.iter()
+            .map(|w| json!({
+                "sleepWindowFrequency": w["sleepWindowFrequency"],
+                "startSleepTimeSecondsFromMidnight": w["startSleepTimeSecondsFromMidnight"],
+                "endSleepTimeSecondsFromMidnight": w["endSleepTimeSecondsFromMidnight"],
+            }))
+            .collect()
+    });
     json!({
         "measurementSystem": data["measurementSystem"],
         "timeFormat": data["timeFormat"],
         "firstDayOfWeek": data["firstDayOfWeek"]["dayName"].as_str().or(data["firstDayOfWeek"].as_str()),
         "gender": data["gender"],
+        "userSleep": sleep.is_object().then(|| json!({
+            "sleepTime": sleep["sleepTime"],
+            "wakeTime": sleep["wakeTime"],
+            "defaultSleepTime": sleep["defaultSleepTime"],
+            "defaultWakeTime": sleep["defaultWakeTime"],
+        })),
+        "userSleepWindows": windows,
     })
 }
 struct Prefs {

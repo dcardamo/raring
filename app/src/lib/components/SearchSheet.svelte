@@ -4,7 +4,7 @@
  import {sheetOpened} from '../sheet';
  // Find a page or Garmin metric by name. Browsing works without it.
  let {close, navigate}: {close: () => void, navigate: (route: string) => void} = $props();
- const PAGES: [string, string][] = [['Last night’s sleep', 'sleep'], ['Readiness', 'readiness'], ['Weekly goals', 'plan/commitments'], ['Strength', 'strength'],
+ const PAGES: [string, string][] = [['Last night’s sleep', 'sleep/last'], ['Readiness', 'readiness'], ['Weekly goals', 'plan/commitments'], ['Strength', 'strength'],
   ['Activities', 'activities'], ['Gear', 'gear'], ['Weight', 'health/weight'], ['Weekly review', 'review/latest'], ['Settings', 'settings'], ['Export your data', 'settings'], ['Help', 'help'], ['Profile', 'profile']];
  const index = [...PAGES, ...Object.entries(metricNames).map(([id, name]) => [name, 'metric/' + id] as [string, string])];
  let q = $state('');

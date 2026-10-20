@@ -790,6 +790,8 @@ pub(crate) fn apply(
     now: DateTime<Local>,
     first: Weekday,
     proposals: &[GoalProposal],
+    // The evening a wind-down report belongs to, from the night Tonight shows.
+    wind_down_evening: Option<NaiveDate>,
 ) -> Result<()> {
     store.settings_tx(|tx| {
         migrate(tx)?;
@@ -1070,8 +1072,8 @@ pub(crate) fn apply(
             }
             LocalAction::ReportWindDown => {
                 writable(&r, &[Circumstances::KEY])?;
-                // A report after midnight and before noon belongs to the evening before.
-                let evening = if now.hour() < 12 { today - Duration::days(1) } else { today };
+                // Otherwise a report after midnight and before noon belongs to the evening before.
+                let evening = wind_down_evening.unwrap_or(if now.hour() < 12 { today - Duration::days(1) } else { today });
                 if !r.circumstances.wind_downs.iter().any(|w| w.date == evening.to_string()) {
                     r.circumstances.wind_downs.push(WindDownReport { date: evening.to_string(), at: at.clone() });
                 }
