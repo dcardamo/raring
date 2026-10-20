@@ -13,12 +13,10 @@ describe('chart colour categories',()=>{
   expect([0,25,50,51,75,76,100].map(stress.tone)).toEqual(['good','good','good','fair','fair','poor','poor']);
   const battery=chartScale('bodyBattery');
   expect([29,30,69,70].map(battery.tone)).toEqual(['poor','fair','fair','good']);
-  expect(battery.key.map(k=>k.tone)).toEqual(['poor','fair','good']);
  });
  it('colours a usual range’s readings inside good and outside fair, bounds included',()=>{
   const hrv=chartScale('hrv',{band:[48,62]});
   expect([47,48,55,62,63].map(hrv.tone)).toEqual(['fair','good','good','good','fair']);
-  expect(hrv.key).toEqual([{tone:'fair',label:'Outside it'}]);
  });
  it('leaves a range metric neutral without its band, as on weekly and monthly averages',()=>{
   for(const m of ['hrv','restingHr','sleepHr','respiration','spo2','skinTemp','acuteLoad'] as const){
@@ -33,7 +31,6 @@ describe('chart colour categories',()=>{
  it('compares Fitness Age with your age, and is neutral without it',()=>{
   const age=chartScale('fitnessAge',{age:46});
   expect([45,46,47].map(age.tone)).toEqual(['good','fair','poor']);
-  expect(age.key.map(k=>k.tone)).toEqual(['good','fair','poor']);
   expect(chartScale('fitnessAge').tone(40)).toBe('neutral');
  });
  it('draws readings without a verdict in the neutral blue, never ink',()=>{

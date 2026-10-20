@@ -201,7 +201,6 @@
  <span id={id} class="sr-only">{activeLabel}, {count} {bucketName}. {present} recorded. Missing readings are gaps. Use the slider to select a date.</span>
  <div class="history-legend">
   {#if shownBand}<span><i class="band"></i>{bandLabel} · {show(shownBand[0])}–{show(shownBand[1])}{activeUnit && activeUnit!=='min'?' '+activeUnit:''}</span>{/if}
-  {#each palette.key as k}<span><i class="dot" style:background={chartColor(k.tone)}></i>{k.label}</span>{/each}
   {#if ageLine!=null}<span><i class="line dashed"></i>Your age {show(ageLine)}</span>{/if}
   {#if bucket!=='day'}<span><i style:background={colored?colors.secondary:color}></i>{bucket==='week'?'Weekly':'Monthly'} average of recorded days</span>{/if}
   {#if overlay}<span><i class="line" style:border-color={colors.secondary} style:border-top-style="dashed"></i>{overlay.name}, right axis</span>{/if}
@@ -255,7 +254,6 @@
  .history-legend span{display:inline-flex;align-items:center;gap:5px}
  .history-legend i{width:6px;height:6px;border-radius:2px;opacity:.7}
  .history-legend i.line{width:14px;height:0;border-radius:0;border-top:2px solid;opacity:1}
- .history-legend i.dot{width:8px;height:8px;border-radius:50%;opacity:1}
  .history-legend i.band{width:14px;height:9px;border-radius:2px;background:color-mix(in srgb,var(--good) 16%,transparent);border:1px dashed color-mix(in srgb,var(--good) 60%,transparent);opacity:1}
  .history-legend i.dashed{border-top:2px dashed rgba(228,232,240,.55)}
  .record-count{margin-left:auto}

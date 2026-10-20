@@ -322,7 +322,8 @@ try {
  const ageHistory=page.locator('.history');await ageHistory.locator('.history-line').waitFor();
  assert.match(await page.locator('.metric-hero').textContent(),/39.*Garmin estimate · Sun 12 Oct · Your age 46.*7 years younger than your age/);
  assert.equal(await ageHistory.locator('.age-line').count(),1,'your age is a dashed line');
- assert.match(await ageHistory.locator('.history-legend').textContent(),/Younger than you.*Older.*Your age 46/);
+ assert.match(await ageHistory.locator('.history-legend').textContent(),/Your age 46/);
+ assert.doesNotMatch(await ageHistory.locator('.history-legend').textContent(),/Younger|Older/,'colour alone, no colour key');
  assert.match(await ageHistory.locator('.history-line').getAttribute('stroke'),/^url\(#/,'estimates take their colour from your age');
  await back('health');
  await ageCard.getByRole('button',{name:'Fitness Age history',exact:true}).click();await waitRoute('metric/fitnessAge');await back('health');

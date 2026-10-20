@@ -57,7 +57,8 @@ synthetic data. `design/mockup/index.html` shows the app before the redesign.
 - Color means something or it isn't used. Icons and titles say where you
   are; color says how it's going:
   - **Status**: mint green good (`#60D3A0`), ochre fair (`#F2B85E`), coral
-    poor (`#F17E78`), always with a word, symbol or labelled key. Missing data
+    poor (`#F17E78`). In text a status colour comes with a word or symbol;
+    on charts colour alone carries it, with no colour key. Missing data
     is a gap, never a zero. Amber is attention, such as a reading outside its
     usual range; coral is a poor rating.
   - **Effort**: heart-rate zones run gray, blue, yellow, orange, red. Red
@@ -1463,7 +1464,8 @@ next pending wind-down while signed in.
   separate from Garmin's seven-day HRV status. Personal ranges are not
   medical targets.
 - **Stress bars**: the Today card averages each 15 minutes of Garmin's
-  readings; the detail shows every reading. Colors follow Garmin's categories.
+  readings; the detail shows every reading. Colors follow Garmin's categories,
+  without a colour key; the selected reading names its level.
 - **Heart-rate chart**: the compact card averages only present samples in
   16-minute bars for legibility; the detail plots the two-minute readings.
   An empty bar remains a gap, not a zero or an inferred resting value.
@@ -1500,8 +1502,10 @@ next pending wind-down while signed in.
   drawing an empty range.
 - **Body Battery color**: good at 70 and above, fair from 30, poor below 30.
   Garmin rates no level, so only the display color is bucketed.
-- **Chart colours**: every metric chart is in one of four categories, named in
-  its key, and a line changes colour exactly where it crosses a threshold.
+- **Chart colours**: every metric chart is in one of four categories, shown by
+  colour alone with no colour key; a line changes colour exactly where it
+  crosses a threshold. The usual band still prints its bounds and source, and
+  the age line its age.
   - Garmin's levels: readiness (Low/Poor under 50, Moderate 50–74,
     High/Prime 75+), Sleep Score (Poor under 60, Fair 60–79, Good 80+),
     stress (rest and low 0–50 good, medium 51–75 fair, high 76+ poor) and

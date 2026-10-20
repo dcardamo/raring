@@ -537,11 +537,13 @@ faces, screens, sensors and audio prompts stay in Connect.
 ## Done
 
 - **Chart colours, Fitness Age bar and weight layout** (commits "Colour charts
-  by range, restore the Fitness Age bar and align weight" and "Tint range
-  bars, keep Health's weight range and say when Fitness Age matches"), from the
-  maintainer's phone. Charts are no longer ink on ink: each metric is in one
-  category, keyed on the chart. Garmin's levels (readiness, Sleep Score,
-  stress, Body Battery) colour days and averages; usual ranges are a
+  by range, restore the Fitness Age bar and align weight", "Tint range bars,
+  keep Health's weight range and say when Fitness Age matches" and "Drop the
+  colour keys from charts"), from the maintainer's phone. Charts are no
+  longer ink on ink: each metric is in one category, shown by colour alone
+  (no colour key on any chart, the stress timeline's included). Garmin's
+  levels (readiness, Sleep Score, stress, Body Battery) colour days and
+  averages; usual ranges are a
   green-tinted band, readings inside green and outside amber; acute load is
   amber below and coral above Garmin's optimal range; Fitness Age is green
   under your age and coral over it; weight, VO₂ max, time asleep, monthly
