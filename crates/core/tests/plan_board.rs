@@ -219,6 +219,10 @@ fn a_passed_session_is_not_recorded_until_its_person_says_otherwise() {
     assert_eq!(item(&b, &q).state, ItemState::Missed);
     assert_eq!(item(&b, &gone).state, ItemState::LetGo);
     assert!(day(&b, "2025-03-11").not_recorded);
+    assert_eq!(day(&b, "2025-03-11").planned, 0, "a passed session is not recorded, not planned");
+    assert_eq!(day(&b, "2025-03-15").planned, 0, "a session let go isn't planned");
+    lift(&f, "2025-03-15");
+    assert_eq!(day(&board(&f), "2025-03-15").planned, 1, "a later day shows what is still planned");
     listed(&f.store, "2025-03-12", "2025-03-13");
     assert_eq!(item(&board(&f), &p).state, ItemState::Awaiting, "an incomplete day awaits data");
 }

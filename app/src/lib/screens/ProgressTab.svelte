@@ -5,6 +5,7 @@
  import DayCells from '../components/DayCells.svelte';
  import AxisChart from '../components/AxisChart.svelte';
  import HelpButton from '../components/HelpButton.svelte';
+ import RingLegend from '../components/RingLegend.svelte';
  import type {ProgressDomains} from '../generated/ProgressDomains';
  import type {DomainWeek} from '../generated/DomainWeek';
  import type {DomainMonth} from '../generated/DomainMonth';
@@ -14,7 +15,7 @@
  import type {Period} from '../generated/Period';
  import type {PeriodTotals} from '../generated/PeriodTotals';
  import {GOALS, SPORT_COLORS, SPORT_NAMES} from '../goals';
- import {dateLabel, duration, num, signed} from '../format';
+ import {dateLabel, duration, num, shortMonth, signed} from '../format';
  import * as api from '../api';
  // Progress: a report for a chosen period, the calendar, goals over time, trends
  // and milestones. Follow-through and measured change stay apart; nothing is a grade.
@@ -93,10 +94,12 @@
  <p class="axis"><span>{dateLabel(view.from)}</span><span>{dateLabel(view.to)}</span></p>
  {#if view.buckets.some(b => b.total)}<p class="legend">{#each [...new Set(view.buckets.flatMap(b => b.minutes.map(m => m.sport)))] as s}<span><i style:background={SPORT_COLORS[s]}></i>{SPORT_NAMES[s]}</span>{/each}</p>{/if}
 </section>
-{#if view.ringDays.length}
+{#if view.period === 'week' && view.current}
+ <!-- This week's days are Plan's day strip. -->
+{:else if view.ringDays.some(d => d.rings.length)}
  <section class="card ring-cal"><h3><span>Calendar</span><HelpButton topic="rings"/></h3>
   <DayCells days={view.ringDays.filter((_, i, all) => all.slice(Math.floor(i / 7) * 7, Math.floor(i / 7) * 7 + 7).some(d => d.date >= view.from && d.date <= view.to))} select={() => navigate('plan')} size={28} within={[view.from, view.to]}/>
-  <p class="small">Rings show what was recorded toward each goal that day; moon: rest, hatched: ill or paused, dotted: awaiting data. Days outside {view.period === 'week' ? 'the week' : 'the month'} are faint.</p>
+  <RingLegend kinds={view.ringDays.flatMap(d => d.rings.map(r => r.kind))}/>
  </section>
 {:else if view.calendar.length}
  <section class="card"><h3>Calendar</h3>
@@ -105,12 +108,13 @@
  </section>
 {/if}
 {#if view.goalWeeks.length}
+ <!-- Each passed week opens its review; this week opens Plan. Weeks that didn't count are faded and say why. -->
  <section class="card"><h3><span>Weekly goals over time</span><HelpButton topic="progress-overall"/></h3>
-  <div class="gw">{#each view.goalWeeks as w}<button class:uncounted={!w.counted} onclick={() => navigate('review/' + w.start)} aria-label={`Week of ${dateLabel(w.start)}: ${w.counted ? `${w.met} of ${w.goals} goals met` : 'not counted' + (w.reasons.length ? ', ' + w.reasons.join(', ') : '')}`}><NestedRings rings={w.rings} size={34} stroke={3} mark={w.counted ? null : 'unknown'}/><small>{Number(w.start.slice(8))}/{Number(w.start.slice(5, 7))}</small></button>{/each}</div>
+  <div class="gw">{#each view.goalWeeks as w}<button class:uncounted={!w.counted && !w.current} class:current={w.current} onclick={() => navigate(w.current ? 'plan' : 'review/' + w.start)} aria-label={`Week of ${dateLabel(w.start)}: ${w.current ? 'this week, open Plan' : w.counted ? `${w.met} of ${w.goals} goals met` : 'not counted' + (w.reasons.length ? ', ' + w.reasons.join(', ') : '')}`}><NestedRings rings={w.rings} size={34} stroke={3} mark={w.mark} dim={!w.counted && !w.current}/><small>{w.current ? 'This week' : `${Number(w.start.slice(8))} ${shortMonth(w.start)}`}</small></button>{/each}</div>
+  <RingLegend kinds={view.goalWeeks.flatMap(w => w.rings.map(r => r.kind))}/>
+  <button class="link-row all-weeks" onclick={() => navigate('reviews')}><span><b>All weekly reviews</b><small>Each week against its own goals</small></span><Icon name="chevron" size={16}/></button>
  </section>
 {/if}
-<button class="card link-row" onclick={() => navigate('review/latest')}><span><b>Last week</b><small>What was met, what changed and next week’s goals</small></span><Icon name="chevron" size={16}/></button>
-<button class="card link-row" onclick={() => navigate('reviews')}><span><b>Earlier weeks</b><small>Each week against its own goals</small></span><Icon name="chevron" size={16}/></button>
 <div class="sec-h"><h2>Records and milestones</h2></div>
 {#if view.milestones.length}
  {#if view.milestones.some(m=>m.new)}<button class="secondary" onclick={markSeen}>Mark records seen</button>{/if}
@@ -171,7 +175,8 @@
  .cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.day{display:grid;place-items:center;height:34px;border-radius:10px;font:600 12px Outfit;color:var(--text2);background:rgba(255,255,255,.03)}
  .day.active{background:rgba(61,220,151,.22);color:var(--text)}.day.uncovered{outline:1px dashed var(--text3)}.day.rest{background:rgba(169,200,255,.14)}.day.ill,.day.paused{background:repeating-linear-gradient(45deg,rgba(169,200,255,.22) 0 3px,transparent 3px 6px)}.day.unknown{outline:1px dotted var(--text3);background:none}.day.future,.day.before{background:none;color:var(--text3)}
  .k{width:12px;height:12px;border-radius:4px}.k.active{background:rgba(61,220,151,.4)}.k.rest{background:rgba(169,200,255,.3)}.k.paused{background:repeating-linear-gradient(45deg,rgba(169,200,255,.5) 0 2px,transparent 2px 4px)}.k.unknown{outline:1px dotted var(--text3)}
- .gw{display:flex;gap:4px;overflow-x:auto;padding-bottom:4px}.gw button{display:grid;justify-items:center;gap:3px;background:none;border:0;color:var(--text2);min-width:40px;min-height:44px}.gw small{font-size:10px}
+ .gw{display:flex;gap:4px;overflow-x:auto;padding-bottom:4px}.gw button{display:grid;justify-items:center;gap:3px;background:none;border:0;border-radius:10px;color:var(--text2);min-width:46px;min-height:44px;padding:3px 0}.gw small{font-size:11px;white-space:nowrap}.gw .current{outline:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.05)}.gw .current small{color:var(--text)}.gw .uncounted small{color:var(--text3)}
+ .all-weeks{border:0;border-top:1px solid var(--line);background:none;margin-top:10px;padding:12px 0 2px}
  .link-row{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;color:var(--text)}.link-row b{display:block;font:600 16px Outfit}.link-row small{display:block;font-size:12px;color:var(--text2);margin-top:3px}
  .sec-h{margin:22px 4px 0}.sec-h h2{font:600 19px Outfit}
  .tiles2{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.tile2{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;color:var(--text);margin-top:10px}.tile2 span{font:500 12px Inter;color:var(--text2)}.tile2 b{font:600 26px Outfit}.tile2 small{font:500 12px Inter;color:var(--text2);margin-left:3px}.tile2 em{font-style:normal;font-size:13px;color:var(--text2)}

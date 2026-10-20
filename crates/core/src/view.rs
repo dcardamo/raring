@@ -2266,6 +2266,8 @@ pub struct DayCell {
     /// Everything planned that day is done.
     pub done: bool,
     pub not_recorded: bool,
+    /// Sessions still planned that day (today or later).
+    pub planned: u32,
     pub recordings: Vec<String>,
     pub items: Vec<String>,
     pub garmin: u32,
@@ -2701,6 +2703,11 @@ pub struct CalendarDay {
 pub struct GoalWeek {
     pub start: String,
     pub rings: Vec<Ring>,
+    /// The week in progress: never counted yet, never marked.
+    pub current: bool,
+    /// Why a passed week didn't count: ill or paused (two or more such days,
+    /// the larger), otherwise unknown (an incomplete activity list).
+    pub mark: Option<DayMark>,
     pub counted: bool,
     pub met: u32,
     pub goals: u32,

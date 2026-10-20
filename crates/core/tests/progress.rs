@@ -194,8 +194,22 @@ fn goals_over_time_show_each_weeks_rings_and_the_first_fully_met_week() {
     assert_eq!(starts, ["2025-11-03", "2025-11-10", "2025-11-17"], "weeks before goals have none");
     assert_eq!((m.goal_weeks[0].met, m.goal_weeks[0].goals, m.goal_weeks[0].rings[0].fill), (1, 1, 1.));
     assert_eq!((m.goal_weeks[1].met, m.goal_weeks[1].rings[0].fill), (0, 0.));
+    let marks: Vec<(bool, Option<DayMark>)> = m.goal_weeks.iter().map(|w| (w.current, w.mark)).collect();
+    assert_eq!(marks, [(false, None), (false, None), (true, None)], "the week in progress is current, not unknown");
     let first = m.milestones.iter().find(|x| x.kind == MilestoneKind::GoalWeek).unwrap();
     assert_eq!((first.date.as_str(), first.route.as_deref()), ("2025-11-09", Some("review/2025-11-03")));
+}
+
+#[test]
+fn a_week_that_did_not_count_says_why_on_its_rings() {
+    let f = fx("goalweek-marks");
+    f.core.local_action(&LocalAction::SetGoals { targets: GoalTargets { strength_sessions: 1, ..Default::default() } }, at(11, 3)).unwrap();
+    f.core.local_action(&LocalAction::Pause { reason: PauseReason::Ill, review: None }, at(11, 11)).unwrap();
+    f.core.local_action(&LocalAction::Resume, at(11, 13)).unwrap();
+    f.store.set_cursor("listed:lo", "2025-11-05").unwrap();
+    let m = view(&f, Period::Month, "2025-11-18", at(11, 18));
+    let marks: Vec<(bool, Option<DayMark>)> = m.goal_weeks.iter().map(|w| (w.counted, w.mark)).collect();
+    assert_eq!(marks, [(false, Some(DayMark::Unknown)), (false, Some(DayMark::Ill)), (false, None)]);
 }
 
 #[test]

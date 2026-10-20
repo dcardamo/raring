@@ -25,7 +25,7 @@ async function mocked(browser,errors,mock){
 
 export async function planProgressChecks({browser,url,errors}){
  const samples={};
- for(const name of ['today','status','checkin','review','reviews','progress','progressDomains'])samples[name]=await load(name);
+ for(const name of ['today','status','checkin','review','reviews','progress','progressDomains','health'])samples[name]=await load(name);
  samples.plan_board=await load('board');
  const base={...samples,app_status:samples.status,week_review:samples.review,progress_domains:samples.progressDomains};
 
@@ -75,4 +75,46 @@ export async function planProgressChecks({browser,url,errors}){
   await page.close();
  }
  console.log('Plan: sessions are placed and moved within the plan week, by name and day: passed');
+ // Rings: every goal ring fits (PP-B1), weeks that didn't count say why over
+ // faded rings (PP-B12), this week opens Plan, and ring grids carry a key (PP-M11).
+ {
+  const progress=structuredClone(samples.progress);
+  const kinds=['strength','zone2','highIntensity','intensity','sleepTiming'];
+  const five=progress.ringDays.findIndex(d=>d.date==='2025-10-06');
+  progress.ringDays[five].rings=kinds.map(kind=>({kind,recorded:1,planned:0,fill:1}));
+  const page=await mocked(browser,errors,{...base,progress});
+  await page.goto(`${url}/#progress`);
+  const cal=page.locator('.ring-cal');
+  await cal.waitFor();
+  const radii=await cal.getByRole('button',{name:/^Monday 6 Oct/}).locator('circle[stroke-width]').evaluateAll(cs=>cs.map(c=>Number(c.getAttribute('r'))));
+  assert.equal(radii.length,5,'all five rings draw at 28 px');
+  assert.ok(Math.min(...radii)>=3,radii.join());
+  assert.ok((await cal.locator('.ring-legend').textContent()).includes('Zone 2'),'the calendar has a colour key');
+  const weeks=page.locator('.gw button');
+  assert.equal(await weeks.count(),3);
+  assert.ok(await weeks.first().evaluate(b=>b.classList.contains('uncounted')&&!!b.querySelector('g[opacity="0.4"]')&&[...b.querySelectorAll('circle')].some(c=>c.getAttribute('fill')?.startsWith('url('))),'an ill week is faded and hatched');
+  assert.equal((await weeks.last().textContent()).trim(),'This week');
+  assert.equal(await page.getByRole('button',{name:/^Last week/}).count(),0,'the strip replaces the Last week row');
+  await page.getByRole('button',{name:/^All weekly reviews/}).waitFor();
+  await weeks.last().click();
+  await page.waitForFunction(()=>location.hash==='#plan');
+  // Plan's days mark what is still planned and Garmin's sessions; the week ring centre is clear.
+  const fri=page.getByRole('button',{name:/^Friday 17 Oct/});
+  await fri.waitFor();
+  assert.ok((await fri.getAttribute('aria-label')).includes('1 session planned'));
+  assert.equal(await fri.locator('.marks .pl').count(),1);
+  assert.equal(await fri.locator('.marks .gm').count(),1);
+  assert.equal(await page.locator('.ws .nc').textContent(),'','no text over the week rings');
+  await page.close();
+  // Without goals, the calendar shows activity days rather than empty rings (PP-M10).
+  const bare=structuredClone(samples.progress);
+  bare.ringDays=bare.ringDays.map(d=>({...d,rings:[]}));bare.goalWeeks=[];
+  const none=await mocked(browser,errors,{...base,progress:bare});
+  await none.goto(`${url}/#progress`);
+  await none.locator('.cal').waitFor();
+  assert.equal(await none.locator('.ring-cal').count(),0);
+  assert.equal(await none.getByRole('button',{name:/weekly reviews/}).count(),0,'no review links without goal weeks');
+  await none.close();
+ }
+ console.log('Rings: every ring fits, uncounted weeks say why, this week opens Plan, colour keys: passed');
 }

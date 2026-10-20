@@ -10,7 +10,11 @@ rings: Array<Ring>,
 /**
  * Everything planned that day is done.
  */
-done: boolean, notRecorded: boolean, recordings: Array<string>, items: Array<string>, garmin: number, 
+done: boolean, notRecorded: boolean, 
+/**
+ * Sessions still planned that day (today or later).
+ */
+planned: number, recordings: Array<string>, items: Array<string>, garmin: number, 
 /**
  * Garmin's Sleep Score for the night ending this morning.
  */

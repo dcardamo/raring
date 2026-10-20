@@ -344,6 +344,14 @@ faces, screens, sensors and audio prompts stay in Connect.
   starting target (`appliesFrom`, "From today, Thu 22 Oct"); kept proposals
   read "Kept (proposed 3)". Add a session, Move and Reschedule offer only this
   plan week's days, with the day on the button and an optional name.
+  Commit "Make the goal rings fit and say why a week didn't count": every
+  ring fits at any size (four- and five-goal weeks drew nothing inside 36 px),
+  marks sit over faded rings in the weekly strip (`GoalWeek.current`, `mark`),
+  this week's ring opens Plan, ring grids have a colour key, the week ring's
+  centre is clear, day cells mark planned and not-recorded sessions
+  (`DayCell.planned`) with the weekday above the date, the calendar falls back
+  to activity days without goals and hides for the current week, and the
+  Last week / Earlier weeks rows merge into the strip's "All weekly reviews".
 
 - **21. Write rules** (commit "Add the Garmin write rules and a log of
   recent changes"). One core write path (`crates/core/src/writes.rs`): only

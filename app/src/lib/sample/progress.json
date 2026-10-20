@@ -28,6 +28,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -60,6 +61,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -92,6 +94,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -124,6 +127,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -156,6 +160,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -188,6 +193,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -220,6 +226,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -252,6 +259,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -284,6 +292,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -316,6 +325,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -348,6 +358,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -380,6 +391,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -412,6 +424,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -444,6 +457,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -476,6 +490,7 @@
       ],
       "done": true,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [
         "9000000000005"
       ],
@@ -512,6 +527,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [
         "9000000000004"
       ],
@@ -546,6 +562,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [
         "9000000000002",
         "9000000000003"
@@ -581,6 +598,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [
         "9000000000001"
       ],
@@ -615,6 +633,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 1,
       "recordings": [],
       "items": [
         "i1760380000001"
@@ -649,6 +668,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 1,
       "recordings": [],
       "items": [
         "i1760380000002"
@@ -683,6 +703,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -715,6 +736,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -747,6 +769,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -779,6 +802,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -811,6 +835,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -843,6 +868,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -875,6 +901,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -907,6 +934,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -939,6 +967,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -971,6 +1000,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -1003,6 +1033,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -1035,6 +1066,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -1067,6 +1099,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -1099,6 +1132,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -1131,6 +1165,7 @@
       ],
       "done": false,
       "notRecorded": false,
+      "planned": 0,
       "recordings": [],
       "items": [],
       "garmin": 0,
@@ -1622,6 +1657,68 @@
   ],
   "goalWeeks": [
     {
+      "start": "2025-09-29",
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 3,
+          "planned": 1,
+          "fill": 0.375
+        },
+        {
+          "kind": "zone2",
+          "recorded": 100,
+          "planned": 40,
+          "fill": 0.3333333333333333
+        },
+        {
+          "kind": "intensity",
+          "recorded": 124,
+          "planned": 0,
+          "fill": 0.41333333333333333
+        }
+      ],
+      "current": false,
+      "mark": "ill",
+      "counted": false,
+      "met": 0,
+      "goals": 3,
+      "reasons": [
+        "2 ill days"
+      ]
+    },
+    {
+      "start": "2025-10-06",
+      "rings": [
+        {
+          "kind": "strength",
+          "recorded": 3,
+          "planned": 1,
+          "fill": 1
+        },
+        {
+          "kind": "zone2",
+          "recorded": 100,
+          "planned": 40,
+          "fill": 1
+        },
+        {
+          "kind": "intensity",
+          "recorded": 124,
+          "planned": 0,
+          "fill": 1
+        }
+      ],
+      "current": false,
+      "mark": null,
+      "counted": true,
+      "met": 3,
+      "goals": 3,
+      "reasons": [
+        "1 rest day"
+      ]
+    },
+    {
       "start": "2025-10-13",
       "rings": [
         {
@@ -1643,10 +1740,14 @@
           "fill": 0.8266666666666667
         }
       ],
-      "counted": true,
+      "current": true,
+      "mark": null,
+      "counted": false,
       "met": 0,
       "goals": 3,
-      "reasons": []
+      "reasons": [
+        "Week still in progress"
+      ]
     }
   ],
   "milestones": [

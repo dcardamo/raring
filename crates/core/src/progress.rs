@@ -292,9 +292,20 @@ pub fn progress(store: &Store, period: Period, anchor: NaiveDate, today: NaiveDa
             .filter(|w| (*w + Duration::days(6)).to_string() >= first_goal)
             .map(|w| {
                 let week = review::week(store, &local, w, end);
+                let current = w + Duration::days(6) >= today;
+                let (ill, paused) = (week.review.ill_days, week.review.paused_days);
+                let mark = (!current && !week.review.counted).then(|| {
+                    if ill + paused >= 2 {
+                        if ill >= paused { DayMark::Ill } else { DayMark::Paused }
+                    } else {
+                        DayMark::Unknown
+                    }
+                });
                 GoalWeek {
                     start: w.to_string(),
                     rings: week.rings,
+                    current,
+                    mark,
                     counted: week.review.counted,
                     met: week.goals.iter().filter(|g| g.state == OutcomeState::Met).count() as u32,
                     goals: week.goals.iter().filter(|g| g.state != OutcomeState::Observed).count() as u32,

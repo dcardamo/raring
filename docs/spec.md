@@ -71,7 +71,9 @@ synthetic data. `design/mockup/index.html` shows the app before the redesign.
   fixed colour each (strength pink, Zone 2 blue, Zone 4–5 orange, intensity
   teal, sleep timing pale blue). A ring draws only recorded work, with no
   track for the rest; moon for rest, hatching for ill or paused, dots for
-  awaiting data (Rules: Rings).
+  awaiting data (Rules: Rings). Every ring fits: strokes thin as goals are
+  added, and no ring's radius is under 3 px. Each grid of rings has a colour
+  key of the goals it draws; nothing is written inside a week ring.
 - **Done, planned, not recorded** look the same everywhere: done is filled
   with a check and its recorded stats, planned is outlined with its planned
   time, passed and not recorded is muted.
@@ -408,7 +410,9 @@ Backlog, Garmin Coach).
   Zone 4–5 and intensity minutes (Garmin's weekly goal until changed), sleep
   timing (asleep by or wind down at a chosen time) and an average Sleep Score.
   Zero turns a goal off. Saves apply as the Local records rule says.
-- **Days**: day cells with rings; a day lists your sessions and Garmin Coach
+- **Days**: day cells with rings and a row of marks (an outlined dot per
+  session still planned, a muted hollow dot for one not recorded, ◇ for
+  Garmin's); a day lists your sessions and Garmin Coach
   sessions with one state word (Done, Needs review, Planned, Not recorded,
   Awaiting data, Marked missed), Garmin Coach rest days, recordings not in
   your plan, and Garmin's scheduled workouts by name, read-only and not
@@ -430,13 +434,15 @@ Backlog, Garmin Coach).
 
 Four sections, the choice kept across a detail and Back:
 
-- **Overall**: the weekly goal rings for the last 12 weeks (each opening its
-  review), the period report (week, month, 3 months, year; previous and next;
-  known totals and a comparison only when comparable, Rules: Progress
-  periods), the ring calendar for week and month periods (whole plan weeks,
-  days outside the period faint), Last week and earlier reviews, and the
-  latest 12 records and milestones with a link to all of them
-  (`#progress/milestones`, by month).
+- **Overall**: the period report (week, month, 3 months, year; previous and
+  next; known totals and a comparison only when comparable, Rules: Progress
+  periods), the ring calendar for month and past week periods (whole plan
+  weeks, days outside the period faint; the current week is Plan's day strip;
+  without goals, the activity calendar), the weekly goal rings for the last 12
+  weeks (passed weeks open their review and this week opens Plan; a week that
+  didn't count is faded, hatched when ill or paused and dotted when data was
+  missing) with one link to all reviews, and the latest 12 records and
+  milestones with a link to all of them (`#progress/milestones`, by month).
 - **Cardio**: Zone 2, Zone 4–5 (with its goal) and intensity minutes per week
   for 12 weeks against the goal, and Garmin's VO2max estimates on the same
   weeks (Rules: Progress domains).

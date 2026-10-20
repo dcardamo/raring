@@ -515,6 +515,7 @@ pub fn board_with(store: &Store, local: &LocalRecords, anchor: NaiveDate, today:
                 rings,
                 done: !workouts.is_empty() && workouts.iter().all(|p| p.state == ItemState::Done),
                 not_recorded: day_items.iter().any(|p| p.state == ItemState::NotRecorded),
+                planned: day_items.iter().filter(|p| p.state == ItemState::Planned).count() as u32,
                 recordings: day_recs.iter().map(|c| c.rec.id.clone()).collect(),
                 items: day_items.iter().map(|p| p.intention.id.clone()).collect(),
                 garmin: (garmin.iter().filter(|g| g.date == ds).count() + coach_sessions.iter().filter(|c| c.date == ds).count()) as u32,

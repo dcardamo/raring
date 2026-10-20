@@ -174,7 +174,7 @@ const boardDays=Array.from({length:7},(_,i)=>{const date=`2025-10-${13+i}`,futur
  const plannedOf=k=>items.reduce((n,p)=>n+p.intention.allocation[k],0);
  const ring=(kind,recorded,planned)=>({kind,recorded,planned,fill:recorded>0?recorded/Math.max(planned,recorded):0});
  return {date,today:date==='2025-10-16',future,mark:null,rings:[ring('strength',future?0:recs.filter(r=>r.sport==='strength').length,plannedOf('strengthSessions')),ring('zone2',future?0:Math.floor((zone2s[date]??0)/60),plannedOf('zone2Min')),ring('intensity',future?0:({'2025-10-13':20,'2025-10-14':28,'2025-10-15':40,'2025-10-16':36})[date]??0,0)],
-  done:items.length>0&&items.every(p=>p.state==='done'),notRecorded:false,recordings:recs.map(r=>r.id),items:items.map(p=>p.intention.id),garmin:date==='2025-10-17'?1:0,sleepScore:future?null:({'2025-10-13':81,'2025-10-14':76,'2025-10-15':88,'2025-10-16':84})[date]}});
+  done:items.length>0&&items.every(p=>p.state==='done'),notRecorded:items.some(p=>p.state==='notRecorded'),planned:items.filter(p=>p.state==='planned').length,recordings:recs.map(r=>r.id),items:items.map(p=>p.intention.id),garmin:date==='2025-10-17'?1:0,sleepScore:future?null:({'2025-10-13':81,'2025-10-14':76,'2025-10-15':88,'2025-10-16':84})[date]}});
 const ledger=(kind,target,recorded,planned)=>({kind,target,original:null,revisedOn:null,recorded,planned,remaining:Math.max(0,target-recorded-planned),reached:recorded>=target,review:0,unavailable:null,observation:false});
 const boardLedger=[ledger('strength',4,3,1),ledger('zone2',150,100,40),ledger('intensity',150,124,0)];
 const board={today:'2025-10-16',start:'2025-10-13',end:'2025-10-19',goals:{from:'2025-10-06',targets:goalTargets,source:'setup',savedAt:'2025-10-06T08:00:00'},versions:[{from:'2025-10-06',targets:goalTargets,source:'setup',savedAt:'2025-10-06T08:00:00'}],garminIntensityGoal:150,
@@ -188,7 +188,10 @@ const progressTotals={activities:5,activeMin:Math.round(boardRecs.reduce((n,a)=>
 const progress={milestonesTotal:0,ringDays:[],today:'2025-10-16',period:'month',from:'2025-10-01',to:'2025-10-31',end:'2025-10-16',current:true,historyStart:'2025-09-01',totals:progressTotals,previous:null,previousFrom:null,previousTo:null,partial:false,
  buckets:Array.from({length:31},(_,i)=>{const date=`2025-10-${String(i+1).padStart(2,'0')}`,acts=boardRecs.filter(r=>r.date===date);return {from:date,to:date,minutes:acts.map(a=>({sport:a.sport,minutes:a.durationMin})),total:acts.reduce((n,a)=>n+a.durationMin,0),known:i<16,future:i>=16}}),
  calendar:Array.from({length:31},(_,i)=>{const date=`2025-10-${String(i+1).padStart(2,'0')}`,n=boardRecs.filter(r=>r.date===date).length;return {date,state:i>=16?'future':n?'active':'none',activities:n,covered:i<16}}),
- goalWeeks:[{start:board.start,rings:board.weekRings,counted:true,met:0,goals:3,reasons:[]}],
+ goalWeeks:[
+  {start:'2025-09-29',rings:board.weekRings.map(r=>({...r,fill:r.fill/2})),current:false,mark:'ill',counted:false,met:0,goals:3,reasons:['2 ill days']},
+  {start:'2025-10-06',rings:board.weekRings.map(r=>({...r,fill:1})),current:false,mark:null,counted:true,met:3,goals:3,reasons:['1 rest day']},
+  {start:board.start,rings:board.weekRings,current:true,mark:null,counted:false,met:0,goals:3,reasons:['Week still in progress']}],
  milestones:[{id:'longest:running',kind:'longest',title:'Longest run',value:'10.2 km',date:'2025-10-16',route:'workout/9000000000001',new:false,corrected:false}],sleep:{nights:14,belowHour:2}};
 // Training's lanes: Zone 2 and strength goals on, Thursday; eight counted weeks behind the band.
 training.lanes={start:'2025-10-13',today:'2025-10-16',lanes:[
@@ -202,7 +205,7 @@ training.lanes={start:'2025-10-13',today:'2025-10-16',lanes:[
  progress.milestonesTotal=progress.milestones.length;progress.ringDays=Array.from({length:35},(_,i)=>{const date=day(i),inWeek=boardDays.find(d=>d.date===date);if(inWeek)return inWeek;
   const future=date>'2025-10-16',lift=!future&&[1,3].includes(i%7)?1:0,z2=!future&&i%7===5?45:0,im=future?0:[0,30,25,10,40,0,55][i%7];
   return {date,today:false,future,mark:date==='2025-10-08'?'ill':date==='2025-10-09'?'ill':null,rings:[{kind:'strength',recorded:lift,planned:0,fill:fill(lift,0)},{kind:'zone2',recorded:z2,planned:0,fill:fill(z2,0)},{kind:'intensity',recorded:im,planned:0,fill:fill(im,0)}],
-   done:false,notRecorded:false,recordings:[],items:[],garmin:0,sleepScore:null}});
+   done:false,notRecorded:false,planned:0,recordings:[],items:[],garmin:0,sleepScore:null}});
  const weekStart=n=>{const d=new Date(Date.UTC(2025,6,28+7*n));return d.toISOString().slice(0,10)};
  const zones=[90,120,140,0,155,130,160,150,40,135,165,100],ims=[140,160,150,null,175,150,180,165,60,155,170,124],str=[3,4,3,2,4,4,3,4,1,4,4,3];
  const months=['2024-11','2024-12','2025-01','2025-02','2025-03','2025-04','2025-05','2025-06','2025-07','2025-08','2025-09','2025-10'];
