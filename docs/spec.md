@@ -223,8 +223,12 @@ Tonight:
   - **Strength**: this week's sessions against the goal and sets, the muscle
     map over a chosen range with gaps named (Rules: Muscle gaps), and a link
     to Strength.
-  - **Activities**: every recording with Garmin's primary benefit, training
-    effect and intensity minutes, filterable by sport.
+  - **Activities**: every stored recording with Garmin's primary benefit,
+    training effect and intensity minutes as one text line, filterable by
+    sport. The last 31 days open instantly; Show older pages back through
+    stored history (filtered by sport before the page limit) without a
+    Garmin request. Today's "All today's activities" opens this section
+    narrowed to that day; the old `#activities` link opens Training.
 - Latest recorded Garmin running lactate-threshold HR and pace, running threshold
   power, cycling FTP, heat acclimation and acclimated altitude in a compact
   Training card, each with its own recorded date. Missing, null or stale
@@ -794,7 +798,8 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   on, its share (a strength recording is that week's Nth strength session of
   the target; Zone 2 and Zone 4–5 add its own zone minutes), the week's
   recorded total, the plan item it completed, and any milestone awarded for
-  it. Garmin's estimates (VO₂ max, Fitness Age) are never credited to one
+  it. With no weekly goal on and nothing else to say, the card is left out
+  rather than implying a goal rejected the workout. Garmin's estimates (VO₂ max, Fitness Age) are never credited to one
   workout.
 - **Muscle gaps**: sets per muscle group over a range ending today (7D–1Y,
   or Max from the first stored session), each named active set counting once
@@ -805,7 +810,11 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   flagged as doubled); bodyweight, unweighted, rep-less and doubled sets are
   left out of both and their number is shown. No estimated one-rep max. Lift
   charts share one Max weight / Volume choice and the 7D–Max range picker,
-  each range ending today; points are sessions, not averages.
+  each range ending today; points are sessions, not averages, placed on a
+  date axis from the range's first day (the first session for Max) to
+  today, so breaks show as gaps. An exercise with no weighted set charts the
+  most reps in one counted bodyweight set each session instead, with no
+  Volume choice.
 - **Week lanes**: live Training only. One lane per cardio goal on (Zone 2,
   Zone 4–5, intensity), or recorded cardio minutes (every sport but strength
   and other) when none is, plus strength sessions when that goal is on or a
@@ -1138,7 +1147,8 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   Ungraded heart rate uses neutral ink, not a poor-status color.
 - **Trends**: one value per Garmin day, from the recent per-day rows and the
   history rows behind them. Readiness is the morning score; Body Battery the
-  day's high; acute load the day's last readiness snapshot; vitals use Health
+  day's high; acute load the day's Training Status (the value Training
+  shows), else the day's last readiness snapshot; vitals use Health
   Status where Garmin sent it, otherwise the nightly record, read from the
   same fields as the Sleep and Health screens (Sleep HR is Garmin's overnight
   average and never stands in for resting HR). Garmin's

@@ -42,7 +42,7 @@
  import WeekSummary from './lib/components/WeekSummary.svelte';
  import WeightCard from './lib/components/WeightCard.svelte';
  import type {WeightView} from './lib/generated/WeightView';
- let weightRange=$state<import('./lib/generated/TrendRange').TrendRange>('days30');
+ let weightRange=$state<TrendRange>('days30');
  import AddSessionSheet,{type Draft} from './lib/components/AddSessionSheet.svelte';
  import ItemSheet from './lib/components/ItemSheet.svelte';
  import EventSheet from './lib/components/EventSheet.svelte';
@@ -67,6 +67,7 @@
  import {importRowText,importSummary,importDone} from './lib/import';
  import type {StrengthView} from './lib/generated/StrengthView';
  import type {FigureChoice} from './lib/generated/FigureChoice';
+ import type {TrendRange} from './lib/generated/TrendRange';
  import WhySheet from './lib/components/WhySheet.svelte';
  import Reconcile from './lib/components/Reconcile.svelte';
  import {closeSheet} from './lib/sheet';
@@ -81,7 +82,7 @@
  let progressQuery:{period:import('./lib/generated/Period').Period,date?:string}={period:'month'};
  let progressRevision=0;
  type PageData=TodayView|SleepView|TrainingView|WorkoutView|HealthView|CheckinView|PlanBoard|StrengthPage|ProgressPage|WeightView|ProfileView;
- let sheet=$state(false),search=$state(false),addDraft=$state<Draft|null>(null),itemSheet=$state<PlanItem|null>(null),eventSheet=$state(false),reviewData=$state<WeekReview|null>(null),reviewRows=$state<ReviewRow[]|null>(null),milestoneRows=$state<Milestone[]|null>(null),garminChanges=$state<GarminChange[]|null>(null),garminChangesFailed=$state(false),lastPhase=$state<string|null>(null),adaptOpen=$state(false),invalidLink=$state<string|null>(null),trainingSection=$state<'fitness'|'strength'|'activities'>('fitness'),progressSection=$state<'overall'|'cardio'|'strength'|'long'>('overall'),adaptLimits=$state(false),chooseOpen=$state(false),garminSheet=$state<GarminSession|null>(null),adaptState=$state<AdaptState|null>(null),weekBoard=$state<PlanBoard|null>(null),statusOffer=$state(false),savingStatus=$state(false);
+ let sheet=$state(false),search=$state(false),addDraft=$state<Draft|null>(null),itemSheet=$state<PlanItem|null>(null),eventSheet=$state(false),reviewData=$state<WeekReview|null>(null),reviewRows=$state<ReviewRow[]|null>(null),milestoneRows=$state<Milestone[]|null>(null),garminChanges=$state<GarminChange[]|null>(null),garminChangesFailed=$state(false),lastPhase=$state<string|null>(null),adaptOpen=$state(false),invalidLink=$state<string|null>(null),trainingSection=$state<'fitness'|'strength'|'activities'>('fitness'),liftPicked=$state<string|null>(null),liftMetric=$state<'max'|'volume'>('max'),liftRange=$state<TrendRange>('days90'),muscleRange=$state<TrendRange>('days30'),activityDay=$state<string|null>(null),progressSection=$state<'overall'|'cardio'|'strength'|'long'>('overall'),adaptLimits=$state(false),chooseOpen=$state(false),garminSheet=$state<GarminSession|null>(null),adaptState=$state<AdaptState|null>(null),weekBoard=$state<PlanBoard|null>(null),statusOffer=$state(false),savingStatus=$state(false);
  let checkingStatusOffer=false,settingsRevision=0;
  let settingsBusy=$state<Partial<Record<keyof api.Settings,boolean>>>({});
  function canApplySettingsRead(revision:number){return revision===settingsRevision && !Object.values(settingsBusy).some(Boolean) && !savingStatus}
@@ -199,7 +200,7 @@
  // Every root header shows today's circumstances; they come with the live Today.
  function readAdapt(){void readView('today').then(v=>{adaptState=(v as TodayView).adapt??null}).catch(()=>{})}
  let activeTab=$derived([...trail].reverse().find(r=>(tabs as readonly string[]).includes(r))??'today');
- let parentLabel=$derived.by(()=>{const parent=trail.at(-2);if(!parent)return 'Today';if(parent.startsWith('workout/'))return 'Workout';if(parent.startsWith('help/'))return 'Help';return ({today:'Today',sleep:'Sleep',training:'Training',health:'Health',readiness:'Readiness',plan:'Plan',progress:'Progress',profile:'Profile',activities:'Activities','plan/commitments':'Goals',strength:'Strength',help:'Help',settings:'Settings'} as Record<string,string>)[parent]??'Back'});
+ let parentLabel=$derived.by(()=>{const parent=trail.at(-2);if(!parent)return 'Today';if(parent.startsWith('workout/'))return 'Workout';if(parent.startsWith('help/'))return 'Help';return ({today:'Today',sleep:'Sleep',training:'Training',health:'Health',readiness:'Readiness',plan:'Plan',progress:'Progress',profile:'Profile','plan/commitments':'Goals',strength:'Strength',help:'Help',settings:'Settings'} as Record<string,string>)[parent]??'Back'});
  // Keep Progress's selection with its cached page, not a component that is
  // destroyed on a detail visit. Older reads may not replace a newer selection.
  function saveProgress(progress:ProgressView){
@@ -226,7 +227,7 @@
    case 'plan':return api.plan_board();
    case 'progress':{const [progress,health]=await Promise.all([api.progress(progressQuery.period,progressQuery.date),api.health()]);return {progress,health}}
    case 'profile':return api.profile();
-   case 'gear':case 'activities':return api.training();
+   case 'gear':return api.training();
    case 'metric':return api[metricSource(id)]();
    default:return api.today();
   }
@@ -313,6 +314,8 @@
    const changed=next[next.length-1]!==route;
    if(changed){scrollPositions.set(route,scroll?.scrollTop??0);pendingSwap=null;selectedFactor='';checkinIndex=0;sheet=false;search=false;chooseOpen=false;garminSheet=null;quickHelp.topic=null;addDraft=null;itemSheet=null;eventSheet=false;reviewData=null;journalOpen=false;journalDayOpen=null}
    trail=next;route=next[next.length-1];
+   // Today's one-day activity list holds into a workout and back, not elsewhere.
+   if(route!=='training' && !route.startsWith('workout/'))activityDay=null;
    const available=changed?cached(route):null;
    if(changed){
     data=available;
@@ -405,7 +408,7 @@
   if(session && workoutData?.summary.id===id)data={...workoutData,strength:session};
   return session;
  }
- let todayData=$derived(route==='today'||route==='readiness'?data as TodayView|null:null),sleepData=$derived(route.startsWith('sleep')?data as SleepView|null:null),trainingData=$derived(route==='training'?data as TrainingView|null:null),workoutData=$derived(route.startsWith('workout/')?data as WorkoutView|null:null),strengthData=$derived(route==='strength'?data as StrengthPage|null:null),healthData=$derived(route==='health'?data as HealthView|null:null),checkinData=$derived(route.startsWith('review/')?data as CheckinView|null:null),boardData=$derived(route==='plan'||route==='plan/commitments'?data as PlanBoard|null:null),progressData=$derived(route==='progress'?data as ProgressPage|null:null),profileData=$derived(route==='gear'||route==='activities'?data as TrainingView|null:null),profilePage=$derived(route==='profile'?data as ProfileView|null:null);
+ let todayData=$derived(route==='today'||route==='readiness'?data as TodayView|null:null),sleepData=$derived(route.startsWith('sleep')?data as SleepView|null:null),trainingData=$derived(route==='training'?data as TrainingView|null:null),workoutData=$derived(route.startsWith('workout/')?data as WorkoutView|null:null),strengthData=$derived(route==='strength'?data as StrengthPage|null:null),healthData=$derived(route==='health'?data as HealthView|null:null),checkinData=$derived(route.startsWith('review/')?data as CheckinView|null:null),boardData=$derived(route==='plan'||route==='plan/commitments'?data as PlanBoard|null:null),progressData=$derived(route==='progress'?data as ProgressPage|null:null),profileData=$derived(route==='gear'?data as TrainingView|null:null),profilePage=$derived(route==='profile'?data as ProfileView|null:null);
  let shownActivities=$derived((todayData?.activities??[]).filter(a=>a.id!==todayData?.lead?.activity));
  let todayNaps=$derived((todayData?.day?.events??[]).filter(e=>e.kind==='nap'));
  // Pages between the area cards and the closing summary, in order.
@@ -456,7 +459,7 @@
   {:else if card==='sleepPlan' && todayData.sleepPlan}<SleepPlanCard plan={todayData.sleepPlan} {now} lead={i===0} mode={todayData.focus.planOpen?(({evening:'evening',windDown:'windDown',lateNight:'lateNight'} as const)[todayData.focus.phase as 'evening']??'full'):'line'} open={()=>navigate('sleep/tonight')}/>
   {:else if card==='vitals' && todayData.vitals.readings.length}<VitalsMonitor vitals={todayData.vitals} compact open={(kind)=>navigate('metric/'+kind)}/>{/if}
  {/each}
- {#if shownActivities.length || todayNaps.length}<Card title="Recorded today">{#each shownActivities.slice(0,2) as a}<ActivityRow activity={a} open={()=>navigate('workout/'+a.id)}/>{#if a.aerobicTe!=null || a.benefit}<div class="tags">{#if a.aerobicTe!=null}<span class="pill">Aerobic {a.aerobicTe} · {a.aerobicLabel}</span>{/if}{#if a.benefit}<span class="pill">{a.benefit}</span>{/if}</div>{/if}{/each}{#each todayNaps as n}<button class="activity" onclick={()=>navigate('sleep')}><span class="act-ico"><Icon name="moon" size={24}/></span><span class="act-main"><b>Nap</b><small>{n.startMin!=null?minuteClock(n.startMin):'Start not recorded'}{n.endMin!=null?`–${minuteClock(n.endMin)}`:''}{n.durationMin!=null?` · ${Math.round(n.durationMin)} min`:''}</small><small>{n.bodyBatteryChange!=null?`Body Battery ${n.bodyBatteryChange>=0?'+':''}${n.bodyBatteryChange} · `:''}separate from last night</small></span></button>{/each}{#if todayData.activities.length>2}<button class="link-row" onclick={()=>navigate('activities')}>All today’s activities ({todayData.activities.length})<Icon name="chevron" size={15}/></button>{/if}</Card>{/if}
+ {#if shownActivities.length || todayNaps.length}<Card title="Recorded today">{#each shownActivities.slice(0,2) as a}<ActivityRow activity={a} open={()=>navigate('workout/'+a.id)}/>{#if a.aerobicTe!=null || a.benefit}<div class="tags">{#if a.aerobicTe!=null}<span class="pill">Aerobic {a.aerobicTe} · {a.aerobicLabel}</span>{/if}{#if a.benefit}<span class="pill">{a.benefit}</span>{/if}</div>{/if}{/each}{#each todayNaps as n}<button class="activity" onclick={()=>navigate('sleep')}><span class="act-ico"><Icon name="moon" size={24}/></span><span class="act-main"><b>Nap</b><small>{n.startMin!=null?minuteClock(n.startMin):'Start not recorded'}{n.endMin!=null?`–${minuteClock(n.endMin)}`:''}{n.durationMin!=null?` · ${Math.round(n.durationMin)} min`:''}</small><small>{n.bodyBatteryChange!=null?`Body Battery ${n.bodyBatteryChange>=0?'+':''}${n.bodyBatteryChange} · `:''}separate from last night</small></span></button>{/each}{#if todayData.activities.length>2}<button class="link-row" onclick={()=>{trainingSection='activities';activityDay=todayData.date;navigate('training')}}>All today’s activities ({todayData.activities.length})<Icon name="chevron" size={15}/></button>{/if}</Card>{/if}
  {#if weekBoard && !['windDown','lateNight'].includes(todayData.focus.phase)}<Card title="This week" onclick={()=>navigate('plan')} extra="week-card"><div class="wk2"><div>{#if weekBoard.ledger.length}<WeekSummary board={weekBoard} compact onGoals={()=>navigate('plan/commitments')}/>{:else}<p class="small">Recorded activities show here. Weekly goals are optional.</p>{/if}</div>{#if weekBoard.backlogPaused || weekBoard.backlog.length}<div class="left-week" role="group" aria-label="Left this week"><h3>Left this week</h3>{#if weekBoard.backlogPaused}<p class="small">Paused · nothing to catch up.</p>{:else}{#each weekBoard.backlog as b}<div class="left-item" style:--c={GOALS[b.kind].color}><span><i></i>{b.kind==='strength'?'Strength session':`${amount(b.kind,b.amount)} ${GOALS[b.kind].name}`}</span>{#if b.kind!=='sleepTiming'}<button class="small-edit" onclick={(e)=>{e.stopPropagation();addDraft=backlogDraft(b,weekBoard!.today)}}>Do it today</button>{/if}</div>{/each}{/if}</div>{/if}</div><div class="week-cells"><DayCells days={weekBoard.days} select={()=>navigate('plan')} size={30}/></div></Card>{/if}
  {#if !todayData.day && todayData.bodyBattery.now!=null}<div class="row">{#if !todayData.day && todayData.bodyBattery.now!=null}<Card title="Body Battery" onclick={()=>navigate('metric/bodyBattery')}><div class="bb"><div class="battery"><i style:height={Math.max(0,Math.min(100,todayData.bodyBattery.now))+'%'} style:background={batteryColor(todayData.bodyBattery.now)}></i></div><div><div class="big n" style:color={batteryColor(todayData.bodyBattery.now)}>{num(todayData.bodyBattery.now)}</div>{#if todayData.bodyBattery.charged!=null}<div class="small"><b>+{num(todayData.bodyBattery.charged)}</b> charged today</div>{/if}</div></div></Card>{/if}</div>{/if}
  {#if !todayData.day && (todayData.stress.average!=null || todayData.stress.timeline.length)}{@const stress=todayData.stress}<Card title="Stress" onclick={()=>navigate('metric/stress')}>{#snippet aside()}{#if stress.qualifier}<span class="pill" style:color={toneColor(stress.tone)}>{stress.qualifier}</span>{/if}{/snippet}<div class="stress-summary"><div><div class="big n" style:color={stress.level?stressColors[stress.level]:undefined}>{num(stress.average)}</div><div class="small">{stress.level?stressNames[stress.level]+' · ':''}average</div></div>{#if stress.timeline.length}<StressTimeline {stress} compact/>{/if}</div></Card>{/if}
@@ -467,11 +470,11 @@
 {:else if sleepData}
  {#snippet sleepHeader()}<Header title="Sleep" eyebrow={sleepData.startLocal?`${clock(sleepData.startLocal)} – ${clock(sleepData.endLocal)}`:dateLabel(sleepData.date)} {...rootControls}/>{/snippet}{#snippet tonightTab()}<SleepTonight sleep={sleepData} board={weekBoard} {act} {navigate} {now} reminder={settings.notifyBedtime} setReminder={on=>void patchSettings({notifyBedtime:on})}/>{/snippet}<SleepDetail {sleepData} header={sleepHeader} tab={route==='sleep/tonight'||(route==='sleep'&&sleepData.tonightFirst)?'tonight':'last'} setTab={t=>navigate('sleep/'+(t==='last'?'last':'tonight'))} tonight={tonightTab}/>
 {:else if trainingData}
- {#snippet trainingHeader()}<Header title="Training" eyebrow="Last 7 days" {...rootControls}/>{/snippet}<TrainingTab {trainingData} header={trainingHeader} {navigate} bind:section={trainingSection} muscles={api.muscles}/>
+ {#snippet trainingHeader()}<Header title="Training" eyebrow={dateLabel(trainingData.lanes?.today ?? trainingData.week.at(-1)?.date ?? '')} {...rootControls}/>{/snippet}<TrainingTab {trainingData} header={trainingHeader} {navigate} bind:section={trainingSection} bind:muscleRange bind:day={activityDay} muscles={api.muscles} activityPage={api.activity_page}/>
 {:else if workoutData}
  {@const sets=workoutData.strength}<Header title={workoutData.summary.name} eyebrow={(sets?'Strength · ':'')+dateLabel(workoutData.summary.startLocal.slice(0,10))+' · '+clock(workoutData.summary.startLocal)} back={back} backLabel={parentLabel} onHelp={sets?()=>sheet=true:undefined}/><WorkoutDetail {workoutData} {navigate} help={()=>sheet=true} refresh={refreshStrength}/>
 {:else if strengthData}
- <Header title="Strength" eyebrow="Lifts and muscles" back={back} backLabel={parentLabel} onHelp={()=>navigate('help')}/>{#if strengthData.strengthPage}<StrengthHistory view={strengthData.strengthPage} {navigate} liftSeries={api.lift_series} muscles={api.muscles} figureChoice={settings.bodyFigure} setFigure={saveFigure}/>{:else}<Card title="No sets yet"><p class="small untracked">Start a Strength activity on your watch and press lap after each set. Your sets appear here after Garmin Connect syncs.</p><button class="watch-open" onclick={()=>navigate('help/strength-start')}>Lift with your watch <Icon name="arrow-right" size={16}/></button></Card>{/if}
+ <Header title="Strength" eyebrow="Lifts and muscles" back={back} backLabel={parentLabel} onHelp={()=>navigate('help')}/>{#if strengthData.strengthPage}<StrengthHistory view={strengthData.strengthPage} {navigate} liftSeries={api.lift_series} muscles={api.muscles} figureChoice={settings.bodyFigure} setFigure={saveFigure} bind:picked={liftPicked} bind:metric={liftMetric} bind:range={liftRange} bind:muscleRange/>{:else}<Card title="No sets yet"><p class="small untracked">Start a Strength activity on your watch and press lap after each set. Your sets appear here after Garmin Connect syncs.</p><button class="watch-open" onclick={()=>navigate('help/strength-start')}>Lift with your watch <Icon name="arrow-right" size={16}/></button></Card>{/if}
 {:else if healthData}
  <Header title="Health" eyebrow={dateLabel(healthData.date)} {...rootControls}/><HealthDetail {healthData} {navigate} {toggleJournal} journalBusy={settingsBusy.journalEnabled} bind:journalOpen bind:journalDayOpen>{#snippet weightContent()}<WeightCard bind:range={weightRange} {navigate}/>{/snippet}</HealthDetail>
 {:else if boardData && route==='plan'}
@@ -484,8 +487,6 @@
  {#snippet profileHeader()}<Header title="Profile" eyebrow="RARING" back={back} backLabel={parentLabel}/>{/snippet}<ProfileScreen {status} profile={profilePage} {navigate} limits={()=>{adaptLimits=true;adaptOpen=true}} header={profileHeader}/>
 {:else if profileData && route==='gear'}
  <Header title="Gear" eyebrow="Garmin" back={back} backLabel={parentLabel}/>{#if profileData.gear}<GearCard gear={profileData.gear}/>{:else}<p class="small">No gear list from Garmin yet.</p>{/if}
-{:else if profileData && route==='activities'}
- <Header title="Activities" eyebrow="Recorded" back={back} backLabel={parentLabel}/><Card title="Recent activities">{#each profileData.workouts as a}<ActivityRow activity={a} open={()=>navigate('workout/'+a.id)}/>{:else}<p class="small">No recorded activities yet.</p>{/each}</Card>
 {:else if route==='health/weight'}
  <Header title="Weight" eyebrow="Garmin weigh-ins · Raring trend" back={back} backLabel={parentLabel}/><WeightCard initial={data as WeightView} bind:range={weightRange}/>
 {:else if route.startsWith('metric/')}

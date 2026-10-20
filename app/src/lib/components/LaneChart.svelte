@@ -1,10 +1,11 @@
 <script lang="ts">
  import type {WeekLane} from '../generated/WeekLane';
  import {GOALS} from '../goals';
+ import {weekLetters} from '../format';
  // One kind of training through the week: the cumulative line so far, the
  // goal as a dashed line, and the usual week as a band (middle half) with its
  // median. All values come from the core.
- let {lane: core, today}: {lane: WeekLane, today: number} = $props();
+ let {lane: core, today, start}: {lane: WeekLane, today: number, start: string} = $props();
  const INFO = {cardio: {name: 'Cardio', unit: 'min', color: '#36C9C6'}, zone2: {name: GOALS.zone2.name, unit: 'min', color: GOALS.zone2.color},
   highIntensity: {name: GOALS.highIntensity.name, unit: 'min', color: GOALS.highIntensity.color}, intensity: {name: GOALS.intensity.name, unit: 'min', color: GOALS.intensity.color},
   strength: {name: 'Strength', unit: 'sessions', color: GOALS.strength.color}} as const;
@@ -25,14 +26,14 @@
 <div class="lane" bind:clientWidth={w}>
  <div class="lh"><b style:color={lane.color}>{lane.name}</b><span><b class="n">{now != null ? fmt(now) : '—'}</b>{lane.goal ? ` of ${lane.goal}` : ''} {lane.unit}{usualNow != null ? ` · usual by now ${usualNow}` : ''}</span></div>
  {#if unknown}<p class="unk">Awaiting data: an activity has no Garmin zones or a day hasn't synced.</p>{/if}
- <svg width={w} height={H} role="img" aria-label={`${lane.name}: ${now ?? 0} ${lane.unit} so far${lane.goal ? ` of a ${lane.goal} goal` : ''}${usualNow != null ? `; usual week by now ${usualNow}` : ''}`}>
+ <svg width={w} height={H} role="img" aria-label={`${lane.name}: ${now != null ? `${fmt(now)} ${lane.unit}` : 'unknown'} so far${lane.goal ? ` of a ${lane.goal} goal` : ''}${usualNow != null ? `; usual week by now ${usualNow}` : ''}`}>
   {#if band}<path d={band} fill={lane.color} opacity=".13"/><path d={mid} fill="none" stroke={lane.color} stroke-opacity=".5" stroke-dasharray="1.5 3"/>{/if}
   {#if lane.goal}<line x1={L} x2={w - R} y1={y(lane.goal)} y2={y(lane.goal)} stroke="#E4E8F0" stroke-dasharray="4 3"/><text class="gl" x={w - R + 4} y={y(lane.goal) + 3}>goal {lane.goal}</text>{/if}
   <path d={line} fill="none" stroke={lane.color} stroke-width="2.4" stroke-linejoin="round"/>
   {#each lane.cum as v, i}{#if v != null}<circle cx={x(i)} cy={y(v)} r={i === today ? 4 : 2.5} fill={lane.color}/>{/if}{/each}
   {#if now != null}<text class="vl" x={x(today)} y={y(now) - 7} text-anchor="middle">{fmt(now)}</text>{/if}
   <text class="yt" x={L - 4} y={y(0) + 3} text-anchor="end">0</text><text class="yt" x={L - 4} y={y(max / 1.08) + 3} text-anchor="end">{fmt(max / 1.08)}</text>
-  {#each ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as d, i}<text class="xt" x={x(i)} y={H - 4} text-anchor="middle" class:on={i === today}>{d}</text>{/each}
+  {#each weekLetters(start) as d, i}<text class="xt" x={x(i)} y={H - 4} text-anchor="middle" class:on={i === today}>{d}</text>{/each}
  </svg>
 </div>
 <style>

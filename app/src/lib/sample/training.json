@@ -51,7 +51,7 @@
       }
     ]
   },
-  "headline": "Room to build",
+  "headline": "In your optimal range",
   "chips": [
     {
       "icon": "flame",
@@ -230,29 +230,6 @@
       "intensityMin": 62
     },
     {
-      "id": "9000000000002",
-      "icon": "strength",
-      "name": "Lower A",
-      "startLocal": "2025-10-15T17:12:00",
-      "durationS": 2882,
-      "distanceKm": null,
-      "load": 74,
-      "zoneSeconds": [
-        840,
-        1320,
-        540,
-        180,
-        2
-      ],
-      "aerobicTe": null,
-      "aerobicLabel": null,
-      "anaerobicTe": null,
-      "anaerobicLabel": null,
-      "benefit": null,
-      "avgHr": 118,
-      "intensityMin": 24
-    },
-    {
       "id": "9000000000003",
       "icon": "bike",
       "name": "Evening Ride",
@@ -274,6 +251,29 @@
       "benefit": "Base",
       "avgHr": 138,
       "intensityMin": 96
+    },
+    {
+      "id": "9000000000002",
+      "icon": "strength",
+      "name": "Lower A",
+      "startLocal": "2025-10-15T17:12:00",
+      "durationS": 2882,
+      "distanceKm": null,
+      "load": 74,
+      "zoneSeconds": [
+        840,
+        1320,
+        540,
+        180,
+        2
+      ],
+      "aerobicTe": null,
+      "aerobicLabel": null,
+      "anaerobicTe": null,
+      "anaerobicLabel": null,
+      "benefit": null,
+      "avgHr": 118,
+      "intensityMin": 24
     }
   ],
   "planned": {
@@ -382,8 +382,8 @@
         "cumulative": [
           0,
           30,
-          30,
-          30,
+          82,
+          100,
           null,
           null,
           null

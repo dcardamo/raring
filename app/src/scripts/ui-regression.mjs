@@ -378,7 +378,16 @@ try {
  await page.goto(`${url}/#training`);await waitRoute('training');
  await page.getByRole('tab',{name:'Strength'}).click();
  await page.getByRole('button',{name:/^Strength this week/}).click();await waitRoute('strength');
- await page.getByText('Heaviest set each session',{exact:true}).waitFor();
+ await page.getByText('Latest heaviest set',{exact:true}).waitFor();
+ // B5: the lift chart's x axis is dates from the range start to today, with the year on the first month.
+ {
+  const trend=page.locator('svg.trend.narrow');
+  await trend.waitFor();
+  const labels=await trend.locator('text.axis:not(.n)').allTextContents();
+  assert.match(labels[0],/^[A-Z][a-z]+ 2025$/,'the first month carries its year: '+labels);
+  const xs=await trend.locator('circle').evaluateAll(cs=>cs.map(c=>+c.getAttribute('cx')));
+  assert.ok(xs.length>=2 && xs.at(-1)>xs[0]);
+ }
  const strengthSample=JSON.parse(await readFile(resolve('src/lib/sample/strength.json'),'utf8'));
  const historyWorkouts=JSON.parse(await readFile(resolve('src/lib/sample/strengthWorkoutHistory.json'),'utf8'));
  const assertStrengthWorkout=async(id,date)=>{
@@ -425,6 +434,11 @@ try {
  await page.getByRole('button',{name:'Bicycle Crunch',exact:true}).click();
  await page.locator('.card h3',{hasText:'Most reps in a set'}).waitFor();
  assert.equal(await page.locator('.rec .n').first().textContent(),'26','bodyweight bests are labelled as reps');
+ // M4: a bodyweight exercise charts its most reps, with no dead Max weight / Volume switch.
+ assert.equal(await page.getByRole('group',{name:'Lift measure'}).count(),0,'no weight measure without weighted sets');
+ await page.getByText('Most reps in one set each session',{exact:true}).waitFor();
+ await page.locator('svg.trend.narrow[aria-label^="Most reps each session"]').waitFor();
+ await page.getByRole('group',{name:'Lift range'}).getByRole('button',{name:'All history'}).click();
  const muscleRange=page.getByRole('group',{name:'Muscle range'});
  await muscleRange.getByRole('button',{name:'7 days'}).click();
  assert.equal(await muscleRange.getByRole('button',{name:'7 days'}).getAttribute('aria-pressed'),'true');
@@ -434,11 +448,17 @@ try {
  assert.equal(await figureChoice.getByRole('button',{name:'Male',exact:true}).getAttribute('aria-pressed'),'true','the Strength picker overrides the profile');
  await page.getByRole('button',{name:/^Wed 15 Oct/}).click();await waitRoute('workout/9000000000111');
  await back('strength');
+ // B4: Back keeps the chosen exercise, lift range and muscle range; Training shares the muscle range.
+ assert.equal(await page.getByRole('group',{name:'Exercise'}).getByRole('button',{name:'Bicycle Crunch',exact:true}).getAttribute('aria-pressed'),'true');
+ assert.equal(await page.getByRole('group',{name:'Lift range'}).getByRole('button',{name:'All history'}).getAttribute('aria-pressed'),'true');
+ assert.equal(await page.getByRole('group',{name:'Muscle range'}).getByRole('button',{name:'7 days'}).getAttribute('aria-pressed'),'true');
  await page.getByRole('button',{name:'Help',exact:true}).click();await waitRoute('help');
  await page.getByRole('button',{name:'How sets are counted'}).click();await waitRoute('help/strength-sets');
  await page.getByText(/1\.8 times/).waitFor();
  await page.getByText(/After that, tap Refresh from Garmin on the workout/).waitFor();
  await back('help');await back('strength');await back('training');
+ assert.equal(await page.locator('.q-muscles').getByRole('group',{name:'Muscle range'}).getByRole('button',{name:'7 days'}).getAttribute('aria-pressed'),'true','one muscle range for Training and Strength');
+ await page.locator('.q-muscles').getByRole('group',{name:'Muscle range'}).getByRole('button',{name:'30 days'}).click();
  await page.getByRole('tab',{name:'Activities'}).click();
  await page.getByRole('button',{name:/^Lower A/}).click();await waitRoute('workout/9000000000002');
  await page.getByText('3 things look off',{exact:true}).waitFor();
@@ -730,12 +750,23 @@ try {
   const many=await browser.newPage({viewport:{width:390,height:844}});
   const extra=[1,2,3].map(i=>({...sample.activities[0],id:`900000000010${i}`,name:`Walk ${i}`}));
   await many.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify({...sample,activities:[...sample.activities,...extra]})}`}));
+  const manyTraining=JSON.parse(await readFile(resolve('src/lib/sample/training.json'),'utf8'));
+  manyTraining.workouts=[...extra,...manyTraining.workouts];
+  await many.route(u=>u.pathname==='/src/lib/sample/training.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(manyTraining)}`}));
   await many.goto(`${url}/#today`);
   const recordedMany=many.locator('.card').filter({hasText:'Recorded today'});
   await recordedMany.waitFor();
   assert.equal(await recordedMany.locator('.activity').count(),3,'two activities and the nap');
+  // B6: the link opens Training's Activities for today only, not a month-long second list.
   await recordedMany.getByRole('button',{name:/^All today’s activities \(4\)/}).click();
-  await many.waitForURL('**/#activities');
+  await many.waitForURL('**/#training');
+  assert.equal(await many.getByRole('tab',{name:'Activities'}).getAttribute('aria-selected'),'true');
+  const todayOnly=many.locator('.q-activities');
+  assert.equal(await todayOnly.locator('.activity').count(),4,'today’s four recordings');
+  await todayOnly.getByRole('button',{name:/^Only Thu 16 Oct/}).click();
+  assert.ok(await todayOnly.locator('.activity').count()>4,'clearing the day shows every recent recording');
+  await many.goto(`${url}/#activities`);
+  await many.waitForURL('**/#training');
   await many.close();
   const shifted=await browser.newPage({viewport:{width:390,height:844}});
   const dst={...sample,day:{...sample.day,clockChange:true,bodyBattery:[],stress:[],heartRate:[]}};
@@ -779,13 +810,35 @@ try {
   const card=tp.locator('.week-lanes');
   await card.waitFor();
   const zone=card.getByRole('img',{name:/^Zone 2:/});
-  assert.equal(await zone.getAttribute('aria-label'),'Zone 2: 30 min so far of a 150 goal; usual week by now 65');
+  assert.equal(await zone.getAttribute('aria-label'),'Zone 2: 100 min so far of a 150 goal; usual week by now 65');
   assert.equal(await card.getByRole('img',{name:/^Strength: 2 sessions so far of a 4 goal/}).count(),1);
   assert.ok((await card.textContent()).includes('middle half of 8 recent complete weeks'));
   assert.equal(await card.locator('svg path[opacity=".13"]').count(),2,'a usual-week band per lane');
+  assert.equal((await zone.locator('text.xt').allTextContents()).join(''),'MTWTFSS');
   for(const width of [320,700]){await tp.setViewportSize({width,height:900});assert.equal(await tp.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`lanes fit ${width}px`)}
   assert.deepEqual(await contrastFailures(tp),[],'Lanes contrast');
+  // B2: a Sunday-start week labels its days from Sunday, and today (Thursday) is still the bold letter.
+  // B8: an unknown lane day is announced as unknown, never as zero.
   await tp.close();
+  const sunTraining=JSON.parse(await readFile(resolve('src/lib/sample/training.json'),'utf8'));
+  sunTraining.lanes.start='2025-10-12';
+  for(const l of sunTraining.lanes.lanes){l.cumulative=[0,...l.cumulative.slice(0,6)];if(l.usual)for(const k of ['low','median','high'])l.usual[k]=[0,...l.usual[k].slice(0,6)]}
+  sunTraining.lanes.lanes.find(l=>l.kind==='strength').cumulative[4]=null;
+  const sun=await browser.newPage({viewport:{width:390,height:844}});
+  sun.on('pageerror',e=>errors.push(e.message));
+  await sun.route(u=>u.pathname==='/src/lib/sample/training.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(sunTraining)}`}));
+  await sun.goto(`${url}/#training`);
+  const sunCard=sun.locator('.week-lanes');
+  await sunCard.getByRole('img',{name:/^Strength: unknown so far/}).waitFor();
+  const sunZone=sunCard.getByRole('img',{name:/^Zone 2:/});
+  assert.equal((await sunZone.locator('text.xt').allTextContents()).join(''),'SMTWTFS');
+  assert.equal(await sunZone.locator('text.xt').nth(4).evaluate(t=>t.classList.contains('on')),true,'Thursday is the fifth day of a Sunday week');
+  await sun.getByRole('tab',{name:'Strength'}).click();
+  const sw=sun.locator('.q-strength');
+  await sw.waitFor();
+  assert.equal(await sw.locator('.big').first().evaluate(b=>b.firstChild.textContent),'—','an unknown strength lane is not counted as zero');
+  assert.ok((await sw.textContent()).includes('awaiting data'));
+  await sun.close();
  }
  console.log('Training week lanes: goal, usual-week band and labels: passed');
  // Training sections: Fitness's three questions, Strength's muscles with gaps, Activities in Garmin's words.
@@ -809,6 +862,17 @@ try {
   const acts=ts.locator('.q-activities');
   assert.ok((await acts.textContent()).includes('Aerobic 3.8 · Improving'),'Garmin’s training effect label');
   assert.ok((await acts.textContent()).includes('Primary benefit · Tempo'));
+  assert.equal(await acts.locator('.pill').count(),0,'training effect is a text line, not button-like pills');
+  // B6: older stored recordings page in after the 31 days, filtered by sport first.
+  const recent=await acts.locator('.activity').count();
+  await acts.getByRole('button',{name:'Show older'}).click();
+  await ts.waitForFunction(n=>document.querySelectorAll('.q-activities .activity').length>n,recent);
+  await acts.getByRole('group',{name:'Filter by sport'}).getByRole('button',{name:'Strength'}).click();
+  await acts.getByRole('button',{name:'Show older'}).click();
+  await ts.waitForFunction(()=>/That’s every stored activity/.test(document.querySelector('.q-activities').textContent));
+  const strengthIds=await acts.locator('.activity').count();
+  assert.ok(strengthIds>=11,'every stored strength workout: '+strengthIds);
+  await acts.getByRole('group',{name:'Filter by sport'}).getByRole('button',{name:'All'}).click();
   // The chosen section holds across a detail and Back.
   await acts.locator('.activity').first().click();await ts.waitForURL(/#workout\//);
   await ts.goBack();await ts.waitForURL(/#training$/);
@@ -980,7 +1044,8 @@ try {
   await vol.waitFor();
   assert.notEqual(await vol.getAttribute('aria-label'),before.replace('Heaviest set','Volume'),'volume plots different values');
   assert.ok((await lp.locator('.strength-history').textContent()).includes('weight × reps over weighted sets'));
-  assert.ok((await lp.locator('.strength-history').textContent()).includes('No estimated one-rep max'));
+  assert.ok(!(await lp.locator('.strength-history').textContent()).includes('No estimated one-rep max'),'no disclaimer line');
+  assert.equal(await lp.getByText('Latest heaviest set',{exact:true}).count(),0,'the heaviest-set headline belongs to Max weight');
   const picker=lp.getByRole('group',{name:'Lift range'});
   for(const label of ['7D','14D','30D','90D','1Y','Max'])assert.equal(await picker.getByRole('button',{name:new RegExp(label==='Max'?'All history':label.replace('D',' days').replace('1Y','1 year'))}).count(),1,`${label} offered`);
   await picker.getByRole('button',{name:'7 days'}).click();
@@ -1009,6 +1074,18 @@ try {
   const hic=await wp.getByRole('region',{name:'How it counted'}).textContent();
   assert.ok(hic.includes('18 min Zone 2') && hic.includes('100 of 150 this week') && hic.includes('Best in available history'),'U15: '+hic);
   assert.ok(!/Fitness Age will|younger/.test(hic));
+  // B9: with no weekly goals on and nothing else to say, the card is left out.
+  {
+   const noGoals=JSON.parse(await readFile(resolve('src/lib/sample/workout.json'),'utf8'));
+   noGoals.counted={week:'2025-10-13',goals:false,lines:[],planItem:null,bests:[]};
+   const ng=await browser.newPage({viewport:{width:390,height:844}});
+   await ng.route(u=>u.pathname==='/src/lib/sample/workout.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(noGoals)}`}));
+   await ng.goto(`${url}/#workout/9000000000001`);
+   await ng.locator('h1').waitFor();
+   await ng.getByRole('region',{name:'What it did'}).waitFor();
+   assert.equal(await ng.getByRole('region',{name:'How it counted'}).count(),0,'no goals, no How it counted');
+   await ng.close();
+  }
   for(const width of [320,700]){await wp.setViewportSize({width,height:900});assert.equal(await wp.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`workout fits ${width}px`)}
   assert.deepEqual(await contrastFailures(wp),[],'Workout detail contrast');
   await wp.goto(`${url}/#workout/9000000000002`);

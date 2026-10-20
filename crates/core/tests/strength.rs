@@ -634,7 +634,8 @@ fn lift_series_takes_max_and_volume_from_counted_sets_only() {
     session(&store, "12", "2025-03-10T18:00:00.0", vec![
         set("SQUAT", Some("BARBELL_BACK_SQUAT"), Some(5), 105_000.), set("SQUAT", Some("BARBELL_BACK_SQUAT"), Some(3), 110_000.),
         set("SQUAT", Some("BARBELL_BACK_SQUAT"), Some(10), 0.), set("SQUAT", Some("BARBELL_BACK_SQUAT"), Some(0), 60_000.),
-        set("BENCH_PRESS", Some("BARBELL_BENCH_PRESS"), Some(5), 70_000.)]);
+        set("BENCH_PRESS", Some("BARBELL_BENCH_PRESS"), Some(5), 70_000.),
+        set("PULL_UP", Some("PULL_UP"), Some(8), 0.), set("PULL_UP", Some("PULL_UP"), Some(10), 0.)]);
     let today = chrono::NaiveDate::from_ymd_opt(2025, 3, 13).unwrap();
     let key = "SQUAT/BARBELL_BACK_SQUAT";
     let all = strength::lift_series(&store, key, TrendRange::All, today).unwrap();
@@ -642,8 +643,15 @@ fn lift_series_takes_max_and_volume_from_counted_sets_only() {
     let rows: Vec<_> = all.points.iter().map(|p| (p.date.as_str(), p.max, p.volume, p.excluded)).collect();
     assert_eq!(rows, vec![("2025-03-01", Some(100.), Some(1000.), 0), ("2025-03-10", Some(110.), Some(855.), 2)],
         "bodyweight and zero-rep sets are left out of both and counted");
+    assert_eq!((all.from.as_str(), all.to.as_str()), ("2025-03-01", "2025-03-13"), "Max spans the first session to today");
+    assert_eq!(all.points.iter().map(|p| p.most_reps).collect::<Vec<_>>(), [None, None],
+        "the 10-rep bodyweight squat is flagged as doubled");
+    let pull = strength::lift_series(&store, "PULL_UP/PULL_UP", TrendRange::All, today).unwrap();
+    let rows: Vec<_> = pull.points.iter().map(|p| (p.max, p.most_reps)).collect();
+    assert_eq!(rows, vec![(None, Some(10))], "bodyweight exercises chart their most reps");
     let week = strength::lift_series(&store, key, TrendRange::Days7, today).unwrap();
     assert_eq!(week.points.len(), 1, "7 days ends today");
+    assert_eq!((week.from.as_str(), week.to.as_str()), ("2025-03-07", "2025-03-13"), "the axis covers the whole range");
     assert!(strength::lift_series(&store, "SQUAT/NOT_DONE", TrendRange::All, today).is_none());
     assert!(strength::lift_series(&store, key, TrendRange::Custom, today).is_none());
 }

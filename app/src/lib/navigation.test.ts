@@ -5,7 +5,7 @@ describe('routes', () => {
   it('accepts known routes and rejects invalid or malformed fragments', () => {
     expect(tabs).toEqual(['today', 'plan', 'training', 'health', 'progress']);
     for (const route of [...tabs, 'sleep', 'readiness', 'settings', 'onboarding', 'strength', 'help', 'help/strength-sets',
-      'activities', 'profile', 'gear', 'plan/commitments', 'review/latest', 'reviews', 'review/2025-10-13',
+      'profile', 'gear', 'plan/commitments', 'review/latest', 'reviews', 'review/2025-10-13',
       'workout/123_abc-2', ...['bodyBattery', 'stress', 'restingHr', 'hrv', 'respiration', 'spo2',
         'skinTemp', 'vo2max', 'endurance', 'hill', 'runningTolerance'].map(id => `metric/${id}`)]) {
       expect(normalizeRoute(`#${route}`)).toBe(route);
@@ -43,11 +43,12 @@ describe('routes', () => {
     expect(routeTrail('metric/hrv', ['today', 'sleep/last'])).toEqual(['today', 'sleep/last', 'metric/hrv']);
     expect(knownRoute('sleep/tonight')).toBe('sleep/tonight');
     expect(knownRoute('sleep/naps')).toBeNull();
-    expect(routeTrail('workout/7')).toEqual(['today', 'training', 'activities', 'workout/7']);
+    expect(routeTrail('workout/7')).toEqual(['today', 'training', 'workout/7']);
+    // The old Activities page is Training's Activities section now.
+    expect(normalizeRoute('#activities')).toBe('training');
     expect(routeTrail('workout/7', ['today'])).toEqual(['today', 'workout/7']);
     expect(routeTrail('workout/7', ['today', 'training'])).toEqual(['today', 'training', 'workout/7']);
     expect(routeTrail('workout/7', ['today', 'plan'])).toEqual(['today', 'plan', 'workout/7']);
-    expect(routeTrail('workout/7', ['today', 'training', 'activities'])).toEqual(['today', 'training', 'activities', 'workout/7']);
     expect(routeTrail('settings', ['today', 'training', 'workout/7'])).toEqual(['today', 'training', 'workout/7', 'settings']);
     expect(routeTrail('settings', ['today', 'settings'])).toEqual(['today', 'settings']);
     expect(routeTrail('settings')).toEqual(['today', 'settings']);
@@ -162,15 +163,15 @@ describe('browser navigation', () => {
     vi.stubGlobal('window', browser);
     const first = createNavigation(() => {});
     first.start();
-    expect(browser.hashes()).toEqual(['#today', '#training', '#activities', '#workout/42']);
+    expect(browser.hashes()).toEqual(['#today', '#training', '#workout/42']);
     first.destroy();
     const changes: string[][] = [];
     const nav = createNavigation(trail => changes.push(trail));
     nav.start();
     nav.navigate('workout/42');
     await tick();
-    expect(browser.hashes()).toEqual(['#today', '#training', '#activities', '#workout/42']);
-    expect(changes).toEqual([['today', 'training', 'activities', 'workout/42']]);
+    expect(browser.hashes()).toEqual(['#today', '#training', '#workout/42']);
+    expect(changes).toEqual([['today', 'training', 'workout/42']]);
     nav.destroy();
   });
 

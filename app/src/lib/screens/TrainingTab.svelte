@@ -3,6 +3,9 @@
  import type {TrainingView} from '../generated/TrainingView';
  import type {MuscleRange} from '../generated/MuscleRange';
  import type {TrendRange} from '../generated/TrendRange';
+ import type {ActivityCard} from '../generated/ActivityCard';
+ import type {ActivityPage} from '../generated/ActivityPage';
+ import type {Icon as ActivityIcon} from '../generated/Icon';
  import type {IconName} from '../components/Icon.svelte';
  import {masonry} from '../masonry';
  import Card from '../components/Card.svelte';
@@ -24,32 +27,49 @@
  // three questions (enough or too much? improving? ready for what?);
  // Strength is led by the goal and muscle gaps; Activities shows what each
  // recording worked, in Garmin's words.
- let {trainingData, header, navigate, section = $bindable('fitness'), muscles}: {trainingData: TrainingView, header: Snippet, navigate: (route: string) => void,
-  section?: 'fitness' | 'strength' | 'activities', muscles: (range: TrendRange) => Promise<MuscleRange | null>} = $props();
+ let {trainingData, header, navigate, section = $bindable('fitness'), muscleRange = $bindable('days30'), day = $bindable(null), muscles, activityPage}: {trainingData: TrainingView, header: Snippet, navigate: (route: string) => void,
+  section?: 'fitness' | 'strength' | 'activities', muscleRange?: TrendRange, day?: string | null, muscles: (range: TrendRange) => Promise<MuscleRange | null>,
+  activityPage: (beforeStart: string, beforeId: string, icon: ActivityIcon | null) => Promise<ActivityPage>} = $props();
  const SECTIONS = [['fitness', 'Fitness'], ['strength', 'Strength'], ['activities', 'Activities']] as const;
  const TH: Record<string, string> = {runningHr: 'Lactate threshold HR', runningPace: 'Lactate threshold pace', runningPower: 'Running threshold power', cyclingFtp: 'Cycling FTP', heat: 'Heat acclimation', altitude: 'Acclimated altitude'};
  let acute = $derived(trainingData.acute);
  let tw = $derived(trainingData.lanes);
  let todayIndex = $derived(tw ? Math.round((Date.parse(tw.today) - Date.parse(tw.start)) / 864e5) : 0);
  let strengthLane = $derived(tw?.lanes.find(l => l.kind === 'strength') ?? null);
+ // An unknown lane day stays unknown; Garmin's count stands in only without a lane.
+ let strengthCount = $derived(strengthLane ? strengthLane.cumulative[todayIndex] ?? null : trainingData.strength?.strengthActivities ?? null);
  // Muscles over the chosen range, read from the core.
- let muscleRange = $state<TrendRange>('days30'), muscleView = $state<MuscleRange | null>(null), muscleError = $state(false);
+ let muscleView = $state<MuscleRange | null>(null), muscleError = $state(false);
  let request = 0;
  $effect(() => { if (section !== 'strength') return; const r = muscleRange, id = ++request; muscleError = false; void muscles(r).then(v => { if (id === request) muscleView = v }).catch(() => { if (id === request) muscleError = true }); });
- // Activities, filtered by Garmin's activity icon.
+ // Activities: the last 31 days, then older stored recordings a page at a time,
+ // filtered by Garmin's activity icon before paging; `day` narrows to one date.
  const ICON_NAMES = Object.fromEntries(Object.entries(SPORT_ICONS).map(([s, i]) => [i, SPORT_NAMES[s as keyof typeof SPORT_NAMES]])) as Record<string, string>;
  let filter = $state<IconName | 'all'>('all'), limit = $state(12);
- let kinds = $derived([...new Set(trainingData.workouts.map(a => a.icon))]);
- let shown = $derived(trainingData.workouts.filter(a => filter === 'all' || a.icon === filter));
+ let older = $state<ActivityCard[]>([]), more = $state(true), loadingOlder = $state(false), olderError = $state(false), pageRequest = 0;
+ let kinds = $derived([...new Set([...trainingData.workouts, ...older].map(a => a.icon))]);
+ let shown = $derived([...trainingData.workouts, ...older].filter(a => (filter === 'all' || a.icon === filter) && (!day || a.startLocal.startsWith(day))));
+ function choose(k: IconName | 'all') { filter = k; limit = 12; older = []; more = true; olderError = false; pageRequest++; }
+ async function showOlder() {
+  const last = older.at(-1) ?? trainingData.workouts.at(-1), id = ++pageRequest;
+  loadingOlder = true; olderError = false;
+  try {
+   const page = await activityPage(last?.startLocal ?? '9999-12-31T00:00:00', last?.id ?? '', filter === 'all' ? null : filter as ActivityIcon);
+   if (id !== pageRequest) return;
+   const have = new Set([...trainingData.workouts, ...older].map(a => a.id));
+   older = [...older, ...page.activities.filter(a => !have.has(a.id))]; more = page.more && page.activities.length > 0; limit = Math.max(limit, shown.length);
+  } catch { if (id === pageRequest) olderError = true; }
+  finally { if (id === pageRequest) loadingOlder = false; }
+ }
  const te = (v: number | null, label: string | null, kind: string) => v == null ? null : `${kind} ${num(v, 1)}${label ? ` · ${label}` : ''}`;
 </script>
 <div class="page-hero">{@render header()}{#if trainingData.status}<span class="status-pill pill" style:color={toneColor(trainingData.statusTone)}>{trainingData.status}</span>{/if}
  <div class="headline training-head"><h2>{trainingData.headline}</h2>{#if trainingData.statusWhy}<div class="why-line"><WhySheet why={trainingData.statusWhy} label={trainingData.status ? `Why ${trainingData.status}?` : 'Why?'}/></div>{/if}</div></div>
 <div class="dashboard" {@attach masonry}>
- {#if tw?.lanes.length}<Card title="This week" extra="week-lanes" help="training-week">{#each tw.lanes as lane (lane.kind)}<LaneChart {lane} today={todayIndex}/>{/each}
+ {#if tw?.lanes.length}<Card title="This week" extra="week-lanes" help="training-week">{#each tw.lanes as lane (lane.kind)}<LaneChart {lane} today={todayIndex} start={tw.start}/>{/each}
   {#if tw.bySport.length}<p class="mix">{#each tw.bySport as m}<span><Icon name={SPORT_ICONS[m.sport]} size={14}/>{SPORT_NAMES[m.sport]} <b class="n">{Math.round(m.minutes)} min</b></span>{/each}</p>{/if}
   <p class="small">Line: so far this week. {tw.lanes.some(l => l.usual) ? `Band: your usual week, the middle half of ${Math.max(...tw.lanes.map(l => l.weeks))} recent complete weeks; dotted: its middle.` : 'Your usual week appears after three complete weeks of history.'} Dashed: your goal.</p></Card>
- {:else if trainingData.week.length}<Card title="This week"><WeekBars days={trainingData.week}/></Card>{/if}
+ {:else if trainingData.week.length}<Card title="Training load, last 7 days"><WeekBars days={trainingData.week}/></Card>{/if}
 </div>
 <div class="train-tabs" role="tablist" aria-label="Training section">{#each SECTIONS as [k, l]}<button role="tab" aria-selected={section === k} onclick={() => section = k}>{l}</button>{/each}</div>
 <div class="dashboard" {@attach masonry}>
@@ -80,7 +100,7 @@
 {:else if section === 'strength'}
  {#if trainingData.strength || strengthLane}{@const st = trainingData.strength}
   <Card title="Strength this week" onclick={() => navigate('strength')} extra="q-strength">
-   <div class="sw"><div><b class="n big">{strengthLane?.cumulative[todayIndex] ?? st?.strengthActivities ?? 0}{#if strengthLane?.goal}<small> of {strengthLane.goal}</small>{/if}</b><span class="small">sessions{strengthLane?.goal ? ' · your goal' : ''}</span></div>
+   <div class="sw"><div><b class="n big">{strengthCount ?? '—'}{#if strengthLane?.goal}<small> of {strengthLane.goal}</small>{/if}</b><span class="small">sessions{strengthLane?.goal ? ' · your goal' : ''}{strengthCount == null ? ' · awaiting data' : ''}</span></div>
     {#if st}<div><b class="n big">{st.sets}</b><span class="small">sets · {st.sessionsWithSets === 1 ? '1 session' : `${st.sessionsWithSets} sessions`} with sets{st.strengthActivities > st.sessionsWithSets ? ` · ${st.strengthActivities - st.sessionsWithSets} without` : ''}</span></div>{/if}
     {#if st?.records}<span class="pill ok"><Icon name="star" size={12}/>{st.records === 1 ? '1 record' : `${st.records} records`}</span>{/if}</div>
   </Card>
@@ -97,14 +117,16 @@
  {:else}<Card title="No strength sessions yet"><p class="small">Start a Strength activity on your watch and press lap after each set.</p><button class="secondary" onclick={() => navigate('help/strength-start')}>Lift with your watch</button></Card>{/if}
 {:else}
  <Card title="What each activity worked" extra="q-activities" help="activity-contribution">
-  <p class="small">Garmin’s benefit and training effect for each recording; open one for more.</p>
-  {#if kinds.length > 1}<div class="chips2" role="group" aria-label="Filter by sport"><button aria-pressed={filter === 'all'} onclick={() => { filter = 'all'; limit = 12; }}>All</button>{#each kinds as k}<button aria-pressed={filter === k} onclick={() => { filter = k; limit = 12; }}><Icon name={k} size={14}/>{ICON_NAMES[k] ?? 'Other'}</button>{/each}</div>{/if}
+  {#if day}<div class="chips2"><button aria-pressed="true" aria-label={`Only ${dateLabel(day)}; show every day`} onclick={() => day = null}>{dateLabel(day)}<Icon name="close" size={13}/></button></div>{/if}
+  {#if kinds.length > 1}<div class="chips2" role="group" aria-label="Filter by sport"><button aria-pressed={filter === 'all'} onclick={() => choose('all')}>All</button>{#each kinds as k}<button aria-pressed={filter === k} onclick={() => choose(k)}><Icon name={k} size={14}/>{ICON_NAMES[k] ?? 'Other'}</button>{/each}</div>{/if}
   {#each shown.slice(0, limit) as a (a.id)}
    {@const lines = [a.benefit && `Primary benefit · ${a.benefit}`, te(a.aerobicTe, a.aerobicLabel, 'Aerobic'), te(a.anaerobicTe, a.anaerobicLabel, 'Anaerobic'), a.intensityMin != null && `${num(a.intensityMin)} intensity min`].filter(Boolean)}
    <div class="workout-item"><ActivityRow activity={a} open={() => navigate('workout/' + a.id)}/>
-    {#if lines.length}<div class="tags">{#each lines as l}<span class="pill">{l}</span>{/each}</div>{/if}</div>
-  {:else}<p class="small">No recorded activities yet.</p>{/each}
-  {#if shown.length > limit}<button class="secondary" onclick={() => limit += 12}>Show more</button>{/if}
+    {#if lines.length}<p class="effect-line">{lines.join(' · ')}</p>{/if}</div>
+  {:else}<p class="small">{day ? `No recorded activities on ${dateLabel(day)}.` : older.length || !more ? 'No recorded activities.' : 'No recorded activities in the last 31 days.'}</p>{/each}
+  {#if shown.length > limit}<button class="secondary" onclick={() => limit += 12}>Show more</button>
+  {:else if !day && more}<button class="secondary" disabled={loadingOlder} onclick={showOlder}>{loadingOlder ? 'Reading older activities…' : 'Show older'}</button>{#if olderError}<p class="small" role="status">Older activities couldn’t be read. Try again.</p>{/if}
+  {:else if !day && older.length}<p class="small">That’s every stored activity.</p>{/if}
  </Card>
 {/if}
 </div>
@@ -126,6 +148,6 @@
  .mus li{display:grid;grid-template-columns:1fr auto 30px;gap:6px;align-items:baseline}.mus li small{color:var(--text2);font-size:11px}.mus li.gap span{color:var(--fair);font-weight:600}
  .chips2{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.chips2 button{display:inline-flex;gap:5px;align-items:center;min-height:36px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:none;color:var(--text2);font:600 12.5px Inter}
  .chips2 button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
- .tags{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+ .effect-line{margin:2px 0 10px;font-size:12.5px;color:var(--text2)}
  @container(max-width:340px){.mus{flex-direction:column;align-items:center}.mus ul{width:100%}}
 </style>

@@ -1,10 +1,10 @@
 <script lang="ts">
- import {dateLabel,clock} from '../format';
+ import {localDateTime} from '../format';
  import type {StrengthSession} from '../generated/StrengthSession';
  // One explicit Garmin read, only when someone asks. Opening a workout never refreshes.
  let {checkedAt,refresh}:{checkedAt:string|null,refresh:()=>Promise<StrengthSession|null>}=$props();
  let busy=$state(false),note=$state('');
- const label=$derived(checkedAt?`Sets checked ${dateLabel(checkedAt)} · ${clock(checkedAt)}`:'Sets from Garmin not checked yet');
+ const label=$derived(checkedAt?`Sets checked ${localDateTime(checkedAt)}`:'Sets from Garmin not checked yet');
  async function run(){
   if(busy)return;
   busy=true;note='';

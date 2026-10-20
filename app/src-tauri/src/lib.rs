@@ -436,6 +436,10 @@ async fn muscles(app: tauri::AppHandle, range: TrendRange) -> Result<Option<rari
     read_view(app, move |core| Ok(core.muscles(range, Local::now()))).await
 }
 #[tauri::command]
+async fn activity_page(app: tauri::AppHandle, before_start: String, before_id: String, icon: Option<raring_core::view::Icon>) -> Result<raring_core::view::ActivityPage, String> {
+    read_view(app, move |core| Ok(core.activity_page(&before_start, &before_id, icon))).await
+}
+#[tauri::command]
 async fn lift_series(app: tauri::AppHandle, key: String, range: TrendRange) -> Result<Option<raring_core::view::LiftSeries>, String> {
     read_view(app, move |core| Ok(core.lift_series(&key, range, Local::now()))).await
 }
@@ -1102,6 +1106,7 @@ pub fn run() {
                     progress_domains,
                     milestone_archive,
                     lift_series,
+                    activity_page,
                     muscles,
                     load_demo_data,
                     demo_session
@@ -1142,6 +1147,7 @@ pub fn run() {
                     progress_domains,
                     milestone_archive,
                     lift_series,
+                    activity_page,
                     muscles
                 ]
             }

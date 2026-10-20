@@ -746,7 +746,7 @@ pub(crate) fn status(v: &Value) -> Option<String> {
         )
     })
 }
-fn acute(v: &Value) -> Option<f64> {
+pub(crate) fn acute(v: &Value) -> Option<f64> {
     num(
         training_device(v),
         &[
@@ -957,6 +957,28 @@ pub(crate) fn activity(store: &Store, id: &str) -> Option<ActivityCard> {
             .filter(|(m, g)| *m >= 0. && *g >= 0.)
             .map(|(m, g)| m + 2. * g),
     })
+}
+/// Stored recordings older than one already shown, newest first. The sport
+/// filter applies before the page limit, so other sports can't hide older
+/// ones; no Garmin request is made.
+pub fn activity_page(store: &Store, before_start: &str, before_id: &str, icon: Option<Icon>, limit: usize) -> ActivityPage {
+    let (mut start, mut id) = (before_start.to_owned(), before_id.to_owned());
+    let mut activities = vec![];
+    loop {
+        let batch = store.activities_before(&start, &id, 100);
+        if batch.is_empty() {
+            return ActivityPage { activities, more: false };
+        }
+        for (next_id, next_start) in batch {
+            if activities.len() == limit {
+                return ActivityPage { activities, more: true };
+            }
+            if let Some(card) = activity(store, &next_id).filter(|c| icon.is_none_or(|i| c.icon == i)) {
+                activities.push(card);
+            }
+            (start, id) = (next_start, next_id);
+        }
+    }
 }
 fn activities(store: &Store, since: &str) -> Vec<ActivityCard> {
     store
@@ -2291,7 +2313,7 @@ pub fn training_at_calendar(store: &Store, date: &str, calendar: NaiveDate, now:
         headline: match (load, band(&v)) {
             (Some(amount), Some([lo, _])) if amount < lo => "Room to build".into(),
             (Some(amount), Some([_, hi])) if amount > hi => "Load high".into(),
-            (Some(_), Some(_)) => "Room to build".into(),
+            (Some(_), Some(_)) => "In your optimal range".into(),
             _ => status
                 .map(|s| label(Some(s)))
                 .unwrap_or_else(|| "Training at a glance".into()),

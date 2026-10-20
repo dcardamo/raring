@@ -295,6 +295,16 @@ pub struct VitalsCard {
     pub baseline_ready: bool,
 }
 
+/// A page of older stored recordings for Training → Activities.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ActivityPage {
+    pub activities: Vec<ActivityCard>,
+    /// Older recordings may remain.
+    pub more: bool,
+}
+
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -3007,6 +3017,8 @@ pub struct LiftPoint {
     /// Sets of this exercise left out: bodyweight, unweighted, without reps,
     /// or flagged as doubled.
     pub excluded: u32,
+    /// Most reps in one counted bodyweight set (Rules: Records and bests).
+    pub most_reps: Option<u32>,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
@@ -3017,6 +3029,10 @@ pub struct LiftSeries {
     pub name: String,
     pub unit: WeightUnit,
     pub range: TrendRange,
+    /// The range's first day (the first session for Max) and today: the
+    /// chart's date axis.
+    pub from: String,
+    pub to: String,
     /// Sessions in the range, oldest first.
     pub points: Vec<LiftPoint>,
 }
@@ -3239,6 +3255,8 @@ pub struct CountLine {
 pub struct WorkoutCount {
     /// The plan week's first day.
     pub week: String,
+    /// Whether any weekly goal is on that week; without one, nothing counts.
+    pub goals: bool,
     pub lines: Vec<CountLine>,
     /// Your session (or Garmin Coach's) this recording completed.
     pub plan_item: Option<String>,

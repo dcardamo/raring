@@ -1944,6 +1944,7 @@
   "vo2maxNew": null,
   "counted": {
     "week": "2025-10-13",
+    "goals": true,
     "lines": [
       {
         "kind": "zone2",

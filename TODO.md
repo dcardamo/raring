@@ -333,6 +333,21 @@ faces, screens, sensors and audio prompts stay in Connect.
 
 ## Done
 
+- **Training and workout review: bugs** (commit "Fix Training and workout
+  review bugs"). From the read-only UX review of Training and workouts: the
+  in-range headline says "In your optimal range"; week-lane letters follow
+  the plan week's first day; "Sets checked" uses one local date and clock;
+  Back keeps the chosen exercise, lift range, measure and one muscle range
+  shared by Training and Strength; lift charts sit on a date axis (range
+  start to today, year on the first month and January, dots thinned past 40
+  sessions) and bodyweight exercises chart most reps instead of dead weight
+  controls; Activities pages back through stored history by sport without a
+  Garmin request, Today's link opens it narrowed to today and `#activities`
+  aliases Training; unknown lanes are never 0; How it counted is left out
+  without goals; the acute-load trend prefers Training Status so the chart
+  and card agree; the Training eyebrow is the date and the 7-day fallback is
+  titled as such.
+
 - **21. Write rules** (commit "Add the Garmin write rules and a log of
   recent changes"). One core write path (`crates/core/src/writes.rs`): only
   from an explicit action (only `writes` can create the proof

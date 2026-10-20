@@ -1,5 +1,5 @@
-import {describe,it,expect} from 'vitest';
-import {duration,elapsed,pace,clock,dateLabel,monthLabel,shortMonth,signed,num} from './format';
+import {describe,it,expect,vi} from 'vitest';
+import {duration,elapsed,pace,clock,dateLabel,monthLabel,shortMonth,signed,num,localDateTime,weekLetters} from './format';
 describe('Garmin formatting',()=>{
  it('renders durations and times',()=>{expect(duration(468)).toBe('7:48');expect(duration(null)).toBe('—');expect(elapsed(3134)).toBe('52:14');expect(elapsed(5050)).toBe('1:24:10');expect(clock('2025-10-16T06:12:00')).toBe('06:12')});
  it('renders paces and deltas',()=>{expect(pace(307)).toBe('5:07/km');expect(signed(-4,'m')).toBe('−4m');expect(signed(1)).toBe('+1');expect(signed(0)).toBe('');expect(signed(0.8,'m')).toBe('');expect(signed(1.714285)).toBe('+1.7');expect(num(null)).toBe('—')});
@@ -20,5 +20,21 @@ describe('Garmin formatting',()=>{
   const instant='2025-10-16T20:12:00Z';
   expect(clock(instant)).toBe(new Date(instant).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
   expect(clock('invalid')).toBe('—');expect(clock(null)).toBe('—');
+ });
+ it('dates an offset timestamp on the device clock, across midnight',()=>{
+  try{
+   // 02:00 UTC is the previous evening in Toronto and the same morning in Tokyo.
+   vi.stubEnv('TZ','America/Toronto');
+   expect(localDateTime('2025-10-16T02:00:00+00:00')).toBe('Wed 15 Oct · 22:00');
+   vi.stubEnv('TZ','Asia/Tokyo');
+   expect(localDateTime('2025-10-15T20:00:00Z')).toBe('Thu 16 Oct · 05:00');
+  }finally{vi.unstubAllEnvs()}
+  expect(localDateTime('2025-10-16T06:12:00')).toBe('Thu 16 Oct · 06:12');
+  expect(localDateTime(null)).toBe('—');
+ });
+ it('labels a plan week from its first day',()=>{
+  expect(weekLetters('2025-10-13').join('')).toBe('MTWTFSS');
+  expect(weekLetters('2025-10-12').join('')).toBe('SMTWTFS');
+  expect(weekLetters('2025-10-11').join('')).toBe('SSMTWTF');
  });
 });

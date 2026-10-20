@@ -27,6 +27,18 @@ export const dateLabel=(date:string)=>{
  const day=calendarDay(date);
  return day?`${weekdays[(day.getDay()+6)%7]} ${day.getDate()} ${months[day.getMonth()]}`:'Date unavailable';
 };
+// An offset timestamp as the device's local date and clock, so both halves agree.
+export const localDateTime=(iso:string|null|undefined)=>{
+ if(!iso||!/(?:Z|[+-]\d{2}:?\d{2})$/i.test(iso))return iso?`${dateLabel(iso)} · ${clock(iso)}`:'—';
+ const at=new Date(iso);
+ if(Number.isNaN(at.getTime()))return '—';
+ return `${weekdays[(at.getDay()+6)%7]} ${at.getDate()} ${months[at.getMonth()]} · ${clock(iso)}`;
+};
+// One narrow weekday letter for each of the seven days from a week's first date.
+export const weekLetters=(start:string)=>{
+ const first=calendarDay(start);
+ return Array.from({length:7},(_,i)=>first?'MTWTFSS'[(first.getDay()+6+i)%7]:'');
+};
 export const monthLabel=(date:string)=>{
  const day=calendarDay(date);
  return day?`${months[day.getMonth()]} ${day.getFullYear()}`:'Date unavailable';

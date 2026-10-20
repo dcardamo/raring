@@ -13,4 +13,8 @@ volume: number | null,
  * Sets of this exercise left out: bodyweight, unweighted, without reps,
  * or flagged as doubled.
  */
-excluded: number, };
+excluded: number, 
+/**
+ * Most reps in one counted bodyweight set (Rules: Records and bests).
+ */
+mostReps: number | null, };

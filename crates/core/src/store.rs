@@ -212,6 +212,22 @@ impl Store {
             .map(|it| it.flatten().collect())
             .unwrap_or_default()
     }
+    /// Up to `limit` activities older than (`start_local`, `id`), newest
+    /// first, with their start times: one page of stored history.
+    pub fn activities_before(&self, start_local: &str, id: &str, limit: usize) -> Vec<(String, String)> {
+        let db = self.db.lock().unwrap();
+        let Ok(mut stmt) = db.prepare(
+            "SELECT id,start_local FROM activities
+             WHERE replace(start_local, ' ', 'T')<replace(?1, ' ', 'T')
+                OR (replace(start_local, ' ', 'T')=replace(?1, ' ', 'T') AND id<?2)
+             ORDER BY replace(start_local, ' ', 'T') DESC, id DESC LIMIT ?3",
+        ) else {
+            return vec![];
+        };
+        stmt.query_map(params![start_local, id, limit as i64], |r| Ok((r.get(0)?, r.get(1)?)))
+            .map(|it| it.flatten().collect())
+            .unwrap_or_default()
+    }
     /// Activities starting on local days `from` through `to` (YYYY-MM-DD), oldest first.
     pub fn activities_between(&self, from: &str, to: &str) -> Vec<(String, String)> {
         let db = self.db.lock().unwrap();

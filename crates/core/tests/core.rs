@@ -174,11 +174,11 @@ fn load_chip_uses_garmin_optimal_range() {
 fn training_load_label_requires_garmin_range() {
     use raring_core::view::Tone;
     let store = Store::open(":memory:").unwrap();
-    for (amount, range, expected, tone) in [
-        (350, true, "Low", Tone::Fair),
-        (612, true, "Optimal", Tone::Good),
-        (810, true, "High", Tone::Poor),
-        (612, false, "", Tone::Neutral),
+    for (amount, range, expected, tone, headline) in [
+        (350, true, "Low", Tone::Fair, Some("Room to build")),
+        (612, true, "Optimal", Tone::Good, Some("In your optimal range")),
+        (810, true, "High", Tone::Poor, Some("Load high")),
+        (612, false, "", Tone::Neutral, None),
     ] {
         let mut data = json!({"acuteTrainingLoad": amount});
         if range {
@@ -186,9 +186,11 @@ fn training_load_label_requires_garmin_range() {
             data["optimalRangeMax"] = json!(760);
         }
         store.put("training", "2025-01-02", "now", &data).unwrap();
-        let acute = raring_core::screens::training(&store, "2025-01-02")
-            .acute
-            .unwrap();
+        let view = raring_core::screens::training(&store, "2025-01-02");
+        if let Some(headline) = headline {
+            assert_eq!(view.headline, headline);
+        }
+        let acute = view.acute.unwrap();
         assert_eq!(acute.label, expected);
         assert_eq!(acute.tone, tone);
         assert_eq!(acute.band.is_some(), range);
@@ -1325,4 +1327,40 @@ async fn rate_limit_returns_backoff() {
         Err(garmin::Error::RateLimited { .. })
     ));
     thread.join().unwrap();
+}
+#[test]
+fn activities_page_back_through_stored_history_by_sport() {
+    use raring_core::view::Icon;
+    let store = Store::open(":memory:").unwrap();
+    // Weekly runs over a year, a ride every week and two runs at the same minute.
+    for week in 0..52u32 {
+        let day = chrono::NaiveDate::from_ymd_opt(2024, 10, 1).unwrap() + chrono::Duration::weeks(week as i64);
+        for (id, kind, hour) in [(1000 + week, "running", 7), (2000 + week, "cycling", 18)] {
+            store.put("activity", &id.to_string(), "now", &json!({"activityId": id, "activityName": kind, "activityTypeDTO": {"typeKey": kind},
+                "summaryDTO": {"startTimeLocal": format!("{day} {hour:02}:00:00"), "duration": 1800.}})).unwrap();
+        }
+    }
+    store.put("activity", "10500", "now", &json!({"activityId": 10500, "activityName": "twin", "activityTypeDTO": {"typeKey": "running"},
+        "summaryDTO": {"startTimeLocal": "2025-09-23 07:00:00", "duration": 1800.}})).unwrap();
+    let first = raring_core::screens::activity_page(&store, "2025-09-23T07:00:00", "1051", None, 20);
+    assert_eq!(first.activities.len(), 20);
+    assert!(first.more);
+    assert_eq!(first.activities[0].id, "10500", "a recording at the same minute is not skipped");
+    let runs = raring_core::screens::activity_page(&store, "2025-09-23T07:00:00", "1051", Some(Icon::Run), 20);
+    assert!(runs.activities.iter().all(|a| a.icon == Icon::Run), "the sport filter applies before the limit");
+    assert_eq!(runs.activities.len(), 20);
+    let mut all = vec![];
+    let (mut start, mut id) = ("2025-12-31T00:00:00".to_owned(), String::new());
+    loop {
+        let page = raring_core::screens::activity_page(&store, &start, &id, Some(Icon::Bike), 20);
+        if let Some(last) = page.activities.last() {
+            (start, id) = (last.start_local.clone(), last.id.clone());
+        }
+        all.extend(page.activities.into_iter().map(|a| a.id));
+        if !page.more {
+            break;
+        }
+    }
+    assert_eq!(all.len(), 52, "every stored ride, back to the first");
+    assert_eq!(all.last().map(String::as_str), Some("2000"));
 }

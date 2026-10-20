@@ -145,5 +145,14 @@ fn a_workout_says_how_it_counted_toward_the_week() {
     assert_eq!((c.week.as_str(), s.amount, s.position, s.recorded, s.target), ("2025-03-10", 1., Some(2), Some(2.), 2.), "the second of two strength sessions");
     assert!(c.lines.iter().all(|l| l.kind != GoalKind::Zone2), "no zones, no Zone 2 share");
     assert!(c.plan_item.is_none() && c.bests.is_empty());
+    assert!(c.goals);
     assert!(f.core.workout("6").unwrap().counted.is_none(), "only live reads say how it counted");
+}
+
+#[test]
+fn a_workout_without_weekly_goals_says_so() {
+    let f = fx("no-goals", json!({"trainingPlanCategory": "NONE"}));
+    act(&f.store, 6, "2025-03-12", "running", 30.);
+    let c = f.core.workout_live("6", at(13, 18)).unwrap().counted.unwrap();
+    assert!(!c.goals && c.lines.is_empty(), "no goal on, so no goal rejected it");
 }
