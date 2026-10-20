@@ -1,6 +1,8 @@
 use chrono::{Datelike, Local};
 #[cfg(not(target_os = "android"))]
 mod desktop_credentials;
+#[cfg(desktop)]
+mod desktop_reminders;
 #[cfg(not(target_os = "android"))]
 use desktop_credentials::DesktopCredentials;
 #[cfg(not(target_os = "android"))]
@@ -8,6 +10,7 @@ use raring_core::Tokens;
 use raring_core::{garmin::sso, view::*, Raring};
 #[cfg(target_os = "android")]
 use serde::Deserialize;
+use serde::Serialize;
 use std::sync::Mutex;
 use tauri::{Emitter, Manager};
 
@@ -26,6 +29,21 @@ struct ChosenImport {
 }
 #[derive(Default)]
 struct ImportState(Mutex<Option<ChosenImport>>);
+
+/// What a desktop build can say about reminders in Settings. Android reports
+/// its permission through the native plugin, so it returns none.
+#[derive(Serialize, Clone, Debug, Default, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct ReminderStatus {
+    /// This build has a notification path at all.
+    supported: bool,
+    /// The platform allows Raring to show notifications.
+    granted: bool,
+    /// Why the last attempt could not show a reminder.
+    error: Option<String>,
+    /// The pending wind-down the running check will wake for.
+    next_at: Option<String>,
+}
 
 fn core(app: &tauri::AppHandle) -> Result<Raring, String> {
     Raring::open(database_path(app)?).map_err(|e| e.to_string())
@@ -339,6 +357,99 @@ async fn heart_rate_day(app: tauri::AppHandle, date: String) -> Result<HeartRate
     }
 }
 
+fn day_detail_parts(scope: &str) -> Result<Vec<DayDetailPart>, String> {
+    match scope {
+        "sleep" => Ok(vec![DayDetailPart::Sleep]),
+        "day" => Ok(vec![DayDetailPart::Stress, DayDetailPart::Vitals]),
+        _ => Err("unknown day detail scope".into()),
+    }
+}
+
+#[tauri::command]
+async fn fetch_day_detail(app: tauri::AppHandle, date: String, scope: String) -> Result<(), String> {
+    let parts = day_detail_parts(&scope)?;
+    #[cfg(target_os = "android")]
+    {
+        // Kotlin re-reads the scope; parsing it here only rejects a bad one early.
+        let _ = parts;
+        if !session_ready(&app)? { return Err("Account verification required".into()); }
+        let expected = core(&app)?.session_identity().ok_or("Account verification required")?;
+        vault(&app)
+            .0
+            .run_mobile_plugin_async::<serde_json::Value>(
+                "fetchDetail",
+                serde_json::json!({"date":date,"activityId":"","scope":scope}),
+            )
+            .await
+            .map_err(|e| e.to_string())?;
+        if !session_ready(&app)? || core(&app)?.session_identity().as_ref() != Some(&expected) {
+            return Err("Account changed while reading the day".into());
+        }
+        return Ok(());
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let core = core(&app)?;
+        let report = with_desktop_tokens(&app, |tokens| async move {
+            let (tokens, report) = core
+                .fetch_day_detail(tokens, &date, &parts)
+                .await
+                .map_err(|e| e.to_string())?;
+            Ok((report, tokens))
+        })
+        .await?
+        .ok_or("sign in again")?;
+        if report.auth_failed {
+            return Err("sign in again".into());
+        }
+        if let Some(error) = report.error {
+            return Err(error);
+        }
+        Ok(())
+    }
+}
+
+#[tauri::command]
+async fn fetch_workout_detail(app: tauri::AppHandle, id: String) -> Result<(), String> {
+    #[cfg(target_os = "android")]
+    {
+        if !session_ready(&app)? { return Err("Account verification required".into()); }
+        let expected = core(&app)?.session_identity().ok_or("Account verification required")?;
+        vault(&app)
+            .0
+            .run_mobile_plugin_async::<serde_json::Value>(
+                "fetchDetail",
+                serde_json::json!({"date":"","activityId":id}),
+            )
+            .await
+            .map_err(|e| e.to_string())?;
+        if !session_ready(&app)? || core(&app)?.session_identity().as_ref() != Some(&expected) {
+            return Err("Account changed while reading the workout".into());
+        }
+        return Ok(());
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let core = core(&app)?;
+        let report = with_desktop_tokens(&app, |tokens| async move {
+            let (tokens, report) = core
+                .fetch_workout_detail(tokens, &id)
+                .await
+                .map_err(|e| e.to_string())?;
+            Ok((report, tokens))
+        })
+        .await?
+        .ok_or("sign in again")?;
+        if report.auth_failed {
+            return Err("sign in again".into());
+        }
+        if let Some(error) = report.error {
+            return Err(error);
+        }
+        Ok(())
+    }
+}
+
 #[tauri::command]
 async fn refresh_strength(
     app: tauri::AppHandle,
@@ -564,22 +675,23 @@ async fn sync_now(app: tauri::AppHandle) -> Result<AppStatus, String> {
         .run_mobile_plugin_async::<serde_json::Value>("syncNow", serde_json::json!({}))
         .await
         .map_err(|e| e.to_string())?;
-    #[cfg(not(target_os = "android"))]
+    #[cfg(desktop)]
     {
         let sync_core = core(&app)?;
-        if let Some(notifications) = with_desktop_tokens(&app, |tokens| async move {
+        let synced = with_desktop_tokens(&app, |tokens| async move {
             let outcome = sync_core
                 .sync(tokens, Local::now(), 60)
                 .await
                 .map_err(|e| e.to_string())?;
             if let Some(error) = &outcome.snapshot_error { log::warn!("status snapshot publication failed: {error}"); }
-            Ok((outcome.notifications, outcome.tokens))
+            Ok(((), outcome.tokens))
         })
-        .await?
-        {
-            core(&app)?
-                .mark_notifications_sent(&notifications, Local::now())
-                .map_err(|e| e.to_string())?;
+        .await?;
+        if synced.is_some() {
+            // A failed reminder stays unmarked and is retried; it never fails the sync.
+            if let Err(error) = desktop_reminders::deliver_due(&app, &core(&app)?, Local::now()) {
+                log::warn!("reminders not delivered after sync: {error}");
+            }
         }
     }
     let status = app_status(app.clone()).await?;
@@ -624,8 +736,32 @@ fn request_notification_permission(app: tauri::AppHandle) -> Result<bool, String
     #[cfg(not(target_os = "android"))]
     {
         let _ = app;
-        Ok(false)
+        // Desktop needs no permission prompt; Settings reads what the platform
+        // allows through `reminders_status`.
+        Ok(true)
     }
+}
+
+#[cfg(desktop)]
+#[tauri::command]
+fn check_reminders(app: tauri::AppHandle) {
+    desktop_reminders::check(&app);
+}
+
+#[cfg(mobile)]
+#[tauri::command]
+fn check_reminders(_app: tauri::AppHandle) {}
+
+#[cfg(desktop)]
+#[tauri::command]
+fn reminders_status(app: tauri::AppHandle) -> Option<ReminderStatus> {
+    Some(desktop_reminders::status(&app))
+}
+
+#[cfg(mobile)]
+#[tauri::command]
+fn reminders_status(_app: tauri::AppHandle) -> Option<ReminderStatus> {
+    None
 }
 
 fn database_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
@@ -1025,6 +1161,8 @@ pub fn run() {
         .manage(ImportState::default());
     #[cfg(not(target_os = "android"))]
     let builder = builder.manage(DesktopCredentials::default());
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_notification::init());
     builder
         .plugin(
             tauri::plugin::Builder::<tauri::Wry>::new("vault")
@@ -1098,6 +1236,8 @@ pub fn run() {
                     patch_settings,
                     heart_rate_day,
                     refresh_strength,
+                    fetch_day_detail,
+                    fetch_workout_detail,
                     export_archive,
                     choose_import,
                     apply_import,
@@ -1108,6 +1248,8 @@ pub fn run() {
                     lift_series,
                     activity_page,
                     muscles,
+                    check_reminders,
+                    reminders_status,
                     load_demo_data,
                     demo_session
                 ]
@@ -1139,6 +1281,8 @@ pub fn run() {
                     patch_settings,
                     heart_rate_day,
                     refresh_strength,
+                    fetch_day_detail,
+                    fetch_workout_detail,
                     export_archive,
                     choose_import,
                     apply_import,
@@ -1148,7 +1292,9 @@ pub fn run() {
                     milestone_archive,
                     lift_series,
                     activity_page,
-                    muscles
+                    muscles,
+                    check_reminders,
+                    reminders_status
                 ]
             }
         })
@@ -1175,6 +1321,8 @@ pub fn run() {
                         .run_mobile_plugin::<serde_json::Value>("schedule", serde_json::json!({}));
                 });
             }
+            #[cfg(desktop)]
+            desktop_reminders::start(app.handle().clone());
             Ok(())
         })
         .run(tauri::generate_context!())

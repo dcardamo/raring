@@ -1,5 +1,9 @@
 {
   "9000000000007": {
+    "detail": {
+      "missing": [],
+      "unavailable": []
+    },
     "summary": {
       "id": "9000000000007",
       "icon": "swim",
@@ -1021,6 +1025,10 @@
     "strength": null
   },
   "9000000000008": {
+    "detail": {
+      "missing": [],
+      "unavailable": []
+    },
     "summary": {
       "id": "9000000000008",
       "icon": "walk",

@@ -7,7 +7,8 @@
  // Sleep, Body Battery, stress, heart rate and recorded events share one
  // midnight-to-midnight axis, so a moment lines up across rows. Values come
  // from the core; nothing is drawn after the watch's last upload.
- let {day,navigate}:{day:DayTimeline,navigate:(route:string)=>void}=$props();
+ // `compact` follows tonight's plan from the evening on: sleep, Body Battery and recordings only.
+ let {day,navigate,compact=false}:{day:DayTimeline,navigate:(route:string)=>void,compact?:boolean}=$props();
  const pct=(m:number)=>Math.max(0,Math.min(100,m/1440*100));
  const STAGE:Record<string,string>={deep:'#2F6FE0',light:'#5C9BFF',rem:'#A9C8FF',awake:'#E4E8F0'};
  // The core already blanks slots past the upload or now; this only places the last reading.
@@ -23,10 +24,10 @@
  let naps=$derived(day.events.filter(e=>e.kind==='nap'&&e.startMin!=null&&e.endMin!=null));
  let placed=$derived(day.events.filter(e=>e.startMin!=null));
 </script>
-<section class="your-day" aria-label="Your day on one timeline">
+<section class="your-day" class:compact aria-label="Your day on one timeline">
  <div class="yd-h"><h2>Your day <HelpButton topic="today"/></h2>{#if day.uploadMin!=null}<span>Watch upload {hm(day.uploadMin)}</span>{:else}<span>No watch upload today</span>{/if}</div>
  {#if day.clockChange}<p class="clock" role="note">Clocks changed by an hour today, so Body Battery, stress and heart rate are in their details.</p>{/if}
- <button class="row" onclick={()=>navigate('sleep')} aria-label={day.sleep.length?`Sleep until ${hm(Math.max(...day.sleep.map(s=>s.endMin)))}, ${duration(day.asleepMin)} asleep`:'Sleep: no recorded night yet'}>
+ <button class="row" onclick={()=>navigate('sleep/last')} aria-label={day.sleep.length?`Sleep until ${hm(Math.max(...day.sleep.map(s=>s.endMin)))}, ${duration(day.asleepMin)} asleep`:'Sleep: no recorded night yet'}>
   <span class="lab"><Icon name="moon" size={15}/><b>Sleep</b></span>
   <span class="track sleep">{#each day.sleep as s}<i style:left={pct(s.startMin)+'%'} style:width={pct(s.endMin)-pct(s.startMin)+'%'} style:background={STAGE[s.stage]}></i>{/each}{#if !day.sleep.length}<em class="none">No recorded night yet</em>{/if}{#if now!=null}<u style:left={pct(now)+'%'}></u>{/if}</span>
   <span class="val n">{day.asleepMin!=null?duration(day.asleepMin):'—'}</span>
@@ -36,6 +37,7 @@
   <span class="track chart">{#if bb}<svg viewBox="0 0 1440 50" preserveAspectRatio="none" aria-hidden="true">{#each naps as n}<rect x={n.startMin} y="0" width={n.endMin!-n.startMin!} height="50" fill="rgba(169,200,255,.22)"/>{/each}<path d={bb} fill="none" stroke="#3DDC97" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>{#each naps.filter(n=>n.bodyBatteryChange!=null) as n}<span class="nap-d" style:left={pct((n.startMin!+n.endMin!)/2)+'%'}>{n.bodyBatteryChange!>=0?'+':''}{n.bodyBatteryChange} nap</span>{/each}{:else}<em class="none">{day.clockChange?'Clock change today · open the detail':'Awaiting upload'}</em>{/if}{#if now!=null}<u style:left={pct(now)+'%'}></u>{/if}</span>
   <span class="val n">{bbNow??'—'}</span>
  </button>
+ {#if !compact}
  <button class="row" onclick={()=>navigate('metric/stress')} aria-label={`Stress, average ${day.stressAverage??'not recorded'}`}>
   <span class="lab"><Icon name="pulse" size={15}/><b>Stress</b></span>
   <span class="track chart">{#if bars.length}<svg viewBox="0 0 1440 50" preserveAspectRatio="none" aria-hidden="true">{#each bars as b}<rect x={b.m+1} y={50-Math.max(2,b.v/100*48)} width="13" height={Math.max(2,b.v/100*48)} fill={stressColors[level(b.v)]}/>{/each}</svg>{:else}<em class="none">{day.clockChange?'Clock change today · open the detail':'Awaiting upload'}</em>{/if}{#if now!=null}<u style:left={pct(now)+'%'}></u>{/if}</span>
@@ -46,15 +48,17 @@
   <span class="track chart">{#if hr}<svg viewBox="0 0 1440 50" preserveAspectRatio="none" aria-hidden="true"><path d={hr} fill="none" stroke="#FF6B8A" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg><span class="yl">180<br>40</span>{:else}<em class="none">{day.clockChange?'Clock change today · open the detail':'Awaiting upload'}</em>{/if}{#if now!=null}<u style:left={pct(now)+'%'}></u>{/if}</span>
   <span class="val n">{day.restingHr??'—'}<small>rest bpm</small></span>
  </button>
+ {/if}
  <div class="row ev" role="group" aria-label="Recorded activities and naps">
   <span class="lab"><Icon name="run" size={15}/><b>Recorded</b></span>
-  <span class="track events">{#each placed as e}<button class="evb" class:nap={e.kind==='nap'} style:left={pct(e.startMin!)+'%'} style:width={`max(26px, ${pct(e.endMin??e.startMin!)-pct(e.startMin!)}%)`} aria-label={`${e.name} ${hm(e.startMin!)}${e.durationMin!=null?`, ${Math.round(e.durationMin)} min`:''}${e.bodyBatteryChange!=null?`, Body Battery ${e.bodyBatteryChange>=0?'+':''}${e.bodyBatteryChange}`:''}`} onclick={()=>navigate(e.id?'workout/'+e.id:'sleep')}><Icon name={e.icon} size={12}/></button>{/each}{#if !placed.length}<em class="none">Nothing recorded yet</em>{/if}{#if now!=null}<u style:left={pct(now)+'%'}></u>{/if}</span>
+  <span class="track events">{#each placed as e}<button class="evb" class:nap={e.kind==='nap'} style:left={pct(e.startMin!)+'%'} style:width={`max(26px, ${pct(e.endMin??e.startMin!)-pct(e.startMin!)}%)`} aria-label={`${e.name} ${hm(e.startMin!)}${e.durationMin!=null?`, ${Math.round(e.durationMin)} min`:''}${e.bodyBatteryChange!=null?`, Body Battery ${e.bodyBatteryChange>=0?'+':''}${e.bodyBatteryChange}`:''}`} onclick={()=>navigate(e.id?'workout/'+e.id:'sleep/last')}><Icon name={e.icon} size={12}/></button>{/each}{#if !placed.length}<em class="none">Nothing recorded yet</em>{/if}{#if now!=null}<u style:left={pct(now)+'%'}></u>{/if}</span>
   <span class="val n">{day.events.filter(e=>e.kind==='activity').length||''}</span>
  </div>
  <div class="row axis" aria-hidden="true"><span></span><span class="track ticks">{#each [0,6,12,18,24] as h}<i style:left={h/24*100+'%'}>{String(h).padStart(2,'0')}</i>{/each}{#if now!=null}<b style:left={pct(now)+'%'}>Now {hm(now)}</b>{/if}</span><span></span></div>
- <p class="key">{#each ['rest','low','medium','high'] as l}<span><i style:background={stressColors[l as 'rest']}></i>{stressNames[l as 'rest']}</span>{/each}</p>
+ {#if !compact}<p class="key">{#each ['rest','low','medium','high'] as l}<span><i style:background={stressColors[l as 'rest']}></i>{stressNames[l as 'rest']}</span>{/each}</p>{/if}
 </section>
 <style>
+ .your-day.compact{margin-top:0}
  .your-day{margin-top:12px;border:1px solid var(--line);border-radius:22px;background:var(--card);padding:14px 14px 10px}
  .yd-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}.yd-h h2{display:flex;align-items:center;gap:8px;font:600 11px Inter;letter-spacing:.13em;text-transform:uppercase;color:var(--text2)}.yd-h span{font-size:11px;color:var(--text2)}
  .row{display:grid;grid-template-columns:96px minmax(0,1fr) 48px;gap:8px;align-items:center;width:100%;padding:6px 0;background:none;border:0;color:var(--text);text-align:left;min-height:44px}

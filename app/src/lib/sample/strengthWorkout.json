@@ -1,4 +1,8 @@
 {
+  "detail": {
+    "missing": [],
+    "unavailable": []
+  },
   "counted": {
     "week": "2025-10-13",
     "goals": true,

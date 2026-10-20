@@ -6,12 +6,14 @@ describe('routes', () => {
     expect(tabs).toEqual(['today', 'plan', 'training', 'health', 'progress']);
     for (const route of [...tabs, 'sleep', 'readiness', 'settings', 'onboarding', 'strength', 'help', 'help/strength-sets',
       'profile', 'gear', 'plan/commitments', 'review/latest', 'reviews', 'review/2025-10-13',
-      'workout/123_abc-2', ...['bodyBattery', 'stress', 'restingHr', 'hrv', 'respiration', 'spo2',
+      'workout/123_abc-2', 'sleep/2025-10-14', 'health/2025-10-14', 'metric/stress/2025-10-14',
+      'metric/heartRate/2025-10-14', ...['bodyBattery', 'stress', 'restingHr', 'hrv', 'respiration', 'spo2',
         'skinTemp', 'vo2max', 'endurance', 'hill', 'runningTolerance'].map(id => `metric/${id}`)]) {
       expect(normalizeRoute(`#${route}`)).toBe(route);
     }
     for (const route of ['#metric/unknown', '#workout/', '#workout/a/b', '#%ZZ', '#review/2025-1-1',
-      '#sleep/other', '#https://bad.example', '#onboarding/next', '#help/unknown', '#strength/x']) {
+      '#sleep/other', '#sleep/2025-1-1', '#sleep/2025-13-01', '#health/2025-10-32', '#metric/bodyBattery/2025-10-14',
+      '#metric/stress/2025-1-1', '#https://bad.example', '#onboarding/next', '#help/unknown', '#strength/x']) {
       expect(normalizeRoute(route)).toBe('today');
       expect(knownRoute(route)).toBeNull();
     }
@@ -66,6 +68,20 @@ describe('routes', () => {
     expect(routeTrail('metric/stress', ['today', 'health'])).toEqual(['today', 'health', 'metric/stress']);
     expect(routeTrail('metric/vo2max')).toEqual(['today', 'training', 'metric/vo2max']);
     expect(routeTrail('metric/hrv', ['today', 'sleep'])).toEqual(['today', 'sleep', 'metric/hrv']);
+    // A dated day or night is its own page and Back returns to the page that opened it.
+    expect(routeTrail('sleep/2025-10-14')).toEqual(['today', 'sleep/2025-10-14']);
+    expect(routeTrail('sleep/2025-10-14', ['today', 'health'])).toEqual(['today', 'health', 'sleep/2025-10-14']);
+    expect(routeTrail('sleep/2025-10-14', ['today', 'sleep'])).toEqual(['today', 'sleep', 'sleep/2025-10-14']);
+    expect(routeTrail('sleep/2025-10-14', ['today', 'progress', 'health/2025-10-01'])).toEqual(['today', 'progress', 'health/2025-10-01', 'sleep/2025-10-14']);
+    expect(routeTrail('sleep/2025-10-14', ['today', 'progress'])).toEqual(['today', 'progress', 'sleep/2025-10-14']);
+    expect(routeTrail('sleep/last', ['today', 'progress', 'sleep/2025-10-14'])).toEqual(['today', 'sleep/last']);
+    expect(routeTrail('health/2025-10-14')).toEqual(['today', 'health', 'health/2025-10-14']);
+    expect(routeTrail('health/2025-10-14', ['today', 'progress'])).toEqual(['today', 'progress', 'health/2025-10-14']);
+    expect(routeTrail('health/2025-10-14', ['today', 'health'])).toEqual(['today', 'health', 'health/2025-10-14']);
+    expect(routeTrail('metric/stress/2025-10-14', ['today', 'progress', 'health/2025-10-14'])).toEqual(['today', 'progress', 'health/2025-10-14', 'metric/stress/2025-10-14']);
+    expect(routeTrail('metric/stress/2025-10-14', ['today', 'health'])).toEqual(['today', 'health', 'metric/stress/2025-10-14']);
+    expect(routeTrail('metric/stress/2025-10-14')).toEqual(['today', 'health', 'metric/stress/2025-10-14']);
+    expect(routeTrail('metric/heartRate/2025-10-14', ['today', 'sleep/2025-10-14'])).toEqual(['today', 'sleep/2025-10-14', 'metric/heartRate/2025-10-14']);
     expect(routeTrail('onboarding', ['today', 'settings'])).toEqual(['onboarding']);
   });
 

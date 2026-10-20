@@ -8,7 +8,7 @@ import type { TodayCard } from "./TodayCard";
  */
 export type TodayFocus = { phase: DayPhase, 
 /**
- * Advice cards in order; the first one leads.
+ * Today's cards in order; the first advice card leads.
  */
 cards: Array<TodayCard>, 
 /**
@@ -36,4 +36,9 @@ note: string | null,
 /**
  * Garmin's recovery time at the latest readiness, hours.
  */
-recoveryHours: number | null, };
+recoveryHours: number | null, 
+/**
+ * Where the phases' wake time comes from when it isn't recorded nights:
+ * "Garmin sleep schedule".
+ */
+schedule: string | null, };

@@ -1239,6 +1239,7 @@
     "phase": "wake",
     "cards": [
       "focus",
+      "day",
       "sleepPlan"
     ],
     "until": "2025-10-16T09:39:00",
@@ -1251,7 +1252,8 @@
       "woke": "06:39"
     },
     "note": null,
-    "recoveryHours": 18
+    "recoveryHours": 18,
+    "schedule": null
   },
   "heartRateDay": {
     "date": "2025-10-16",

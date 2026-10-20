@@ -39,6 +39,13 @@ export const weekLetters=(start:string)=>{
  const first=calendarDay(start);
  return Array.from({length:7},(_,i)=>first?'MTWTFSS'[(first.getDay()+6+i)%7]:'');
 };
+// When Raring read a value, with its weekday unless it was read today: an old reading never looks like today's.
+export const readAt=(iso:string,now=new Date())=>{
+ const date=new Date(iso);
+ if(Number.isNaN(date.getTime()))return '—';
+ const time=date.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+ return date.toDateString()===now.toDateString()?time:`${weekdays[(date.getDay()+6)%7]} ${time}`;
+};
 export const monthLabel=(date:string)=>{
  const day=calendarDay(date);
  return day?`${months[day.getMonth()]} ${day.getFullYear()}`:'Date unavailable';

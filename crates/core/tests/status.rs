@@ -197,7 +197,8 @@ fn missing_data_migration_atomic_replace_and_forget() {
     for metric in ["readiness", "sleep", "bodyBattery", "stress", "heartRate"] {
         assert_eq!(v[metric], json!({"value": null, "tone": "neutral"}));
     }
-    assert_eq!(v["focusLine"], "Waiting for readiness");
+    // Nothing synced: Today's lead waits for the night, and so does the surface.
+    assert_eq!(v["focusLine"], "Waiting for last night's sleep");
     assert_eq!(v["focusTarget"], "today");
     assert_eq!(v["phase"], "overview");
     let mut settings = core.settings();
@@ -327,4 +328,39 @@ fn the_morning_update_drops_garmins_advice_while_resting() {
     assert!(rested.ends_with("Rest day · no training call"), "{rested}");
     let advice: Vec<&str> = before.lines().filter(|l| !rested.contains(*l)).collect();
     assert!(!rested.contains("done ·"), "no workout or Garmin call note beside the rest line: {rested} (before: {advice:?})");
+}
+
+#[test]
+fn surfaces_follow_todays_lead_through_the_day() {
+    use raring_core::view::LeadKind;
+    let path = db_path();
+    let store = Store::open(&path).unwrap();
+    seed(&store);
+    let core = Raring::open(&path).unwrap();
+    core.set_setting("status", true).unwrap();
+    let file = path.with_extension("status.json");
+    let tomorrow = |h: u32| Local.with_ymd_and_hms(2025, 3, 13, h, 0, 0).single().unwrap();
+    for (when, line, target) in [
+        (now(12), "Easy", "readiness"),
+        // Today's evening lead, not the phase headline ("Wind down at 22:00").
+        (now(21), "Make room for sleep", "sleep"),
+        (now(22), "Time to wind down", "sleep"),
+        (tomorrow(1), "Rest when you're ready", "sleep"),
+        // Past the usual wake with the night unsynced: yesterday's readiness
+        // is still displayed, but neither Today nor the surface gives its verdict.
+        (tomorrow(8), "Waiting for last night's sleep", "today"),
+    ] {
+        core.refresh_status_snapshot(when).unwrap();
+        let v: Value = serde_json::from_slice(&fs::read(&file).unwrap()).unwrap();
+        let today = core.today_live_at(&core.current_date(when), when);
+        let lead = today.lead.unwrap();
+        assert_eq!((v["focusLine"].as_str(), v["focusTarget"].as_str()), (Some(line), Some(target)), "{when}");
+        match lead.kind {
+            LeadKind::Sleep => assert_eq!(lead.headline, line),
+            LeadKind::Waiting => assert!(v["focusReason"].is_null()),
+            // The same reason line as Today, from Garmin's inputs.
+            LeadKind::Easy => assert_eq!(v["focusReason"].as_str(), today.readiness_why.as_ref().map(|w| w.summary.as_str())),
+            other => panic!("{when}: unexpected lead {other:?}"),
+        }
+    }
 }
