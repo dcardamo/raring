@@ -472,25 +472,26 @@ Follow-through and measured change stay apart; nothing is a grade.
 
 ### Weekly check-in
 
-Opened from the Monday notification (or Progress → Last week, `#review/latest`;
-an explicit week is `#review/YYYY-MM-DD`): a short stack of swipeable cards for the
-week just ended. Readiness, sleep, training and health each get a gauge or
-chart with an arrow against the week before. VO2max and Fitness Age changes
-are called out. A timing card shows the week's bed and wake times, their
-earliest and latest, how many nights Garmin rated aligned, ahead or behind,
-and one timing focus. It is descriptive: no adherence score, streaks or
-claims that timing changed a score. An intensity card shows Garmin's weekly
-intensity minutes as a ring against Garmin's goal, with the moderate and
-vigorous split. Once goals are set, a plan card (mockup `checkin`) lists
-each strength, intensity, Zone 2 and migrated sleep-timing goal's result for
-the plan week that just ended (read from the local goals), a check or amber
-dot, the change against the week before, and next week's targets and rest
-days with Keep and Change (Change opens the weekly goals and returns here).
-It ends with one win and one focus for the coming week, a line each.
-
-The week's review (Rules: Week review) adds what was met, partly met or not
-recorded and why (rest, illness, a pause, missing data), with next week's
-proposed goals that change nothing until accepted; Keep all is always offered.
+Opened from the Monday notification (or a passed week in Progress's weekly
+goal rings; `#review/latest`, an explicit week is `#review/YYYY-MM-DD`): one
+page for the week just ended, the decision first. Once goals are set, the
+goals card lists each goal's result for the plan week (read from the local
+goals: met, partly, not met or not counted, and why: rest, illness, a pause,
+missing data) and, for the week that can still decide (Rules: Week review),
+next week's proposed goals with Accept and Keep all; Edit goals opens the
+weekly goals and returns here. Then the week's readings in one grid:
+readiness, Sleep Score, acute load and Fitness Age, each with its average,
+the change against the week before (under 1 is steady) and its seven days
+labelled. Only readiness and Sleep Score carry status colours; load and
+Fitness Age are neutral, with no gauge or invented scale. An intensity card
+shows Garmin's weekly intensity minutes as a ring against Garmin's goal, with
+the moderate and vigorous split. A timing card shows the week's bed and wake
+times, their earliest and latest, how many nights Garmin rated aligned, ahead
+or behind, and one timing focus. It is descriptive: no adherence score,
+streaks or claims that timing changed a score. VO2max and Fitness Age changes
+of 1 or more are called out. It ends with one win (a change of 1 or more the
+grid shows) and one focus naming Garmin's metric and its values (Rules:
+Weekly focus), a line each.
 
 ## Android status surfaces
 
@@ -1262,7 +1263,9 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   follows its own rule): the biggest gap among sleep against need, load-focus
   shortage, falling readiness, and intensity minutes against Garmin's weekly
   goal for the plan week that just ended (without them, Fitness Age's
-  vigorous-minutes average against its target).
+  vigorous-minutes average against its target), said as one line with
+  Garmin's metric and values ("Garmin's load focus: low aerobic was furthest
+  below its range").
 - **Threshold display**: Garmin's lactate-threshold `speed` is seconds per
   meter; convert to seconds per kilometer or mile with the saved Garmin
   measurement system. HR is bpm, running power and cycling FTP are watts,

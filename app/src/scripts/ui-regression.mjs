@@ -298,16 +298,12 @@ try {
  await history.locator('.chart-surface').click({position:{x:chart.width*.55,y:chart.height*.5}});
  assert.notEqual(await slider.inputValue(),'29','chart taps select a reading');
  await page.goto(`${url}/#checkin`);await waitRoute('review/latest');
- for(let i=0;i<4;i++)await page.getByRole('button',{name:'Next'}).click();
  const timing=page.locator('.timing-review');
  await timing.waitFor();
- assert.equal(await page.locator('.checkin-controls span').textContent(),'5 / 7','the timing review follows the area cards');
  const review=await timing.textContent();
  assert.ok(review.includes('Bedtimes22:31–00:30') && review.includes('Garmin: 5 aligned · 2 behind') && review.includes('Keep waking near 06:48.'),review);
  assert.equal(await timing.locator('rect.night').count(),7);
- await page.getByRole('button',{name:'Next'}).click();
  assert.ok((await page.locator('.intensity-review').textContent()).includes("Garmin's goal reached"));
- await page.getByRole('button',{name:'Next'}).click();
  await page.getByText('THE FOCUS',{exact:true}).waitFor();
  // Goals: each week against its own goals, then proposals that need acceptance.
  const goalsReview=page.locator('.wr');

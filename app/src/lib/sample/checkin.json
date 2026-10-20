@@ -56,9 +56,9 @@
   "cards": [
     {
       "area": "readiness",
-      "headline": "More ready to move",
+      "headline": "Readiness",
       "value": 82,
-      "unit": "pts",
+      "unit": "",
       "previous": 76,
       "tone": "good",
       "series": [
@@ -73,9 +73,9 @@
     },
     {
       "area": "sleep",
-      "headline": "Sleep is settling",
+      "headline": "Sleep Score",
       "value": 84,
-      "unit": "pts",
+      "unit": "",
       "previous": 79,
       "tone": "good",
       "series": [
@@ -90,28 +90,28 @@
     },
     {
       "area": "training",
-      "headline": "A strong week",
+      "headline": "Acute load",
       "value": 612,
       "unit": "load",
       "previous": 520,
-      "tone": "good",
+      "tone": "neutral",
       "series": [
-        0,
-        142,
-        210,
-        0,
-        95,
-        320,
-        186
+        580,
+        596,
+        610,
+        604,
+        615,
+        630,
+        612
       ]
     },
     {
       "area": "health",
-      "headline": "Younger every year",
+      "headline": "Fitness Age",
       "value": 39,
       "unit": "years",
       "previous": 40,
-      "tone": "good",
+      "tone": "neutral",
       "series": [
         40,
         40,
@@ -125,7 +125,7 @@
   ],
   "vo2maxChange": 1,
   "fitnessAgeChange": -1,
-  "win": "You made room for recovery and still built your load.",
+  "win": "Readiness up 6 on the week before, averaging 82",
   "plan": {
     "week": {
       "start": "2025-10-13",
@@ -197,5 +197,5 @@
     "vigorous": 50,
     "goal": 150
   },
-  "focus": "Add one hard interval session to fill your anaerobic gap."
+  "focus": "Garmin's load focus: anaerobic was furthest below its range"
 }

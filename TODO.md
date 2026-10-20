@@ -352,6 +352,13 @@ faces, screens, sensors and audio prompts stay in Connect.
   (`DayCell.planned`) with the weekday above the date, the calendar falls back
   to activity days without goals and hides for the current week, and the
   Last week / Earlier weeks rows merge into the strip's "All weekly reviews".
+  Commit "Lead the weekly review with the decision": the goals card comes
+  first; readiness, Sleep Score, acute load and Fitness Age sit in one grid
+  with averages, the change against the week before and seven labelled days
+  instead of seven swipe cards; load and Fitness Age lose their invented
+  gauges and score colours; the win needs a change of 1 or more (it said
+  "Fitness age improved" beside "Steady"); the focus names Garmin's metric;
+  "Keep the momentum" is gone.
 
 - **21. Write rules** (commit "Add the Garmin write rules and a log of
   recent changes"). One core write path (`crates/core/src/writes.rs`): only

@@ -2888,50 +2888,54 @@ pub fn checkin(store: &Store, monday: &str) -> CheckinView {
             area,
             headline: match area {
                 CheckinArea::Readiness => "Readiness",
-                CheckinArea::Sleep => "Sleep",
-                CheckinArea::Training => "Training",
-                CheckinArea::Health => "Fitness age",
+                CheckinArea::Sleep => "Sleep Score",
+                CheckinArea::Training => "Acute load",
+                CheckinArea::Health => "Fitness Age",
             }
             .into(),
             value,
             unit: unit.into(),
             previous,
-            tone: value.map(rules::score).unwrap_or(Tone::Neutral),
+            // Garmin rates readiness and sleep as scores; load and Fitness Age have no such scale.
+            tone: match area {
+                CheckinArea::Readiness | CheckinArea::Sleep => value.map(rules::score).unwrap_or(Tone::Neutral),
+                _ => Tone::Neutral,
+            },
             series,
         });
     }
-    let win = cards
-        .iter()
-        .find(|c| match c.area {
-            CheckinArea::Readiness | CheckinArea::Sleep => {
-                c.value.zip(c.previous).is_some_and(|(a, b)| a > b)
+    // A change under 1 reads as steady on the cards, so it is never a win.
+    let win = cards.iter().find_map(|c| {
+        let (a, b) = c.value.zip(c.previous)?;
+        match c.area {
+            CheckinArea::Readiness | CheckinArea::Sleep if a - b >= 1. => {
+                Some(format!("{} up {:.0} on the week before, averaging {:.0}", c.headline, a - b, a))
             }
-            CheckinArea::Health => c.value.zip(c.previous).is_some_and(|(a, b)| a < b),
-            _ => false,
-        })
-        .map(|c| format!("{} improved", c.headline));
+            CheckinArea::Health if b - a >= 1. => Some(format!("Fitness Age down {:.1} years on the week before", b - a)),
+            _ => None,
+        }
+    });
     let last = date_sub(monday, 1);
-    let sleep_gaps: Vec<f64> = (1..=7)
+    let nights: Vec<(f64, f64)> = (1..=7)
         .filter_map(|i| {
             let s = sleep_view(store, &date_sub(monday, i));
-            s.asleep_min
-                .zip(s.need_min)
-                .filter(|(_, n)| *n > 0.)
-                .map(|(a, n)| ((n - a) / n).max(0.))
+            s.asleep_min.zip(s.need_min).filter(|(_, n)| *n > 0.)
         })
         .collect();
-    let sleep_gap =
-        (!sleep_gaps.is_empty()).then(|| sleep_gaps.iter().sum::<f64>() / sleep_gaps.len() as f64);
+    let mean = |v: Vec<f64>| (!v.is_empty()).then(|| v.iter().sum::<f64>() / v.len() as f64);
+    let sleep_gap = mean(nights.iter().map(|(a, n)| ((n - a) / n).max(0.)).collect());
+    let sleep_short = mean(nights.iter().map(|(a, n)| (n - a).max(0.)).collect());
     let training = training(store, &last);
-    let load_gap = training
+    let load_short = training
         .load_focus
         .iter()
         .filter_map(|bar| {
             bar.target
                 .filter(|r| r[0] > 0.)
-                .map(|r| ((r[0] - bar.value) / r[0]).max(0.))
+                .map(|r| (bar, ((r[0] - bar.value) / r[0]).max(0.)))
         })
-        .reduce(f64::max);
+        .max_by(|a, b| a.1.total_cmp(&b.1));
+    let load_gap = load_short.map(|(_, gap)| gap);
     let readiness_drop = cards[0]
         .value
         .zip(cards[0].previous)
@@ -2942,20 +2946,30 @@ pub fn checkin(store: &Store, monday: &str) -> CheckinView {
     let intensity = plan_week.and_then(|(d, start)| plan::intensity(store, start, d));
     // Garmin's weekly intensity minutes against its goal; without them, the
     // Fitness Age vigorous-minutes average against its target.
-    let intensity_gap = intensity
-        .as_ref()
-        .and_then(|i| i.goal.map(|g| (i.total, g)))
-        .or_else(|| {
-            health(store, &last)
-                .drivers
-                .iter()
-                .find(|d| d.key == "vigorousMinutes")
-                .and_then(|d| d.value.zip(d.target))
-        })
-        .filter(|(_, t)| *t > 0.)
-        .map(|(v, t)| ((t - v) / t).max(0.));
-    let focus =
-        rules::weekly_focus(sleep_gap, load_gap, readiness_drop, intensity_gap).map(str::to_owned);
+    let weekly = intensity.as_ref().and_then(|i| i.goal.map(|g| (i.total, g))).filter(|(_, t)| *t > 0.);
+    let vigorous = || {
+        health(store, &last)
+            .drivers
+            .iter()
+            .find(|d| d.key == "vigorousMinutes")
+            .and_then(|d| d.value.zip(d.target))
+            .filter(|(_, t)| *t > 0.)
+    };
+    let intensity_values = weekly.or_else(vigorous);
+    let intensity_gap = intensity_values.map(|(v, t)| ((t - v) / t).max(0.));
+    // One line naming Garmin's metric and its values, never just the area.
+    let focus = rules::weekly_focus(sleep_gap, load_gap, readiness_drop, intensity_gap).and_then(|name| match name {
+        "Sleep" => sleep_short.map(|m| format!("Sleep: about {m:.0} min a night under Garmin's sleep need")),
+        "Load focus" => load_short.map(|(bar, _)| format!("Garmin's load focus: {} was furthest below its range", bar.name.to_lowercase())),
+        "Readiness" => cards[0].value.zip(cards[0].previous).map(|(a, b)| format!("Readiness: Garmin's score averaged {a:.0}, down from {b:.0}")),
+        _ => intensity_values.map(|(v, t)| {
+            if weekly.is_some() {
+                format!("Intensity minutes: {v:.0} of Garmin's {t:.0}-minute weekly goal")
+            } else {
+                format!("Vigorous minutes: {v:.0} of the {t:.0} a week Fitness Age looks for")
+            }
+        }),
+    });
     let vo2max_change = historical_vo2(store, &last)
         .zip(historical_vo2(store, &date_sub(monday, 8)))
         .map(|(a, b)| a - b);

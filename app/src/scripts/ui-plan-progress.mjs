@@ -117,4 +117,23 @@ export async function planProgressChecks({browser,url,errors}){
   await none.close();
  }
  console.log('Rings: every ring fits, uncounted weeks say why, this week opens Plan, colour keys: passed');
+ // The weekly review leads with the decision; the readings sit in one grid with
+ // labelled days, and only Garmin's scores carry status colours (PP-M6, PP-B6).
+ {
+  const page=await mocked(browser,errors,base);
+  await page.goto(`${url}/#review/2025-10-06`);
+  const grid=page.getByRole('region',{name:'Your week'});
+  await grid.waitFor();
+  const order=await page.locator('.wr, .cw').evaluateAll(els=>els.map(e=>e.className.includes('wr')?'goals':'week'));
+  assert.deepEqual(order,['goals','week'],'the goals decision comes first');
+  assert.equal(await grid.getByRole('group').count(),4);
+  const age=grid.getByRole('group',{name:/^Fitness Age/});
+  assert.equal(await age.locator('.n').evaluate(e=>e.style.color),'','Fitness Age has no status colour');
+  assert.equal(await age.locator('.cw-bar b').count(),7,'each day labelled');
+  assert.ok((await grid.getByRole('group',{name:/^Readiness/}).locator('.n').evaluate(e=>e.style.color))!=='','readiness keeps its score colour');
+  assert.equal(await page.locator('.gauge').count(),1,'only the intensity ring is a gauge');
+  assert.equal(await page.getByText('Keep the momentum').count(),0);
+  await page.close();
+ }
+ console.log('Weekly review: decision first, one readings grid, score colours only for scores: passed');
 }
