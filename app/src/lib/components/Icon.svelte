@@ -38,6 +38,6 @@
  {:else if name==='star'}<path d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.6L12 16.5l-5.1 2.7 1-5.6-4.1-4 5.7-.8z" fill="currentColor" stroke="none"/>
  {:else if name==='alert'}<path d="M12 4.5l8.5 15h-17z"/><path d="M12 10.5v3.5M12 16.8h.01"/>
  {:else if name==='chevron'}<path d="M9 5l7 7-7 7"/>
- {:else if name==='other'}<circle cx="12" cy="12" r="8"/><path d="M12 8v4m0 4h.01"/>
+ {:else if name==='other'}<circle cx="12" cy="13.5" r="7"/><path d="M12 13.5V10M10 3.5h4M18.5 6.5l-1.3 1.3"/>
  {/if}
 </svg>
