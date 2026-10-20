@@ -3214,3 +3214,41 @@ pub struct WorkoutCount {
     /// Milestones awarded for this recording, in available history.
     pub bests: Vec<String>,
 }
+
+/// What importing a chosen export would change, by record kind. Counts are
+/// rows in the file: added, replaced (the file's copy is newer) and kept
+/// (this phone already has it or has a newer copy).
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ImportRow {
+    pub kind: String,
+    pub added: u32,
+    pub replaced: u32,
+    pub kept: u32,
+}
+
+/// Something in the export this import deliberately does not bring over.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ImportSkip {
+    pub what: String,
+    pub reason: String,
+}
+
+/// A validated import, before or after applying it (§ Rules: Import).
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ImportPreview {
+    /// When the export was made.
+    pub exported_at: Option<String>,
+    /// The version of Raring that made the export.
+    pub app_version: Option<String>,
+    /// The earliest and latest dates the imported settings cover.
+    pub from: Option<String>,
+    pub to: Option<String>,
+    pub rows: Vec<ImportRow>,
+    pub skipped: Vec<ImportSkip>,
+}

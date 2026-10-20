@@ -14,7 +14,7 @@ use serde_json::{Map, Value};
 /// The change-log schema this build reads and writes.
 pub const SCHEMA: u64 = 1;
 /// A versioned settings row, so export, account switches and sign-out cover it.
-const KEY: &str = "garmin:changes";
+pub(crate) const KEY: &str = "garmin:changes";
 /// Entries kept, newest first.
 pub const LOG_LIMIT: usize = 50;
 

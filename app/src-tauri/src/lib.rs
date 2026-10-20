@@ -16,6 +16,17 @@ struct SignInState(Mutex<Option<String>>);
 #[derive(Default)]
 struct SignInPending(Mutex<Option<u64>>);
 
+/// A chosen export, held between the preview and applying it. The core reads
+/// only this path; an Android copy in the app's cache is removed afterwards.
+#[derive(Clone)]
+struct ChosenImport {
+    path: std::path::PathBuf,
+    /// The cache leaf the native picker wrote, when the file is a copy.
+    cleanup: Option<String>,
+}
+#[derive(Default)]
+struct ImportState(Mutex<Option<ChosenImport>>);
+
 fn core(app: &tauri::AppHandle) -> Result<Raring, String> {
     Raring::open(database_path(app)?).map_err(|e| e.to_string())
 }
@@ -751,6 +762,137 @@ async fn export_archive(app: tauri::AppHandle) -> Result<String, String> {
     }
 }
 
+#[cfg(target_os = "android")]
+fn choose_archive(app: &tauri::AppHandle) -> Result<ChosenImport, String> {
+    #[derive(Deserialize)]
+    struct Picked {
+        filename: String,
+    }
+    if !session_ready(app)? {
+        return Err("Account verification required".into());
+    }
+    let picked = vault(app)
+        .0
+        .run_mobile_plugin::<Picked>("pickImport", serde_json::json!({}))
+        .map_err(|e| e.to_string())?;
+    let path = app
+        .path()
+        .app_cache_dir()
+        .map_err(|e| e.to_string())?
+        .join("imports")
+        .join(&picked.filename);
+    Ok(ChosenImport { path, cleanup: Some(picked.filename) })
+}
+
+// The desktop chooser runs on the GTK main thread, where the window lives.
+#[cfg(not(target_os = "android"))]
+fn choose_archive(app: &tauri::AppHandle) -> Result<ChosenImport, String> {
+    let (sender, receiver) = std::sync::mpsc::channel();
+    app.run_on_main_thread(move || {
+        let picked = rfd::FileDialog::new()
+            .set_title("Choose a Raring export")
+            .add_filter("Raring export", &["zip"])
+            .pick_file();
+        let _ = sender.send(picked);
+    })
+    .map_err(|e| e.to_string())?;
+    let path = receiver
+        .recv_timeout(std::time::Duration::from_secs(600))
+        .map_err(|_| "The file chooser was closed".to_owned())?
+        .ok_or_else(|| "No file chosen".to_owned())?;
+    Ok(ChosenImport { path, cleanup: None })
+}
+
+fn discard_import(app: &tauri::AppHandle, chosen: &ChosenImport) {
+    #[cfg(target_os = "android")]
+    if let Some(filename) = &chosen.cleanup {
+        let _ = vault(app).0.run_mobile_plugin::<serde_json::Value>(
+            "discardImport",
+            serde_json::json!({"filename": filename}),
+        );
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        // A desktop choice is the person's own file and is never deleted.
+        let _ = app;
+        debug_assert!(chosen.cleanup.is_none());
+    }
+}
+
+/// Pick an export with the platform's own chooser and validate it. Nothing is
+/// written: the chosen file waits until the person confirms the preview.
+#[tauri::command]
+async fn choose_import(app: tauri::AppHandle) -> Result<ImportPreview, String> {
+    let previous = app.state::<ImportState>().0.lock().map_err(|e| e.to_string())?.take();
+    if let Some(previous) = previous {
+        let handle = app.clone();
+        tauri::async_runtime::spawn_blocking(move || discard_import(&handle, &previous))
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+    let handle = app.clone();
+    let chosen = tauri::async_runtime::spawn_blocking(move || choose_archive(&handle))
+        .await
+        .map_err(|e| e.to_string())??;
+    let handle = app.clone();
+    let path = chosen.path.clone();
+    let preview = tauri::async_runtime::spawn_blocking(move || -> Result<ImportPreview, String> {
+        let core = core(&handle)?;
+        core.import_preview(&path, core.session_identity()).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?;
+    match preview {
+        Ok(preview) => {
+            *app.state::<ImportState>().0.lock().map_err(|e| e.to_string())? = Some(chosen);
+            Ok(preview)
+        }
+        Err(error) => {
+            let handle = app.clone();
+            tauri::async_runtime::spawn_blocking(move || discard_import(&handle, &chosen))
+                .await
+                .map_err(|e| e.to_string())?;
+            Err(error)
+        }
+    }
+}
+
+/// Apply the previewed archive once, under the core's account barrier.
+#[tauri::command]
+async fn apply_import(app: tauri::AppHandle) -> Result<ImportPreview, String> {
+    let chosen = app
+        .state::<ImportState>()
+        .0
+        .lock()
+        .map_err(|e| e.to_string())?
+        .clone()
+        .ok_or("Choose a Raring export first")?;
+    let handle = app.clone();
+    let path = chosen.path.clone();
+    let result = tauri::async_runtime::spawn_blocking(move || -> Result<ImportPreview, String> {
+        let core = core(&handle)?;
+        core.import_settings(&path, core.session_identity()).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?;
+    // A refused import keeps the file chosen, so the person can retry or pick another.
+    let preview = result?;
+    *app.state::<ImportState>().0.lock().map_err(|e| e.to_string())? = None;
+    let handle = app.clone();
+    let done = chosen.clone();
+    tauri::async_runtime::spawn_blocking(move || discard_import(&handle, &done))
+        .await
+        .map_err(|e| e.to_string())?;
+    // Imported rest, pauses and limits change the native surfaces offline.
+    #[cfg(target_os = "android")]
+    vault(&app)
+        .0
+        .run_mobile_plugin_async::<serde_json::Value>("applyStatusSettings", serde_json::json!({}))
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(preview)
+}
+
 #[tauri::command]
 async fn get_settings(app: tauri::AppHandle) -> Result<Settings, String> {
     read_view(app, |core| Ok(core.settings())).await
@@ -828,7 +970,8 @@ mod background;
 pub fn run() {
     let builder = tauri::Builder::default()
         .manage(SignInState::default())
-        .manage(SignInPending::default());
+        .manage(SignInPending::default())
+        .manage(ImportState::default());
     #[cfg(not(target_os = "android"))]
     let builder = builder.manage(DesktopCredentials::default());
     builder
@@ -904,6 +1047,8 @@ pub fn run() {
                     patch_settings,
                     heart_rate_day,
                     export_archive,
+                    choose_import,
+                    apply_import,
                     weight_trend,
                     profile,
                     progress_domains,
@@ -941,6 +1086,8 @@ pub fn run() {
                     patch_settings,
                     heart_rate_day,
                     export_archive,
+                    choose_import,
+                    apply_import,
                     weight_trend,
                     profile,
                     progress_domains,
