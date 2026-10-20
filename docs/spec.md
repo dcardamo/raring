@@ -171,15 +171,19 @@ A briefing with an ending, in this order:
 ### Readiness
 
 - Large gauge with Garmin's level (Prime/High green, Moderate amber, Low/Poor
-  red) and a few-word headline from Garmin's own feedback.
-- Factor bars worst first; tapping one explains it in a sentence. A bar's
+  red) and a few-word headline from Garmin's own feedback. A watch that
+  can't record readiness says so, with no headline.
+- Factor bars worst first, each with Garmin's rating word beside its
+  percentage; tapping one explains it in the Why sheet's sentence with the
+  value Garmin used. A bar's
   color is Garmin's rating; a percentage without a rating keeps its number
   but stays neutral. A factor Garmin didn't rate (it sends NONE, for example
   without valid sleep) is a gap, never 0.
 - A Why sheet lists the six factors worst first, each with the value Garmin
   used (sleep score, recovery hours, 7-day HRV, acute load) and Garmin's
   rating, under one line naming what holds readiness back and what helps.
-- Readiness trend chart and today's call. Tap the chart or use the date
+- Readiness trend chart and today's call: Today's effort bar and reason
+  line, shown when Today shows them. Tap the chart or use the date
   slider to inspect a reading. Dates are anchored to the stored Garmin day,
   missing days remain gaps, and daily bars use Garmin's level boundaries (50
   for Moderate, 75 for High).

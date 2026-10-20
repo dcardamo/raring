@@ -376,6 +376,17 @@ faces, screens, sensors and audio prompts stay in Connect.
 
 ## Done
 
+- **Readiness tells one effort story** (commit "Show Readiness's call on
+  Today's effort bar and explain each factor"), from the Today and Sleep
+  review (M9, M10, m15). Today's call is Today's chevron bar
+  (`EffortBar.svelte`) with Today's reason line, under the same gate; each
+  factor prints Garmin's rating word and a tap gives the Why sheet's
+  sentence with the value Garmin used. An unsupported watch says so without
+  a "waiting" headline. The demo's readiness now carries `sleepScore`,
+  `hrvWeeklyAverage` and `acuteLoad`, so its Why sheet shows the values; the
+  null values the review saw were the demo's, and the High-level summary
+  still names only helpers (spec Rules: Why sheets).
+
 - **Today says each fact once; Choose and This week explain limits**
   (commit "Cut Today's repeats and say why limits block a backlog item"),
   from the Today and Sleep review (B7, M1, M2, M4, M5, m7, m10–m12, m14,

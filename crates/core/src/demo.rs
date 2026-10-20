@@ -222,7 +222,15 @@ fn seed_day(store: &Store, fixture: &Value, day: NaiveDate, days_ago: i64) -> ru
     values["training"]["acuteChronicWorkloadRatio"] = json!(1.1);
     values["training"]["dailyTrainingLoad"] =
         json!([186, 320, 95, 0, 210, 142, 0][days_ago as usize % 7]);
+    // Garmin's readiness carries the values its factors used.
+    let (sleep_score, acute) = (
+        values["sleep"]["dailySleepDTO"]["sleepScores"]["overall"]["value"].clone(),
+        values["training"]["acuteTrainingLoad"].clone(),
+    );
     let r = &mut values["readiness"][0];
+    r["sleepScore"] = sleep_score;
+    r["hrvWeeklyAverage"] = json!(56);
+    r["acuteLoad"] = acute;
     r["score"] = json!(if days_ago == 0 {
         82
     } else {

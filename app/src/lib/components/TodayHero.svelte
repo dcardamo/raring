@@ -3,6 +3,7 @@
  import Icon from './Icon.svelte';
  import Reconcile from './Reconcile.svelte';
  import ActivityRow from './ActivityRow.svelte';
+ import EffortBar from './EffortBar.svelte';
  import type {TodayView} from '../generated/TodayView';
  import type {LocalAction} from '../generated/LocalAction';
  import {toneColor} from '../charts';
@@ -25,7 +26,6 @@
  let recognised = $derived(lead?.activity ? today.activities.find(a => a.id === lead!.activity) : undefined);
  // Keep · Choose another for a session that leads today; Rest is inside Choose.
  let keepId = $derived(lead && ['session', 'garmin'].includes(lead.kind) ? lead.intention ?? lead.garmin ?? null : null);
- const EFFORTS = ['rest', 'easy', 'steady', 'push'] as const;
  function run() {
   const a = lead?.action;
   if (!a) return;
@@ -50,10 +50,7 @@
  {#if today.focus.note && lead?.kind !== 'fixed'}<p class="reason"><Icon name="clock" size={13}/> {today.focus.note}</p>{/if}
  {#if today.focus.schedule}<p class="reason"><Icon name="clock" size={13}/> Timed by your {today.focus.schedule} until a few more nights are recorded.</p>{/if}
  {#if showReason && today.readinessWhy}<p class="reason">{today.readinessWhy.summary}</p>{/if}
- {#if effort}
-  <div class="effort" role="img" aria-label={`Suggested effort from Garmin readiness: ${effort}`}><small>Suggested effort · from Garmin readiness</small>
-   <div class="ebar">{#each EFFORTS as e, i}<span class="sw" class:on={e === effort}><i class="seg s{i}"></i><em>{e}</em></span>{/each}</div></div>
- {/if}
+ {#if effort}<EffortBar {effort}/>{/if}
  {#if lead?.kind === 'sleep'}{#each stillPlanned as s}<button class="still" onclick={() => navigate('plan')}>{s.name}{s.time ? ` ${s.time}` : ''} · still in your plan<Icon name="chevron" size={14}/></button>{/each}{/if}
  {#if recognised}<div class="recognised"><ActivityRow activity={recognised} open={() => navigate('workout/' + recognised!.id)}/></div>{/if}
  {#if today.reconcile && !waiting}<Reconcile reconcile={today.reconcile}/>{/if}
@@ -75,12 +72,6 @@
  .ready-fact{display:flex;flex-wrap:wrap;align-items:center;gap:10px;border-left:1px solid var(--line)!important;padding-left:12px!important}.ready-fact span{min-width:0}.ready-fact b{display:block;font:600 15px Outfit}
  .hero{margin:6px 0 4px;max-width:620px}.hero h2{font:600 23px/1.15 Outfit;margin:8px 4px 2px}
  .line{margin:2px 4px;font-size:14px;color:var(--text)}.reason{margin:2px 4px 6px;font-size:13px;color:var(--text2)}
- .effort{display:grid;gap:4px;margin:8px 4px 6px}.effort>small{font:500 11px Inter;color:var(--text2)}
- .ebar{display:flex;align-items:flex-end}.sw{flex:1;display:grid;gap:5px;justify-items:center;margin-left:-6px}.sw:first-child{margin-left:0}
- .seg{display:block;width:100%;height:16px;clip-path:polygon(0 0,calc(100% - 9px) 0,100% 50%,calc(100% - 9px) 100%,0 100%,9px 50%);opacity:.5}
- .sw:first-child .seg{clip-path:polygon(0 0,calc(100% - 9px) 0,100% 50%,calc(100% - 9px) 100%,0 100%);border-radius:6px 0 0 6px}.sw:last-child .seg{clip-path:polygon(0 0,100% 0,100% 100%,0 100%,9px 50%);border-radius:0 6px 6px 0}
- .s0{background:linear-gradient(90deg,#6F95FF,#5FB8D8)}.s1{background:linear-gradient(90deg,#5FB8D8,#3DDC97)}.s2{background:linear-gradient(90deg,#3DDC97,#FFB547)}.s3{background:linear-gradient(90deg,#FFB547,#FF6B6B)}
- .sw em{font:600 12px Inter;font-style:normal;text-transform:capitalize;color:var(--text2)}.sw.on .seg{opacity:1;height:21px;box-shadow:0 0 0 2px var(--ink)}.sw.on em{color:var(--text);font-weight:700}.sw.on em::before{content:'▲ ';font-size:9px;color:var(--ink)}
  .still{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;min-height:44px;margin:6px 0 0;padding:6px 4px;border:0;border-top:1px solid var(--line);background:none;color:var(--text2);font:500 13px Inter;text-align:left}
  .recognised{margin:10px 0 4px;padding:12px;border:1px solid rgba(61,220,151,.3);border-radius:18px;background:rgba(61,220,151,.06)}
  .acts{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0}.acts button{width:auto;flex:1 1 140px;margin-top:0}

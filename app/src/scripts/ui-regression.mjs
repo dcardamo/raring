@@ -577,6 +577,18 @@ try {
  assert.equal(await page.evaluate(()=>window.__raringBack()),true);
  await whySheet.waitFor({state:'detached'});
  assert.ok(page.url().endsWith('#readiness'),'Back closes the sheet before leaving the screen');
+ // M9/M10: Readiness reuses Today's chevron effort bar with Today's reason line; each factor prints Garmin's
+ // rating word, and a tap explains it in a sentence with the value Garmin used.
+ {
+  const call=page.locator('.card').filter({hasText:"Today's call"});
+  assert.equal(await call.locator('.ebar .sw').count(),4,'one continuous effort bar');
+  assert.equal(await call.locator('button').count(),0,'the effort call is not buttons');
+  assert.ok((await call.textContent()).includes(JSON.parse(await readFile(resolve('src/lib/sample/today.json'),'utf8')).readinessWhy.summary),'the reason is Today’s line from Garmin’s inputs');
+  const load=page.locator('.factor-row').filter({hasText:'Acute load'});
+  assert.ok((await load.textContent()).includes('Moderate'),'the rating is a word, not only a colour');
+  await load.click();
+  assert.ok((await load.locator('p').textContent()).startsWith('612 · Your last 7 days of training load'),'a tap explains the factor');
+ }
  await page.goto(`${url}/#metric/bodyBattery`);await waitRoute('metric/bodyBattery');
  await page.getByRole('button',{name:'Why 78?',exact:true}).click();
  const batterySheet=page.getByRole('dialog',{name:'Why Body Battery is 78'});
@@ -906,6 +918,7 @@ try {
   await rp.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify({...sample,readiness:null,missingMetricReasons:{readiness:'This watch can’t record Training Readiness.'}})}`}));
   await rp.goto(`${url}/#readiness`);
   await rp.locator('.detail-gauge').getByText('This watch can’t record Training Readiness.',{exact:true}).waitFor();
+  assert.equal(await rp.locator('.detail-gauge h2').count(),0,'m15: no "waiting" headline under an unsupported watch');
   await rp.close();
   await sp.goto(`${url}/#health`);
   assert.ok((await sp.locator('.age-source').textContent()).startsWith('Garmin estimate · '),'U48');
