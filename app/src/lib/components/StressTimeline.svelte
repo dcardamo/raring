@@ -72,7 +72,7 @@
 {/snippet}
 {#if !compact}
  {#if heartRate && dayMinutes!==1440}<p class="axis-note">A {num(dayMinutes/60,1)}-hour day: hours count from its start</p>{/if}
- <div class="legend">{#if heartRate}<span><i style:background={colors.ink}></i>Heart rate</span>{:else}{#each ['rest','low','medium','high'] as level}<span><i style:background={stressColors[level]}></i>{stressNames[level]}</span>{/each}{/if}<span><i style:background={colors.secondary}></i>{heartRate?'Activity':'Active'}</span>{#if sleep.length}<span><i style:background={colors.ink} style:opacity=".5"></i>Asleep</span>{/if}</div>
+ <div class="legend">{#if heartRate}<span><i style:background={colors.ink}></i>Heart rate</span>{/if}<span><i class="strip" style:background={colors.secondary}></i>{heartRate?'Activity':'Active'}</span>{#if sleep.length}<span><i style:background={colors.ink} style:opacity=".5"></i>Asleep</span>{/if}</div>
 {/if}
 <style>
  svg{display:block;width:100%;height:auto;overflow:visible;font-family:Inter,sans-serif;color:var(--text)}
@@ -84,4 +84,6 @@
  .legend{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:12px;font-size:12px;color:var(--text2)}
  .legend span{display:inline-flex;align-items:center;gap:5px}
  .legend i{width:7px;height:7px;border-radius:2px}
+ /* Shaped like the strip under the plot, so it isn't read as rest-level stress, which is the same grey. */
+ .legend i.strip{width:14px;height:4px}
 </style>

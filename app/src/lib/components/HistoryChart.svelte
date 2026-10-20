@@ -1,10 +1,11 @@
 <script lang="ts">
  import {untrack,getContext,onDestroy} from 'svelte';
  import type {ChartStateContext} from '../chart-state';
- import {addDays,readinessTone} from '../history';
+ import {addDays} from '../history';
  import {metricAxis} from '../plot';
  import {dateLabel} from '../format';
  import {colors,toneColor} from '../charts';
+ import {chartScale,chartColor,gradientStops} from '../levels';
  import {ranges,localPoints,pointLabel,axisLabel,bucketDays,trendValue,trendNames,trendDecimals,defaultOverlay,changeValue,firstDay} from '../trends';
  import * as api from '../api';
  import type {TrendMetric} from '../generated/TrendMetric';
@@ -18,9 +19,11 @@
  // Without `metric` the chart shows the screen's own 7 or 30 days, ending on `endDate`. With it, longer ranges and comparisons
  // come from the core, which averages long ranges into weeks or months.
  // `compact` is a summary card's chart: its own metric, four ranges, tap to read a day; `more` opens the full tool.
- let {values,endDate='',label,unit='',decimals=0,band=null,bandLabel='Your usual range',readiness=false,nights=false,color=colors.ink,metric,initialRange='days7',compact=false,ranges:compactRanges=['days7','days30','days90','year'],more,moreLabel='Compare and all history',openDay=null,overlayOnly}:{
+ let {values,endDate='',label,unit='',decimals=0,band=null,bandLabel='Your usual range',readiness=false,nights=false,color=colors.neutral,metric,initialRange='days7',compact=false,ranges:compactRanges=['days7','days30','days90','year'],more,moreLabel='Compare and all history',openDay=null,overlayOnly,age=null}:{
   values:(number|null)[];endDate?:string;label:string;unit?:string;decimals?:number;band?:[number,number]|null;
   bandLabel?:string;readiness?:boolean;nights?:boolean;color?:string;metric?:TrendMetric;initialRange?:TrendRange;compact?:boolean;ranges?:TrendRange[];more?:()=>void;moreLabel?:string;openDay?:((date:string)=>void)|null;
+  // Fitness Age's chart compares each estimate with this age (Garmin's current chronological age).
+  age?:number|null;
   // One fixed metric with a single overlay toggle instead of the explorer's metric choice and comparisons.
   overlayOnly?:TrendMetric;
  }=$props();
@@ -67,12 +70,17 @@
    .catch(e=>{if(!cancelled){loadError=String(e);busy=false}});
   return ()=>{cancelled=true};
  });
- // Garmin rates single days; averaged weeks and months and other metrics are ink.
- let levels=$derived(activeReadiness && bucket==='day');
+ // A usual range is shown, and colours readings, only on daily points: it is current, not each week's.
  let shownBand=$derived(!primary && bucket==='day'?band:null);
+ let ageLine=$derived(activeMetric==='fitnessAge' && !primary?age:null);
+ // Garmin's levels colour every reading; a shown range colours readings in or out of it; otherwise neutral blue.
+ let palette=$derived(chartScale(activeReadiness?'readiness':activeMetric,{band:shownBand,age:ageLine}));
+ let colored=$derived(palette.edges.length>0);
+ const tint=(v:number)=>colored?chartColor(palette.tone(v)):color;
  // Bounded Garmin metrics share a stable domain; a quiet day must not fill the scale.
- let axis=$derived(metricAxis(activeReadiness?'readiness':activeMetric,[...points,...(previous?.points??[])].map(p=>p.value),shownBand,activeUnit));
+ let axis=$derived(metricAxis(activeReadiness?'readiness':activeMetric,[...points,...(previous?.points??[])].map(p=>p.value),shownBand ?? (ageLine!=null?[ageLine,ageLine]:null),activeUnit));
  let scale=$derived(axis.scale);
+ let stops=$derived(gradientStops(palette,scale));
  let axis2=$derived(overlay?metricAxis(overlay.metric,overlay.points.map(p=>p.value),null,overlay.unit):{scale:[0,1] as [number,number],ticks:[]});
  let scale2=$derived(axis2.scale);
  let W=$derived(Math.max(280,Math.round(width)));
@@ -126,7 +134,7 @@
  {#snippet inspectedReading()}
  <div class="history-reading" class:inspected={!local} aria-live="polite" aria-atomic="true">
   <div class="reading-values">
-   <div><b class="n" style:color={selected?.value==null?toneColor('neutral'):levels?toneColor(readinessTone(selected.value)):color}>{show(selected?.value)}</b><span>{selected?.value==null?'Not recorded':bucket==='week'?'weekly average':bucket==='month'?'monthly average':activeUnit==='min'?'h:mm':activeUnit}</span></div>
+   <div><b class="n" style:color={selected?.value==null?toneColor('neutral'):tint(selected.value)}>{show(selected?.value)}</b><span>{selected?.value==null?'Not recorded':bucket==='week'?'weekly average':bucket==='month'?'monthly average':activeUnit==='min'?'h:mm':activeUnit}</span></div>
    {#if overlay && selected}<div class="overlay-reading"><b class="n">{trendValue(overlay.points[index]?.value,overlay.unit,overlayDecimals)}</b><span>{overlay.name}</span></div>{/if}
    {#if previous && selected}<div class="overlay-reading"><b class="n">{show(previous.points[index]?.value)}</b><span>{comparisonStart?'comparison block':'period before'}</span></div>{/if}
   </div>
@@ -149,25 +157,27 @@
  <div class="plot-units"><span>{activeLabel}{activeUnit?' · '+(activeUnit==='min'?'h:mm':activeUnit):''}</span>{#if overlay}<span>{overlay.name} · {overlay.unit} (right)</span>{/if}</div>
  <button class="chart-surface" tabindex={compact?0:-1} aria-hidden={compact?undefined:true} aria-label={compact?`${activeLabel} chart. ${selectedText}. Left and right arrows choose a day.`:undefined} onclick={selectFromChart} onkeydown={compact?(e)=>{if(e.key==='ArrowLeft'&&index>0){e.preventDefault();offset++}else if(e.key==='ArrowRight'&&index<count-1){e.preventDefault();offset--}}:undefined}>
   <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${activeLabel}, ${count} ${bucketName}. ${present} recorded. Missing readings are gaps.`}>
+   {#if colored}<defs><linearGradient id={id+'-tone'} gradientUnits="userSpaceOnUse" x1="0" x2="0" y1={y(scale[1])} y2={y(scale[0])}>{#each stops as s}<stop offset={s.offset} stop-color={s.color}/>{/each}</linearGradient></defs>{/if}
    {#if shownBand}
-    <rect x={L} y={y(shownBand[1])} width={R-L} height={Math.max(1,y(shownBand[0])-y(shownBand[1]))} fill="var(--chart-band)"/>
-    <line x1={L} x2={R} y1={y(shownBand[0])} y2={y(shownBand[0])} stroke="#fff" opacity=".2" stroke-dasharray="3 4"/>
-    <line x1={L} x2={R} y1={y(shownBand[1])} y2={y(shownBand[1])} stroke="#fff" opacity=".2" stroke-dasharray="3 4"/>
+    <rect class="history-band" x={L} y={y(shownBand[1])} width={R-L} height={Math.max(1,y(shownBand[0])-y(shownBand[1]))} fill={colors.good} fill-opacity=".1"/>
+    <line x1={L} x2={R} y1={y(shownBand[0])} y2={y(shownBand[0])} stroke={colors.good} stroke-opacity=".45" stroke-dasharray="3 4"/>
+    <line x1={L} x2={R} y1={y(shownBand[1])} y2={y(shownBand[1])} stroke={colors.good} stroke-opacity=".45" stroke-dasharray="3 4"/>
    {/if}
    {#each axis.ticks as tick}
     <text x="0" y={y(tick)+3} fill="var(--text3)" font-size="11">{show(tick)}</text>
     <line x1={L} x2={R} y1={y(tick)} y2={y(tick)} stroke="var(--chart-grid)" stroke-width="var(--stroke-grid)"/>
    {/each}
    {#if overlay}{#each axis2.ticks as tick}<text x={W} y={y(tick,scale2)+3} fill="var(--text3)" font-size="11" text-anchor="end">{trendValue(tick,overlay.unit,overlayDecimals)}</text>{/each}{/if}
+   {#if ageLine!=null}<line class="age-line" x1={L} x2={R} y1={y(ageLine)} y2={y(ageLine)} stroke={colors.ink} stroke-opacity=".6" stroke-dasharray="5 4" stroke-width="1.2"/>{/if}
    {#if count}<line x1={x(index)} x2={x(index)} y1="8" y2={H-12} stroke="currentColor" opacity=".35" stroke-dasharray="2 3"/>{/if}
    {#if previous}<path class="history-previous" d={path(previous.points,scale)} fill="none" stroke={colors.ink} stroke-opacity=".45" stroke-width="1.6" stroke-dasharray="4 4" stroke-linecap="round"/>{/if}
-   {#if !activeReadiness}<path d={path(points,scale)} fill="none" stroke={color} stroke-width="var(--stroke-chart)" stroke-linecap="round" stroke-linejoin="round"/>{/if}
+   {#if !activeReadiness}<path class="history-line" d={path(points,scale)} fill="none" stroke={colored?`url(#${id}-tone)`:color} stroke-width="var(--stroke-chart)" stroke-linecap="round" stroke-linejoin="round"/>{/if}
    {#each points as p,i}
     {#if p.value!=null}
      {#if activeReadiness}
-      <rect class="history-bar" x={x(i)-barWidth/2} y={Math.min(H-18,y(p.value))} width={barWidth} height={Math.max(2,H-16-y(p.value))} rx={Math.min(2,barWidth/2)} fill={levels?toneColor(readinessTone(p.value)):colors.ink} opacity={index===i?1:overlay?.4:levels?.55:.38}/>
+      <rect class="history-bar" x={x(i)-barWidth/2} y={Math.min(H-18,y(p.value))} width={barWidth} height={Math.max(2,H-16-y(p.value))} rx={Math.min(2,barWidth/2)} fill={tint(p.value)} opacity={index===i?1:overlay?.4:.55}/>
      {:else if index===i || count<=40 || (points[i-1]?.value==null && points[i+1]?.value==null)}
-      <circle cx={x(i)} cy={y(p.value)} r={index===i?4:2.5} fill={color} stroke="var(--bg)" stroke-width={index===i?2:0}/>
+      <circle cx={x(i)} cy={y(p.value)} r={index===i?4:2.5} fill={tint(p.value)} stroke="var(--card)" stroke-width={index===i?2:0}/>
      {/if}
     {:else}<circle class="history-gap" cx={x(i)} cy={H-9} r="1.5" fill="currentColor" opacity=".3"/>{/if}
    {/each}
@@ -190,9 +200,9 @@
  </div>{/if}
  <span id={id} class="sr-only">{activeLabel}, {count} {bucketName}. {present} recorded. Missing readings are gaps. Use the slider to select a date.</span>
  <div class="history-legend">
-  {#if shownBand}<span><i style:background="rgba(255,255,255,.13)"></i>{bandLabel} · {show(shownBand[0])}–{show(shownBand[1])}{activeUnit && activeUnit!=='min'?' '+activeUnit:''}</span>{/if}
-  {#if levels}<span><i style:background={colors.poor}></i>Low / Poor</span><span><i style:background={colors.fair}></i>Moderate</span><span><i style:background={colors.good}></i>High / Prime</span>{/if}
-  {#if bucket!=='day'}<span><i style:background={colors.ink}></i>{bucket==='week'?'Weekly':'Monthly'} average of recorded days</span>{/if}
+  {#if shownBand}<span><i class="band"></i>{bandLabel} · {show(shownBand[0])}–{show(shownBand[1])}{activeUnit && activeUnit!=='min'?' '+activeUnit:''}</span>{/if}
+  {#if ageLine!=null}<span><i class="line dashed"></i>Your age {show(ageLine)}</span>{/if}
+  {#if bucket!=='day'}<span><i style:background={colored?colors.secondary:color}></i>{bucket==='week'?'Weekly':'Monthly'} average of recorded days</span>{/if}
   {#if overlay}<span><i class="line" style:border-color={colors.secondary} style:border-top-style="dashed"></i>{overlay.name}, right axis</span>{/if}
   {#if previous}<span><i class="line dashed"></i>{comparisonStart?'Comparison block':range==='year'?'Year before':range==='custom'?'Previous block':days+' '+period+' before'}</span>{/if}
   <span class="record-count">{present} / {count} {bucket==='day'?'recorded':bucketName}</span>
@@ -244,6 +254,7 @@
  .history-legend span{display:inline-flex;align-items:center;gap:5px}
  .history-legend i{width:6px;height:6px;border-radius:2px;opacity:.7}
  .history-legend i.line{width:14px;height:0;border-radius:0;border-top:2px solid;opacity:1}
+ .history-legend i.band{width:14px;height:9px;border-radius:2px;background:color-mix(in srgb,var(--good) 16%,transparent);border:1px dashed color-mix(in srgb,var(--good) 60%,transparent);opacity:1}
  .history-legend i.dashed{border-top:2px dashed rgba(228,232,240,.55)}
  .record-count{margin-left:auto}
  .compare{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}

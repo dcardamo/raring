@@ -97,8 +97,8 @@ const figures:[FigureChoice,string][]=[['profile','Profile'],['female','Female']
     {#if shown && !chart}<p class="dim">{shown.points.length?`Fewer than two sessions with ${weighted?'weighted sets':'reps'} in this range.`:'No sessions in this range.'}</p>{/if}
     <div bind:clientWidth={chartWidth} data-chart="lift" {@attach declutter}>{#if chart}<svg class="trend" viewBox={`0 0 ${chart.W} ${H}`} role="img" aria-label={`${measure==='max'?'Heaviest set':measure==='volume'?'Volume':'Most reps'} each session, ${points.length} sessions: ${points.map(p=>`${dateLabel(p.date)} ${p.v??'none'}`).join(', ')}`}>
      {#each chart.ticks as t}<line x1={pl} x2={chart.W} y1={chart.Y(t)} y2={chart.Y(t)} stroke="rgba(255,255,255,.06)"/><text data-thin="2" x="0" y={chart.Y(t)+4} class="axis n">{t}</text>{/each}
-     <path d={chart.d} fill="none" stroke={colors.ink} stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-     {#each chart.pts as p}{#if p?.dot}{#if p.last}<circle cx={p.x} cy={p.y} r="6.5" fill={p.record?colors.good:colors.ink} stroke="var(--bg)" stroke-width="3"/>{:else}<circle cx={p.x} cy={p.y} r="3" fill="var(--bg)" stroke={colors.ink} stroke-width="2"/>{/if}{#if p.reps!=null && latest?.top && p.reps!==latest.top.reps}<text data-thin x={p.x} y={p.y+18} text-anchor="middle" class="axis n">×{p.reps}</text>{/if}{/if}{/each}
+     <path d={chart.d} fill="none" stroke={colors.neutral} stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+     {#each chart.pts as p}{#if p?.dot}{#if p.last}<circle cx={p.x} cy={p.y} r="6.5" fill={p.record?colors.good:colors.neutral} stroke="var(--card)" stroke-width="3"/>{:else}<circle cx={p.x} cy={p.y} r="3" fill="var(--card)" stroke={colors.neutral} stroke-width="2"/>{/if}{#if p.reps!=null && latest?.top && p.reps!==latest.top.reps}<text data-thin x={p.x} y={p.y+18} text-anchor="middle" class="axis n">×{p.reps}</text>{/if}{/if}{/each}
      {#each chart.dates as m}<text data-thin="1" x={m.x} y={H-4} text-anchor="middle" class="axis">{m.label}</text>{/each}
     </svg>{/if}</div>
    </section>

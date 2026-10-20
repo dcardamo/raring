@@ -313,7 +313,20 @@ try {
  assert.deepEqual(await page.locator('.over-time').first().getByRole('group',{name:'History period'}).getByRole('button').allTextContents(),['7D','30D','90D','1Y']);
  const restingCard=page.locator('.over-time').first();
  assert.ok((await restingCard.locator('.history-legend').textContent()).includes('Raring usual range'),'resting HR is shaded by its own usual range');
- assert.equal(await page.getByText('Fitness Age history',{exact:true}).count(),0,'Fitness Age history lives in its hero card');
+ // Fitness Age is the YOU/AGE bar (green younger, red older); its history is a tap away, not a chart on Health.
+ const ageCard=page.locator('#fitness-age');
+ assert.equal(await ageCard.locator('.history').count(),0,'no history chart on the Health card');
+ assert.deepEqual(await ageCard.locator('.age-mark span').allTextContents(),['YOU 39','AGE 46']);
+ assert.ok(await ageCard.locator('.age-mark.fit').evaluate(el=>el.offsetLeft<el.parentElement.querySelector('.age-mark.real').offsetLeft),'younger sits left of your age');
+ await ageCard.getByRole('button',{name:'Fitness Age 39, your age 46. Open Fitness Age history'}).click();await waitRoute('metric/fitnessAge');
+ const ageHistory=page.locator('.history');await ageHistory.locator('.history-line').waitFor();
+ assert.match(await page.locator('.metric-hero').textContent(),/39.*Garmin estimate · Sun 12 Oct · Your age 46.*7 years younger than your age/);
+ assert.equal(await ageHistory.locator('.age-line').count(),1,'your age is a dashed line');
+ assert.match(await ageHistory.locator('.history-legend').textContent(),/Your age 46/);
+ assert.doesNotMatch(await ageHistory.locator('.history-legend').textContent(),/Younger|Older/,'colour alone, no colour key');
+ assert.match(await ageHistory.locator('.history-line').getAttribute('stroke'),/^url\(#/,'estimates take their colour from your age');
+ await back('health');
+ await ageCard.getByRole('button',{name:'Fitness Age history',exact:true}).click();await waitRoute('metric/fitnessAge');await back('health');
  assert.equal(await page.getByText('Biggest lever',{exact:true}).count(),0,'the lever is folded into its driver');
  const drivers=await page.locator('.drivers').textContent();
  assert.ok(drivers.includes('Target ≥ 150 min/wk') && drivers.includes('38 min/wk to go') && drivers.includes('Biggest lever · reach 150 for age 38'),drivers);
@@ -559,8 +572,8 @@ try {
    if(width>=660 && layout.columns)assert.equal(layout.columns,2,`${width}/${route}: two columns`);
    if(route==='health'){
     await page.locator('.weight-card .fresh').waitFor();
-    assert.ok((await page.locator('.weight-card .fresh').textContent()).includes('Last measured Thu 16 Oct'),`${width}/health: dated weigh-in`);
-    assert.equal(await page.locator('.weight-card .changes li').count(),2,`${width}/health: a 7- and 30-day summary`);
+    assert.ok((await page.locator('.weight-card .fresh').textContent()).includes('Last weigh-in Thu 16 Oct · today'),`${width}/health: dated weigh-in`);
+    assert.deepEqual(await page.locator('.weight-card .summary-pair .label').allTextContents(),['Trend weight','Trend change'],`${width}/health: trend weight and its change`);
    }
    assert.ok(layout.holes<=18,`${width}/${route}: ${layout.holes}px hole between cards`);
    if([390,840].includes(width) && ['today','sleep','training','workout/9000000000001','workout/9000000000002','strength','help/strength-sets','health','plan','plan/commitments','progress','profile'].includes(route)) {
@@ -586,7 +599,8 @@ try {
   const card=sparsePage.locator('.weight-card');
   await card.locator('.fresh').waitFor();
   assert.equal(await card.locator('.scale-mark').count(),indices.length,'each actual scale reading has a marker');
-  assert.equal(await card.locator('.trend-mark').count(),indices.length,'trend markers correspond to actual weigh-ins');
+  assert.equal(await card.locator('.trend-mark').count(),1,'the read point marks its trend');
+  assert.match(await card.locator('.record-count').textContent(),new RegExp(`^${indices.length} weigh-ins?$`),'the key counts actual weigh-ins');
   const path=await card.locator('.scale-line').getAttribute('d');
   assert.equal((path.match(/M/g)??[]).length,indices.length,'core-defined long gaps split the scale line');
   assert.ok(!path.includes('L')&&!path.includes('C'),'isolated readings are not joined');
@@ -599,21 +613,30 @@ try {
   await wp.route('**/src/lib/sample/weight.ts*',r=>r.fulfill({contentType:'text/javascript',body:`export const weightFixtures=${JSON.stringify(fixtures)}`}));
   await wp.goto(`${url}/?weight-unit=${unit}#health`);
   const card=wp.locator('.weight-card');await card.locator('.fresh.stale').waitFor();
-  assert.ok((await card.locator('.weight-head').textContent()).includes(unit));
-  assert.deepEqual(await card.locator('.changes li>span:first-child').allTextContents(),['7 days','30 days'],'Health summarises the week and month');
-  assert.equal(await card.getByRole('group',{name:'Weight range'}).count(),0);
+  assert.ok((await card.locator('.metric-summary').first().textContent()).includes(unit));
+  // Laid out like Health's other history cards: its ranges, the period, the chart and reading, one link; in the neutral blue.
+  assert.deepEqual(await card.getByRole('group',{name:'Weight range'}).getByRole('button').allTextContents(),['7D','30D','90D','1Y']);
+  assert.match(await card.locator('.period-source').textContent(),/^Garmin weigh-ins · /);
+  assert.equal(await card.locator('.changes').count(),0,'each change lives on the detail');
+  assert.equal(await card.locator('.trend-line').getAttribute('stroke'),'#76ACEE','weight is drawn in the neutral blue');
+  assert.equal(await card.locator('.chart-surface').getAttribute('tabindex'),'0','the compact chart reads a weigh-in by key');
   assert.equal(await wp.getByRole('button',{name:'Add weight',exact:true}).count(),0,'adding a weight lives on Profile only');
   assert.deepEqual(await contrastFailures(wp),[],`weight ${unit} contrast`);
-  await card.getByRole('button',{name:'All ranges, changes and body composition'}).click();
+  await card.getByRole('button',{name:'Changes and body composition'}).click();
   await wp.waitForFunction(()=>location.hash==='#health/weight');
   const detail=wp.locator('.weight-card');await detail.locator('.fresh').waitFor();
-  assert.equal(await detail.locator('.changes li').count(),6);
-  assert.ok(!(await detail.textContent()).includes('−0.0'),'a change that rounds to nothing is 0.0');
+  assert.equal(await wp.locator('.weight-changes .changes li').count(),6);
+  assert.ok(!(await wp.locator('main').textContent()).includes('−0.0'),'a change that rounds to nothing is 0.0');
   await detail.getByRole('group',{name:'Weight range'}).getByRole('button',{name:'14 days',exact:true}).click();
   await wp.waitForFunction(()=>document.querySelector('.weight-card')?.getAttribute('aria-busy')==='false');
   await detail.getByRole('slider',{name:'Weight readings'}).press('Home');
   assert.ok((await detail.getByRole('slider').getAttribute('aria-valuetext')).includes(unit));
   assert.deepEqual(await contrastFailures(wp),[],`weight detail ${unit} contrast`);
+  // A range only the detail offers shows on Health as 30 days, with that button selected.
+  await wp.goBack();await wp.waitForFunction(()=>location.hash==='#health');
+  await card.locator('.fresh').waitFor();
+  assert.equal(await card.getByRole('group',{name:'Weight range'}).locator('button.active').textContent(),'30D');
+  assert.match(await card.locator('.period-source').textContent(),/Wed 17 Sept 2025 – Thu 16 Oct 2025/);
   await wp.close();
  }
  console.log('Weight: core fixtures, gap markers, units, freshness, ranges and canonical detail passed');
@@ -2566,7 +2589,8 @@ function trendFixture(q){
   await history.getByText('Weekly average of recorded days',{exact:true}).waitFor();
   assert.equal(await history.locator('.history-bar').count()+await history.locator('.history-gap').count(),52,'a year is 52 weeks');
   const fills=new Set(await history.locator('.history-bar').evaluateAll(bars=>bars.map(b=>b.getAttribute('fill'))));
-  assert.deepEqual([...fills],['#F4F1EA'],'weekly averages are ink, not Garmin levels');
+  // A weekly average sits on Garmin's 0–100 readiness scale, so it takes that level's colour; never ink.
+  assert.ok(fills.size>0 && [...fills].every(f=>['#60D3A0','#F2B85E','#F17E78'].includes(f)),'weekly averages take Garmin level colours: '+[...fills]);
   assert.ok((await history.getByRole('slider').getAttribute('aria-valuetext')).startsWith('Week of '));
   assert.match(await history.locator('.history-reading small').textContent(),/^\d of \d days recorded$/);
   await history.getByRole('button',{name:'Previous',exact:true}).click();

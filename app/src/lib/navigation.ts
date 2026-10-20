@@ -2,7 +2,7 @@ export const tabs = ['today', 'plan', 'training', 'health', 'progress'] as const
 
 const metrics = new Set([
   'bodyBattery', 'stress', 'heartRate', 'restingHr', 'sleepHr', 'hrv', 'respiration', 'spo2', 'skinTemp',
-  'vo2max', 'endurance', 'hill', 'runningTolerance', 'acuteLoad',
+  'vo2max', 'endurance', 'hill', 'runningTolerance', 'acuteLoad', 'fitnessAge',
 ]);
 const routes = new Set([...tabs, 'sleep', 'sleep/last', 'sleep/tonight', 'readiness', 'settings', 'onboarding', 'strength', 'help',
   'profile', 'gear', 'plan/commitments', 'review/latest', 'reviews', 'health/weight', 'progress/milestones']);

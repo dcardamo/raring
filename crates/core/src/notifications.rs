@@ -133,7 +133,7 @@ pub fn notifications(store: &Store, now: DateTime<Local>) -> Vec<Notification> {
         );
     }
     if view.vitals.off_count >= 2 {
-        let mut outliers = view.vitals.readings.iter().filter(|r| r.tone == Tone::Poor);
+        let mut outliers = view.vitals.readings.iter().filter(|r| r.tone == Tone::Fair);
         let garmin = outliers.clone().any(|r| {
             r.status.is_some() || r.range_source == VitalRangeSource::Garmin
         });

@@ -1,6 +1,6 @@
 <script lang="ts">
  import type {IntensityCard} from '../generated/IntensityCard';
- import {colors} from '../charts';
+ import {colors,goalColors} from '../charts';
  import {num} from '../format';
  import {weekRange} from '../plan';
  import Card from './Card.svelte';
@@ -12,7 +12,7 @@
 <Card title="Intensity minutes" onclick={open} extra="intensity-card" {id}>
  {#snippet aside()}<span class="pill">{weekRange(intensity.start,intensity.end)}</span>{/snippet}
  <div class="ring">
-  <Gauge size={112} stroke={11} value={intensity.total} max={intensity.goal??Math.max(intensity.total,1)} display={num(intensity.total)} caption={intensity.goal!=null?`of ${num(intensity.goal)}`:'min'} color={met?colors.good:colors.ink}/>
+  <Gauge size={112} stroke={11} value={intensity.total} max={intensity.goal??Math.max(intensity.total,1)} display={num(intensity.total)} caption={intensity.goal!=null?`of ${num(intensity.goal)}`:'min'} color={met?colors.good:goalColors.intensity}/>
   <div class="split">
    <div><b class="n">{num(intensity.moderate)}</b><span>moderate min</span></div>
    <div><b class="n">{num(intensity.vigorous)}</b><span>vigorous min, counted twice</span></div>

@@ -20,7 +20,7 @@ const contrast=(a:string,b:string)=>{
 
 describe('Raring visual tokens',()=>{
  it('keeps CSS surfaces and chart/goal palettes in agreement',()=>{
-  for(const name of ['good','fair','poor','amount','ink','deep','light','rem','awake'] as const)expect(colors[name]).toBe(token(name));
+  for(const name of ['good','fair','poor','amount','neutral','ink','deep','light','rem','awake'] as const)expect(colors[name]).toBe(token(name));
   expect(colors.secondary).toBe(token('text2'));
   for(const [kind,name] of [['strength','strength'],['zone2','zone2'],['highIntensity','high'],['intensity','intensity'],['sleep','sleep']] as const){
    expect(goalColors[kind]).toBe(token(`goal-${name}`));
@@ -28,7 +28,7 @@ describe('Raring visual tokens',()=>{
   expect(GOALS.sleepScore.color).toBe(GOALS.sleepTiming.color);
  });
  it('keeps every text and semantic color above 4.5:1 on every solid surface',()=>{
-  const inks=[...['text','text2','text3','ink','good','fair','poor','amount'].map(token),...Object.values(goalColors)];
+  const inks=[...['text','text2','text3','ink','good','fair','poor','amount','neutral'].map(token),...Object.values(goalColors)];
   for(const surface of ['bg','card','surface2','surface3'])for(const ink of inks){
    expect(contrast(ink,token(surface)),`${ink} on ${surface}`).toBeGreaterThanOrEqual(4.5);
   }
