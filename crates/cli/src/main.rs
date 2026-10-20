@@ -213,6 +213,23 @@ async fn main() -> Result<()> {
             if let Some(error)=report.error{bail!("{error}")};
             show(&serde_json::json!({"requests":report.requests,"day":day}))?;
         },
+        Some("day-detail")=>{
+            let date=args.get(1).context("day-detail YYYY-MM-DD")?;
+            let parts=[raring_core::view::DayDetailPart::Sleep,raring_core::view::DayDetailPart::Stress,raring_core::view::DayDetailPart::Vitals];
+            let (tokens,report)=core.fetch_day_detail(read_tokens()?,date,&parts).await?;
+            save_tokens(&tokens)?;if report.auth_failed{bail!("sign in again")};
+            if report.rate_limited{bail!("rate limited")};
+            if let Some(error)=report.error{bail!("{error}")};
+            show(&report)?;
+        },
+        Some("workout-detail")=>{
+            let id=args.get(1).context("workout-detail ACTIVITY_ID")?;
+            let (tokens,report)=core.fetch_workout_detail(read_tokens()?,id).await?;
+            save_tokens(&tokens)?;if report.auth_failed{bail!("sign in again")};
+            if report.rate_limited{bail!("rate limited")};
+            if let Some(error)=report.error{bail!("{error}")};
+            show(&report)?;
+        },
         Some("export")=>{let path=Path::new(args.get(1).context("export FILE.zip")?);if path.exists(){bail!("export file already exists")};core.export(path, env!("CARGO_PKG_VERSION"))?;println!("Exported {}",path.display());},
         // Validate an export's settings and, with --apply, import them for this phone's account.
         Some("import")=>{let apply=args.iter().any(|a|a=="--apply");
@@ -283,7 +300,7 @@ async fn main() -> Result<()> {
             save_tokens(&client.tokens().await)?;
             println!("Scrubbed capture at {}. Review it manually before sharing.",out.display());
         },
-        _=>bail!("usage: raring login [--import FILE] | sync [--budget N] | status | demo [--date YYYY-MM-DD] | show SCREEN [--date YYYY-MM-DD] [--at YYYY-MM-DDTHH:MM] | set-plan JSON | notifications | trend METRIC [--range days7|days30|days90|year|all|custom] [--start DATE] [--date DATE] [--overlay METRIC] [--previous] [--comparison-start DATE] | fetch KIND [KEY] | capture --out DIR")
+        _=>bail!("usage: raring login [--import FILE] | sync [--budget N] | status | demo [--date YYYY-MM-DD] | show SCREEN [--date YYYY-MM-DD] [--at YYYY-MM-DDTHH:MM] | set-plan JSON | notifications | trend METRIC [--range days7|days30|days90|year|all|custom] [--start DATE] [--date DATE] [--overlay METRIC] [--previous] [--comparison-start DATE] | day-detail YYYY-MM-DD | workout-detail ACTIVITY_ID | fetch KIND [KEY] | capture --out DIR")
     }
     Ok(())
 }

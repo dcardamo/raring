@@ -707,6 +707,30 @@ pub struct JournalDay {
     pub entries: Vec<JournalEntry>,
 }
 
+/// One page's per-day detail that an explicit open can still fetch.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum DayDetailPart {
+    Sleep,
+    Stress,
+    Vitals,
+    Workout,
+}
+
+/// Per-day reads this phone has stored or still needs for an opened day.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct DayDetail {
+    /// Parts with a per-day read this phone has never stored.
+    #[serde(default)]
+    pub missing: Vec<DayDetailPart>,
+    /// Parts Garmin answered with nothing for this day.
+    #[serde(default)]
+    pub unavailable: Vec<DayDetailPart>,
+}
+
 /// One night's recorded sleep against Garmin's need for it.
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -764,6 +788,9 @@ pub struct SleepView {
     /// before the night's window).
     #[serde(default)]
     pub wind_down_open: bool,
+    /// A past night's detail an explicit open can fetch.
+    #[serde(default)]
+    pub detail: DayDetail,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
@@ -972,6 +999,9 @@ pub struct WorkoutView {
     /// How it counted toward the week's goals; live reads only.
     #[serde(default)]
     pub counted: Option<WorkoutCount>,
+    /// Per-activity reads this phone has never stored for the workout.
+    #[serde(default)]
+    pub detail: DayDetail,
 }
 
 /// Weights follow Garmin's measurement setting.
@@ -1282,6 +1312,9 @@ pub struct HealthView {
     pub body_weight: Option<BodyWeightCard>,
     /// This week's intensity minutes, when Garmin reported any day of it.
     pub intensity: Option<IntensityCard>,
+    /// A past day's detail an explicit open can fetch.
+    #[serde(default)]
+    pub detail: DayDetail,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]

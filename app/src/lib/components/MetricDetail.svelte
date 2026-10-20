@@ -18,10 +18,11 @@
  import RangeBar from './RangeBar.svelte';
  import StressTimeline from './StressTimeline.svelte';
  import WhySheet from './WhySheet.svelte';
- let {metric,data}:{metric:string,data:TodayView|HealthView|TrainingView}=$props();
+ let {metric,data,dayDate=null}:{metric:string,data:TodayView|HealthView|TrainingView,dayDate?:string|null}=$props();
  let source=$derived(metricSource(metric));
  let battery=$derived(metric==='bodyBattery'?(data as TodayView).bodyBattery:null);
- let stress=$derived(metric==='stress'?(data as TodayView).stress:null);
+ let stress=$derived(metric==='stress'?(data as TodayView|HealthView).stress:null);
+ let isDay=$derived(dayDate!=null);
  let stressTotal=$derived(stress?stress.time.reduce((a,b)=>a+b.seconds,stress.activeS??0):0);
  let vital=$derived(source==='health'?(data as HealthView).vitals.readings.find(v=>v.kind===metric):null);
  let training=$derived(source==='training'?data as TrainingView:null);
@@ -39,6 +40,13 @@
   catch { hrError='Could not load that day. Try again later.'; }
   finally { hrBusy=false; }
  }
+ // An opened dated heart-rate page reads that day once; navigation never fetches.
+ let fetchedDay=$state('');
+ $effect(()=>{
+  if(metric!=='heartRate' || !dayDate || fetchedDay===dayDate)return;
+  fetchedDay=dayDate;
+  void changeHrDate(dayDate);
+ });
 </script>
 <div class="metric-hero">
  {#if metric==='heartRate' && shown}
@@ -48,7 +56,7 @@
   {#if hrError}<p class="small">{hrError}</p>{/if}
  {:else if stress}
   <div class="metric-value n" style:color={stress.level?stressColors[stress.level]:toneColor('neutral')}>{num(stress.average)}</div>
-  <p class="small">{stress.level?stressNames[stress.level]+' · ':''}average so far today{#if stress.max!=null}{` · peak ${num(stress.max)}`}{/if}</p>
+  <p class="small">{stress.level?stressNames[stress.level]+' · ':''}average {isDay?'for '+dateLabel((data as HealthView).date):'so far today'}{#if stress.max!=null}{` · peak ${num(stress.max)}`}{/if}</p>
   {#if stress.qualifier}<span class="pill" style:color={toneColor(stress.tone)}>{stress.qualifier}</span>{/if}
  {:else if battery}
   <Gauge size={210} stroke={15} value={battery.now} caption="Latest synced" color={battery.now!=null?batteryColor(battery.now):colors.secondary}/>
@@ -67,10 +75,10 @@
   <Card title="Through the day">{#if shown.timeline.length}{#key shown.date}<StressTimeline heartRate={shown}/>{/key}{:else}<p class="small">No heart-rate samples for this day.</p>{/if}</Card>
   <Card title="Daily values"><div class="battery-totals"><div><b class="big n">{num(shown.resting)}</b><span>Garmin resting HR · bpm</span></div><div><b class="big n">{num(shown.minimum)}</b><span>Minimum · bpm</span></div><div><b class="big n">{num(shown.maximum)}</b><span>Maximum · bpm</span></div></div></Card>
  {:else if stress}
-  {#if stress.timeline.length}<Card title="Through the day"><StressTimeline {stress}/></Card>{/if}
+  {#if stress.timeline.length}<Card title="Through the day"><StressTimeline {stress}/></Card>{:else}<Card title="Through the day"><p class="small">Garmin has no stress readings for this day.</p></Card>{/if}
   {#if stress.time.length}<Card title="Time in each level">{#each stress.time as t}<div class="stress-row"><b>{stressNames[t.level]}</b><div class="bar"><i style:width={t.seconds/Math.max(stressTotal,1)*100+'%'} style:background={stressColors[t.level]}></i></div><span class="n">{duration(t.seconds/60)}</span><small>{Math.round(t.seconds/Math.max(stressTotal,1)*100)}%</small></div>{/each}{#if stress.activeS}<div class="stress-row"><b>Active</b><div class="bar"><i style:width={stress.activeS/Math.max(stressTotal,1)*100+'%'} style:background={colors.secondary}></i></div><span class="n">{duration(stress.activeS/60)}</span><small>{Math.round(stress.activeS/Math.max(stressTotal,1)*100)}%</small></div>{/if}</Card>{/if}
   <Card title="Daily average">
-   <HistoryChart values={stress.trend} endDate={(data as TodayView).date} label="Average stress" color={colors.ink} metric="stress"/>
+   <HistoryChart values={stress.trend} endDate={(data as TodayView|HealthView).date} label="Average stress" color={colors.ink} metric="stress"/>
   </Card>
  {:else if battery}
   <Card title="Daily high"><HistoryChart values={[]} endDate={(data as TodayView).date} label="Highest Body Battery" metric="bodyBattery" initialRange="days30"/></Card>
