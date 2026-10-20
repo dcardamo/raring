@@ -47,6 +47,7 @@ fn input<'a>(now: &str, plan: Option<&'a SleepPlan>, wakes: &'a [f64]) -> PhaseI
         date: NaiveDate::parse_from_str(DATE, "%Y-%m-%d").unwrap(),
         plan,
         wakes,
+        schedule_wake: None,
         last_night: Some(LastNight {
             asleep_min: Some(450.),
             need_min: Some(465.),
@@ -598,4 +599,49 @@ fn the_unsynced_morning_waits_and_a_finished_workout_drops_the_effort_call() {
     assert!(lead.action.is_none() && !lead.dismissable);
     drop(core);
     let _ = std::fs::remove_file(path);
+}
+
+/// Without enough recorded nights, Garmin's own sleep schedule anchors the
+/// phases instead of the fixed layout, labelled as such; recorded wake times
+/// take over once there are enough of them.
+#[test]
+fn garmins_sleep_schedule_anchors_the_phases_until_nights_are_recorded() {
+    let plan = plan();
+    let few = [6.9, 7.1];
+    let mut i = input("2025-03-12T21:00", Some(&plan), &few);
+    assert_eq!(phase::focus(&i).phase, DayPhase::Overview, "no schedule: fixed layout");
+    i.schedule_wake = Some(7.0);
+    let f = phase::focus(&i);
+    assert_eq!((f.phase, f.schedule.as_deref(), f.note.as_deref()), (DayPhase::Evening, Some("Garmin sleep schedule"), None));
+    let mut late = input("2025-03-12T23:30", Some(&plan), &few);
+    late.schedule_wake = Some(7.5);
+    assert_eq!(phase::focus(&late).until.as_deref(), Some("2025-03-13T07:30:00"), "late night lasts to the scheduled wake");
+    // Enough recorded nights: they win, and nothing is labelled.
+    let mut recorded = input("2025-03-12T23:30", Some(&plan), &WAKES);
+    recorded.schedule_wake = Some(9.0);
+    let f = phase::focus(&recorded);
+    assert_eq!((f.until.as_deref(), f.schedule), (Some("2025-03-13T07:00:00"), None));
+
+    let store = Store::open(":memory:").unwrap();
+    for date in [DATE, "2025-03-11"] {
+        put_night(&store, date, "07:00", -5, WINDOW());
+    }
+    let home = FixedOffset::west_opt(5 * 3600).unwrap();
+    let evening = home.from_local_datetime(&at("2025-03-12T21:00")).unwrap();
+    assert_eq!(screens::today_at(&store, DATE, evening).focus.phase, DayPhase::Overview);
+    let settings = |default: bool| json!({"measurementSystem": "metric",
+        "userSleep": {"sleepTime": 82800, "wakeTime": 28800, "defaultSleepTime": default, "defaultWakeTime": default},
+        // 2025-03-12 is a Wednesday: its own window comes before the daily one.
+        "userSleepWindows": [
+            {"sleepWindowFrequency": "DAILY", "startSleepTimeSecondsFromMidnight": 82800, "endSleepTimeSecondsFromMidnight": 28800},
+            {"sleepWindowFrequency": "WEDNESDAY", "startSleepTimeSecondsFromMidnight": 79200, "endSleepTimeSecondsFromMidnight": 21600}]});
+    // Garmin's untouched defaults are no schedule.
+    store.put("profile_settings", "me", "synthetic", &settings(true)).unwrap();
+    assert_eq!(screens::today_at(&store, DATE, evening).focus.phase, DayPhase::Overview);
+    store.put("profile_settings", "me", "synthetic", &settings(false)).unwrap();
+    let view = screens::today_at(&store, DATE, evening);
+    assert_eq!((view.focus.phase, view.focus.schedule.as_deref()), (DayPhase::Evening, Some("Garmin sleep schedule")));
+    // The handover follows the scheduled 06:00 wake (three hours on), not noon.
+    assert_eq!(screens::current_date(&store, at("2025-03-13T08:30")).to_string(), DATE);
+    assert_eq!(screens::current_date(&store, at("2025-03-13T09:30")).to_string(), "2025-03-13");
 }

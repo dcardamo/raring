@@ -756,6 +756,12 @@ try {
   await sp.goto(`${url}/#sleep`);
   await sp.getByRole('tab',{name:'Tonight'}).waitFor();
   assert.equal(await sp.getByRole('tab',{name:'Tonight'}).getAttribute('aria-selected'),'true','evening opens Tonight');
+  // The header names tonight's evening and window on Tonight, last night's times on Last night.
+  assert.equal(await sp.locator('.eyebrow').first().textContent(),'Thu 16 Oct · 22:30–23:06','Tonight header');
+  await sp.getByRole('tab',{name:'Last night'}).click();
+  await sp.waitForFunction(()=>document.querySelector('.eyebrow')?.textContent==='22:31 – 06:39');
+  await sp.getByRole('tab',{name:'Tonight'}).click();
+  await sp.waitForFunction(()=>document.querySelector('.eyebrow')?.textContent?.startsWith('Thu 16 Oct'));
   const wound=sp.getByRole('button',{name:/Wound down · self-reported/});
   assert.ok(await wound.isDisabled(),'a reported wind-down is shown, once');
   {
@@ -1199,7 +1205,7 @@ try {
    // After midnight Your day and Recorded today are the new calendar day's, which has nothing yet.
    const next=time.includes('T');
    const view={...structuredClone(base),sleepPlan:plan,lead:l,checkinReady:true,watchLastUpload:new Date(clock.getTime()-15*60_000).toISOString(),
-    focus:{...base.focus,phase,cards:['sleepPlan','day','focus'],until,effort,planOpen:true},
+    focus:{...base.focus,phase,cards:['sleepPlan','day','focus'],until,effort,planOpen:true,schedule:time==='21:30'?'Garmin sleep schedule':null},
     day:next?{...base.day,date:'2025-10-17',nowMin:90,sleep:[],asleepMin:null,events:[],bodyBattery:[],stress:[],heartRate:[]}:base.day};
    await night.clock.setFixedTime(clock);
    await night.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(view)}`}));
@@ -1227,6 +1233,7 @@ try {
    for(const text of ['Left this week','Do it today','Weekly check-in','Plan your week'])assert.equal(main.includes(text),!calm,`${time}: ${text} ${calm?'hidden':'shown'}`);
    if(calm)assert.ok(!/holds it back|Ready to push|Training is an option/.test(await night.locator('.hero').textContent()),`${time}: the hero's reason is about sleep`);
    if(time==='23:21')await night.screenshot({path:resolve(output,'390-today-night-2321.png'),fullPage:true});
+   assert.equal((await night.locator('.hero').textContent()).includes('Timed by your Garmin sleep schedule'),time==='21:30',`${time}: the schedule's source is named when it anchors the day`);
    if(time==='21:30'){
     // Last night's facts open Last night, even though Sleep opens Tonight in the evening.
     const sleepSample=JSON.parse(await readFile(resolve('src/lib/sample/sleep.json'),'utf8'));

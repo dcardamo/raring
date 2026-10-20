@@ -278,6 +278,39 @@ fn wake_hours(nights: &[Value]) -> Vec<f64> {
         .filter(|hour| hour.is_finite() && (0.0..24.0).contains(hour))
         .collect()
 }
+/// The wake time of Garmin's sleep schedule for the morning of `date`, hours
+/// after local midnight: that weekday's window, otherwise the daily one,
+/// otherwise `userSleep`. Garmin's untouched defaults are no schedule.
+pub(crate) fn garmin_wake(store: &Store, date: NaiveDate) -> Option<f64> {
+    let settings = store.get("profile_settings", "me")?;
+    let sleep = &settings["userSleep"];
+    if sleep["defaultWakeTime"].as_bool() == Some(true) || sleep["defaultSleepTime"].as_bool() == Some(true) {
+        return None;
+    }
+    let day = date.format("%A").to_string().to_uppercase();
+    let windows = settings["userSleepWindows"].as_array();
+    let window = |frequency: &str| {
+        windows?
+            .iter()
+            .find(|w| w["sleepWindowFrequency"].as_str() == Some(frequency))?["endSleepTimeSecondsFromMidnight"]
+            .as_f64()
+    };
+    window(&day)
+        .or_else(|| window("DAILY"))
+        .or_else(|| sleep["wakeTime"].as_f64())
+        .filter(|s| (0. ..86_400.).contains(s))
+        .map(|s| s / 3600.)
+}
+/// Fewer recorded wake times in the 14 nights to `date` than the phases
+/// need, so Garmin's sleep schedule would anchor them.
+pub(crate) fn few_recorded_wakes(store: &Store, date: &str) -> bool {
+    rules::wake_clock(&wake_hours(&recent_nights(store, date))).is_none_or(|u| u.count < phase::MIN_WAKE_NIGHTS)
+}
+/// The usual wake for the morning of `date` (Rules: Time of day).
+fn usual_wake(store: &Store, date: &str) -> Option<rules::WakeClock> {
+    let day = NaiveDate::parse_from_str(date, "%Y-%m-%d").ok()?;
+    phase::usual(&wake_hours(&recent_nights(store, date)), garmin_wake(store, day)).0
+}
 fn recent_nights(store: &Store, date: &str) -> Vec<Value> {
     (0..14)
         .filter_map(|i| store.get("sleep", &date_sub(date, i)))
@@ -1475,7 +1508,7 @@ pub fn current_date(store: &Store, now: NaiveDateTime) -> NaiveDate {
         let date = today - Duration::days(back);
         let key = date.to_string();
         if has_night(store, &key) {
-            let usual = rules::wake_clock(&wake_hours(&recent_nights(store, &key)));
+            let usual = usual_wake(store, &key);
             return if now < phase::handover(date, recorded_wake(store, &key), usual.as_ref()) {
                 date
             } else {
@@ -1779,6 +1812,7 @@ pub fn today_at_calendar(store: &Store, date: &str, now: DateTime<FixedOffset>, 
         date: NaiveDate::parse_from_str(date, "%Y-%m-%d").unwrap_or(now.date_naive()),
         plan: plan.as_ref(),
         wakes: &wake_hours(&nights),
+        schedule_wake: NaiveDate::parse_from_str(date, "%Y-%m-%d").ok().and_then(|d| garmin_wake(store, d)),
         last_night: recorded.map(|s| LastNight {
             asleep_min: num(s, &[&["sleepTimeSeconds"]]).map(|t| t / 60.),
             need_min: sleep_need_minutes(&s["sleepNeed"]),

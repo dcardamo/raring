@@ -408,6 +408,10 @@ pub struct TodayFocus {
     pub note: Option<String>,
     /// Garmin's recovery time at the latest readiness, hours.
     pub recovery_hours: Option<f64>,
+    /// Where the phases' wake time comes from when it isn't recorded nights:
+    /// "Garmin sleep schedule".
+    #[serde(default)]
+    pub schedule: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]

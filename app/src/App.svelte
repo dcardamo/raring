@@ -71,7 +71,7 @@
  import Reconcile from './lib/components/Reconcile.svelte';
  import {closeSheet} from './lib/sheet';
  import * as api from './lib/api';
- import type {TodayView} from './lib/generated/TodayView';import type {SleepView} from './lib/generated/SleepView';import type {TrainingView} from './lib/generated/TrainingView';import type {WorkoutView} from './lib/generated/WorkoutView';import type {HealthView} from './lib/generated/HealthView';import type {CheckinView} from './lib/generated/CheckinView';import type {AppStatus} from './lib/generated/AppStatus';
+ import type {TodayView} from './lib/generated/TodayView';import type {SleepView} from './lib/generated/SleepView';import type {SleepPlan} from './lib/generated/SleepPlan';import type {TrainingView} from './lib/generated/TrainingView';import type {WorkoutView} from './lib/generated/WorkoutView';import type {HealthView} from './lib/generated/HealthView';import type {CheckinView} from './lib/generated/CheckinView';import type {AppStatus} from './lib/generated/AppStatus';
  import Icon from './lib/components/Icon.svelte';import BrandMark from './lib/components/BrandMark.svelte';import ReadinessTrend from './lib/components/ReadinessTrend.svelte';
  import Gauge from './lib/components/Gauge.svelte';import Sparkline from './lib/components/Sparkline.svelte';import RangeBar from './lib/components/RangeBar.svelte';import ZoneStrip from './lib/components/ZoneStrip.svelte';import Hypnogram from './lib/components/Hypnogram.svelte';import ConsistencyChart from './lib/components/ConsistencyChart.svelte';import WeekBars from './lib/components/WeekBars.svelte';import LoadFocus from './lib/components/LoadFocus.svelte';import RouteMap from './lib/components/RouteMap.svelte';import HrChart from './lib/components/HrChart.svelte';import Card from './lib/components/Card.svelte';import Chip from './lib/components/Chip.svelte';import Header from './lib/components/Header.svelte';import TabBar from './lib/components/TabBar.svelte';import ActivityRow from './lib/components/ActivityRow.svelte';
  import {colors,toneColor,batteryColor,stressColors,stressNames} from './lib/charts';import {duration,elapsed,pace,clock,dateLabel,monthLabel,signed,num,minuteClock} from './lib/format';
@@ -417,6 +417,9 @@
  let dayInHero=$derived(todayData?.focus.cards.find(c=>c!=='focus' && c!=='vitals')==='day');
  // Wind-down and late night: nothing about the week competes with tonight's plan.
  let calmNight=$derived(['windDown','lateNight'].includes(todayData?.focus.phase??''));
+ let sleepTab=$derived<'tonight'|'last'>(route==='sleep/tonight'||(route==='sleep'&&!!sleepData?.tonightFirst)?'tonight':'last');
+ // Tonight's header names the evening the plan's night starts and its window, not last night's times.
+ const tonightLabel=(plan:SleepPlan|null)=>plan?`${dateLabel(addDays(plan.night,-1))} · ${plan.bedtimeStart?`${plan.bedtimeStart}–${plan.bedtime}`:`asleep by ${plan.bedtime}`}`:'Tonight';
  let todayNaps=$derived((todayData?.day?.events??[]).filter(e=>e.kind==='nap'));
  // Pages between the area cards and the closing summary, in order.
  let checkinExtra=$derived(checkinData?[...(checkinData.timing?['timing']:[]),...(checkinData.intensity?['intensity']:[])]:[]);
@@ -477,7 +480,7 @@
 {:else if route==='readiness' && todayData}
  {#snippet readinessHeader()}<Header title="Readiness" eyebrow={dateLabel(todayData.date)} back={back} backLabel="Today"/>{/snippet}<ReadinessDetail {todayData} header={readinessHeader} bind:selectedFactor/>
 {:else if sleepData}
- {#snippet sleepHeader()}<Header title="Sleep" eyebrow={sleepData.startLocal?`${clock(sleepData.startLocal)} – ${clock(sleepData.endLocal)}`:dateLabel(sleepData.date)} {...rootControls}/>{/snippet}{#snippet tonightTab()}<SleepTonight sleep={sleepData} board={weekBoard} {act} {navigate} {now} reminder={settings.notifyBedtime} setReminder={on=>void patchSettings({notifyBedtime:on})}/>{/snippet}<SleepDetail {sleepData} header={sleepHeader} tab={route==='sleep/tonight'||(route==='sleep'&&sleepData.tonightFirst)?'tonight':'last'} setTab={t=>navigate('sleep/'+(t==='last'?'last':'tonight'))} tonight={tonightTab}/>
+ {#snippet sleepHeader()}<Header title="Sleep" eyebrow={sleepTab==='tonight'?tonightLabel(sleepData.sleepPlan):sleepData.startLocal?`${clock(sleepData.startLocal)} – ${clock(sleepData.endLocal)}`:dateLabel(sleepData.date)} {...rootControls}/>{/snippet}{#snippet tonightTab()}<SleepTonight sleep={sleepData} board={weekBoard} {act} {navigate} {now} reminder={settings.notifyBedtime} setReminder={on=>void patchSettings({notifyBedtime:on})}/>{/snippet}<SleepDetail {sleepData} header={sleepHeader} tab={sleepTab} setTab={t=>navigate('sleep/'+(t==='last'?'last':'tonight'))} tonight={tonightTab}/>
 {:else if trainingData}
  {#snippet trainingHeader()}<Header title="Training" eyebrow="Last 7 days" {...rootControls}/>{/snippet}<TrainingTab {trainingData} header={trainingHeader} {navigate} bind:section={trainingSection} muscles={api.muscles}/>
 {:else if workoutData}

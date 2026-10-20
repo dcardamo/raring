@@ -36,4 +36,9 @@ note: string | null,
 /**
  * Garmin's recovery time at the latest readiness, hours.
  */
-recoveryHours: number | null, };
+recoveryHours: number | null, 
+/**
+ * Where the phases' wake time comes from when it isn't recorded nights:
+ * "Garmin sleep schedule".
+ */
+schedule: string | null, };

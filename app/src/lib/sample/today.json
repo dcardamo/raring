@@ -1251,7 +1251,8 @@
       "woke": "06:39"
     },
     "note": null,
-    "recoveryHours": 18
+    "recoveryHours": 18,
+    "schedule": null
   },
   "heartRateDay": {
     "date": "2025-10-16",

@@ -1078,7 +1078,13 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   are never changed and no future dates are fetched.
 - **Time of day**: phases are local wall-clock times anchored to the
   displayed night's recorded wake (otherwise its usual wake) and tonight's
-  shared sleep plan, never fixed clock hours. After waking lasts three hours,
+  shared sleep plan, never fixed clock hours. The usual wake is the recorded
+  wake times' once there are at least four in 14 nights; until then it is
+  the wake time of Garmin's sleep schedule for the displayed day (that
+  weekday's window, otherwise the daily one, otherwise `userSleep`), which
+  counts as credible and is labelled "Garmin sleep schedule" on Today.
+  Garmin's untouched defaults (`defaultSleepTime` or `defaultWakeTime`) are
+  no schedule. After waking lasts three hours,
   or until the plan rises if that comes first; the day runs until two hours
   before Garmin's window starts (Raring's asleep-by time without one); the
   evening until the plan's wind-down time; wind-down until the window ends;
@@ -1363,8 +1369,12 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   strength activities found by the history download get their sets after it. Once
   there are sets, weight or a recorded threshold/acclimation response, the
   user settings (`/userprofile-service/userprofile/user-settings`) are read
-  weekly and only the measurement system, time format, start of week and
-  gender (the body-map figure) are stored; the rest of `userData` is discarded.
+  weekly; they are also read daily while fewer than four wake times are
+  recorded in 14 nights (Rules: Time of day), and once (at most daily) for a
+  stored row without the sleep schedule. Only the measurement system, time
+  format, start of week, gender (the body-map figure) and the sleep schedule
+  (`userSleep` times and default flags, `userSleepWindows` start, end and
+  frequency) are stored; the rest is discarded.
   Garmin's public exercise catalog (only when sets exist)
   (`connect.garmin.com/web-data/exercises/Exercises.json`, no credentials) is
   read monthly and only each exercise's primary muscles are kept.

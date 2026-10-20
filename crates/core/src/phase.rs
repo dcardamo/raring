@@ -33,6 +33,9 @@ pub struct PhaseInput<'a> {
     pub plan: Option<&'a SleepPlan>,
     /// Recorded wake times of the last 14 nights, hours after local midnight.
     pub wakes: &'a [f64],
+    /// The wake time of Garmin's sleep schedule for `date`, hours after
+    /// local midnight, unless it's Garmin's untouched default.
+    pub schedule_wake: Option<f64>,
     /// The displayed night's recorded sleep, when it has synced.
     pub last_night: Option<LastNight>,
     /// The displayed night's recorded wake; used only with `last_night`.
@@ -56,6 +59,18 @@ fn midnight(date: NaiveDate) -> NaiveDateTime {
     date.and_time(NaiveTime::MIN)
 }
 
+/// The usual wake the phases use: recorded wake times once there are
+/// enough of them, otherwise the wake time of Garmin's sleep schedule, which
+/// counts as a credible schedule of its own. Returns whether it is Garmin's.
+pub fn usual(wakes: &[f64], schedule_wake: Option<f64>) -> (Option<WakeClock>, bool) {
+    let recorded = rules::wake_clock(wakes);
+    match schedule_wake {
+        Some(h) if recorded.as_ref().is_none_or(|u| u.count < MIN_WAKE_NIGHTS) => {
+            (Some(WakeClock { median: h, spread: 0., count: MIN_WAKE_NIGHTS }), true)
+        }
+        _ => (recorded, false),
+    }
+}
 /// Enough recorded wake times, close enough together, to anchor the day.
 pub fn credible(usual: Option<&WakeClock>) -> bool {
     usual.is_some_and(|u| u.count >= MIN_WAKE_NIGHTS && u.spread * 60. <= IRREGULAR_SPREAD_MIN)
@@ -105,7 +120,7 @@ struct Night {
 }
 
 pub fn focus(input: &PhaseInput) -> TodayFocus {
-    let usual = rules::wake_clock(input.wakes);
+    let (usual, garmin) = usual(input.wakes, input.schedule_wake);
     let usual = usual.as_ref();
     let woke_at = input.woke_at.filter(|_| input.last_night.is_some());
     let next = next_wake(input.date, woke_at, usual);
@@ -134,6 +149,7 @@ pub fn focus(input: &PhaseInput) -> TodayFocus {
         last_night: input.last_night.clone(),
         note: None,
         recovery_hours: None,
+        schedule: None,
     };
     // Waiting for a night that hasn't synced: neutral, with neither the
     // previous day's plan nor its effort call.
@@ -197,6 +213,10 @@ pub fn focus(input: &PhaseInput) -> TodayFocus {
     }
     let wake_end = (woke + Duration::minutes(WAKE_SPAN_MIN)).min(night.promote);
     let now = input.now;
+    let focus = |phase, lead: &[TodayCard], until| TodayFocus {
+        schedule: garmin.then(|| "Garmin sleep schedule".to_owned()),
+        ..focus(phase, lead, until)
+    };
     use TodayCard::*;
     if now < wake_end {
         focus(DayPhase::Wake, &[Focus, Day, SleepPlan], Some(wake_end))

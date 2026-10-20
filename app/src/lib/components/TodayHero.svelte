@@ -49,6 +49,7 @@
  <h2 id="lead-h">{lead?.headline ?? today.headline ?? 'Your day is taking shape'}</h2>
  {#if lead?.line && !planCard}<p class="line">{lead.line}</p>{/if}
  {#if today.focus.note && lead?.kind !== 'fixed'}<p class="reason"><Icon name="clock" size={13}/> {today.focus.note}</p>{/if}
+ {#if today.focus.schedule}<p class="reason"><Icon name="clock" size={13}/> Timed by your {today.focus.schedule} until a few more nights are recorded.</p>{/if}
  {#if showReason && today.readinessWhy}<p class="reason">{today.readinessWhy.summary}</p>{/if}
  {#if effort}
   <div class="effort" role="img" aria-label={`Suggested effort from Garmin readiness: ${effort}`}><small>Suggested effort · from Garmin readiness</small>
