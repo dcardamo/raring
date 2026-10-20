@@ -5,7 +5,7 @@ import {resolve} from 'node:path';
 import {chromium} from 'playwright';
 
 // Website screens, named as in .data/screens and site/assets.
-const site=['today','plan','sleep','training','strength-workout','health','review'];
+const site=['today','plan','sleep','training','workout','health','review'];
 // The README montage shows the five tabs.
 const tabs=[['Today','today'],['Plan','plan'],['Training','training'],['Health','health'],['Progress','progress-cardio']];
 const root=resolve('..'),screens=resolve(root,'.data/screens'),assets=resolve(root,'site/assets');

@@ -47,7 +47,7 @@ try{
     assert.equal(await page.locator('.free-note').textContent(),'Free to use. No subscription.');
     const free=await page.locator('.free-note').boundingBox();
     assert.ok(free && free.y+free.height<=900,`${width}: free-to-use message is above the fold`);
-    assert.deepEqual(await page.locator('.spotlight img').evaluateAll(images=>images.map(img=>img.getAttribute('src'))),['assets/plan.png','assets/sleep.png','assets/training.png','assets/strength-workout.png','assets/health.png','assets/review.png']);
+    assert.deepEqual(await page.locator('.spotlight img').evaluateAll(images=>images.map(img=>img.getAttribute('src'))),['assets/plan.png','assets/sleep.png','assets/training.png','assets/workout.png','assets/health.png','assets/review.png']);
     assert.deepEqual(await page.locator('.benefits h3').allTextContents(),['Today','Plan','Sleep','Training','Strength','Health','Progress','Adapt','On your phone']);
     assert.deepEqual(await page.locator('.highlights strong').allTextContents(),['Today','Plan','Training','Health','Progress']);
     // App screenshots are synthetic; each says so to screen readers too.
