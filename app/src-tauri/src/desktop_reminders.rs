@@ -47,7 +47,7 @@ fn signed_in(app: &AppHandle) -> bool {
 /// Linux posts through the session D-Bus notification server. The Tauri
 /// plugin dispatches on a background task and discards the server's error, so
 /// a session without a server would mark a reminder that nobody can see.
-#[cfg(all(unix, not(target_os = "macos")))]
+#[cfg(target_os = "linux")]
 fn notification_server() -> Result<(), String> {
     let connection = zbus::blocking::Connection::session().map_err(|e| e.to_string())?;
     let bus = zbus::blocking::fdo::DBusProxy::new(&connection).map_err(|e| e.to_string())?;
@@ -59,7 +59,9 @@ fn notification_server() -> Result<(), String> {
     }
 }
 
-#[cfg(any(windows, target_os = "macos"))]
+/// macOS, Windows and the BSDs report a refused post through the plugin, so
+/// there is nothing extra to check before marking.
+#[cfg(not(target_os = "linux"))]
 fn notification_server() -> Result<(), String> {
     Ok(())
 }
