@@ -200,9 +200,13 @@ A briefing with an ending, in this order:
   compact: sleep, Body Battery and recordings. A calendar day with nothing
   recorded yet (after midnight, or before the night syncs) hides it. The
   upload time is said once, in the header, never repeated in a card.
-- **Recorded today**: the calendar day's (Your day's) activities, up to two,
-  with Garmin's benefit and training effect, naps with their Body Battery change, and a link to all of today's
-  activities. Compact after tonight's plan: without the effect labels.
+- **Recorded today**: one list of everything the calendar day (Your day's)
+  recorded, workouts and naps together in the order they started, directly
+  under the day's headline while the day leads. Workouts carry Garmin's benefit
+  and training effect (one decimal); naps their Body Battery change. Up to four
+  rows, then a link to all of today's activities. The headline never repeats a
+  workout from this list. Compact after tonight's plan: without the effect
+  labels.
 - **This week**: the week's rings and one line per goal beside **Left this
   week** with Do it today (not from the evening on: a weekly gap is context,
   not a command to catch up tonight), over the day cells; hidden during
@@ -1162,7 +1166,8 @@ next pending wind-down while signed in.
   a session still planned today stays as a quiet "still in your plan" line);
   illness or a pause (resume from Adapt); rest; the fixed layout's recorded
   day; a recording today (the latest, skipping walks once goals exist),
-  headed "Done today" above the recording, with its strength count against
+  headed "Done today" above the Recorded today list (which lists it with
+  the rest), with its strength count against
   the goal or Garmin's intensity minutes; Garmin's
   scheduled workout today unless dismissed (limits make it "Review needed",
   since its sport and movements are unknown); your planned session today,

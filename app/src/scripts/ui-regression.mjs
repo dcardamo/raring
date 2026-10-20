@@ -850,7 +850,10 @@ try {
   await many.goto(`${url}/#today`);
   const recordedMany=many.locator('.card').filter({hasText:'Recorded today'});
   await recordedMany.waitFor();
-  assert.equal(await recordedMany.locator('.activity').count(),3,'two activities and the nap');
+  assert.equal(await recordedMany.locator('.activity').count(),4,'one list of up to four recordings, workouts and naps together');
+  assert.equal(await many.locator('.hero .activity').count(),0,'the headline lists nothing; everything recorded is in one list');
+  const times=await recordedMany.locator('.activity').evaluateAll(rows=>rows.map(r=>r.textContent));
+  assert.ok(times.every(t=>!/\d\.\d{3,}/.test(t)),'training effects are rounded');
   // B6: the link opens Training's Activities for today only, not a month-long second list.
   await recordedMany.getByRole('button',{name:/^All today’s activities \(4\)/}).click();
   await many.waitForURL('**/#training');

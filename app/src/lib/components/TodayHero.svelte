@@ -2,7 +2,6 @@
  import MorningStats from './MorningStats.svelte';
  import Icon from './Icon.svelte';
  import Reconcile from './Reconcile.svelte';
- import ActivityRow from './ActivityRow.svelte';
  import EffortBar from './EffortBar.svelte';
  import TodaySessionCard from './TodaySessionCard.svelte';
  import type {TodayView} from '../generated/TodayView';
@@ -18,7 +17,8 @@
  // Tonight's plan card below already carries the window and opens Tonight.
  let planCard = $derived(lead?.kind === 'sleep' && !!today.sleepPlan && today.focus.planOpen);
  let showReason = $derived(!!effort && (!lead || ['suggest', 'easy', 'session', 'garmin', 'done', 'fixed'].includes(lead.kind)));
- let recognised = $derived(lead?.activity ? today.activities.find(a => a.id === lead!.activity) : undefined);
+ // A recorded workout is listed with everything else recorded today, right below; the headline only counts it.
+ let done = $derived(lead?.kind === 'done');
  // Today's session sits below the day's context, with Keep · Choose another
  // inside it so they clearly act on the session; Rest is inside Choose.
  let session = $derived(lead && ['session', 'garmin'].includes(lead.kind) ? lead.session ?? null : null);
@@ -38,11 +38,10 @@
  {#if effort}<EffortBar {effort}/>{/if}
  {#if showReason && today.readinessWhy}<p class="reason">{today.readinessWhy.summary}</p>{/if}
  {#if lead?.kind === 'sleep'}{#each stillPlanned as s}<button class="still" onclick={() => navigate('plan')}>{s.name}{s.time ? ` ${s.time}` : ''} · still in your plan<Icon name="chevron" size={14}/></button>{/each}{/if}
- {#if recognised}<div class="recognised"><ActivityRow activity={recognised} open={() => navigate('workout/' + recognised!.id)}/></div>{/if}
  {#if today.reconcile && !waiting}<Reconcile reconcile={today.reconcile}/>{/if}
- {#if lead && !planCard && !session && (lead.action || lead.dismissable || lead.kind === 'review')}
+ {#if lead && !planCard && !session && ((lead.action && !done) || lead.dismissable || lead.kind === 'review')}
   <div class="acts">
-   {#if lead.action && !recognised}<button class="primary" onclick={run}>{lead.action.label}</button>{/if}
+   {#if lead.action && !done}<button class="primary" onclick={run}>{lead.action.label}</button>{/if}
    {#if lead.kind === 'review'}<button class="secondary" onclick={() => act({action: 'restToday'})}>Rest today</button>{/if}
    {#if lead.dismissable}<button class="secondary" onclick={() => act({action: 'dismiss', id: lead!.id})}>Not today</button>{/if}
   </div>
@@ -58,6 +57,5 @@
  .hero{margin:6px 0 4px;max-width:620px}.hero h2{font:600 26px/1.2 var(--font-body);letter-spacing:-.035em;margin:16px 4px 6px}
  .line{margin:2px 4px;font-size:14px;color:var(--text)}.reason{margin:2px 4px 6px;font-size:13px;color:var(--text2)}
  .still{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;min-height:44px;margin:6px 0 0;padding:6px 4px;border:0;border-top:1px solid var(--line);background:none;color:var(--text2);font:500 13px Inter;text-align:left}
- .recognised{margin:12px 0 4px;padding:14px;border:1px solid var(--line);border-radius:var(--radius-control);background:var(--card)}
  .acts{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0}.acts button{width:auto;flex:1 1 140px;margin-top:0}
 </style>
