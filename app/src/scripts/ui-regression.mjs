@@ -2665,6 +2665,21 @@ function trendFixture(q){
   await nightly.getByRole('button',{name:'All history',exact:true}).click();
   assert.equal(await nightly.getByText(/^Current Garmin baseline/).count(),0,'past baselines differed, so averages show none');
   await shot('trends-all');
+  // VO₂ max is Garmin's occasional estimate: one line joins the estimates, dotted where it crosses days without one.
+  await trends.goto(`${url}/#metric/vo2max`);
+  const vo2=trends.locator('.history').first();
+  await vo2.getByRole('button',{name:'90 days',exact:true}).click();
+  await vo2.getByText('Reading your history…').waitFor({state:'detached'});
+  const vo2Line=await vo2.locator('.history-line').getAttribute('d');
+  const vertices=[...vo2Line.matchAll(/[ML]([\d.]+),([\d.]+)/g)].map(m=>[+m[1],+m[2]]);
+  const dots=await vo2.locator('.chart-surface circle').evaluateAll(cs=>cs.map(c=>[+c.getAttribute('cx'),+c.getAttribute('cy')]));
+  assert.ok(vertices.length>2,'the 90 days hold several estimates');
+  assert.equal(vertices.length,Number((await vo2.locator('.record-count').textContent()).split(' / ')[0]),'every estimate is on the line');
+  assert.equal((vo2Line.match(/M/g)??[]).length,1,'one joined line: '+vo2Line);
+  for(const end of [vertices[0],vertices.at(-1)])assert.ok(dots.some(([cx,cy])=>Math.abs(cx-end[0])<.2 && Math.abs(cy-end[1])<.2),'the line ends on dotted estimates');
+  assert.equal(await vo2.locator('.history-gap').count(),0,'days without a new estimate are not gaps');
+  await vo2.getByRole('button',{name:'Previous reading'}).click();
+  assert.match(await vo2.getByRole('slider').getAttribute('aria-valuetext'),/: (No new estimate|\d+ )/,'a day between estimates is not a missing reading');
   await trends.close();
  }
  console.log('Trend ranges, weekly and monthly averages, overlays and the period before at 390/700/1100: passed');

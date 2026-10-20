@@ -18,7 +18,7 @@ export const metricDescriptions: Record<string, string> = {
   respiration: 'Breaths per minute during sleep, as reported by Garmin. The shaded band shows your usual overnight range.',
   spo2: 'Garmin’s overnight blood oxygen estimate. Watch fit and movement can affect it.',
   skinTemp: 'Garmin’s overnight skin-temperature change, not your absolute body temperature. Compare it with your usual range.',
-  vo2max: 'Garmin’s estimate of the oxygen your body can use during exercise. The trend shows how your estimate has changed over time.',
+  vo2max: 'Garmin’s estimate of the oxygen your body can use during exercise, updated after qualifying runs or rides. The line joins Garmin’s estimates in order; a day without a new one isn’t missing.',
   endurance: 'Garmin’s endurance score describes your ability to sustain prolonged effort across activities.',
   hill: 'Garmin’s hill score describes your ability to run uphill, based on your training and fitness.',
   acuteLoad: 'Garmin’s acute load: a 7-day weighted sum of your training load. Each day shows Garmin’s Training Status value for that day; the latest matches Training.',

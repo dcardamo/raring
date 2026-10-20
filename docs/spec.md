@@ -107,7 +107,8 @@ synthetic data. `design/mockup/index.html` shows the app before the redesign.
   band for Garmin's target. Unknown amounts are not filled; measured zero
   stays zero. Duration rows name the clock format instead of adding percentages
   with an unclear denominator. Period plots use round ticks; count ticks are
-  integers. Gaps are drawn as gaps. Shared single-metric charts use
+  integers. Gaps are drawn as gaps; Garmin's occasional estimates (VO₂ max,
+  Fitness Age) are joined instead (Trends). Shared single-metric charts use
   2 px main traces, quiet 1 px gridlines and green-tinted usual-range bands
   with dashed edges; range bars (vitals, drivers) tint the usual range or
   Garmin's target green under the reading's dot; goal lanes
@@ -552,7 +553,11 @@ Every trend chart (Readiness, the vitals, stress, Body Battery, VO2max,
 acute load, Fitness Age and Sleep's history card) is the same interactive chart, drawn from local data.
 Health's cards use its compact form (Health), except Fitness Age, whose card is
 its bar and opens the chart. Garmin's sparse estimates (VO2max,
-Fitness Age) open on the latest estimate rather than an empty latest day.
+Fitness Age) open on the latest estimate rather than an empty latest day,
+and one line joins their estimates in order (the previous period's and an
+overlay's too), with a dot on each estimate beside a day without one. A day
+without a new estimate isn't a missing reading: it has no gap mark and
+reads "No new estimate". Daily readings still break at a missing day.
 
 - Shared range control: 7D, 14D, 30D, 90D, 1Y and Max (All history), plus Dates for a chosen training block. Up to 90 days shows each day; longer
   ranges show weekly or monthly averages, and the selected point says how many
