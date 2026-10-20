@@ -36,12 +36,11 @@
    <div class="ar"><span></span><span class="ticks">{#each ticks as t}<span data-thin style:left={pct(t)+'%'}>{minuteClock(t)}</span>{/each}</span><span></span></div>
   </div>
   <div class="times">
-   {#if latest.window}<span>Optimal <b class="n">{minuteClock(latest.window[0])}–{minuteClock(latest.window[1])}</b></span>{/if}
+   {#if latest.window}<span>Garmin’s longer-term window (dashed) <b class="n">{minuteClock(latest.window[0])}–{minuteClock(latest.window[1])}</b></span>{/if}
    {#if latest.sleep}<span>Slept <b class="n">{minuteClock(latest.sleep[0])}–{minuteClock(latest.sleep[1])}</b></span>{/if}
   </div>
  {/if}
  <p>{alignment.detail}</p>
- <p class="note">Garmin's optimal window follows your longer-term rhythm; tonight's bedtime window is a separate recommendation.</p>
 </Card>
 
 <style>
@@ -63,5 +62,4 @@
  .times{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;font-size:12px;color:var(--text2)}
  .times b{color:var(--text);font-weight:500;margin-left:4px}
  p{font-size:12px;line-height:1.5;color:var(--text2);margin-top:12px}
- .note{color:var(--text3);font-size:11px;margin-top:8px}
 </style>

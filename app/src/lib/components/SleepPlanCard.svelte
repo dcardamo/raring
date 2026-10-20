@@ -1,7 +1,7 @@
 <script lang="ts">
  import type {SleepPlan} from '../generated/SleepPlan';
  import {duration} from '../format';
- import {nightStrip} from '../tonight';
+ import {nightStrip,wakeLabel} from '../tonight';
  import Card from './Card.svelte';
  import Icon from './Icon.svelte';
  import SleepPlanEvidence from './SleepPlanEvidence.svelte';
@@ -14,7 +14,7 @@
  let strip=$derived(mode==='evening'||mode==='windDown'?nightStrip(plan,now):null);
  let bedWindow=$derived(plan.bedtimeStart?`${plan.bedtimeStart}–${plan.bedtime}`:plan.bedtime);
  let garmin=$derived(plan.bedtimeSource==='garmin');
- let wake=$derived(plan.wakeNights===14?'Usual wake':'Wake reference');
+ let wake=$derived(wakeLabel(plan.wakeNights)==='reference'?'Wake reference':'Usual wake');
  let needSource=$derived(plan.source==='tonight'?'Garmin\'s need for tonight':plan.source==='average'?'14-day average of Garmin\'s sleep need':'Garmin\'s latest sleep need');
  let wakes=$derived(`median of ${plan.wakeNights} recorded wake ${plan.wakeNights===1?'time':'times'}`);
 </script>
@@ -44,8 +44,8 @@
    {#if mode==='windDown'}<small>Sleep need <b class="n">{duration(plan.needMin)}</b></small>{/if}
   </div>
   {@render stripView()}
-  <p>{mode==='windDown'?'A suggestion, not an alarm.':'Tomorrow\'s plan follows your next sleep.'}</p>
-  <div class="foot"><span>Timing history</span><Icon name="arrow-right" size={16}/></div>
+  {#if mode!=='windDown'}<p>Tomorrow's plan follows your next sleep.</p>{/if}
+  <div class="foot"><span>Tonight’s plan</span><Icon name="arrow-right" size={16}/></div>
  </Card>
 {:else}
 <Card title="Tonight's sleep" onclick={open} extra="sleep-plan{lead?' lead':''}">
@@ -73,7 +73,7 @@
    <SleepPlanEvidence {plan}/>
   {/if}
  {/if}
- {#if mode==='evening'}<div class="foot"><span>Timing history</span><Icon name="arrow-right" size={16}/></div>{/if}
+ {#if mode==='evening'}<div class="foot"><span>Tonight’s plan</span><Icon name="arrow-right" size={16}/></div>{/if}
 </Card>
 {/if}
 

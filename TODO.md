@@ -58,7 +58,6 @@ From item 4, in priority order.
   defaults when `userSleep` does.
 - On desktop widths the masonry columns can place the leading card beside a
   notice rather than first in reading order; check it once desktop ships.
-- "Timing history" opens Sleep at its top; scroll it to Consistency.
 
 ### Sleep rhythm follow-ups
 
@@ -175,6 +174,11 @@ From the Today and Sleep review's remainder, in priority order.
 - Health doesn't say when the watch can't record skin temperature or HRV
   status; Today now explains only readiness and the sleep score. Show the
   other missing-metric reasons on Health's vitals.
+- The bottom tab labels run together at 2× text ("PlanTrainingHealthProgress"
+  at 390 px); stack icon and label tighter or drop to icons with names for
+  assistive tech.
+- Check the 11 sp widget and notification labels on a phone: the medium
+  widget's tile labels may truncate at large system text.
 
 ## Next
 
@@ -458,6 +462,22 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Today and Sleep minors** (commit "Drop disclaimers and key Tonight's
+  missing nights"), from the Today and Sleep review (m1–m6, m13, plus a
+  2× overflow in Sleep's hero). Guardrail sentences are gone from the plan
+  cards, Why this plan, the 7-night chart, the nap rows, Adapt's limits and
+  routines, the readiness Why sheet and the status offer; alignment keys
+  "Garmin’s longer-term window (dashed)". Today's plan card footer reads
+  "Tonight’s plan" (it opens Tonight). The wake is "usual" from four
+  recorded wakes ("usual · 9 nights"), not only at 14. The 7-night chart
+  draws a missing night as a dotted gap, keys it and the darker below-need
+  bars, and hides when nothing is recorded. The wind-down reminder is a
+  switch row. Widget and notification labels are 11 sp (was 10; not checked
+  on a device). Sleep's hero and This week's "Left this week" rows wrap at
+  large text instead of running off the screen. Not changed: m19's "84" over
+  "Score" is line-box overlap only (glyphs clear at 2×); m21 (tab labels at
+  2×) is outside this lane.
 
 - **Sleep · Last night reads without a legend hunt** (commit "Make Sleep's
   overnight tiles, stages and history readable"), from the Today and Sleep

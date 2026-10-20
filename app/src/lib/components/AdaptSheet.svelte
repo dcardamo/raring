@@ -31,7 +31,7 @@
  <span class="grab"></span>
  <div class="sheet-h"><h2 id="adapt-title">{limits ? 'Your limits' : routines ? 'My routines' : resuming ? 'Resume training' : 'Adapt today'}</h2><button class="close" aria-label="Close" onclick={close}><Icon name="close" size={20}/></button></div>
  {#if limits}
-  <p class="small">Activities to avoid are left out of suggestions. A movement note is shown wherever a session’s contents are unknown; Raring doesn’t check workouts against it.</p>
+  <p class="small">Activities to avoid are left out of suggestions. A movement note is shown wherever a session’s contents are unknown.</p>
   <div class="chips2" role="group" aria-label="Activities to avoid">{#each SPORTS as s}<button aria-pressed={excluded.includes(s)} onclick={() => toggle(s)}>{SPORT_NAMES[s]}</button>{/each}</div>
   <label class="note"><span>Movement note</span><textarea rows="3" maxlength="500" bind:value={note} placeholder="For example: no overhead pressing"></textarea></label>
   <button class="primary" disabled={busy} onclick={() => run({action: 'setLimits', limits: {excluded, note}})}>Save limits</button>
@@ -45,7 +45,7 @@
  {:else if routines}
   {#if garminWorkouts.length}<h3 class="gh">Garmin workouts this week</h3>{#each garminWorkouts as g}<div class="routine"><span><b>◇ {g.name}</b><small>{g.source} · Contents unknown to Raring</small></span><span class="st">{current?.limits.note || current?.limits.excluded.length ? 'Review needed' : 'No limits set'}</span></div>{/each}{/if}
   <h3 class="gh">Your checklist</h3>
-  <p class="small">A checklist you or your clinician supply. Raring adds no exercises, load or progression.</p>
+  <p class="small">A checklist you or your clinician supply.</p>
   {#each current?.routines ?? [] as r (r.item.id)}
    <div class="routine"><span><b>{r.item.name}</b>{#if r.item.how}<small>{r.item.how}</small>{/if}</span>
     <button class="secondary" aria-pressed={r.done} disabled={busy} onclick={() => act({action: 'reportRoutine', id: r.item.id, done: !r.done})}>{#if r.done}<Icon name="check" size={14}/>Done today · self-reported{:else}Mark done today{/if}</button>
@@ -54,7 +54,6 @@
   <label class="note"><span>Exercise</span><input maxlength="80" bind:value={routineName} placeholder="For example: wall sit, 3 × 30 s"/></label>
   <label class="note"><span>How (optional)</span><input maxlength="300" bind:value={routineHow} placeholder="For example: from my physio"/></label>
   <button class="primary" disabled={busy || !routineName.trim()} onclick={() => { act({action: 'addRoutine', name: routineName, how: routineHow.trim() || null}); routineName = ''; routineHow = ''; }}>Add to checklist</button>
-  <p class="small">Self-reported: no Garmin activity, intensity minutes or records are created, and nothing is sent to Garmin.</p>
  {:else}
   <div class="opts">
    {#if current?.rest}<button onclick={() => run({action: 'cancelRest'})}><Icon name="moon" size={20}/><span><b>Rest day is on</b><small>Turn it off · prompts return today</small></span></button>

@@ -178,7 +178,7 @@ pub(super) fn readiness_why(r: &Value, factors: &[Factor], level: Option<&str>) 
         summary,
         feedback: string(snapshot, &[&["feedbackShort"]]).and_then(|c| rating(Some(&c))),
         inputs,
-        source: "From Garmin's readiness factors, worst first. Raring adds no score.".into(),
+        source: "From Garmin's readiness factors, worst first.".into(),
     })
 }
 

@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {nightStrip,phaseEnded,tonightLine} from './tonight';
+import {nightStrip,phaseEnded,tonightLine,wakeLabel} from './tonight';
 import type {SleepPlan} from './generated/SleepPlan';
 import type {TodayView} from './generated/TodayView';
 
@@ -21,6 +21,9 @@ describe('nightStrip',()=>{
 
 describe('tonightLine',()=>{
  const full={...plan,wakeTime:'06:30',needMin:480} as SleepPlan;
+ it('calls the wake usual from four recorded wakes, naming how many until fourteen',()=>{
+  expect([0,3,4,9,14].map(wakeLabel)).toEqual(['reference','reference','usual · 4 nights','usual · 9 nights','usual']);
+ });
  it('runs from an hour before wind-down to past the usual wake, ticking even hours',()=>{
   const line=tonightLine(full,new Date('2025-03-12T21:30:00'))!;
   expect(line.ticks.map(t=>t.label)).toEqual(['22','00','02','04','06']);

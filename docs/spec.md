@@ -228,8 +228,8 @@ Last night:
 - **Sleep alignment**: Garmin's status (Aligned, Ahead, Behind, Jet lag) and
   last night's sleep against Garmin's optimal sleep window on an overnight
   timeline, with the last seven nights below. Garmin's window is a dashed
-  outline, never shaded like your usual windows, and is labeled as the
-  longer-term rhythm, separate from tonight's bedtime window. Without a
+  outline, never shaded like your usual windows, keyed "Garmin's
+  longer-term window (dashed)". Without a
   rating for last night, show the latest one with its date; say when Garmin
   is still calibrating, and otherwise that alignment is unavailable.
 
@@ -239,16 +239,21 @@ Tonight:
   language as Today's wind-down strip: wind-down, Garmin's bedtime window (or
   Raring's asleep-by estimate, labeled as Raring's), now, and the need as a
   span ending at the usual wake, with an hour axis and a key but no times on
-  the graphic; below it the times, the sleep goal when one is
-  set, and when Garmin's need was read. "Why this plan" lists the evidence:
+  the graphic; below it the times (the wake "usual" from four recorded
+  wakes in 14 nights, with the count until there are 14, otherwise a
+  "reference"), the sleep goal when one is set, and when Garmin's need was
+  read. "Why this plan" lists the evidence:
   who set the bedtime, Garmin's need, baseline and adjustments, the
   wind-down lead and one tip toward steadier timing. A suggestion, never an
-  alarm; it never changes the watch's sleep schedule.
+  alarm; it never changes the watch's sleep schedule (behaviour, not copy:
+  no disclaimer says so).
 - **I wound down** (a self-report for tonight's evening) and the wind-down
   reminder switch. With a sleep-timing goal, "Make tonight one of them"
   places tonight's wind-down session.
 - This week's sleep goals, and the seven nights ending last night against
-  each night's own need, with how many were below it. No running debt. Each
+  each night's own need, with how many were below it; nights below need and
+  unrecorded nights (a dotted gap) are in the key, and without a recorded
+  night the chart is replaced by one line. No running debt. Each
   night opens that night (Rules: Opened past days and workouts).
 
 **A past night.** The seven-night bars and Sleep history's selected day open

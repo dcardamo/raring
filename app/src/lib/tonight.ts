@@ -5,6 +5,9 @@ import type {TodayView} from './generated/TodayView';
 const local=(iso:string|null)=>iso?new Date(iso).getTime():NaN;
 const HOUR=3600_000;
 
+// The usual wake is credible from four recorded wakes in 14 nights (spec Rules: Time of day).
+export const wakeLabel=(nights:number)=>nights>=14?'usual':nights>=4?`usual · ${nights} nights`:'reference';
+
 // Where now sits against wind-down and the window: positions in percent on a whole-hour axis.
 export function nightStrip(plan:SleepPlan, now:Date){
  const windDown=local(plan.windDownAt),start=local(plan.bedtimeStartAt??plan.bedtimeAt),end=local(plan.bedtimeAt);

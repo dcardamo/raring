@@ -293,7 +293,7 @@ try {
  assert.equal(await alignment.locator('h3 .pill').textContent(),'Aligned');
  assert.equal(await alignment.locator('.night').count(),7,'a week of nights against Garmin\'s optimal window');
  assert.equal(await alignment.locator('.optimal').evaluate(el=>{const s=getComputedStyle(el);return `${s.borderTopStyle} ${s.backgroundColor}`}),'dashed rgba(0, 0, 0, 0)','Garmin\'s target is outlined, never shaded like usual windows');
- assert.ok((await alignment.textContent()).includes('Optimal 22:45–06:15'));
+ assert.ok((await alignment.textContent()).includes('Garmin’s longer-term window (dashed) 22:45–06:15'),'m1: a legend label, not a disclaimer sentence');
  assert.ok((await page.locator('.consistency .averages').textContent()).includes('22:55'));
  await tab('Health');
  assert.equal(await page.locator('.dashboard>.card').first().locator('h3>span').first().textContent(),'Fitness Age','long-term health leads (U55)');
@@ -359,7 +359,7 @@ try {
  await page.locator('.review-row').first().click();await waitRoute('review/2025-10-06');
  await back('reviews');
  await page.goto(`${url}/#today`);await waitRoute('today');
- await page.locator('.week-card').click();await waitRoute('plan');
+ await page.locator('.week-card > h3').click();await waitRoute('plan');
  const week=await page.locator('.wk').textContent();
  assert.ok(week.includes('Strength 3 of 4 sessions · 1 placed'),week);
  assert.ok(week.includes('Zone 2 100 of 150 min · 40 placed · 10 left'),week);
@@ -725,7 +725,7 @@ try {
   await routines.waitFor();
   assert.ok((await routines.textContent()).includes('Wall sit 3 × 30 s') && (await routines.textContent()).includes('From my physio'));
   assert.equal(await routines.getByRole('button',{name:'Mark done today'}).count(),1);
-  assert.ok((await routines.textContent()).includes('no Garmin activity, intensity minutes or records'));
+  assert.ok(!(await routines.textContent()).includes('nothing is sent to Garmin'),'m1: guardrails decide what is shown; they are not printed as disclaimers');
   assert.ok(await routines.getByRole('button',{name:'Add to checklist'}).isDisabled(),'a name is required');
   await routines.getByLabel('Exercise').fill('Calf raises');
   assert.ok(!(await routines.getByRole('button',{name:'Add to checklist'}).isDisabled()));
@@ -778,7 +778,7 @@ try {
   assert.equal(await yd.getByRole('button',{name:'Morning Run 06:12, 52 min'}).count(),1);
   assert.equal(await dayPage.locator('.dashboard').getByRole('button',{name:/^Body Battery/}).count(),0,'Your day replaces the separate Body Battery card');
   const recorded=dayPage.locator('.card').filter({hasText:'Recorded today'});
-  assert.ok((await recorded.textContent()).includes('Body Battery +6 · separate from last night'),'the nap row shows its Body Battery change');
+  assert.ok((await recorded.textContent()).includes('Body Battery +6'),'the nap row shows its Body Battery change');
   assert.equal(await dayPage.getByRole('button',{name:'Keep',exact:true}).count(),1);
   const week=dayPage.locator('.week-card');
   const left=week.getByRole('group',{name:'Left this week'});
@@ -890,6 +890,18 @@ try {
   naps='unavailable';
   await lp.goto(`${url}/?naps=failed#sleep/last`);
   await lp.getByText('Couldn’t read naps from Garmin.',{exact:true}).waitFor();
+  // Tonight (m1, m3–m6): no disclaimers, a credible usual wake says so, a missing night is a dotted gap in the
+  // key, the darker below-need bars are keyed, and the reminder is a switch.
+  await lp.goto(`${url}/?tonight#sleep/tonight`);
+  const nights=lp.locator('.tonight-nights');
+  await nights.waitFor();
+  assert.equal(await nights.locator('.gap').count(),sleepSample.recent.filter(n=>n.asleepMin==null).length);
+  for(const key of ['Below need','Not recorded'])await nights.locator('.key').getByText(key,{exact:true}).waitFor();
+  assert.ok(!(await nights.textContent()).includes('—'),'a missing night is not a dash');
+  await lp.getByRole('checkbox',{name:'Remind me to wind down'}).waitFor();
+  await lp.getByRole('button',{name:'Why this plan'}).click();
+  const main=await lp.locator('main').textContent();
+  for(const line of ['No running debt','not an alarm',"doesn't change your watch"])assert.ok(!main.includes(line),`no disclaimer: ${line}`);
   await lp.close();
  }
  // Sleep: a plain #sleep opens the closer tab; Tonight is a plan with a self-report, at every width.
@@ -1393,6 +1405,8 @@ try {
   assert.equal(await phasePage.locator('.week-card').count(),['winddown','late'].includes(name)?0:1,`${name}: no goal remainders during sleep phases`);
   assert.ok(!/\bin \d+ ?(min|h)\b|left\b/i.test(advice.join(' ')),`${name}: no countdown`);
   if(name==='evening')assert.equal(await phasePage.locator('.sleep-plan .strip-bar u').count(),1,'the strip marks now against the window');
+  // m2: the card opens Tonight, so its footer says so.
+  if(name==='evening')assert.ok((await phasePage.locator('.sleep-plan .foot').textContent()).includes('Tonight’s plan'));
   if(name==='late')assert.ok(text.includes("Tonight's window was"));
   if(name==='missing'){
    const all=await phasePage.locator('main').textContent();assert.ok(all.includes('Not synced yet') && !all.includes('holds it back'),'an unsynced night is neutral');
