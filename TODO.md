@@ -485,6 +485,18 @@ faces, screens, sensors and audio prompts stay in Connect.
 
 ## Done
 
+- **Tonight as a sleep clock** (commit "Draw tonight's plan as a 24-hour
+  sleep clock"), from the maintainer's phone (v0.1.41): the horizontal
+  Tonight timeline is replaced by a 24-hour ring (midnight at the top) with
+  the planned sleep from asleep-by to the expected wake, the minutes to fall
+  asleep lighter before it, the wind-down softer, Garmin's window as a short
+  outer segment and a now dot; inside only the need, "In bed" and "Up".
+  The facts sit below once, with the time-to-fall-asleep setting. "Last 7
+  nights against need" becomes "Recent nights vs tonight's window": 14
+  nights of recorded sleep on a clock axis against tonight's bedtime band
+  and wake, missing nights marked, plus one below-need line. Today's
+  evening and wind-down cards use the same clock, compact.
+
 - **Today's session, morning stats and time to fall asleep** (commit
   "Separate today's session from the day and add the morning stats"), from
   the maintainer's phone (v0.1.41). Today's hero is about the day (the

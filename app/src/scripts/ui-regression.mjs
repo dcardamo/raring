@@ -269,7 +269,8 @@ try {
  assert.equal(await page.getByRole('tab',{name:'Tonight'}).getAttribute('aria-selected'),'true','the tonight line opens the Tonight tab');
  const plan=page.locator('.tonight-plan');
  assert.ok((await plan.textContent()).includes('22:30–23:06'));
- assert.equal(await plan.getByRole('img',{name:/^Tonight: now/}).count(),1,'a timeline from the evening to the usual wake');
+ assert.equal(await plan.getByRole('img',{name:/^Tonight on a 24-hour clock: in bed 22:51, asleep by 23:06, up 06:56/}).count(),1,'a 24-hour clock from in bed to the expected wake');
+ assert.ok((await plan.textContent()).includes('so about 8:05 in bed with 15 min to fall asleep'),'the time in bed sits beside the need');
  assert.ok((await plan.textContent()).includes('Wind down22:00'),'the plan leads with the wind-down time');
  assert.ok((await plan.textContent()).includes('Garmin plan'));
  assert.ok((await plan.textContent()).includes("Garmin added 20 min for today's activity and load."));
@@ -277,12 +278,12 @@ try {
  const evidence=await plan.locator('.evidence').textContent();
  assert.ok(evidence.includes("Garmin's recommendation for tonight.") && evidence.includes("Training: today's activity and load") && evidence.includes('30 min before the window starts'),evidence);
  const recentNights=page.locator('.tonight-nights');
- assert.ok((await recentNights.textContent()).includes('2 of 6 recorded nights below Garmin’s need.'),await recentNights.textContent());
+ assert.ok((await recentNights.textContent()).includes('2 of 6 recorded nights in the last 7 were below Garmin’s need for that night.'),await recentNights.textContent());
  assert.equal(await recentNights.getByRole('img').count(),0,'the nights are a group of buttons, not one image');
- const nightButtons=recentNights.getByRole('group',{name:/^Hours asleep, last 7 nights/}).getByRole('button');
- assert.equal(await nightButtons.count(),7,'each night is reachable by assistive tech');
- assert.equal(await recentNights.getByRole('button',{name:'Open Sun 12 Oct: not recorded',exact:true}).count(),1,'a missing night is labelled, not zero');
- assert.equal(await recentNights.getByRole('button',{name:/^Open Thu 16 Oct: 7:48 asleep, need 7:30$/}).count(),1);
+ const nightButtons=recentNights.getByRole('group',{name:/^Recorded sleep, last 14 nights/}).getByRole('button');
+ assert.equal(await nightButtons.count(),14,'each night is reachable by assistive tech');
+ assert.equal(await recentNights.getByRole('button',{name:'Open Thu 16 Oct: asleep 22:31 to 06:39',exact:true}).count(),1);
+ for(const key of ['Asleep','Tonight’s bedtime','Tonight’s wake'])await recentNights.locator('.key').getByText(key,{exact:true}).waitFor();
  assert.equal(await page.locator('.tonight-goals').count(),1);
  await page.getByRole('tab',{name:'Last night'}).click();await waitRoute('sleep/last');
  assert.equal(await page.locator('.tonight-plan').count(),0);
@@ -968,11 +969,15 @@ try {
   await lp.getByText('Couldn’t read naps from Garmin.',{exact:true}).waitFor();
   // Tonight (m1, m3–m6): no disclaimers, a credible usual wake says so, a missing night is a dotted gap in the
   // key, the darker below-need bars are keyed, and the reminder is a switch.
+  const gapNight=u=>u.pathname==='/src/lib/sample/sleep.json';
+  await lp.route(gapNight,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify({...sleepSample,consistency:sleepSample.consistency.filter(n=>n.date!=='2025-10-12')})}`}));
   await lp.goto(`${url}/?tonight#sleep/tonight`);
   const nights=lp.locator('.tonight-nights');
   await nights.waitFor();
-  assert.equal(await nights.locator('.gap').count(),sleepSample.recent.filter(n=>n.asleepMin==null).length);
-  for(const key of ['Below need','Not recorded'])await nights.locator('.key').getByText(key,{exact:true}).waitFor();
+  assert.equal(await nights.locator('.gap').count(),1,'the missing night is marked');
+  assert.equal(await nights.getByRole('button',{name:'Open Sun 12 Oct: not recorded',exact:true}).count(),1,'a missing night is labelled, not zero');
+  await nights.locator('.key').getByText('Not recorded',{exact:true}).waitFor();
+  await lp.unroute(gapNight);
   assert.ok(!(await nights.textContent()).includes('—'),'a missing night is not a dash');
   await lp.getByRole('checkbox',{name:'Remind me to wind down'}).waitFor();
   await lp.getByRole('button',{name:'Why this plan'}).click();
@@ -1480,7 +1485,7 @@ try {
   const advice=await phasePage.locator('.dashboard > :not(.week-card)').allTextContents();
   assert.equal(await phasePage.locator('.week-card').count(),['winddown','late'].includes(name)?0:1,`${name}: no goal remainders during sleep phases`);
   assert.ok(!/\bin \d+ ?(min|h)\b|left\b/i.test(advice.join(' ')),`${name}: no countdown`);
-  if(name==='evening')assert.equal(await phasePage.locator('.sleep-plan .strip-bar u').count(),1,'the strip marks now against the window');
+  if(name==='evening')assert.equal(await phasePage.locator('.sleep-plan [data-mark="now"]').count(),1,'the clock marks now against the window');
   // m2: the card opens Tonight, so its footer says so.
   if(name==='evening')assert.ok((await phasePage.locator('.sleep-plan .foot').textContent()).includes('Tonight’s plan'));
   if(name==='late')assert.ok(text.includes("Tonight's window was"));

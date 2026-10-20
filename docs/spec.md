@@ -158,7 +158,9 @@ A briefing with an ending, in this order:
   another** sit inside it (Rules: Today's choice), so they act on the
   session. There is no effort scale
   beside a recorded workout (the day can finish) or from the evening on.
-  Evening, wind-down and late night lead with tonight's sleep and keep any
+  Evening, wind-down and late night lead with tonight's sleep (the evening
+  and wind-down cards carry the same sleep clock, compact, beside the
+  wind-down, in-bed and window times) and keep any
   session still planned as a quiet line; beside tonight's plan card the hero
   keeps only the headline, since the card carries the window and opens
   Tonight.
@@ -251,14 +253,20 @@ Last night:
 
 Tonight:
 
-- A timeline from an hour before wind-down to the usual wake, in the same
-  language as Today's wind-down strip: wind-down, Garmin's bedtime window (or
-  Raring's asleep-by estimate, labeled as Raring's), now, and the need as a
-  span ending at the usual wake, with an hour axis and a key but no times on
-  the graphic; below it the times (the wake "usual" from four recorded
-  wakes in 14 nights, with the count until there are 14, otherwise a
-  "reference"), the sleep goal when one is set, and when Garmin's need was
-  read. "Why this plan" lists the evidence:
+- A 24-hour sleep clock as the hero, midnight at the top: the planned
+  sleep from the asleep-by time to the expected wake (asleep-by plus the
+  need) as a thick arc, led by a lighter segment for the minutes to fall
+  asleep from in bed; the wind-down as a softer arc before in bed; Garmin's
+  window as a short emphasised segment just outside the ring; and a now dot.
+  Inside, only the need and two lines ("In bed 22:51", "Up 06:56"); hour
+  ticks 00, 06, 12 and 18 sit outside. Below it the facts once: the
+  wind-down (Raring's, with its lead), Garmin's bedtime window or Raring's
+  asleep-by estimate, Garmin's need with when it was read and "so about
+  8:05 in bed with 15 min to fall asleep (Raring)", and the usual wake (from
+  four recorded wakes in 14 nights, with the count until there are 14,
+  otherwise a "reference") when it differs from the expected wake; the
+  sleep goal when one is set; and the time-to-fall-asleep setting. "Why
+  this plan" lists the evidence:
   who set the bedtime, Garmin's need, baseline and adjustments, the
   wind-down lead and one tip toward steadier timing. A suggestion, never an
   alarm; it never changes the watch's sleep schedule (behaviour, not copy:
@@ -266,11 +274,14 @@ Tonight:
 - **I wound down** (a self-report for tonight's evening) and the wind-down
   reminder switch. With a sleep-timing goal, "Make tonight one of them"
   places tonight's wind-down session.
-- This week's sleep goals, and the seven nights ending last night against
-  each night's own need, with how many were below it; nights below need and
-  unrecorded nights (a dotted gap) are in the key, and without a recorded
-  night the chart is replaced by one line. No running debt. Each
-  night opens that night (Rules: Opened past days and workouts).
+- This week's sleep goals, and **Recent nights vs tonight's window**: the
+  14 nights ending last night as bars from Garmin's recorded sleep start to
+  end on a clock axis (evening at the top), against tonight's bedtime band
+  (Garmin's window start or in bed, whichever is earlier, to asleep-by) and
+  tonight's wake as a dashed line; a missing night is a dotted mark, in the
+  key. One line says how many of the last seven recorded nights were below
+  that night's own Garmin need. No running debt. Each night opens that
+  night (Rules: Opened past days and workouts).
 
 **A past night.** The seven-night bars and Sleep history's selected day open
 `#sleep/YYYY-MM-DD`: Last night for that date, with no Tonight tab and no

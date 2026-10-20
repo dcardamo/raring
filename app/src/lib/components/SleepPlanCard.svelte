@@ -1,17 +1,17 @@
 <script lang="ts">
  import type {SleepPlan} from '../generated/SleepPlan';
  import {duration} from '../format';
- import {nightStrip,wakeLabel} from '../tonight';
+ import {wakeLabel} from '../tonight';
+ import SleepClock from './SleepClock.svelte';
  import Card from './Card.svelte';
+ import type {Snippet} from 'svelte';
  import Icon from './Icon.svelte';
  import SleepPlanEvidence from './SleepPlanEvidence.svelte';
- import {declutter} from '../declutter';
  // `evidence` adds the "Why this plan" sheet; Today opens Sleep instead. Today's `mode` follows
  // the time of day: one line until the plan leads, then the evening, wind-down or late-night card.
  type Mode='full'|'line'|'evening'|'windDown'|'lateNight';
  let {plan,open,evidence=false,mode='full',now=new Date(),lead=false}:{plan:SleepPlan;open?:()=>void;evidence?:boolean;mode?:Mode;now?:Date;lead?:boolean}=$props();
  let why=$state(false);
- let strip=$derived(mode==='evening'||mode==='windDown'?nightStrip(plan,now):null);
  let bedWindow=$derived(plan.bedtimeStart?`${plan.bedtimeStart}–${plan.bedtime}`:plan.bedtime);
  let garmin=$derived(plan.bedtimeSource==='garmin');
  let wake=$derived(wakeLabel(plan.wakeNights)==='reference'?'Wake reference':'Usual wake');
@@ -19,14 +19,23 @@
  let wakes=$derived(`median of ${plan.wakeNights} recorded wake ${plan.wakeNights===1?'time':'times'}`);
 </script>
 
-{#snippet stripView()}
- {#if strip}
-  <div class="strip" aria-hidden="true" data-chart="night-strip" {@attach declutter}>
-   <div class="strip-bar"><i class="wd" style:left={strip.windDown+'%'} style:width={strip.start-strip.windDown+'%'}></i><i class="bw" style:left={strip.start+'%'} style:width={Math.max(1,strip.end-strip.start)+'%'}></i>{#if strip.now!=null}<u data-mark="now" style:left={strip.now+'%'}></u>{/if}</div>
-   <div class="strip-ticks">{#each strip.ticks as tick,i}<span data-thin class:first={i===0} class:last={i===strip.ticks.length-1} style:left={tick.left+'%'}>{tick.label}</span>{/each}</div>
-   <div class="strip-key"><span><i class="wd"></i>Wind down</span><span><i class="bw"></i>{garmin?'Bedtime window':'Asleep by'}</span>{#if strip.now!=null}<span><i class="now"></i>Now</span>{/if}</div>
-  </div>
- {/if}
+{#snippet clockRow(times:Snippet)}
+ <!-- The same clock as Sleep · Tonight, compact, with its times beside it. -->
+ <div class="clock-row"><SleepClock {plan} {now} compact/>{@render times()}</div>
+{/snippet}
+{#snippet calm()}
+ <div class="calm">
+  <span>{mode==='lateNight'?(garmin?'Tonight\'s window was':'Tonight\'s asleep-by was'):(garmin?'Bedtime window':'Asleep by')}</span>
+  <b class="n">{bedWindow}</b>
+  {#if mode==='windDown'}<small>In bed by <b class="n">{plan.inBed||plan.bedtime}</b></small>{/if}
+ </div>
+{/snippet}
+{#snippet times()}
+ <dl class="times">
+  <div><dt>Wind down</dt><dd class="n">{plan.windDown}</dd></div>
+  <div><dt>In bed by</dt><dd class="n">{plan.inBed||plan.bedtime}</dd></div>
+  <div><dt>{plan.bedtimeStart?'Garmin window':'Asleep by'}</dt><dd class="n">{bedWindow}</dd></div>
+ </dl>
 {/snippet}
 
 {#if mode==='line'}
@@ -38,18 +47,14 @@
 {:else if mode==='windDown' || mode==='lateNight'}
  <Card title={mode==='windDown'?'Wind down':'Tonight'} onclick={open} extra="sleep-plan{lead?' lead':''}">
   {#snippet aside()}<span class="pill"><Icon name="moon" size={13}/> {garmin?'Garmin plan':'Raring estimate'}</span>{/snippet}
-  <div class="calm">
-   <span>{mode==='lateNight'?(garmin?'Tonight\'s window was':'Tonight\'s asleep-by was'):(garmin?'Bedtime window':'Asleep by')}</span>
-   <b class="n">{bedWindow}</b>
-   {#if mode==='windDown'}<small>Sleep need <b class="n">{duration(plan.needMin)}</b></small>{/if}
-  </div>
-  {@render stripView()}
+  {#if mode==='windDown'}{@render clockRow(calm)}{:else}{@render calm()}{/if}
   {#if mode!=='windDown'}<p>Tomorrow's plan follows your next sleep.</p>{/if}
   <div class="foot"><span>Tonight’s plan</span><Icon name="arrow-right" size={16}/></div>
  </Card>
 {:else}
 <Card title="Tonight's sleep" onclick={open} extra="sleep-plan{lead?' lead':''}">
  {#snippet aside()}<span class="pill"><Icon name="moon" size={13}/> {garmin?'Garmin plan':'Raring estimate'}</span>{/snippet}
+ {#if mode==='evening'}{@render clockRow(times)}{:else}
  <div class="plan-row">
   <div><span>Wind down</span><b class="n">{plan.windDown}</b></div>
   {#if plan.bedtimeStart}
@@ -59,7 +64,7 @@
   {/if}
   <div><span>Sleep need</span><b class="n">{duration(plan.needMin)}</b></div>
  </div>
- {@render stripView()}
+ {/if}
  {#if plan.stale}
   <p>No sleep has synced today; this estimate uses older nights.</p>
  {:else if garmin}
@@ -97,25 +102,13 @@
  .line-main>b span{font-weight:500;color:var(--text2)}
  .line-main>span{font-size:12px;color:var(--text2)}
  .line-main>span b{font:600 13px Outfit;color:var(--text)}
+ .clock-row{display:flex;flex-wrap:wrap;align-items:center;gap:14px 18px;margin-top:4px}.clock-row>:last-child{flex:1 1 8em;min-width:0}
+ .times{display:grid;gap:8px;margin:0}.times>div{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 10px}.times dt{font-size:12px;color:var(--text2)}.times dd{margin:0 0 0 auto;font-size:20px;font-weight:500;white-space:nowrap}
  .calm{display:grid;gap:6px;justify-items:start}
  .calm span{font-size:12px;color:var(--text2)}
  .calm>b{font-size:34px;font-weight:500;line-height:1}
  .calm small{font-size:12px;color:var(--text2)}
  .calm small b{font:600 13px Outfit;color:var(--text)}
- .strip{margin-top:16px}
- .strip-bar{position:relative;height:10px;border-radius:5px;background:rgba(255,255,255,.06)}
- .strip-bar i{position:absolute;top:0;bottom:0;border-radius:5px}
- .wd{background:rgba(228,232,240,.22)}
- .bw{background:var(--ink)}
- .strip-bar u{position:absolute;top:-4px;width:3px;height:18px;border-radius:2px;background:var(--text);transform:translateX(-50%);box-shadow:0 0 0 2px var(--bg)}
- .strip-ticks{position:relative;height:1.5em;margin-top:6px;font:500 11px Inter}
- .strip-ticks span{position:absolute;transform:translateX(-50%);color:var(--text3)}
- .strip-ticks .first{transform:none}
- .strip-ticks .last{transform:translateX(-100%)}
- .strip-key{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:12px;color:var(--text2)}
- .strip-key span{display:flex;align-items:center;gap:5px}
- .strip-key i{width:10px;height:10px;border-radius:3px}
- .strip-key i.now{width:3px;height:12px;border-radius:2px;background:var(--text)}
  .foot{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--ink)}
  @container (max-width:310px){.plan-row{gap:8px}.plan-row b{font-size:21px}}
 </style>
