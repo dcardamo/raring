@@ -3,4 +3,4 @@
 /**
  * One page's per-day detail that an explicit open can still fetch.
  */
-export type DayDetailPart = "sleep" | "stress" | "vitals" | "workout";
+export type DayDetailPart = "sleep" | "stress" | "vitals" | "fitnessAge" | "workout";

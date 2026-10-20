@@ -805,6 +805,8 @@ pub enum DayDetailPart {
     Sleep,
     Stress,
     Vitals,
+    /// Garmin's Fitness Age estimate as of that day.
+    FitnessAge,
     Workout,
 }
 

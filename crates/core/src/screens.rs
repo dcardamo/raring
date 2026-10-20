@@ -1097,11 +1097,16 @@ fn activities(store: &Store, since: &str) -> Vec<ActivityCard> {
         .filter_map(|id| activity(store, id))
         .collect()
 }
-pub(crate) fn age(store: &Store, date: &str) -> FitnessAgeCard {
-    let (recorded_on, v) = store
+/// Garmin's Fitness Age estimate for `date`: that day's, else the latest before it.
+fn fitness_age_row(store: &Store, date: &str) -> Option<(String, Value)> {
+    store
         .get("fitness_age", date)
-        .map(|v| (Some(date.to_owned()), v))
-        .or_else(|| store.history("fitness_age", date, 1).pop().map(|(d, v)| (Some(d), v)))
+        .map(|v| (date.to_owned(), v))
+        .or_else(|| store.history("fitness_age", date, 1).pop())
+}
+pub(crate) fn age(store: &Store, date: &str) -> FitnessAgeCard {
+    let (recorded_on, v) = fitness_age_row(store, date)
+        .map(|(d, v)| (Some(d), v))
         .unwrap_or((None, Value::Null));
     let fitness_age = num(&v, &[&["fitnessAge"], &["fitnessAgeData", "fitnessAge"]]);
     let trend: Vec<Option<f64>> = (0..12)
@@ -2104,7 +2109,18 @@ pub(crate) fn detail_kinds(part: DayDetailPart) -> &'static [&'static str] {
         DayDetailPart::Sleep => &["sleep", "hrv"],
         DayDetailPart::Stress => &["stress", "summary"],
         DayDetailPart::Vitals => &["health_status"],
+        DayDetailPart::FitnessAge => &["fitness_age"],
         DayDetailPart::Workout => &["activity", "splits", "zones", "details"],
+    }
+}
+/// An opened past Health day's parts, in order: its Fitness Age, then its stress and vitals.
+const HEALTH_DAY: &[DayDetailPart] = &[DayDetailPart::FitnessAge, DayDetailPart::Stress, DayDetailPart::Vitals];
+/// The parts an explicit open of a page scope fetches: a night (`sleep`) or a Health day (`day`).
+pub fn day_detail_parts(scope: &str) -> Option<&'static [DayDetailPart]> {
+    match scope {
+        "sleep" => Some(&[DayDetailPart::Sleep]),
+        "day" => Some(HEALTH_DAY),
+        _ => None,
     }
 }
 /// A row that is absent was never read on this phone; a stored null is
@@ -2897,7 +2913,8 @@ pub fn health(store: &Store, date: &str) -> HealthView {
 pub fn health_at_calendar(store: &Store, date: &str, calendar: &str) -> HealthView {
     let vitals = vitals(store, date);
     let body_weight = body_weight(store, date);
-    let v = store.get("fitness_age", date).unwrap_or(Value::Null);
+    // The drivers come from the estimate the Fitness Age card shows.
+    let v = fitness_age_row(store, date).map_or(Value::Null, |(_, v)| v);
     let drivers: Vec<Driver> = [
         ("vo2max", "VO2max", "ml/kg/min"),
         ("restingHr", "Resting HR", "bpm"),
@@ -3018,7 +3035,7 @@ pub fn health_at_calendar(store: &Store, date: &str, calendar: &str) -> HealthVi
             plan::intensity(store, plan::week_start(d, plan::week_starts_on(store)), d)
         }),
         resting_hr_range: resting_hr_range(store, date),
-        detail: day_detail(store, date, &[DayDetailPart::Stress, DayDetailPart::Vitals]),
+        detail: day_detail(store, date, HEALTH_DAY),
     }
 }
 /// The resting-HR chart plots Garmin's daily resting HR, so its band comes

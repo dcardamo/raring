@@ -167,8 +167,16 @@ From item 11, in priority order.
 - Weekly trend buckets run Monday to Sunday. Consider aligning them with
   Garmin's reported intensity-week boundary, which the weekly plan already
   uses; a display preference need not match that data window.
-- Fitness Age history is limited to downloaded per-day estimates; endurance,
-  hill score and race predictions have no long-history rows. The web GraphQL lists
+- Fitness Age history is limited to downloaded per-day estimates: each
+  synced day since install and each opened past day, so Long-term's Fitness
+  Age chart and its history detail are nearly empty. `GET
+  /fitnessage-service/fitnessage/{date}` returns Garmin's estimate as of any
+  past date (verified 2026-10-20, read-only: a date a month back and one a
+  year back each returned their own `fitnessAge`, the `chronologicalAge`
+  then and `components`; `lastUpdated` can be a few days before the date).
+  A history download of one read per month (the month's last day) would give
+  every month a point, at one request per month of history.
+- Endurance, hill score and race predictions have no long-history rows. The web GraphQL lists
   `enduranceScoreScalar` and `hillScoreScalar` (start, end, weekly
   aggregation); unverified.
 
@@ -555,6 +563,20 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **A past Health day's own Fitness Age, weight and week** (commit "Show a
+  past Health day's own Fitness Age, weight and week"), from the maintainer
+  opening a day from Progress's calendar: Fitness Age was blank and "What
+  sets it" gone on any day before the first synced estimate, the weight card
+  showed today's weigh-ins, intensity minutes looked like the whole week's
+  with this week's Plan behind them, and Body Battery's link said "today".
+  Opening a past Health day now also reads that day's Fitness Age once (one
+  more request in the day's budget; Garmin returns the estimate as of the
+  date), the drivers come from the estimate the card shows, and a day Garmin
+  has none for says so. Weight ends on the day, intensity minutes name the
+  days they cover and a passed week opens its review, and the journal says
+  its seven days end there. Checked in a browser preview on a copy of the
+  full-history database; the phone's real fetch is unverified.
 
 - **Instant page opens** (commits "Read stored nights without their
   samples" and "Open pages whole and keep cached views through a sync"),

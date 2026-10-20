@@ -525,7 +525,8 @@ says so on its chart (Rules: Reading freshness).
 - **Drivers**: VO2max, resting heart rate, BMI or body fat, and vigorous
   minutes as tiles with range bars, Garmin's target in words ("Target ≥ 150
   min/wk") and Met or how far off it is; no trend arrows. The driver that would
-  help most (the biggest lever) adds the age you'd reach at its target. Garmin's Fitness Age component owns its
+  help most (the biggest lever) adds the age you'd reach at its target. The
+  drivers come from the estimate the Fitness Age card shows. Garmin's Fitness Age component owns its
   target and age estimate; a recorded weigh-in can supply a missing BMI or
   body-fat value measured in the last 30 days but never creates a target or
   Fitness Age prediction.
@@ -536,15 +537,19 @@ says so on its chart (Rules: Reading freshness).
   diagnosing an illness. A partially calibrated monitor reports only the
   readings it can compare.
 - **A past day**: the Progress calendar and a selected trend point open
-  `#health/YYYY-MM-DD`, anchored to that date: its charts end there, its
-  stress and vitals are that day's, and the journal's seven days end there.
+  `#health/YYYY-MM-DD`, anchored to that date: its charts and weight end
+  there; its Fitness Age (Garmin's estimate as of that date, with that
+  estimate's drivers), stress and vitals are that day's; intensity minutes
+  are its plan week up to that day, named by those days (a passed week opens
+  its review, this week the plan); and the journal's seven days end there.
   The stress detail (`#metric/stress/YYYY-MM-DD`) shows that day's timeline;
   the all-day heart-rate detail (`#metric/heartRate/YYYY-MM-DD`) opens that
-  day and reads its heart-rate day on demand. Missing per-day detail (sleep,
-  HRV, stress, the daily summary, Health Status) is fetched once on opening
-  and kept, inside the shared budget and backoff; the page says while it
-  loads, and says when Garmin has nothing for that day. Today's readings are
-  never substituted for an older date (Rules: Opened past days and workouts).
+  day and reads its heart-rate day on demand. Missing per-day detail (Fitness
+  Age, sleep, HRV, stress, the daily summary, Health Status) is fetched once
+  on opening and kept, inside the shared budget and backoff; the page says
+  while it loads, and says when Garmin has nothing for that day. Today's
+  readings are never substituted for an older date (Rules: Opened past days
+  and workouts).
 
 ### Trends
 

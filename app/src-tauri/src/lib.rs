@@ -358,11 +358,9 @@ async fn heart_rate_day(app: tauri::AppHandle, date: String) -> Result<HeartRate
 }
 
 fn day_detail_parts(scope: &str) -> Result<Vec<DayDetailPart>, String> {
-    match scope {
-        "sleep" => Ok(vec![DayDetailPart::Sleep]),
-        "day" => Ok(vec![DayDetailPart::Stress, DayDetailPart::Vitals]),
-        _ => Err("unknown day detail scope".into()),
-    }
+    raring_core::screens::day_detail_parts(scope)
+        .map(<[DayDetailPart]>::to_vec)
+        .ok_or_else(|| "unknown day detail scope".into())
 }
 
 #[tauri::command]
