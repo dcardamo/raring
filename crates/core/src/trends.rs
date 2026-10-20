@@ -175,8 +175,38 @@ fn day(s: &str) -> Option<NaiveDate> {
     NaiveDate::parse_from_str(s.get(..10)?, "%Y-%m-%d").ok()
 }
 
-/// Recorded days of a metric from `from` to `to`.
+/// Recorded days of a metric from `from` to `to`. Stress leaves out the days
+/// Garmin rated only in part (see `split`).
 pub fn daily(
+    store: &Store,
+    metric: TrendMetric,
+    from: NaiveDate,
+    to: NaiveDate,
+) -> BTreeMap<NaiveDate, f64> {
+    split(store, metric, from, to).0
+}
+
+/// The recorded days, and Garmin's average on the stress days it rated only in
+/// part (too little wear, or awake only). Those stay out of every average and
+/// count; daily charts draw them apart.
+fn split(
+    store: &Store,
+    metric: TrendMetric,
+    from: NaiveDate,
+    to: NaiveDate,
+) -> (BTreeMap<NaiveDate, f64>, BTreeMap<NaiveDate, f64>) {
+    let days = readings(store, metric, from, to);
+    if metric != TrendMetric::Stress {
+        return (days, BTreeMap::new());
+    }
+    let partial_days = crate::stress::partial_days(store, &from.to_string(), &to.to_string());
+    let (partial, days) = days
+        .into_iter()
+        .partition(|(date, _)| partial_days.contains(date));
+    (days, partial)
+}
+
+fn readings(
     store: &Store,
     metric: TrendMetric,
     from: NaiveDate,
@@ -294,9 +324,11 @@ fn mean(values: impl Iterator<Item = f64>) -> (Option<f64>, u32) {
     ((n > 0).then(|| sum / n as f64), n)
 }
 
+/// `partial` marks daily points on the days Garmin rated only in part.
 fn series(
     metric: TrendMetric,
     days: &BTreeMap<NaiveDate, f64>,
+    partial: Option<&BTreeMap<NaiveDate, f64>>,
     spans: &[(NaiveDate, NaiveDate)],
 ) -> TrendSeries {
     let (name, unit) = name_unit(metric);
@@ -309,6 +341,7 @@ fn series(
                 end: end.to_string(),
                 value,
                 days,
+                partial: partial.and_then(|p| p.get(start)).copied(),
             }
         })
         .collect();
@@ -358,15 +391,15 @@ pub fn trend(store: &Store, query: &TrendQuery, today: &str) -> Result<TrendView
     };
     // All reads the whole history to find its first day; other ranges read
     // their own period and, when compared, the one before it.
-    let (days, (from, bucket, shift)) = if query.range == TrendRange::All {
-        let days = daily(store, query.metric, first_day(), end);
+    let (days, partial, (from, bucket, shift)) = if query.range == TrendRange::All {
+        let (days, partial) = split(store, query.metric, first_day(), end);
         let period = period(query.range, end, days.keys().next().copied());
-        (days, period)
+        (days, partial, period)
     } else {
         let (from, bucket, shift) = custom.unwrap_or_else(|| period(query.range, end, None));
         let back = shift.filter(|_| query.previous).unwrap_or(0);
-        let days = daily(store, query.metric, from - Duration::days(back), end);
-        (days, (from, bucket, shift))
+        let (days, partial) = split(store, query.metric, from - Duration::days(back), end);
+        (days, partial, (from, bucket, shift))
     };
     if let (Some(start), Some(length)) = (comparison.filter(|_| query.previous), shift) {
         if start + Duration::days(length - 1) > today {
@@ -376,21 +409,22 @@ pub fn trend(store: &Store, query: &TrendQuery, today: &str) -> Result<TrendView
         }
     }
     let spans = buckets(from, end, bucket);
-    let series_now = series(query.metric, &days, &spans);
+    let partial_points = (bucket == TrendBucket::Day).then_some(&partial);
+    let series_now = series(query.metric, &days, partial_points, &spans);
     let previous = shift.filter(|_| query.previous).map(|shift| {
         let back = Duration::days(comparison.map_or(shift, |start| (from - start).num_days()));
         let spans: Vec<_> = spans.iter().map(|(s, e)| (*s - back, *e - back)).collect();
         if comparison.is_some() {
             let recorded = daily(store, query.metric, spans[0].0, spans.last().unwrap().1);
-            series(query.metric, &recorded, &spans)
+            series(query.metric, &recorded, None, &spans)
         } else {
-            series(query.metric, &days, &spans)
+            series(query.metric, &days, None, &spans)
         }
     });
     let overlay = query
         .overlay
         .filter(|m| *m != query.metric)
-        .map(|metric| series(metric, &daily(store, metric, from, end), &spans));
+        .map(|metric| series(metric, &daily(store, metric, from, end), None, &spans));
     let change = previous
         .as_ref()
         .and_then(|p| Some(series_now.average? - p.average?));
@@ -404,8 +438,10 @@ pub fn trend(store: &Store, query: &TrendQuery, today: &str) -> Result<TrendView
         previous,
         change,
         available: METRICS.to_vec(),
+        // A partly worn day is still a reading: the watch has synced.
         freshness: (end == today && !matches!(query.metric, TrendMetric::Vo2max | TrendMetric::FitnessAge)).then(|| {
-            let latest = daily(store, query.metric, today - Duration::days(400), today).into_keys().next_back();
+            let (days, partial) = split(store, query.metric, today - Duration::days(400), today);
+            let latest = days.keys().chain(partial.keys()).max().copied();
             crate::weight::freshness(latest, today, 2)
         }),
     })

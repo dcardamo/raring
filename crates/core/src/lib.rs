@@ -23,6 +23,7 @@ pub mod settings;
 pub mod status;
 pub mod store;
 pub mod strength;
+pub mod stress;
 pub mod sync;
 pub mod trends;
 pub mod view;

@@ -15,8 +15,8 @@ describe('trend periods', () => {
     expect(spans('2025-01-01', '2025-02-10', 'month')).toEqual([['2025-01-01', '2025-01-31'], ['2025-02-01', '2025-02-10']]);
   });
   it('labels weeks and months', () => {
-    expect(pointLabel({start: '2026-09-21', end: '2026-09-27', value: 1, days: 7}, 'week')).toBe('Week of 21 Sept 2026');
-    expect(pointLabel({start: '2026-07-01', end: '2026-07-31', value: 1, days: 31}, 'month')).toBe('July 2026');
+    expect(pointLabel({start: '2026-09-21', end: '2026-09-27', value: 1, days: 7, partial: null}, 'week')).toBe('Week of 21 Sept 2026');
+    expect(pointLabel({start: '2026-07-01', end: '2026-07-31', value: 1, days: 31, partial: null}, 'month')).toBe('July 2026');
   });
   it('keeps missing local days as gaps', () => {
     expect(localPoints([5, null, 7], '2026-01-03', 3).map(p => [p.start, p.value, p.days]))
@@ -48,6 +48,14 @@ describe('trend periods', () => {
   it('reads minutes as hours', () => {
     expect(trendValue(453, 'min')).toBe('7:33');
     expect(trendValue(14.25, 'br/min', 1)).toBe('14.3');
+  });
+  it('keeps partly worn stress days out of the preview averages, like the core', () => {
+    const week = sampleTrend({metric: 'stress', range: 'days7', end: null, overlay: null, previous: false, start: null, comparisonStart: null});
+    const worn = week.series.points.filter(p => p.partial != null);
+    expect(worn.map(p => [p.start, p.value, p.days])).toEqual([['2025-10-12', null, 0]]);
+    expect(week.series.days).toBe(week.series.points.filter(p => p.value != null).length);
+    const year = sampleTrend({metric: 'stress', range: 'year', end: null, overlay: null, previous: false, start: null, comparisonStart: null});
+    expect(year.series.points.every(p => p.partial == null)).toBe(true);
   });
   it('offers no period before All in the preview data', () => {
     expect(sampleTrend({metric: 'stress', range: 'all', end: null, overlay: null, previous: true, start:null, comparisonStart:null}).previous).toBeNull();

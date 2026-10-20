@@ -43,16 +43,21 @@ function value(metric: TrendMetric, date: string): number | null {
   return metric === 'respiration' || metric === 'skinTemp' ? Math.round(v * 10) / 10 : Math.round(v);
 }
 
-function series(metric: TrendMetric, list: [string, string][]): TrendSeries {
+// Stress days Garmin rated only in part (too little wear, or awake only): four days ago and a few older ones.
+const partlyWorn = (metric: TrendMetric, date: string) => metric === 'stress' &&
+  (date === new Date(Date.parse(SAMPLE_TODAY + 'T12:00:00Z') - 4 * 86_400_000).toISOString().slice(0, 10) || (date < '2025-09-16' && hash('worn' + date) < .06));
+
+function series(metric: TrendMetric, list: [string, string][], marks = false): TrendSeries {
   let total = 0, count = 0;
   const points = list.map(([start, end]) => {
-    let sum = 0, days = 0;
+    let sum = 0, days = 0, partial: number | null = null;
     for (let d = start; d <= end; d = new Date(Date.parse(d + 'T12:00:00Z') + 86_400_000).toISOString().slice(0, 10)) {
       const v = value(metric, d);
-      if (v != null) {sum += v; days++}
+      if (v != null && partlyWorn(metric, d)) partial = v;
+      else if (v != null) {sum += v; days++}
     }
     total += sum; count += days;
-    return {start, end, value: days ? sum / days : null, days};
+    return {start, end, value: days ? sum / days : null, days, partial: marks && start === end ? partial : null};
   });
   return {metric, name: trendNames[metric], unit: shape[metric][3], points, average: count ? total / count : null, days: count};
 }
@@ -72,7 +77,7 @@ export function sampleTrend(query: TrendQuery): TrendView {
   const {from, bucket, shift} = query.range==='custom'?{from:query.start??end,bucket:bucketFor(length),shift:length}:period(query.range, end, shape[query.metric][4]);
   if(query.previous && query.comparisonStart && shift && Date.parse(query.comparisonStart)+(shift-1)*86400000>Date.parse(SAMPLE_TODAY))throw Error(`The comparison block runs past today (${SAMPLE_TODAY}); choose an earlier start`);
   const list = spans(from, end, bucket);
-  const now = series(query.metric, list);
+  const now = series(query.metric, list, bucket === 'day');
   const offset=query.comparisonStart?Math.round((Date.parse(from)-Date.parse(query.comparisonStart))/86400000):(shift??0);
   const back = (date: string) => new Date(Date.parse(date + 'T12:00:00Z') - offset * 86_400_000).toISOString().slice(0, 10);
   const previous = query.previous && shift ? series(query.metric, list.map(([s, e]) => [back(s), back(e)])) : null;

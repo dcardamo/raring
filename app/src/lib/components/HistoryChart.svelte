@@ -91,14 +91,16 @@
  const y=(v:number,s:[number,number]=scale)=>12+(s[1]-v)/(s[1]-s[0])*(H-28);
  const path=(list:TrendPoint[],s:[number,number])=>list.map((p,i)=>p.value==null?'':`${i && list[i-1].value!=null?'L':'M'}${x(i).toFixed(1)},${y(p.value,s).toFixed(1)}`).join('');
  let present=$derived(points.filter(p=>p.value!=null).length);
+ // Stress days Garmin rated only in part: hollow, outside every average.
+ let partlyWorn=$derived(bucket==='day'?points.filter(p=>p.value==null&&p.partial!=null).length:0);
  let bucketName=$derived(bucket==='week'?'weeks':bucket==='month'?'months':period);
  let overlayDecimals=$derived(overlay?trendDecimals(overlay.metric):0);
  const show=(v:number|null|undefined)=>trendValue(v,activeUnit,activeDecimals);
  // "/ 100" describes one reading, not an average or a change.
  let tileUnit=$derived(activeUnit.startsWith('/') || activeUnit==='min'?'':activeUnit);
- let canOpenDay=$derived(!!openDay && !!selected && bucket==='day' && selected.value!=null && selected.start<latestDay);
+ let canOpenDay=$derived(!!openDay && !!selected && bucket==='day' && (selected.value!=null || selected.partial!=null) && selected.start<latestDay);
  let selectedDate=$derived(selected?bucket==='day'?dateLabel(selected.start)+(range==='custom'||range==='all'?' '+selected.start.slice(0,4):''):pointLabel(selected,bucket):'');
- let selectedText=$derived(selected?`${selectedDate}: ${selected.value==null?'Not recorded':show(selected.value)+' '+(activeUnit==='min'?'h:mm':activeUnit)}`:'');
+ let selectedText=$derived(selected?`${selectedDate}: ${selected.value==null?selected.partial!=null?show(selected.partial)+', partly worn, not in the average':'Not recorded':show(selected.value)+' '+(activeUnit==='min'?'h:mm':activeUnit)}`:'');
  let barWidth=$derived(Math.max(1.5,Math.min(22,(R-L)/Math.max(count,1)*.62)));
  const pairs=Object.keys(trendNames) as TrendMetric[];
  let choices=$derived(pairs.filter(m=>m!==activeMetric));
@@ -134,7 +136,7 @@
  {#snippet inspectedReading()}
  <div class="history-reading" class:inspected={!local} aria-live="polite" aria-atomic="true">
   <div class="reading-values">
-   <div><b class="n" style:color={selected?.value==null?toneColor('neutral'):tint(selected.value)}>{show(selected?.value)}</b><span>{selected?.value==null?'Not recorded':bucket==='week'?'weekly average':bucket==='month'?'monthly average':activeUnit==='min'?'h:mm':activeUnit}</span></div>
+   <div><b class="n" style:color={selected?.value==null?toneColor('neutral'):tint(selected.value)}>{show(selected?.value ?? selected?.partial)}</b><span>{selected?.value==null?selected?.partial!=null?'partly worn · not averaged':'Not recorded':bucket==='week'?'weekly average':bucket==='month'?'monthly average':activeUnit==='min'?'h:mm':activeUnit}</span></div>
    {#if overlay && selected}<div class="overlay-reading"><b class="n">{trendValue(overlay.points[index]?.value,overlay.unit,overlayDecimals)}</b><span>{overlay.name}</span></div>{/if}
    {#if previous && selected}<div class="overlay-reading"><b class="n">{show(previous.points[index]?.value)}</b><span>{comparisonStart?'comparison block':'period before'}</span></div>{/if}
   </div>
@@ -156,7 +158,7 @@
  <div data-chart="history">
  <div class="plot-units"><span>{activeLabel}{activeUnit?' · '+(activeUnit==='min'?'h:mm':activeUnit):''}</span>{#if overlay}<span>{overlay.name} · {overlay.unit} (right)</span>{/if}</div>
  <button class="chart-surface" tabindex={compact?0:-1} aria-hidden={compact?undefined:true} aria-label={compact?`${activeLabel} chart. ${selectedText}. Left and right arrows choose a day.`:undefined} onclick={selectFromChart} onkeydown={compact?(e)=>{if(e.key==='ArrowLeft'&&index>0){e.preventDefault();offset++}else if(e.key==='ArrowRight'&&index<count-1){e.preventDefault();offset--}}:undefined}>
-  <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${activeLabel}, ${count} ${bucketName}. ${present} recorded. Missing readings are gaps.`}>
+  <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${activeLabel}, ${count} ${bucketName}. ${present} recorded.${partlyWorn?` ${partlyWorn} partly worn, not averaged.`:''} Missing readings are gaps.`}>
    {#if colored}<defs><linearGradient id={id+'-tone'} gradientUnits="userSpaceOnUse" x1="0" x2="0" y1={y(scale[1])} y2={y(scale[0])}>{#each stops as s}<stop offset={s.offset} stop-color={s.color}/>{/each}</linearGradient></defs>{/if}
    {#if shownBand}
     <rect class="history-band" x={L} y={y(shownBand[1])} width={R-L} height={Math.max(1,y(shownBand[0])-y(shownBand[1]))} fill={colors.good} fill-opacity=".1"/>
@@ -179,6 +181,7 @@
      {:else if index===i || count<=40 || (points[i-1]?.value==null && points[i+1]?.value==null)}
       <circle cx={x(i)} cy={y(p.value)} r={index===i?4:2.5} fill={tint(p.value)} stroke="var(--card)" stroke-width={index===i?2:0}/>
      {/if}
+    {:else if p.partial!=null && bucket==='day'}<circle class="history-partial" cx={x(i)} cy={y(p.partial)} r={index===i?4:3} fill="var(--card)" stroke={colors.secondary} stroke-width={index===i?2:1.5}/>
     {:else}<circle class="history-gap" cx={x(i)} cy={H-9} r="1.5" fill="currentColor" opacity=".3"/>{/if}
    {/each}
    {#each [previous,overlay] as other}
@@ -198,11 +201,12 @@
   <input aria-label={'Selected '+activeLabel.toLowerCase()+' date'} aria-describedby={id} aria-valuetext={selectedText} type="range" min="0" max={Math.max(0,count-1)} step="1" value={index} oninput={(e)=>offset=count-1-Number(e.currentTarget.value)}/>
   <button aria-label="Next reading" disabled={index>=count-1} onclick={()=>offset--}><Icon name="arrow-right" size={17}/></button>
  </div>{/if}
- <span id={id} class="sr-only">{activeLabel}, {count} {bucketName}. {present} recorded. Missing readings are gaps. Use the slider to select a date.</span>
+ <span id={id} class="sr-only">{activeLabel}, {count} {bucketName}. {present} recorded.{partlyWorn?` ${partlyWorn} partly worn, not averaged.`:''} Missing readings are gaps. Use the slider to select a date.</span>
  <div class="history-legend">
   {#if shownBand}<span><i class="band"></i>{bandLabel} · {show(shownBand[0])}–{show(shownBand[1])}{activeUnit && activeUnit!=='min'?' '+activeUnit:''}</span>{/if}
   {#if ageLine!=null}<span><i class="line dashed"></i>Your age {show(ageLine)}</span>{/if}
   {#if bucket!=='day'}<span><i style:background={colored?colors.secondary:color}></i>{bucket==='week'?'Weekly':'Monthly'} average of recorded days</span>{/if}
+  {#if partlyWorn}<span><i class="hollow"></i>Partly worn · not averaged</span>{/if}
   {#if overlay}<span><i class="line" style:border-color={colors.secondary} style:border-top-style="dashed"></i>{overlay.name}, right axis</span>{/if}
   {#if previous}<span><i class="line dashed"></i>{comparisonStart?'Comparison block':range==='year'?'Year before':range==='custom'?'Previous block':days+' '+period+' before'}</span>{/if}
   <span class="record-count">{present} / {count} {bucket==='day'?'recorded':bucketName}</span>
@@ -254,6 +258,7 @@
  .history-legend span{display:inline-flex;align-items:center;gap:5px}
  .history-legend i{width:6px;height:6px;border-radius:2px;opacity:.7}
  .history-legend i.line{width:14px;height:0;border-radius:0;border-top:2px solid;opacity:1}
+ .history-legend i.hollow{width:7px;height:7px;border-radius:50%;border:1.5px solid var(--text2);background:none;opacity:1}
  .history-legend i.band{width:14px;height:9px;border-radius:2px;background:color-mix(in srgb,var(--good) 16%,transparent);border:1px dashed color-mix(in srgb,var(--good) 60%,transparent);opacity:1}
  .history-legend i.dashed{border-top:2px dashed rgba(228,232,240,.55)}
  .record-count{margin-left:auto}

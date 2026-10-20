@@ -233,6 +233,21 @@ impl Store {
         })
         .unwrap_or_default()
     }
+    /// The text at one SQLite JSON path in each stored day from `from` to `to`;
+    /// rows without text there are left out.
+    pub fn day_strings(&self, endpoint: &str, path: &str, from: &str, to: &str) -> Vec<(String, String)> {
+        let db = self.db.lock().unwrap();
+        let Ok(mut stmt) = db.prepare(
+            "SELECT key,json_extract(json,?4) FROM raw WHERE endpoint=?1 AND key BETWEEN ?2 AND ?3 AND json!='null' ORDER BY key",
+        ) else {
+            return vec![];
+        };
+        stmt.query_map(params![endpoint, from, to, path], |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, Option<String>>(1).ok().flatten()))
+        })
+        .map(|rows| rows.flatten().filter_map(|(k, v)| v.map(|v| (k, v))).collect())
+        .unwrap_or_default()
+    }
     pub fn activity_ids(&self, since: Option<&str>, limit: usize) -> Vec<String> {
         let db = self.db.lock().unwrap();
         let Ok(mut stmt) = db.prepare(

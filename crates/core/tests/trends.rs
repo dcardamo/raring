@@ -475,3 +475,42 @@ fn freshness_flags_a_daily_metric_older_than_two_days_on_todays_chart() {
     assert!(fresh(&store, TrendMetric::Hrv, Some(day(10))).is_none(), "a past chart isn't judged");
     assert!(fresh(&store, TrendMetric::Vo2max, None).is_none(), "sparse estimates are dated, not flagged");
 }
+
+#[test]
+fn partly_worn_stress_days_stay_out_of_values_and_averages() {
+    let store = Store::open(":memory:").unwrap();
+    // Whole days Garmin rated, a day it couldn't (too little wear), an awake-only
+    // day, a history row in history's lowercase spelling and a row without a word.
+    for (n, average, word) in [
+        (0, 52, "UNKNOWN"),
+        (1, 30, "BALANCED"),
+        (2, 55, "UNKNOWN"),
+        (3, 34, "STRESSFUL"),
+        (4, 46, "VERY_STRESSFUL_AWAKE"),
+    ] {
+        put(&store, "stress", &day(n), json!({"avgStressLevel": average}));
+        put(&store, "summary", &day(n), json!({"averageStressLevel": average, "stressQualifier": word}));
+    }
+    put(&store, "daily_summary", &day(5), json!({"stress": {"avgLevel": 61, "qualifier": "unknown"}}));
+    put(&store, "daily_summary", &day(6), json!({"stress": {"avgLevel": 26}}));
+    let view = trend(&store, &query(TrendMetric::Stress, TrendRange::Days7), TODAY);
+    assert_eq!(values(&view), [Some(26.), None, None, Some(34.), None, Some(30.), None]);
+    let partial: Vec<Option<f64>> = view.series.points.iter().map(|p| p.partial).collect();
+    assert_eq!(partial, [None, Some(61.), Some(46.), None, Some(55.), None, Some(52.)]);
+    assert_eq!(view.series.points[1].days, 0, "a partly worn day isn't a recorded day");
+    assert_eq!((view.series.average, view.series.days), (Some(30.), 3));
+    // The latest reading is today's, even though Garmin rated it only in part.
+    assert_eq!(view.freshness.unwrap().recorded_on.as_deref(), Some(day(0).as_str()));
+    // Weeks average whole days only and mark nothing partial.
+    let year = trend(&store, &query(TrendMetric::Stress, TrendRange::Year), TODAY);
+    let weeks: Vec<_> = year.series.points.iter().rev().take(2).map(|w| (w.value, w.days, w.partial)).collect();
+    assert_eq!(weeks, [(Some(30.), 1, None), (Some(30.), 2, None)]);
+    // A summary's word wins over the history row behind it.
+    put(&store, "daily_summary", &day(1), json!({"stress": {"avgLevel": 30, "qualifier": "unknown"}}));
+    let view = trend(&store, &query(TrendMetric::Stress, TrendRange::Days7), TODAY);
+    assert_eq!(view.series.points[5].value, Some(30.));
+    // Other metrics never carry partial days.
+    put(&store, "hrv", &day(0), json!({"hrvSummary": {"lastNightAvg": 41}}));
+    let hrv = trend(&store, &query(TrendMetric::Hrv, TrendRange::Days7), TODAY);
+    assert!(hrv.series.points.iter().all(|p| p.partial.is_none()));
+}

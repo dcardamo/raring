@@ -1708,6 +1708,11 @@ pub struct TrendPoint {
     pub value: Option<f64>,
     /// Recorded days behind the value.
     pub days: u32,
+    /// Garmin's average on a stress day it rated only in part (too little
+    /// wear, or awake only), on daily points. Never in `value`, `days` or an
+    /// average.
+    #[serde(default)]
+    pub partial: Option<f64>,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]

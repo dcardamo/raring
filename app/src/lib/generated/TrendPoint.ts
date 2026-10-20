@@ -12,4 +12,10 @@ start: string, end: string, value: number | null,
 /**
  * Recorded days behind the value.
  */
-days: number, };
+days: number, 
+/**
+ * Garmin's average on a stress day it rated only in part (too little
+ * wear, or awake only), on daily points. Never in `value`, `days` or an
+ * average.
+ */
+partial: number | null, };

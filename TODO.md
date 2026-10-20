@@ -94,6 +94,18 @@ From the chart colour pass, in priority order.
 - The Fitness Age detail offers 7D–30D, which Garmin's sparse estimates
   usually leave empty (as on VO₂ max); consider 90D, 1Y and Max only.
 
+### Stress by day follow-ups
+
+From the partly worn stress days, in priority order.
+
+- Live with it on the maintainer's phone: whether the hollow days on
+  Health's stress card read as "the watch was off", and whether the 30D and
+  90D averages without them match how the weeks felt.
+- Confirm what Garmin's stress word follows before the app explains it: on
+  one account it tracked time at rest against time under stress, not the
+  average (a lower-average day could get the more stressful word), which is
+  undocumented.
+
 ### Time-of-day follow-ups
 
 From item 4, in priority order.
@@ -555,6 +567,20 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Partly worn stress days** (commit "Leave partly worn stress days out of
+  stress averages"), from the maintainer asking for stress by day. A stress
+  day Garmin rated only in part (word `UNKNOWN`, or an awake-only word) stays
+  out of the stress trend's values, averages, counts and comparisons; daily
+  charts draw Garmin's average for it as a hollow point labelled "partly
+  worn · not averaged", and it still counts for freshness. Verified on a real
+  account's stored rows: the daily summary's `stressQualifier` is `UNKNOWN`
+  on days the watch was off for long stretches while `avgStressLevel` is
+  still set, sometimes from one or two hours of readings, so those days used
+  to plot as ordinary ones. `*_AWAKE` words (`BALANCED_AWAKE`) appeared only
+  on days without a recorded night; history rows carry the word in lowercase
+  (`daily_summary` `stress.qualifier`, `very_stressful_awake`), and most of
+  that account's worded history days from the year before were awake-only.
 
 - **Instant page opens** (commits "Read stored nights without their
   samples" and "Open pages whole and keep cached views through a sync"),

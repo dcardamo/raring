@@ -484,7 +484,8 @@ says so on its chart (Rules: Reading freshness).
   baseline is distinct from Garmin's seven-day HRV status. Explain the comparison
   method behind a tap; personal ranges are not medical targets.
 - **Stress**: the daily-average range chart, with a link to today's
-  three-minute readings (the same detail as Today). The detail shows Garmin's
+  three-minute readings (the same detail as Today). A day Garmin rated only
+  in part is a hollow point outside the averages (Rules: Trends). The detail shows Garmin's
   duration in each stress level and Active (not rated) as aligned amount rows;
   missing time is not extrapolated to a whole day.
 - **All-day heart rate** (opened from the resting heart-rate chart):
@@ -1485,7 +1486,13 @@ next pending wind-down while signed in.
   Status where Garmin sent it, otherwise the nightly record, read from the
   same fields as the Sleep and Health screens (Sleep HR is Garmin's overnight
   average and never stands in for resting HR). Garmin's
-  invalid placeholders are missing (zero remains valid for stress and scores). Up to 90 days shows days; up to
+  invalid placeholders are missing (zero remains valid for stress and scores).
+  A stress day Garmin rated only in part, whose word for the day is Unknown
+  (too little wear) or an awake-only word (no sleep measured), stays out of
+  every value, average, count and comparison; a daily point draws Garmin's
+  average for it hollow, saying "partly worn", and it still counts as a
+  reading for freshness. The daily summary's word wins over a history row's;
+  a day without a word keeps its average. Up to 90 days shows days; up to
   two years, weeks (Monday to Sunday); longer, calendar months, the last one
   ending on the selected date. 1Y shows 52 Monday-start weeks through that
   date, including the partial last week. Custom blocks use consecutive seven-day
