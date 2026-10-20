@@ -90,10 +90,11 @@ synthetic data. `design/mockup/index.html` shows the app before the redesign.
   time, passed and not recorded is muted.
 - **Garmin's items** (scheduled workouts, Garmin Coach) carry a small ◇ and a
   "Garmin · read-only" label, beside your own plan in the same days.
-- The effort scale is one continuous bar of joined chevrons, the suggested
-  level raised and marked; it is never shaped like buttons. All segments share
-  one rail and aligned seams; a separate cap raises the selected level without
-  moving its neighbours or their labels.
+- The effort scale is one continuous bar of joined chevrons; it is never shaped
+  like buttons. All four levels share one rail with aligned seams. The
+  suggested level is drawn in full colour as the same chevron, taller above and
+  below the rail, with its label in bold; the others stay muted on the rail.
+  Selection never moves a seam or a label.
 - Weight uses one neutral accent; its changes are directions, never good or
   bad colours.
 - Every chart has axes, units and labelled values; a usual range is a band,
