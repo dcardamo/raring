@@ -340,7 +340,7 @@
   const nativeWindow=window as Window & {__raringBack?:()=>boolean};
   nativeWindow.__raringBack=back;
   const resume=()=>{
-   if(document.visibilityState==='visible'){void refresh(true,true);if(api.desktopReminders){void api.check_reminders();void readReminderStatus()}}
+   if(document.visibilityState==='visible'){void refresh(true,true);if(api.desktopReminders){void api.check_reminders();if(route==='settings')void readReminderStatus()}}
    else {journalOpen=false;finishTouch()}
   };
   document.addEventListener('visibilitychange',resume);

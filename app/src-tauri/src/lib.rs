@@ -1,7 +1,7 @@
 use chrono::{Datelike, Local};
 #[cfg(not(target_os = "android"))]
 mod desktop_credentials;
-#[cfg(not(target_os = "android"))]
+#[cfg(desktop)]
 mod desktop_reminders;
 #[cfg(not(target_os = "android"))]
 use desktop_credentials::DesktopCredentials;
@@ -578,7 +578,7 @@ async fn sync_now(app: tauri::AppHandle) -> Result<AppStatus, String> {
         .run_mobile_plugin_async::<serde_json::Value>("syncNow", serde_json::json!({}))
         .await
         .map_err(|e| e.to_string())?;
-    #[cfg(not(target_os = "android"))]
+    #[cfg(desktop)]
     {
         let sync_core = core(&app)?;
         let synced = with_desktop_tokens(&app, |tokens| async move {
@@ -645,23 +645,23 @@ fn request_notification_permission(app: tauri::AppHandle) -> Result<bool, String
     }
 }
 
-#[cfg(not(target_os = "android"))]
+#[cfg(desktop)]
 #[tauri::command]
 fn check_reminders(app: tauri::AppHandle) {
     desktop_reminders::check(&app);
 }
 
-#[cfg(target_os = "android")]
+#[cfg(mobile)]
 #[tauri::command]
 fn check_reminders(_app: tauri::AppHandle) {}
 
-#[cfg(not(target_os = "android"))]
+#[cfg(desktop)]
 #[tauri::command]
 fn reminders_status(app: tauri::AppHandle) -> Option<ReminderStatus> {
     Some(desktop_reminders::status(&app))
 }
 
-#[cfg(target_os = "android")]
+#[cfg(mobile)]
 #[tauri::command]
 fn reminders_status(_app: tauri::AppHandle) -> Option<ReminderStatus> {
     None
@@ -1064,7 +1064,7 @@ pub fn run() {
         .manage(ImportState::default());
     #[cfg(not(target_os = "android"))]
     let builder = builder.manage(DesktopCredentials::default());
-    #[cfg(not(target_os = "android"))]
+    #[cfg(desktop)]
     let builder = builder.plugin(tauri_plugin_notification::init());
     builder
         .plugin(
@@ -1218,7 +1218,7 @@ pub fn run() {
                         .run_mobile_plugin::<serde_json::Value>("schedule", serde_json::json!({}));
                 });
             }
-            #[cfg(not(target_os = "android"))]
+            #[cfg(desktop)]
             desktop_reminders::start(app.handle().clone());
             Ok(())
         })
