@@ -41,9 +41,10 @@ In priority order; the redesign shipped (Done, item 26) without them.
 
 ### Visual language follow-ups
 
-- Maintainer review of the warm-graphite prototype: typography, softer status
-  colors, flatter surfaces, chart strokes and selected navigation. The page
-  order and all metrics are unchanged; the prototype is not release approval.
+- Maintainer review of the refined warm-graphite prototype. Dan approved
+  keeping neutral surfaces, stronger data accents, the original light-selected
+  range picker and a repair of the chevron bar. Settle the direction before a
+  broader data/layout pass; this is not release approval.
 - Check the new surfaces and contrast on the maintainer's phone with TalkBack
   and the largest system text. Browser chart checks cover 360–1100 px and
   1/1.3/2× text, not physical WebView text zoom.
@@ -477,6 +478,13 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Visual language refinement** (commit "Strengthen data accents and repair
+  the effort bar"). Data colors regain saturation while surfaces stay neutral;
+  time-range pickers restore their light selection and original radii. The
+  effort bar uses one shared SVG rail with matching chevron seams, a raised
+  selected cap and separately aligned text, rather than overlapping clipped
+  boxes of different heights. Scores, labels and actions are unchanged.
 
 - **Warm-graphite visual language prototype** (commit "Prototype Raring's
   warm graphite visual language"). Opaque neutral surfaces, warmer ink,

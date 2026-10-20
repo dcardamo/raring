@@ -5,6 +5,7 @@ import {createServer} from 'vite';
 import {chromium} from 'playwright';
 import {contrastFailures} from './contrast.mjs';
 import {planProgressChecks} from './ui-plan-progress.mjs';
+import {visualLanguageChecks} from './ui-visual-language.mjs';
 
 const server=await createServer({configFile:resolve('vite.config.ts'),server:{host:'127.0.0.1',port:0}});
 const output=resolve('../.data/screens');
@@ -17,6 +18,7 @@ try {
  await server.listen();
  const url=`http://127.0.0.1:${server.httpServer.address().port}`;
  browser=await chromium.launch({headless:true,executablePath:'/run/current-system/sw/bin/chromium',args:['--no-sandbox']});
+ await visualLanguageChecks(browser,url,output);
  const page=await browser.newPage({viewport:{width:390,height:844},hasTouch:true,isMobile:true});
  const errors=[];
  for(const width of [390,700,1100]){

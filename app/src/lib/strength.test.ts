@@ -28,8 +28,8 @@ describe('strength', () => {
  });
  it('shades the body map in one blue with readable labels', () => {
   expect(amountColor(0,12)).toBe('#343A43');
-  expect(amountColor(12,12)).toBe('#93b6e1');
-  expect(amountColor(40,12)).toBe('#93b6e1');
+  expect(amountColor(12,12)).toBe('#76acee');
+  expect(amountColor(40,12)).toBe('#76acee');
   expect(textOn('#5ca8ff')).toBe('#000000');
   expect(textOn('#1f3557')).toBe('#FFFFFF');
   for(const figure of ['female','male'] as const){

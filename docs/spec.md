@@ -56,16 +56,17 @@ synthetic data. `design/mockup/index.html` shows the app before the redesign.
   `app/src/app.css`; the chart palette in `charts.ts` is checked against it.
 - Color means something or it isn't used. Icons and titles say where you
   are; color says how it's going:
-  - **Status**: sage green good (`#91CFA6`), ochre fair (`#E7BC78`), coral
-    poor (`#EE958D`), always with a word, symbol or labelled key. Missing data
+  - **Status**: mint green good (`#60D3A0`), ochre fair (`#F2B85E`), coral
+    poor (`#F17E78`), always with a word, symbol or labelled key. Missing data
     is a gap, never a zero.
   - **Effort**: heart-rate zones run gray, blue, yellow, orange, red. Red
     means hard.
-  - **Amount**: one muted blue (`#93B6E1`), faint to strong, for counts
+  - **Amount**: one muted blue (`#76ACEE`), faint to strong, for counts
     without a judgement, such as sets per muscle.
   - **Ink**: everything else, including charts without a verdict. Primary
     buttons use warm-white ink as their fill with dark text; selected controls
-    use a raised neutral surface. The selected bottom tab has an icon backing,
+    use a raised neutral surface. Time-range pickers keep a light selected
+    segment with dark text. The selected bottom tab has an icon backing,
     a stronger label and an accessible current-page state, not color alone.
 - Text is at least 4.5:1 against its surface, including large text. Text on a
   colored fill is black or white, whichever reads better.
@@ -90,7 +91,9 @@ synthetic data. `design/mockup/index.html` shows the app before the redesign.
 - **Garmin's items** (scheduled workouts, Garmin Coach) carry a small ◇ and a
   "Garmin · read-only" label, beside your own plan in the same days.
 - The effort scale is one continuous bar of joined chevrons, the suggested
-  level raised and marked; it is never shaped like buttons.
+  level raised and marked; it is never shaped like buttons. All segments share
+  one rail and aligned seams; a separate cap raises the selected level without
+  moving its neighbours or their labels.
 - Weight uses one neutral accent; its changes are directions, never good or
   bad colours.
 - Every chart has axes, units and labelled values; a usual range is a band,
