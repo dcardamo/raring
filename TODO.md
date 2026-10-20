@@ -144,10 +144,12 @@ priority order; the bugs and most majors shipped (Done).
 - **Body Battery's latest time** (review m5): the detail gauge says "Latest
   synced" without a time; `BodyBatteryCard` has no reading time yet.
 - **Vital details repeat the hero value** in the chart readout (review m15).
-- **Notification state on a phone**: the Settings blocked line and greyed
-  switches use the new `notificationPermission` plugin command; check on the
-  emulator and a phone with notifications turned off in Android Settings
-  (the emulator was busy with another lane when this shipped).
+- **Notification state on a phone**: on emulator-5560 (in-place debug
+  install, signer `0d59d1bf…7a63`, synthetic demo) a revoked
+  `POST_NOTIFICATIONS` showed the blocked line with Allow and greyed the six
+  switches, and re-granting cleared it on the next Settings open. Still to
+  check on a phone: the app's notifications switch turned off in Android
+  Settings while the permission stays granted (`areNotificationsEnabled`).
 - **Sign-in error wording**: map the native sign-in failures (no network,
   cancelled, Garmin refused) to one plain line each once their messages are
   known; Raring now only drops the "Error:" prefix.
