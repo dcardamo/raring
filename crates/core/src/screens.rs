@@ -1959,6 +1959,45 @@ pub fn today_at_calendar(store: &Store, date: &str, now: DateTime<FixedOffset>, 
     });
     view
 }
+/// The per-day reads behind each detail part, in the order they are fetched.
+pub(crate) fn detail_kinds(part: DayDetailPart) -> &'static [&'static str] {
+    match part {
+        DayDetailPart::Sleep => &["sleep", "hrv"],
+        DayDetailPart::Stress => &["stress", "summary"],
+        DayDetailPart::Vitals => &["health_status"],
+        DayDetailPart::Workout => &["activity", "splits", "zones", "details"],
+    }
+}
+/// A row that is absent was never read on this phone; a stored null is
+/// Garmin's empty answer for that day. Only explicit opens fetch the former.
+fn detail_state(store: &Store, key: &str, parts: &[DayDetailPart]) -> DayDetail {
+    let mut detail = DayDetail::default();
+    for part in parts {
+        let rows: Vec<Option<Value>> = detail_kinds(*part)
+            .iter()
+            .map(|kind| store.get(kind, key))
+            .collect();
+        if rows.iter().any(Option::is_none) {
+            detail.missing.push(*part);
+        } else if rows.iter().all(|row| row.as_ref().is_some_and(Value::is_null)) {
+            detail.unavailable.push(*part);
+        }
+    }
+    detail
+}
+/// A past day's detail state; today's unsynced reads are not on-demand.
+pub(crate) fn day_detail(store: &Store, date: &str, parts: &[DayDetailPart]) -> DayDetail {
+    let past = NaiveDate::parse_from_str(date, "%Y-%m-%d")
+        .is_ok_and(|day| day < Local::now().date_naive());
+    if !past {
+        return DayDetail::default();
+    }
+    detail_state(store, date, parts)
+}
+/// An activity the history download listed but never detailed.
+pub(crate) fn workout_detail(store: &Store, id: &str) -> DayDetail {
+    detail_state(store, id, &[DayDetailPart::Workout])
+}
 pub fn sleep_view(store: &Store, date: &str) -> SleepView {
     let raw = store.get("sleep", date).unwrap_or(Value::Null);
     let v = sleep(&raw);
@@ -2145,6 +2184,7 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
             .collect(),
         tonight_first: false,
         wound_down: false,
+        detail: day_detail(store, date, &[DayDetailPart::Sleep]),
     }
 }
 fn hour(s: &str) -> Option<f64> {
@@ -2602,6 +2642,7 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
             })
             .unwrap_or_default(),
         strength: crate::strength::session(store, id),
+        detail: workout_detail(store, id),
     })
 }
 /// The unit key each stored stream must carry. Values are already in that
@@ -2844,6 +2885,7 @@ pub fn health_at_calendar(store: &Store, date: &str, calendar: &str) -> HealthVi
         intensity: NaiveDate::parse_from_str(date, "%Y-%m-%d").ok().and_then(|d| {
             plan::intensity(store, plan::week_start(d, plan::week_starts_on(store)), d)
         }),
+        detail: day_detail(store, date, &[DayDetailPart::Stress, DayDetailPart::Vitals]),
     }
 }
 pub fn checkin(store: &Store, monday: &str) -> CheckinView {
