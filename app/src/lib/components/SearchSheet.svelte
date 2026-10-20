@@ -1,16 +1,15 @@
 <script lang="ts">
  import Icon from './Icon.svelte';
- import {metricNames} from '../metrics';
+ import {searchIndex,searchHits,type SearchEntry} from '../search';
  import {sheetOpened} from '../sheet';
- // Find a page or Garmin metric by name. Browsing works without it.
- let {close, navigate}: {close: () => void, navigate: (route: string) => void} = $props();
- const PAGES: [string, string][] = [['Last night’s sleep', 'sleep'], ['Readiness', 'readiness'], ['Weekly goals', 'plan/commitments'], ['Strength', 'strength'],
-  ['Activities', 'activities'], ['Gear', 'gear'], ['Weight', 'health/weight'], ['Weekly review', 'review/latest'], ['Settings', 'settings'], ['Export your data', 'settings'], ['Help', 'help'], ['Profile', 'profile']];
- const index = [...PAGES, ...Object.entries(metricNames).map(([id, name]) => [name, 'metric/' + id] as [string, string])];
+ // Find a page, card or Garmin metric by name. Browsing works without it.
+ let {close, navigate, sleepHr}: {close: () => void, navigate: (route: string, anchor?: string) => void, sleepHr?: () => Promise<boolean>} = $props();
+ let showsSleepHr = $state<boolean | null>(null);
+ $effect(() => { sleepHr?.().then(v => showsSleepHr = v).catch(() => {}); });
  let q = $state('');
- let hits = $derived(q.trim() ? index.filter(([name]) => name.toLowerCase().includes(q.trim().toLowerCase())) : index);
+ let hits = $derived(searchHits(q, searchIndex(showsSleepHr)));
  $effect(() => sheetOpened(close));
- const go = (route: string) => { close(); navigate(route); };
+ const go = (entry: SearchEntry) => { close(); navigate(entry.route, entry.anchor); };
 </script>
 <svelte:window onkeydown={e => { if (e.key === 'Escape') close(); }}/>
 <button class="scrim" aria-label="Close search" onclick={close}></button>
@@ -19,7 +18,7 @@
  <div class="sheet-h"><h2 id="search-title">Search</h2><button class="close" aria-label="Close" onclick={close}><Icon name="close" size={20}/></button></div>
  <!-- svelte-ignore a11y_autofocus -->
  <input class="q" type="search" placeholder="Metric or page" aria-label="Search metrics and pages" bind:value={q} autofocus/>
- <ul>{#each hits as [name, route]}<li><button onclick={() => go(route)}><span>{name}</span><Icon name="chevron" size={15}/></button></li>{:else}<li class="none">Nothing matches “{q}”</li>{/each}</ul>
+ <ul>{#each hits as entry (entry.name + entry.route)}<li><button onclick={() => go(entry)}><span>{entry.name}</span><Icon name="chevron" size={15}/></button></li>{:else}<li class="none">Nothing matches “{q}”</li>{/each}</ul>
 </div>
 <style>
  .scrim{position:fixed;inset:0;border:0;background:rgba(5,8,14,.62);z-index:20;padding:0}

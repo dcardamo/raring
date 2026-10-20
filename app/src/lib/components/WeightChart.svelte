@@ -5,7 +5,7 @@
  let {points,unit,color='#8FA8FF'}:{points:WeightPoint[],unit:string,color?:string}=$props();
  let width=$state(320),index=$state(0);
  $effect(()=>{index=Math.max(0,points.length-1)});
- const H=170,L=44,R=10,T=12,B=25;
+ const H=180,L=44,R=10,T=22,B=25;
  let values=$derived(points.flatMap(p=>[p.scale,p.trend]).filter((v):v is number=>v!=null));
  let lo=$derived(values.length?Math.floor((Math.min(...values)-.3)*2)/2:0);
  let hi=$derived(values.length?Math.ceil((Math.max(...values)+.3)*2)/2:1);
@@ -25,7 +25,7 @@
 <div class="weight-chart" bind:clientWidth={width}>
  <svg width={width} height={H} role="img" aria-label={`Scale weight and Raring trend, ${unit}. Scale gaps are not weigh-ins.`}>
   {#each [lo,(lo+hi)/2,hi] as tick}<line x1={L} x2={width-R} y1={y(tick)} y2={y(tick)} stroke="rgba(255,255,255,.1)" stroke-dasharray="3 4"/><text x={L-5} y={y(tick)+4} text-anchor="end">{tick.toFixed(1)}</text>{/each}
-  <text x={L-5} y={H-5} text-anchor="end">{unit}</text>
+  <text x={L-5} y="10" text-anchor="end">{unit}</text>
   <path class="scale-line" d={scalePath} fill="none" stroke={color} stroke-opacity=".45" stroke-width="1.8"/>
   <path class="trend-line" d={trendPath} fill="none" stroke={color} stroke-width="2.6"/>
   {#each points as p}{#if p.scale!=null}<circle class="scale-mark" cx={x(p.date)} cy={y(p.scale)} r="2.4" fill={color} opacity=".55"/>{#if p.trend!=null}<circle class="trend-mark" cx={x(p.date)} cy={y(p.trend)} r="3" fill="#121827" stroke={color} stroke-width="1.8"/>{/if}{/if}{/each}

@@ -102,6 +102,33 @@ From item 11, in priority order.
   `enduranceScoreScalar` and `hillScoreScalar` (start, end, weekly
   aggregation); unverified.
 
+### Health and profile review follow-ups
+
+From the Health/Profile UX review (`.data/ux-review/health-profile.md`), in
+priority order; the bugs and most majors shipped (Done).
+
+- **VO₂ max and Fitness Age as dated estimates** (review M5): plot one point
+  per Garmin estimate with a faint step line, no weekly or monthly averaging
+  and no missing-day marks, and date the VO₂ max hero ("52 · Garmin estimate ·
+  Sun 12 Oct"). First confirm with a read-only probe whether stored
+  `max_metrics` and `fitness_age` rows repeat the estimate daily or appear
+  only on the day Garmin made it; the charts already open on the latest
+  estimate.
+- **Endurance, hill score and running tolerance details** (review M12): each
+  is a bare number. Carry the estimate's date and Garmin's level in
+  `TrainingView` and show them on the detail, or stop the Training tiles from
+  opening a detail until there is history (see the Trends follow-up on
+  `enduranceScoreScalar`). Coordinate with the Training lane.
+- **Bottom tab labels at 2× text** (review M4): "Plan", "Training" and
+  "Health" run together and "Progress" clips. App-wide; belongs with the
+  large-text audit.
+- **Trend chart axes** (review m1, m2): round y ticks with the unit on the top
+  label, and decide whether the missing-day dots under bar charts stay (the
+  line charts already show gaps). Chart legibility lane.
+- **Body Battery's latest time** (review m5): the detail gauge says "Latest
+  synced" without a time; `BodyBatteryCard` has no reading time yet.
+- **Vital details repeat the hero value** in the chart readout (review m15).
+
 ## Next
 
 ### 7a. Weekly plan follow-ups
@@ -332,6 +359,23 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Health review fixes: resting-HR band, search and a summary Health**
+  (commit "Give Health its own resting-HR band and summary charts"). The
+  resting-HR chart's band is Raring's usual range over Garmin's daily resting
+  HR (`HealthView.restingHrRange`), never Health Status's Sleep HR baseline;
+  a table test covers every trend metric's band with and without Health
+  Status. Search normalises "spo2"/"vo2", adds synonyms and Health, Fitness
+  Age, intensity, journal, body composition, import/export and tab entries,
+  opens cards scrolled into view, and sends "resting heart rate" to Garmin's
+  daily resting HR while Sleep HR appears under its own name. Health's charts
+  are compact (own metric, 7D–1Y, tap to read, one link to the canonical
+  detail); the heart-rate detail gained the resting-HR history. Fitness Age's
+  history moved into its hero (sparkline and separate card removed, latest
+  estimate selected), the biggest lever folded into its driver, drivers print
+  Garmin's targets in words, the weight card summarises 30 days and opens the
+  full detail, Add weight lives on Profile only, signed zeros read 0.0, range
+  chips wrap at large text, and journal subtypes read as words.
 
 - **21. Write rules** (commit "Add the Garmin write rules and a log of
   recent changes"). One core write path (`crates/core/src/writes.rs`): only

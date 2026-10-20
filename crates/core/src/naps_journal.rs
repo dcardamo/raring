@@ -61,7 +61,8 @@ pub fn journal(store: &Store, end: &str) -> Vec<JournalDay> {
             let detail = row["details"].as_array().map(|details| details.iter().filter_map(|d| {
                 let amount = d["amount"].as_f64()?;
                 if !amount.is_finite() { return None }
-                let label = d["subTypeName"].as_str().unwrap_or("amount");
+                // Garmin's subtype keys are capitals ("COFFEE"); show them as words.
+                let label = d["subTypeName"].as_str().unwrap_or("amount").replace('_', " ").to_lowercase();
                 Some(format!("{amount} {label}"))
             }).collect::<Vec<_>>().join(", ")).filter(|s| !s.is_empty());
             Some(JournalEntry { name: name.to_owned(), value: detail.or(value) })
@@ -99,6 +100,8 @@ mod tests {
         db.put("journal", day, &Utc::now().to_rfc3339(), &serde_json::json!({"dailyLogsReport":[{"name":"Test","logStatus":"UNKNOWN","details":[{"amount":null}]}]})).unwrap();
         let days = journal(&db, day);
         assert_eq!(days[0].entries[0].value, None);
+        db.put("journal", day, &Utc::now().to_rfc3339(), &serde_json::json!({"dailyLogsReport":[{"name":"Caffeine","logStatus":"YES","details":[{"amount":2,"subTypeName":"COFFEE"},{"amount":1,"subTypeName":"ENERGY_DRINK"}]}]})).unwrap();
+        assert_eq!(journal(&db, day)[0].entries[0].value.as_deref(), Some("2 coffee, 1 energy drink"));
         db.put("sleep", day, &Utc::now().to_rfc3339(), &serde_json::json!({"dailySleepDTO":{"sleepTimeSeconds":25200,"sleepStartTimestampLocal":"2025-02-04T22:00:00","sleepEndTimestampLocal":"2025-02-05T05:00:00"}})).unwrap();
         let sleep = crate::screens::sleep_view(&db, day);
         assert_eq!(sleep.asleep_min, Some(420.));

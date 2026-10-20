@@ -17,4 +17,10 @@ date: string, journal: Array<JournalDay>, journalEnabled: boolean, fitnessAge: F
 /**
  * This week's intensity minutes, when Garmin reported any day of it.
  */
-intensity: IntensityCard | null, };
+intensity: IntensityCard | null, 
+/**
+ * Raring's usual range for Garmin's daily resting HR over the last 30
+ * days (Rules: Normal range), the band on the resting-HR chart. Never
+ * Health Status's Sleep HR baseline, which measures something else.
+ */
+restingHrRange: [number, number] | null, };
