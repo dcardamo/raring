@@ -85,6 +85,11 @@ synthetic data. `design/mockup/index.html` shows the app before the redesign.
   bad colours.
 - Every chart has axes, units and labelled values; a usual range is a band,
   a goal a dashed line. Gaps are drawn as gaps.
+- Chart text is at least 11 px for axis ticks and 12 px for other labels on a
+  390 px phone, never overlaps other text or a marker, and stays inside the
+  screen at 360–1100 px and at larger system text. Collisions are resolved by
+  layout: units and value scales sit outside the plot, and tick labels give
+  way (thinned in a fixed order) rather than shrinking.
 - Reduced motion (the system setting) stops every animation and transition.
 - Phone first; an unfolded or desktop window adds columns without changing
   the order.
@@ -140,6 +145,9 @@ A briefing with an ending, in this order:
   Tonight.
 - **Your day**: sleep stages, Body Battery, stress, heart rate and recorded
   activities and naps on one 00–24 axis with a now marker (Rules: Your day).
+  Each row's value sits at its right, with a nap's Body Battery change under
+  it; heart rate is drawn against the day's own lowest and highest readings
+  and never clipped, with no scale on the plot.
   Each row opens its detail. From the evening on it follows tonight's plan,
   compact: sleep, Body Battery and recordings.
 - **Recorded today**: the calendar day's (Your day's) activities, up to two,
@@ -193,8 +201,9 @@ Last night:
   absent, failed and stale reads have separate neutral labels. Other populated
   nap fields and feedback meanings require further verification before display.
 - **Consistency**: 14-night chart with your usual bed and wake windows
-  shaded, and Garmin's seven-day average bedtime and wake time above it when
-  synced. No rhythm score or chronotype of Raring's own.
+  shaded and their clock ranges in the key, each week's Monday marked, a
+  "Bedtime spread" pill, and Garmin's seven-day average bedtime and wake time
+  above it when synced. No rhythm score or chronotype of Raring's own.
 - **Sleep history**: Garmin's sleep score as a trend chart; time asleep is
   one overlay away.
 - **Sleep alignment**: Garmin's status (Aligned, Ahead, Behind, Jet lag) and
@@ -207,9 +216,11 @@ Last night:
 
 Tonight:
 
-- A compact dial placing now against wind-down, Garmin's bedtime window (or
-  Raring's asleep-by estimate, labeled as Raring's) and the usual wake, with
-  the need in the middle; beside it the times, the sleep goal when one is
+- A timeline from an hour before wind-down to the usual wake, in the same
+  language as Today's wind-down strip: wind-down, Garmin's bedtime window (or
+  Raring's asleep-by estimate, labeled as Raring's), now, and the need as a
+  span ending at the usual wake, with an hour axis and a key but no times on
+  the graphic; below it the times, the sleep goal when one is
   set, and when Garmin's need was read. "Why this plan" lists the evidence:
   who set the bedtime, Garmin's need, baseline and adjustments, the
   wind-down lead and one tip toward steadier timing. A suggestion, never an
@@ -493,14 +504,14 @@ Four sections, the choice kept across a detail and Back:
 - **Cardio**: Zone 2, Zone 4–5 (while it has a goal) and intensity minutes per
   week for 12 weeks, each week against its own target as a stepped dashed line
   (intensity following Garmin's goal says "Garmin goal"), and Garmin's VO2max
-  estimates on the same weeks (Rules: Progress domains). The current week is
-  outlined and labelled This week.
+  estimates on the same weeks (Rules: Progress domains). The current week's
+  bar is outlined (its tick stays a date; spoken labels say this week).
 - **Strength**: strength sessions per week against each week's goal, with
   whole-number ticks, and a link to Training · Strength for bests and lifts
   (shown there once, with its ranges and measures).
 - **Long-term**: training hours, resting heart rate, overnight HRV, VO2max and
-  Fitness Age by month, each opening its detail; the current month is marked
-  "so far".
+  Fitness Age by month, each opening its detail; the current month's bar is
+  outlined and spoken labels say "so far".
 
 Follow-through and measured change stay apart; nothing is a grade.
 
@@ -1630,6 +1641,10 @@ read-only in Health with explicit local consent.
   every rule.
 - UI: Playwright screenshots of each screen on fixture data. These are the
   review screenshots.
+- Chart legibility: a browser check measures the text inside every chart on
+  every page at 360, 390, 720 and 1100 px and at 1, 1.3 and 2× text, and fails
+  on overlaps, text on a marker, undersized labels, gauge numbers wider than
+  their ring, and (Today, Sleep, Readiness) text leaving its card.
 - Android: an emulator install-and-render smoke test. The spike proves
   sign-in and background sync on a real phone.
 - A test fails if fixtures contain email addresses, Garmin IDs or tokens. Real

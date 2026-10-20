@@ -118,6 +118,20 @@ From item 11, in priority order.
   `enduranceScoreScalar` and `hillScoreScalar` (start, end, weekly
   aggregation); unverified.
 
+### Chart legibility follow-ups
+
+From the chart legibility pass, in priority order.
+
+- Check Sleep · Tonight, Your day and the Sleep charts on the maintainer's
+  phone at the largest Android font size. The browser check emulates text
+  zoom by multiplying every font size; WebView's own text zoom is unverified.
+- At 2× text on 720 and 1100 px, text runs out of its card in the workout
+  stats (pace, calories, HR), the strength sets and figure toggle, Training's
+  "Run tolerance" and the respiration history reading. Fix them, then widen
+  the check's card test (Today, Sleep and Readiness only) to every page.
+- The check compares text with other text and with `data-mark` markers, not
+  with bars, points or bands; mark more shapes as charts change.
+
 ## Next
 
 ### 7a. Weekly plan follow-ups
@@ -422,6 +436,28 @@ faces, screens, sensors and audio prompts stay in Connect.
   beside your session; durations read "52 min"; removing an event asks
   first; Do it today leaves no crumbs; inputs fit at large text; explainer
   copy is cut.
+  Merged with the chart legibility work: the stepped goal lines, outlined
+  current bars and whole-number ticks keep its minimums (current bars keep
+  date ticks; spoken labels say this week or so far), and
+  `chart-legibility.mjs` now also measures Progress's Cardio, Strength and
+  Long-term sections.
+
+- **Chart and label legibility** (commit "Make every chart's text legible at
+  phone widths and large text"). Sleep · Tonight's dial is a timeline from an
+  hour before wind-down to the usual wake (wind-down, Garmin's window or the
+  asleep-by estimate, now, and the need ending at the usual wake), with the
+  times only in the facts, which wrap at large text. Your day keeps scales
+  and the nap change off the plot and draws heart rate against the day's own
+  range (no clipping, review B9). The 7-night chart's values sit under each
+  day, its scale is whole even hours with gridlines (B5). Consistency labels
+  its pill, colours and keys the usual windows and marks Mondays (M14). The
+  Card header wraps, the readiness tile stacks and gauges grow with the text
+  (M7, M8). Every chart's ticks are at least 11 px and labels 12 px at 390 px,
+  units sit outside the plots, and tick labels thin rather than collide
+  (`declutter.ts`). `chart-legibility.mjs` (in `npm run test:ui`) measures
+  31 pages at 360/390/720/1100 px and 1/1.3/2× text. The seven-night chart
+  is a labelled group of per-night buttons, not an image, so each night is
+  reachable by assistive tech. UI only; no core change.
 
 - **Garmin's sleep schedule anchors Today's phases** (commit "Anchor Today on
   Garmin's sleep schedule until nights are recorded"). With fewer than four

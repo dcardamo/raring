@@ -79,7 +79,7 @@ import StrengthRefresh from './StrengthRefresh.svelte';
  .sbar.flag>b{color:var(--fair)}
  .sbar.key{flex:0 0 30px}
  .sbar.key b,.sbar.key span{font:600 10px Inter;color:var(--text3)}
- .lastl{margin-top:12px;font-size:12px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .lastl{margin-top:12px;font-size:12px;color:var(--text3)}
  .lastl b{color:var(--text2);font-weight:600;font-size:13px;word-spacing:3px}
  @media(min-width:660px){
   .strength-cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr);margin-bottom:16px}

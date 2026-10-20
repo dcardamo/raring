@@ -154,7 +154,7 @@ export async function planProgressChecks({browser,url,errors}){
   const chart=report.getByRole('img',{name:/^Activity by day, minutes/});
   await chart.waitFor();
   assert.ok((await chart.getAttribute('aria-label')).includes('Thu 16 Oct: 52 min'));
-  assert.ok((await report.locator('text.yu').textContent())==='min','the activity chart has a unit axis');
+  assert.equal((await report.locator('.yu').textContent()).trim(),'min','the activity chart names its unit');
   const records=await page.locator('.ms').allTextContents();
   assert.ok(records.some(r=>r.includes('12 kg × 10 · heaviest for 1–10 reps · Sat 2 Nov 2024')),records.join('|'));
   assert.ok((await page.locator('main').textContent()).includes('since 23 Oct 2024'));
