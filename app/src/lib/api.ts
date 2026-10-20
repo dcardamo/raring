@@ -7,6 +7,7 @@ import sampleTraining from './sample/training.json';
 import sampleWorkout from './sample/workout.json';
 import sampleStrengthWorkout from './sample/strengthWorkout.json';
 import sampleStrengthWorkoutHistory from './sample/strengthWorkoutHistory.json';
+import sampleOtherWorkouts from './sample/otherWorkouts.json';
 import sampleStrength from './sample/strength.json';
 import sampleHealth from './sample/health.json';
 import type {HeartRateDay} from './generated/HeartRateDay';
@@ -97,7 +98,7 @@ export const profile = ():Promise<ProfileView> => call('profile',undefined,sampl
 export const training = (date?:string):Promise<TrainingView> => call('training',{date},sampleTraining as unknown as TrainingView);
 export const workout = (id:string):Promise<WorkoutView> => {
  if(isTauri())return invoke<WorkoutView>('workout',{id});
- const history=sampleStrengthWorkoutHistory as unknown as Record<string,WorkoutView>;
+ const history={...sampleStrengthWorkoutHistory,...sampleOtherWorkouts} as unknown as Record<string,WorkoutView>;
  const listed=sampleTraining.workouts.find(a=>a.id===id);
  // Other listed preview activities keep their own summary, never a run's charts.
  const summaryOnly=listed?{summary:listed,recoveryHours:null,stats:[],route:[],heartRate:[],zoneFloors:[],splits:[],strength:null,along:null,more:[],effects:[],vo2maxNew:null,counted:null}:null;

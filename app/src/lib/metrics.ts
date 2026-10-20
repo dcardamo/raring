@@ -5,7 +5,7 @@ export const vitalNames: Record<string, string> = {
 
 export const metricNames: Record<string, string> = {
   ...vitalNames, bodyBattery: 'Body Battery', stress: 'Stress', heartRate: 'Heart rate', vo2max: 'VO₂ max',
-  endurance: 'Endurance', hill: 'Hill score', runningTolerance: 'Running tolerance',
+  endurance: 'Endurance', hill: 'Hill score', runningTolerance: 'Running tolerance', acuteLoad: 'Acute load',
 };
 
 export const metricDescriptions: Record<string, string> = {
@@ -20,11 +20,12 @@ export const metricDescriptions: Record<string, string> = {
   vo2max: 'Garmin’s estimate of the oxygen your body can use during exercise. The trend shows how your estimate has changed over time.',
   endurance: 'Garmin’s endurance score describes your ability to sustain prolonged effort across activities.',
   hill: 'Garmin’s hill score describes your ability to run uphill, based on your training and fitness.',
+  acuteLoad: 'Garmin’s acute load: a 7-day weighted sum of your training load. Each day shows Garmin’s Training Status value for that day; the latest matches Training.',
   runningTolerance: 'Garmin’s running tolerance is the running distance your body is currently prepared to handle. It is not a Raring training target.',
 };
 
 export function metricSource(key: string): 'today' | 'health' | 'training' {
   if (key === 'bodyBattery' || key === 'stress') return 'today';
-  if (['vo2max', 'endurance', 'hill', 'runningTolerance'].includes(key)) return 'training';
+  if (['vo2max', 'endurance', 'hill', 'runningTolerance', 'acuteLoad'].includes(key)) return 'training';
   return 'health';
 }

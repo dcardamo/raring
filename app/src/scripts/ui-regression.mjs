@@ -401,9 +401,13 @@ try {
   assert.equal(await page.locator('.strength-cols .hero-n').textContent(),String(expected.strength.sets));
   const rendered=await page.locator('.strength-cols .ex').evaluateAll(cards=>cards.map(card=>({
    name:card.querySelector('.ex-h b').textContent,
-   sets:[...card.querySelectorAll('.sbar[role=listitem]')].map(set=>[set.querySelector('b').textContent,set.querySelector('span').textContent])
+   sets:[...card.querySelectorAll('.sbar[role=listitem]')].map(set=>[set.querySelector('b').textContent,set.querySelector('span').firstChild.textContent])
   })));
   assert.deepEqual(rendered,expected.strength.exercises.map(e=>({name:e.name,sets:e.sets.map(s=>[String(s.reps),String(s.weight)])})));
+  // M8: the weight change against the same set last time sits under the weight.
+  const deltas=await page.locator('.strength-cols .sbar .delta').allTextContents();
+  const expectedDeltas=expected.strength.exercises.flatMap(e=>e.sets.map((s,i)=>{const b=e.lastSets[i]?.weight,d=s.weight!=null&&b!=null?Math.round((s.weight-b)*10)/10:0;return d?`${d>0?'+':'−'}${Math.abs(d)}`:null}).filter(Boolean));
+  assert.deepEqual(deltas,expectedDeltas);
   await page.getByRole('button',{name:'Refresh from Garmin'}).waitFor();
   assert.ok((await page.locator('.sets-refresh .small').textContent()).startsWith('Sets checked'),'the workout says when Garmin sets were last read');
   await page.locator('.scroll').evaluate(el=>el.scrollTop=0);
@@ -452,15 +456,18 @@ try {
  assert.equal(await page.getByRole('group',{name:'Exercise'}).getByRole('button',{name:'Bicycle Crunch',exact:true}).getAttribute('aria-pressed'),'true');
  assert.equal(await page.getByRole('group',{name:'Lift range'}).getByRole('button',{name:'All history'}).getAttribute('aria-pressed'),'true');
  assert.equal(await page.getByRole('group',{name:'Muscle range'}).getByRole('button',{name:'7 days'}).getAttribute('aria-pressed'),'true');
- await page.getByRole('button',{name:'Help',exact:true}).click();await waitRoute('help');
- await page.getByRole('button',{name:'How sets are counted'}).click();await waitRoute('help/strength-sets');
+ // M12: Strength holds the full muscle list with gaps marked.
+ assert.ok(await page.getByRole('list',{name:'Sets per muscle group'}).locator('li.gap').count()>0,'gaps are marked in the list');
+ // Strength's "?" opens the same strength help as a workout's, not the general list.
+ await page.getByRole('button',{name:'Help',exact:true}).click();
+ await page.getByRole('dialog',{name:'How sets are counted'}).getByRole('button',{name:'More help'}).click();await waitRoute('help/strength-sets');
  await page.getByText(/1\.8 times/).waitFor();
  await page.getByText(/After that, tap Refresh from Garmin on the workout/).waitFor();
- await back('help');await back('strength');await back('training');
+ await back('strength');await back('training');
  assert.equal(await page.locator('.q-muscles').getByRole('group',{name:'Muscle range'}).getByRole('button',{name:'7 days'}).getAttribute('aria-pressed'),'true','one muscle range for Training and Strength');
  await page.locator('.q-muscles').getByRole('group',{name:'Muscle range'}).getByRole('button',{name:'30 days'}).click();
  await page.getByRole('tab',{name:'Activities'}).click();
- await page.getByRole('button',{name:/^Lower A/}).click();await waitRoute('workout/9000000000002');
+ await page.getByRole('button',{name:/^Lower A Wed 15 Oct/}).click();await waitRoute('workout/9000000000002');
  await page.getByText('3 things look off',{exact:true}).waitFor();
  await page.getByText('A 0-rep set, a doubled set and an unnamed exercise',{exact:true}).waitFor();
  assert.equal(await page.locator('.sbar.flag').count(),5,'one 0-rep, one doubled and three unnamed sets are flagged');
@@ -812,7 +819,8 @@ try {
   const zone=card.getByRole('img',{name:/^Zone 2:/});
   assert.equal(await zone.getAttribute('aria-label'),'Zone 2: 100 min so far of a 150 goal; usual week by now 65');
   assert.equal(await card.getByRole('img',{name:/^Strength: 2 sessions so far of a 4 goal/}).count(),1);
-  assert.ok((await card.textContent()).includes('middle half of 8 recent complete weeks'));
+  assert.ok((await card.locator('.key').getAttribute('aria-label')).includes('middle half of 8 recent complete weeks'));
+  assert.ok((await card.locator('.key').textContent()).includes('usual week (8 weeks)'),'a one-line graphical key, not a legend paragraph');
   assert.equal(await card.locator('svg path[opacity=".13"]').count(),2,'a usual-week band per lane');
   assert.equal((await zone.locator('text.xt').allTextContents()).join(''),'MTWTFSS');
   for(const width of [320,700]){await tp.setViewportSize({width,height:900});assert.equal(await tp.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`lanes fit ${width}px`)}
@@ -851,13 +859,25 @@ try {
   assert.equal(await ts.locator('.semi').count(),0,'no full-width load gauge');
   assert.ok((await ts.locator('.q-load .lbar').getAttribute('aria-label')).includes("Garmin's optimal range 420–760"));
   assert.equal(await ts.locator('.gear').count(),0,'gear lives in Profile');
+  // M2/M11: load focus prints Garmin's target; the optimal band is neutral and the load is a dot in its tone.
+  assert.ok((await ts.locator('.q-load').textContent()).includes('Target 300–600'));
+  assert.ok(!(await ts.locator('.q-load .lbar .band').evaluate(b=>getComputedStyle(b).backgroundColor)).includes('61, 220, 151'),'no status green without a verdict');
+  // M3: a compact 30-day acute-load chart; History opens the metric detail.
+  const loadHistory=ts.locator('.q-load-history');
+  await loadHistory.getByRole('img',{name:/^Garmin's acute load each day for 30 days, optimal range 420–760/}).waitFor();
+  assert.equal(await ts.getByRole('group',{name:/metric/i}).count(),0,'no metric picker on Training');
+  await loadHistory.getByRole('button',{name:/^History/}).click();await ts.waitForURL(/#metric\/acuteLoad$/);
+  await ts.getByRole('heading',{name:'Acute load',level:1}).waitFor();
+  await ts.goBack();await ts.waitForURL(/#training$/);
   await ts.getByRole('tab',{name:'Strength'}).click();
   const mus=ts.locator('.q-muscles');
-  await mus.getByRole('list',{name:'Sets per muscle group'}).waitFor();
+  await mus.getByText(/^Every group had more than/).waitFor();
+  assert.equal(await mus.getByRole('list',{name:'Sets per muscle group'}).count(),0,'the full list lives once, on Strength');
+  assert.equal(await ts.getByText('Lifts and exercises',{exact:true}).count(),0,'no text-only link card');
   assert.ok((await mus.textContent()).includes('Every group had more than 2 sets'),'no gaps over 30 days in the sample');
   await mus.getByRole('group',{name:'Muscle range'}).getByRole('button',{name:'7 days'}).click();
   await ts.waitForFunction(()=>document.querySelector('.q-muscles')?.textContent.includes('Few or no sets since'));
-  assert.ok(await mus.locator('li.gap').count()>0,'gaps are marked');
+  await mus.getByRole('button',{name:/^Sets per muscle, lifts and bests/}).waitFor();
   await ts.getByRole('tab',{name:'Activities'}).click();
   const acts=ts.locator('.q-activities');
   assert.ok((await acts.textContent()).includes('Aerobic 3.8 · Improving'),'Garmin’s training effect label');
@@ -1074,6 +1094,30 @@ try {
   const hic=await wp.getByRole('region',{name:'How it counted'}).textContent();
   assert.ok(hic.includes('18 min Zone 2') && hic.includes('100 of 150 this week') && hic.includes('Best in available history'),'U15: '+hic);
   assert.ok(!/Fitness Age will|younger/.test(hic));
+  // M1: heart rate is drawn once, with a bpm axis and labelled zone floors, at the top of Along the way.
+  assert.equal(await wp.getByRole('heading',{name:'Heart rate',exact:true}).count(),0,'no second heart-rate chart beside Along the way');
+  const hrAlong=wp.getByRole('region',{name:'Along the way'}).getByRole('img',{name:/^Heart rate over/});
+  for(const want of ['bpm','Z2 120','avg 152'])assert.ok((await hrAlong.textContent()).includes(want),want);
+  // M10: pace reads faster-up, with no caption explaining an upside-down axis.
+  const paceTicks=await wp.getByRole('img',{name:/^Pace over/}).locator('text.yt').allTextContents();
+  assert.ok(paceTicks[0]>paceTicks.at(-1),'the slowest pace is at the bottom: '+paceTicks);
+  assert.equal(await wp.getByText(/lower is faster/).count(),0);
+  // M7: a pool swim reads in metres and per 100 m, with Garmin's swim fields; a walk splits by pace per km.
+  await wp.goto(`${url}/#workout/9000000000007`);
+  await wp.locator('h1').waitFor();
+  const swimStats=await wp.locator('.stats').textContent();
+  for(const want of ['1500 m','2:08/100 m','132bpm'])assert.ok(swimStats.includes(want),`${want} in ${swimStats}`);
+  await wp.getByText('Pace /100 m · each 100 m · slowest 2:12, fastest 2:04',{exact:true}).waitFor();
+  await wp.getByRole('img',{name:/^Pace over .*minutes per 100 m/}).waitFor();
+  const swimRec=await wp.getByRole('region',{name:'Recorded by your watch'}).textContent();
+  for(const want of ['Pool length25 m','Lengths60','Avg SWOLF38','Stroke rate28 strokes/min','Distance per stroke1.6 m'])assert.ok(swimRec.includes(want),`${want} in ${swimRec}`);
+  assert.equal(await wp.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'swim fits');
+  await wp.screenshot({path:resolve(output,'workout-swim-390.png'),fullPage:true});
+  await wp.goto(`${url}/#workout/9000000000008`);
+  await wp.locator('h1').waitFor();
+  await wp.getByRole('heading',{name:'Heart rate',exact:true}).waitFor();
+  await wp.getByText('Pace /km · each 1 km · slowest 11:52, fastest 11:30',{exact:true}).waitFor();
+  assert.deepEqual(await wp.locator('.split-value small').allTextContents(),['0.1 km'],'only the lap that differs names its distance');
   // B9: with no weekly goals on and nothing else to say, the card is left out.
   {
    const noGoals=JSON.parse(await readFile(resolve('src/lib/sample/workout.json'),'utf8'));
@@ -1875,6 +1919,7 @@ function trendFixture(q){
   s.workout.zoneFloors=[];
   s.workout.heartRate=[{tS:0,bpm:98},{tS:60,bpm:140},{tS:2100,bpm:110}];
   s.workout.splits=[{index:1,distanceKm:0,seconds:2100,avgHr:120}];
+  s.workout.along=null;
   window.dispatchEvent(new Event('raring:resume'));
  });
  await live.getByRole('navigation').getByRole('button',{name:'Training',exact:true}).click();
@@ -1883,8 +1928,9 @@ function trendFixture(q){
  await live.locator('.activity').first().click();
  await live.locator('.hr-trace').waitFor();
  assert.notEqual(await live.locator('.hr-trace').getAttribute('stroke'),'url(#hr-zones)','HR remains visible without zone boundaries');
- assert.equal(await live.locator('svg[aria-label="Heart rate during workout"] text').last().textContent(),'35:00','HR axis reflects recorded duration, not fixed 45 minutes');
- await live.getByText('Lap duration',{exact:true}).waitFor();
+ const hrSvg=live.getByRole('img',{name:/^Heart rate over 35 minutes/});
+ assert.equal(await hrSvg.locator('text').last().textContent(),'30 min','HR axis reflects recorded duration in round minutes, not fixed 45 minutes');
+ await live.getByText('Lap time',{exact:true}).waitFor();
  assert.equal(await live.getByText(/Fastest (km|split)/).count(),0,'a stationary workout is not a fastest kilometre');
  assert.ok(!(await live.locator('main').innerText()).includes('Invalid Date'));
  await live.evaluate(()=>{

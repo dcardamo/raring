@@ -191,6 +191,7 @@ fn training_load_label_requires_garmin_range() {
             assert_eq!(view.headline, headline);
         }
         let acute = view.acute.unwrap();
+        assert_eq!(acute.max % 100., 0., "the scale ends on a round number");
         assert_eq!(acute.label, expected);
         assert_eq!(acute.tone, tone);
         assert_eq!(acute.band.is_some(), range);
@@ -1363,4 +1364,24 @@ fn activities_page_back_through_stored_history_by_sport() {
     }
     assert_eq!(all.len(), 52, "every stored ride, back to the first");
     assert_eq!(all.last().map(String::as_str), Some("2000"));
+}
+#[test]
+fn activities_read_in_garmin_units_and_swims_in_the_pool_unit() {
+    use raring_core::view::DistanceUnit;
+    let store = Store::open(":memory:").unwrap();
+    let put = |id: &str, kind: &str, extra: serde_json::Value| {
+        let mut summary = json!({"startTimeLocal": "2025-10-14 07:00:00", "duration": 1800., "distance": 1500.});
+        summary.as_object_mut().unwrap().extend(extra.as_object().unwrap().clone());
+        store.put("activity", id, "now", &json!({"activityId": id, "activityName": kind, "activityTypeDTO": {"typeKey": kind}, "summaryDTO": summary})).unwrap();
+    };
+    put("1", "running", json!({}));
+    put("2", "lap_swimming", json!({"poolLength": 25.0, "unitOfPoolLength": {"unitKey": "meter"}, "activeLengths": 60, "averageSwolf": 38}));
+    put("3", "lap_swimming", json!({"poolLength": 25.0, "unitOfPoolLength": {"unitKey": "yard"}}));
+    let unit = |id: &str| raring_core::screens::workout(&store, id).unwrap().summary.distance_unit;
+    assert_eq!((unit("1"), unit("2"), unit("3")), (DistanceUnit::Km, DistanceUnit::M, DistanceUnit::Yd));
+    let swim = raring_core::screens::workout(&store, "2").unwrap();
+    let more: Vec<_> = swim.more.iter().map(|s| (s.key.as_str(), s.value, s.unit.as_str())).collect();
+    assert_eq!(&more[..3], &[("poolLength", 25., "m"), ("activeLengths", 60., ""), ("averageSwolf", 38., "")]);
+    store.put("profile_settings", "me", "now", &json!({"measurementSystem": "statute_us"})).unwrap();
+    assert_eq!((unit("1"), unit("2"), unit("3")), (DistanceUnit::Mi, DistanceUnit::M, DistanceUnit::Yd), "a metre pool stays in metres");
 }

@@ -20,7 +20,8 @@
     "anaerobicLabel": "Minor",
     "benefit": "Tempo",
     "avgHr": 152,
-    "intensityMin": 62
+    "intensityMin": 62,
+    "distanceUnit": "km"
   },
   "recoveryHours": 18,
   "stats": [

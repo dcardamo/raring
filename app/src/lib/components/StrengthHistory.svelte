@@ -85,7 +85,8 @@ const figures:[FigureChoice,string][]=[['profile','Profile'],['female','Female']
  </div>
  <div class="col">
   <section class="card"><h3><span>Muscles</span></h3><RangePicker value={muscleRange} label="Muscle range" onchange={r=>muscleRange=r}/><div class="fig-row"><span class="fig-label">Figure</span><span class="segc" role="group" aria-label="Body map figure">{#each figures as [value,label]}<button class:on={figureChoice===value} aria-pressed={figureChoice===value} onclick={()=>setFigure(value)}>{label}</button>{/each}</span></div>
-   {#if muscleView}<BodyMap figure={muscleView.figure} muscles={muscleView.muscles} max={Math.max(8,Math.round(muscleView.days/2))}/>{#if muscleView.gaps.length}<p class="dim">Few or no sets since {dateLabel(muscleView.from)}: {muscleView.gaps.map(m=>muscleNames[m]).join(', ')}</p>{/if}{/if}</section>
+   {#if muscleView}<BodyMap figure={muscleView.figure} muscles={muscleView.muscles} max={Math.max(1,...muscleView.muscles.map(m=>m.sets))}/>{#if muscleView.gaps.length}<p class="dim">Few or no sets since {dateLabel(muscleView.from)}: {muscleView.gaps.map(m=>muscleNames[m]).join(', ')}</p>{/if}
+    <ul class="mlist" aria-label="Sets per muscle group">{#each [...muscleView.muscles].sort((a,b)=>a.sets-b.sets) as m}<li class:gap={muscleView.gaps.includes(m.muscle)}><span>{muscleNames[m.muscle]}</span><b class="n">{Math.round(m.sets)}</b><small>sets</small></li>{/each}</ul>{/if}</section>
   {#if exercise}
    <div class="exchips" role="group" aria-label="Exercise">{#each view.exercises as e}<button class:on={e.key===exercise.key} aria-pressed={e.key===exercise.key} onclick={()=>pick(e.key)}>{e.name}</button>{/each}</div>
    <section class="card"><h3><span>{exercise.name}</span>{#if measure==='max' && latest?.record}<span class="pill ok"><Icon name="star" size={12}/>New record</span>{/if}</h3>
@@ -105,7 +106,7 @@ const figures:[FigureChoice,string][]=[['profile','Profile'],['female','Female']
   {/if}
  </div>
  <div class="col">
-  <section class="card"><h3><span>Sets per muscle</span><span class="h-note">Since {dateLabel(view.weekStart)}</span></h3>
+  <section class="card"><h3><span>This week vs your 4-week average</span><span class="h-note">Since {dateLabel(view.weekStart)}</span></h3>
    <div class="mus">{#each view.thisWeek as m}<div class="mu"><span>{muscleNames[m.muscle]}</span><div class="mu-b"><i style:width={m.sets/scale*100+'%'} style:background={amountColor(m.sets,12)}></i><u style:left={(average[m.muscle]??0)/scale*100+'%'}></u></div><b class="n">{m.sets}</b></div>{/each}</div>
    <p class="note"><i class="tick"></i>Weekly average, previous 4 weeks</p></section>
   {#if view.workouts.length}<section class="card"><h3><span>Strength workouts</span><span class="h-note">{view.workouts.length} in 12 weeks</span></h3>{#each allWorkouts?view.workouts:view.workouts.slice(0,WORKOUTS) as w}<div class="workout-item"><ActivityRow activity={w.activity} open={()=>navigate('workout/'+w.activity.id)}/>{#if !w.setsRecorded}<p class="nosets">No sets recorded</p>{/if}</div>{/each}{#if view.workouts.length>WORKOUTS}<button class="more" aria-expanded={allWorkouts} onclick={()=>allWorkouts=!allWorkouts}>{allWorkouts?'Show fewer':`Show all ${view.workouts.length} workouts`}</button>{/if}</section>{/if}
@@ -119,10 +120,11 @@ const figures:[FigureChoice,string][]=[['profile','Profile'],['female','Female']
  .dim,.note{font-size:12px;color:var(--text2)}
  .note{margin-top:12px;display:flex;align-items:center;gap:8px}
  .h-note{font:500 12px Inter;letter-spacing:0;text-transform:none;color:var(--text2)}
- .segc{display:inline-flex;background:rgba(255,255,255,.05);border-radius:10px;padding:2px;letter-spacing:0;text-transform:none}
+ h3{flex-wrap:wrap;gap:6px}
+ .segc{display:inline-flex;flex-wrap:wrap;background:rgba(255,255,255,.05);border-radius:10px;padding:2px;letter-spacing:0;text-transform:none}
  .segc button{border:0;background:none;color:var(--text2);font:600 12px Inter;padding:6px 10px;border-radius:8px;min-height:32px}
  .segc button.on{background:rgba(255,255,255,.12);color:var(--text)}
- .fig-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px}
+ .fig-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px}
  .fig-label{font:600 12px Inter;color:var(--text3)}
  .exchips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:12px 0 0}
  .exchips::-webkit-scrollbar{display:none}
@@ -138,15 +140,17 @@ const figures:[FigureChoice,string][]=[['profile','Profile'],['female','Female']
  .rec b{display:block;font:600 20px Outfit;margin:2px 0}
  .rec small{display:block;font:500 11px Inter;color:var(--text3);min-height:14px}
  .rec.new b,.rec.new small{color:var(--good)}
- .ses{display:grid;grid-template-columns:1fr 74px 86px 18px;align-items:center;width:100%;padding:12px 0;border:0;border-top:1px solid var(--line);background:none;text-align:left;font-size:13px;color:var(--text2);min-height:44px}
+ .ses{display:grid;grid-template-columns:1fr minmax(74px,auto) minmax(86px,auto) 18px;gap:0 6px;align-items:center;width:100%;padding:12px 0;border:0;border-top:1px solid var(--line);background:none;text-align:left;font-size:13px;color:var(--text2);min-height:44px}
  .ses:first-of-type{border-top:0;padding-top:0}
  .ses b{font:600 16px Outfit;color:var(--text);text-align:right}
  .ses b small{font:500 11px Inter;color:var(--text3);margin-left:2px}
  .ses .rr{text-align:right;font:500 14px Outfit}
  .ses .pr{display:flex;justify-content:flex-end;color:var(--good)}
  .more{display:block;width:100%;min-height:44px;margin-top:8px;border:0;border-top:1px solid var(--line);background:none;color:var(--text);font:600 13px Inter;padding:12px 0 0}
- .nosets{margin:-4px 0 0 56px;font-size:12px;color:var(--text2)}
+ .nosets{margin:2px 0 0 56px;font-size:12px;color:var(--text2)}
  .mus{display:grid;gap:10px}
+ .mlist{list-style:none;margin:10px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:4px 16px;font-size:13px}
+ .mlist li{display:grid;grid-template-columns:1fr auto 30px;gap:6px;align-items:baseline;color:var(--text2)}.mlist b{color:var(--text)}.mlist small{font-size:11px}.mlist li.gap span{color:var(--fair);font-weight:600}
  .mu{display:grid;grid-template-columns:84px 1fr 26px;align-items:center;gap:10px;font-size:13px;color:var(--text2)}
  .mu b{font:600 14px Outfit;color:var(--text);text-align:right}
  .mu-b{position:relative;height:8px;border-radius:4px;background:rgba(255,255,255,.06)}

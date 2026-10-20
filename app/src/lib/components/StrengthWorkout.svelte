@@ -14,6 +14,8 @@ import StrengthRefresh from './StrengthRefresh.svelte';
  const height=(reps:number|null,max:number)=>Math.max((reps??0)/max*56,3);
  const maxReps=(e:StrengthExercise)=>Math.max(1,...e.sets.map(s=>s.reps??0),...e.lastSets.map(s=>s.reps??0));
  const toCheck=(e:StrengthExercise)=>e.sets.filter(s=>s.flags.length).length;
+ // The weight change against the same set last time: height stays reps, so added weight shows here.
+ const change=(now:number|null,before:number|null|undefined)=>{if(now==null||before==null)return '';const d=Math.round((now-before)*10)/10;return d?`${d>0?'+':'−'}${Math.abs(d)}`:''};
 </script>
 <div class="strength-cols">
  <div class="col">
@@ -30,19 +32,19 @@ import StrengthRefresh from './StrengthRefresh.svelte';
    {@const max=maxReps(e)}{@const check=toCheck(e)}
    <section class="card ex">
     <div class="ex-h"><div><b>{e.name??'Not recognized'}</b><span>{e.key==null?"Garmin couldn't name it":e.muscles.map(m=>muscleNames[m]).join(' · ')||'Muscles unknown'}</span></div>
-     {#if e.key==null}<span class="pill warn">Unnamed</span>{:else if check}<span class="pill warn">{check} to check</span>{:else if e.record}<span class="pill ok"><Icon name="star" size={12}/>{weight(e.record.weight)} × {e.record.reps}</span>{/if}</div>
+     {#if e.key==null}<span class="pill warn">Unnamed</span>{:else if check}<span class="pill warn">{check} to check</span>{:else if e.record}<span class="pill ok"><Icon name="star" size={12}/>{weight(e.record.weight)} {unitLabel(strength.unit)} × {e.record.reps}</span>{/if}</div>
     <div class="setbars" role="list" aria-label="Sets: reps and weight">
      {#each e.sets as s,i}
       {@const ghost=e.lastSets[i]}
       <div class="sbar" class:flag={s.flags.length>0} role="listitem" aria-label={`Set ${i+1}: ${s.reps??'no'} reps, ${s.weight==null?'no weight':`${weight(s.weight)} ${unitLabel(strength.unit)}`}${s.record?', record':''}${s.flags.length?', looks off':''}`}>
        <b class="n">{s.reps??'—'}</b>
        <div class="sbar-t">{#if ghost}<u style:height={height(ghost.reps,max)+'px'}></u>{/if}<i style:height={height(s.reps,max)+'px'}>{#if s.record}<Icon name="star" size={12}/>{/if}</i></div>
-       <span class="n">{weight(s.weight)}</span>
+       <span class="n">{weight(s.weight)}{#if change(s.weight,ghost?.weight)}<small class="delta">{change(s.weight,ghost?.weight)}</small>{/if}</span>
       </div>
      {/each}
      <div class="sbar key" aria-hidden="true"><b>reps</b><div class="sbar-t"></div><span>{unitLabel(strength.unit)}</span></div>
     </div>
-    {#if e.lastDate}<div class="lastl">Last · {dateLabel(e.lastDate)} · <b class="n">{e.lastSets.map(lift).join('  ')}</b></div>{/if}
+    {#if e.lastDate}<div class="lastl">Last · {dateLabel(e.lastDate)}<b class="n">{e.lastSets.map(lift).join('  ')}</b></div>{/if}
    </section>
   {/each}
  </div>
@@ -50,7 +52,7 @@ import StrengthRefresh from './StrengthRefresh.svelte';
 <style>
  .strength-cols{display:grid;gap:0 16px}
  .col{min-width:0}
- .hero{display:flex;justify-content:space-between;gap:12px;align-items:center}
+ .hero{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:center}
  .hero-n{font:600 60px/1 Outfit;margin:6px 0 10px}
  .grid2{display:grid;grid-template-columns:auto auto;gap:14px 22px}
  .grid2 b{display:block;font:600 21px Outfit}
@@ -64,7 +66,7 @@ import StrengthRefresh from './StrengthRefresh.svelte';
  .al-t{flex:1;min-width:0}
  .al-t b{display:block;font:600 15px Inter;color:var(--text)}
  .al-t span{font-size:12px;color:var(--text2)}
- .ex-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px}
+ .ex-h{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px}
  .ex-h b{display:block;font:600 16px Inter}
  .ex-h span:not(.pill){font-size:12px;color:var(--text3)}
  .setbars{display:flex;gap:8px;align-items:flex-end}
@@ -74,13 +76,13 @@ import StrengthRefresh from './StrengthRefresh.svelte';
  .sbar-t i{position:relative;display:grid;place-items:start center;width:100%;border-radius:7px 7px 4px 4px;background:rgba(228,232,240,.78);color:#0B0F1A}
  .sbar-t i :global(svg){margin-top:4px}
  .sbar-t u{position:absolute;left:-3px;right:-3px;bottom:0;border:1.5px dashed rgba(255,255,255,.2);border-radius:9px 9px 6px 6px}
- .sbar>span{font:500 12px Outfit;color:var(--text2);white-space:nowrap}
+ .sbar>span{font:500 12px Outfit;color:var(--text2);white-space:nowrap}.sbar .delta{display:block;font:500 11px Outfit;color:var(--text)}
  .sbar.flag i{background:var(--fair)}
  .sbar.flag>b{color:var(--fair)}
  .sbar.key{flex:0 0 30px}
  .sbar.key b,.sbar.key span{font:600 10px Inter;color:var(--text3)}
- .lastl{margin-top:12px;font-size:12px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
- .lastl b{color:var(--text2);font-weight:600;font-size:13px;word-spacing:3px}
+ .lastl{margin-top:12px;font-size:12px;color:var(--text3)}
+ .lastl b{display:block;color:var(--text2);font-weight:600;font-size:13px;word-spacing:3px}
  @media(min-width:660px){
   .strength-cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr);margin-bottom:16px}
   .col>:global(.card:first-child){margin-top:0}

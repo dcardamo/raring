@@ -214,15 +214,16 @@ Tonight:
   cardio lane.
 - Three sections, the choice kept across a detail and Back:
   - **Fitness**, around three questions. *Enough, or too much?*: acute load
-    on a compact bar with Garmin's optimal range, training status with its
-    Why sheet, load focus against Garmin's target ranges, and the load
-    history. *Is my fitness improving?*: VO2max with its 30-day change and
+    as a dot on a compact bar with Garmin's optimal range as a neutral band,
+    training status with its Why sheet, load focus against Garmin's target
+    ranges (printed), and the last 30 days of acute load against today's
+    optimal range; History opens the acute-load metric detail. *Is my fitness improving?*: VO2max with its 30-day change and
     history, endurance and hill scores, running tolerance. *What am I ready
     for?*: Garmin's race predictions, thresholds and the next race. Garmin's
     next scheduled session is a read-only card.
-  - **Strength**: this week's sessions against the goal and sets, the muscle
-    map over a chosen range with gaps named (Rules: Muscle gaps), and a link
-    to Strength.
+  - **Strength**: this week's sessions against the goal and sets, a small
+    muscle map over a chosen range with gaps named (Rules: Muscle gaps; the
+    range is shared with Strength), and a link to Strength.
   - **Activities**: every stored recording with Garmin's primary benefit,
     training effect and intensity minutes as one text line, filterable by
     sport. The last 31 days open instantly; Show older pages back through
@@ -240,16 +241,25 @@ Tonight:
 
 - Training load, aerobic and anaerobic Training Effect gauges, primary
   benefit and recovery time.
-- Stats grid, route map, heart-rate chart colored by zone, time-in-zone bars,
-  and split bars with the fastest highlighted. Power, cadence and running
-  dynamics when present.
+- Stats grid, route map, heart-rate chart colored by zone (bpm axis, each
+  zone's floor labelled, the average marked, round minute ticks), time-in-zone
+  bars with each zone's bpm range, and split bars with the fastest
+  highlighted: rides by speed, swims by pace per 100 m or 100 yd, everything
+  else by pace; a lap's distance shows only where laps differ. Power, cadence
+  and running dynamics when present. Heart rate is drawn once: at the top of
+  Along the way when streams exist, otherwise in its own card.
+- **Units**: distance, pace, speed and elevation follow Garmin's measurement
+  setting (km, /km, km/h, m or mi, /mi, mph, ft); swims read in the pool's
+  unit (m or yd) with pace per 100. Garmin's swim fields (pool length,
+  lengths, SWOLF, strokes per length, stroke rate, distance per stroke) show
+  under Recorded by your watch when sent.
 - **Strength activities with sets** replace the effect gauges and stats with
   the sets: a hero (sets, time, reps, load, average heart rate, records), a
   card naming the sets that look off, a body map of this session, and one
   card per exercise in the order done. Each card shows Garmin's name and the
-  muscles, a bar per set (reps above, weight below, flagged sets amber,
-  record sets starred) over a dashed outline of last time's set, and last
-  time's sets as text. An exercise Garmin couldn't name is "Not recognized".
+  muscles, a bar per set (reps above, weight below with its change against
+  the same set last time, flagged sets amber, record sets starred) over a
+  dashed outline of last time's set, and last time's sets as text. An exercise Garmin couldn't name is "Not recognized".
   The heart-rate chart and zones follow. A session timed without lap presses
   says no sets were recorded and links to help. A ? opens a sheet on how sets
   are counted. A card on the workout says when Garmin's sets were last read
@@ -268,7 +278,9 @@ Tonight:
 
 Opened from Training → Strength: lifts and muscles.
 
-- Body map over a chosen range (7D–Max) with gaps named (Rules: Muscle gaps).
+- Body map over a chosen range (7D–Max) with gaps named and sets per muscle
+  group listed (Rules: Muscle gaps); shading scales to the range's busiest
+  group.
 - One exercise at a time (chips on the phone, a list with sparklines on
   desktop): Max weight or Volume each session over a chosen range (Rules:
   Lift volume), the best weight in available history at 1,
@@ -779,7 +791,8 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   `directAvailableStamina`, `directPerformanceCondition`,
   `directAirTemperature`) share the samples'
   elapsed-time axis (at most ~300 points) and appear only when recorded; a
-  missing sample is a gap. Runs show speed as pace. Summary fields appear
+  missing sample is a gap. Runs, walks and swims show speed as pace, drawn
+  faster-up. Summary fields appear
   only when Garmin sent them (moving time, moderate and vigorous intensity
   minutes — shown as moderate + 2 × vigorous, Garmin's figures — Body Battery
   change, stamina at start and end, descent, normalized power, intensity

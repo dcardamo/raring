@@ -39,7 +39,8 @@
     "anaerobicLabel": null,
     "benefit": null,
     "avgHr": 118,
-    "intensityMin": 24
+    "intensityMin": 24,
+    "distanceUnit": "km"
   },
   "recoveryHours": 14,
   "stats": [

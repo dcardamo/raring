@@ -18,7 +18,9 @@
  const y = (v: number) => T + (1 - v / max) * (H - T - B);
  let band = $derived(lane.usual ? `M${lane.usual.hi.map((v, i) => `${x(i)},${y(v)}`).join('L')}L${[...lane.usual.lo].reverse().map((v, i) => `${x(6 - i)},${y(v)}`).join('L')}Z` : '');
  let mid = $derived(lane.usual ? lane.usual.mid.map((v, i) => `${i ? 'L' : 'M'}${x(i)},${y(v)}`).join('') : '');
- let line = $derived(lane.cum.map((v, i) => v == null ? '' : `${i ? 'L' : 'M'}${x(i)},${y(v)}`).join(''));
+ // Sessions are whole: the strength lane steps up on the day; minutes slope.
+ const steps = (vals: number[]) => vals.map((v, i) => i ? `H${x(i)}V${y(v)}` : `M${x(0)},${y(v)}`).join('');
+ let line = $derived(lane.unit === 'sessions' ? steps(lane.cum.slice(0, lane.cum.findIndex(v => v == null) < 0 ? 7 : lane.cum.findIndex(v => v == null)) as number[]) : lane.cum.map((v, i) => v == null ? '' : `${i ? 'L' : 'M'}${x(i)},${y(v)}`).join(''));
  let now = $derived(lane.cum[today] ?? null);
  let usualNow = $derived(lane.usual ? Math.round(lane.usual.mid[today]) : null);
  const fmt = (v: number) => lane.unit === 'sessions' ? String(v) : `${Math.round(v)}`;

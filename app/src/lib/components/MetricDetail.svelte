@@ -25,7 +25,7 @@
  let stressTotal=$derived(stress?stress.time.reduce((a,b)=>a+b.seconds,stress.activeS??0):0);
  let vital=$derived(source==='health'?(data as HealthView).vitals.readings.find(v=>v.kind===metric):null);
  let training=$derived(source==='training'?data as TrainingView:null);
- let trainingValue=$derived(training?({vo2max:training.vo2max,endurance:training.enduranceScore,hill:training.hillScore,runningTolerance:training.runningToleranceKm} as Record<string,number|null>)[metric]:null);
+ let trainingValue=$derived(training?({vo2max:training.vo2max,endurance:training.enduranceScore,hill:training.hillScore,runningTolerance:training.runningToleranceKm,acuteLoad:training.acute?.value??null} as Record<string,number|null>)[metric]:null);
  // Health Status's HR is Garmin's sleep average, so its history is Sleep HR, not resting HR.
  const vitalTrend=(v:VitalReading):TrendMetric=>v.kind==='restingHr'?(v.status || v.rangeSource==='garmin'?'sleepHr':'restingHr'):v.kind;
  let decimals=$derived(metric==='skinTemp'||metric==='respiration'?1:0);
@@ -84,6 +84,8 @@
   <Card title={rangeName(vital)}>
    {#if vital.normal}<RangeBar value={vital.value} scale={vital.scale} range={vital.normal} color={toneColor(vital.tone)}/><p class="metric-copy range-caption">{num(vital.normal[0],decimals)}–{num(vital.normal[1],decimals)} {vital.unit}</p>{:else}<p class="metric-copy">{vital.status==='ONBOARDING'?"Garmin is still building this baseline.":metric==='hrv'?"Waiting for Garmin to report your HRV baseline.":"At least 14 recorded nights are needed for Raring's fallback range."}</p>{/if}
   </Card>
+ {:else if training && metric==='acuteLoad'}
+  <Card title="History"><HistoryChart values={[]} label="Acute load" metric="acuteLoad" initialRange="days30" band={training.acute?.band ?? null} bandLabel="Garmin's optimal range now"/></Card>
  {:else if training && metric==='vo2max' && training.vo2maxTrend.some(v=>v!=null)}
   <Card title="History"><HistoryChart values={[]} label="VO₂ max" metric="vo2max" initialRange="year"/></Card>
  {/if}

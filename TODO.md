@@ -132,6 +132,31 @@ From item 11, in priority order.
   is distinct from `sessionsWithSets`; missing lap presses must not reduce
   credit toward the weekly activity goal.
 
+### Training and workout review follow-ups
+
+From the read-only UX review of Training and workouts, in priority order.
+
+- **Real swim and walk**: the pool-swim fields (`poolLength` in the pool's
+  unit, `unitOfPoolLength.unitKey`, `activeLengths`, `averageSwolf`,
+  `averageStrokes`, `averageSwimCadenceInStrokesPerMinute`,
+  `averageStrokeDistance`) and a yard pool are synthetic; compare a real
+  pool swim (and an open-water swim) with Connect. Stroke-rate streams
+  (`directStrokeCadence`) aren't read. Add a swim and a walk to `raring demo`.
+- **Endurance and hill levels**: show Garmin's classification word and the
+  reading's date beside Endurance, Hill score and Run tolerance once their
+  fields are verified (the tiles now carry a chevron only).
+- **Units elsewhere**: running tolerance, Progress distance totals and gear
+  still read km; follow Garmin's measurement setting there too.
+- **Acute-load band per day**: the 30-day chart and metric detail use today's
+  optimal range; draw Garmin's stored range for each day where it exists.
+- **Large text**: at 2x on 360 px, the strength session rows, the acute
+  bar's tick labels and the Splits "Fastest" pill still pass their card;
+  lane weekday letters crowd (chart legibility lane).
+- **Fixtures from the core**: the preview's training, strength and workout
+  fixtures are still hand-made and disagree in places (lane vs board
+  strength counts, squat bests, the sets check time before the workout);
+  generate them from `raring demo` as `raring show` does.
+
 ### Thresholds follow-ups
 
 - Compare the Training card's HR, pace, running power, FTP and acclimation
@@ -332,6 +357,27 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Training and workout review: major items** (commit "Make workouts and
+  Training readable per sport and unit"). Heart rate is one chart (bpm axis,
+  labelled zone floors, average, round minutes) at the top of Along the way
+  or in its own card; pace is drawn faster-up; distance, pace, speed and
+  elevation follow Garmin's measurement setting, swims read in the pool's
+  unit with pace per 100 and Garmin's swim fields; rides split by speed;
+  splits print their scale and only differing lap distances; zones show bpm
+  ranges; load focus prints Garmin's target as a solid band; the acute bar is
+  a toned dot on a neutral band with a round scale end; Training's load
+  history is a compact 30-day chart opening a new acute-load metric detail;
+  set bars show the weight change against last time; muscles are listed
+  once on Strength with shading scaled to the range; the text-only "Lifts and
+  exercises" card, the TE pills in Activities and the disclaimer lines are
+  gone; race predictions say Half marathon and Marathon. Smaller fixes: the
+  lane legend is a one-line key, the strength lane steps, Refresh from Garmin
+  is a text button, the next session carries ◇ Garmin schedule · read-only,
+  the Why sheet says "1.1× your 4-week load", Strength's ? opens the strength
+  help sheet, and dropped leading spaces are restored. Synthetic pool-swim and
+  walk fixtures were added to the preview, and Training's preview list now
+  matches Strength's sessions in date order.
 
 - **Training and workout review: bugs** (commit "Fix Training and workout
   review bugs"). From the read-only UX review of Training and workouts: the

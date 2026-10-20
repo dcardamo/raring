@@ -295,6 +295,20 @@ pub struct VitalsCard {
     pub baseline_ready: bool,
 }
 
+/// How an activity's distance reads: kilometres or miles by Garmin's
+/// measurement setting, and metres or yards (the pool's unit) for swims.
+/// Pace, speed and elevation follow: statute units for `Mi` and `Yd`.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum DistanceUnit {
+    #[default]
+    Km,
+    Mi,
+    M,
+    Yd,
+}
+
 /// A page of older stored recordings for Training → Activities.
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -333,6 +347,8 @@ pub struct ActivityCard {
     /// Garmin's moderate plus twice vigorous minutes for this activity.
     #[serde(default)]
     pub intensity_min: Option<f64>,
+    #[serde(default)]
+    pub distance_unit: DistanceUnit,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Default)]

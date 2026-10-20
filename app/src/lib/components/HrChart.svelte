@@ -1,25 +1,37 @@
 <script lang="ts">
  import type {HrSample} from '../generated/HrSample';
  import {colors} from '../charts';
- import {elapsed} from '../format';
- let {samples,floors,durationS=0}:{samples:HrSample[],floors:number[],durationS?:number}=$props();
+ // Heart rate over the workout: a zone-coloured trace on a bpm axis, each
+ // zone's floor labelled, the average marked, and round minute ticks. Drawn
+ // at its real width so text keeps its size.
+ let {samples,floors,durationS=0,avg=null,axis=true}:{samples:HrSample[],floors:number[],durationS?:number,avg?:number|null,axis?:boolean}=$props();
+ let w=$state(320);
+ const H=160,L=34,R=8,T=20,B=20;
  let maxT=$derived(Math.max(1,durationS,...samples.map(s=>s.tS)));
- let lo=$derived(Math.min(...samples.map(s=>s.bpm))-5),hi=$derived(Math.max(...samples.map(s=>s.bpm))+5);
- const y=(v:number)=>112-(v-lo)/(hi-lo||1)*104;
- let d=$derived(samples.map((s,i)=>`${i?'L':'M'}${(s.tS/maxT*326).toFixed(1)},${y(s.bpm).toFixed(1)}`).join(''));
+ let lo=$derived(Math.floor((Math.min(...samples.map(s=>s.bpm))-4)/10)*10),hi=$derived(Math.ceil((Math.max(...samples.map(s=>s.bpm))+4)/10)*10);
+ const y=(v:number)=>T+(hi-v)/(hi-lo||1)*(H-T-B);
+ const x=(t:number)=>L+t/maxT*(w-L-R);
+ let d=$derived(samples.map((s,i)=>`${i?'L':'M'}${x(s.tS).toFixed(1)},${y(s.bpm).toFixed(1)}`).join(''));
  // Incomplete boundaries cannot identify all five zones; keep the trace visible and neutral.
  let zoned=$derived(floors.length===4 && floors.every((f,i)=>Number.isFinite(f) && (!i || f>floors[i-1])));
  let stops=$derived(zoned?[...floors].reverse():[]);
+ let ticks=$derived.by(()=>{const step=[10,20,30,40,50].find(s=>(hi-lo)/s<=4)??50,out:number[]=[];for(let t=Math.ceil(lo/step)*step;t<=hi;t+=step)out.push(t);return out});
+ let minutes=$derived.by(()=>{const m=maxT/60,step=[1,2,5,10,15,20,30,60].find(s=>m/s<=6)??120,out:number[]=[];for(let t=0;t<=m;t+=step)out.push(t);return out});
+ let shownFloors=$derived(zoned?floors.map((f,i)=>({f,zone:i+2})).filter(z=>z.f>lo && z.f<hi):[]);
 </script>
-<svg class="chart" viewBox="0 0 326 136" aria-label="Heart rate during workout">
+<div class="hr" bind:clientWidth={w}>
+<svg width={w} height={H} role="img" aria-label={`Heart rate over ${Math.round(maxT/60)} minutes, ${lo}–${hi} bpm${avg!=null?`, average ${Math.round(avg)}`:''}`}>
  <defs>
-  <linearGradient id="hr-zones" x1="0" y1="0" x2="0" y2="120" gradientUnits="userSpaceOnUse">
-   {#each stops as floor,i}{@const offset=Math.max(0,Math.min(1,y(floor)/120))}<stop {offset} stop-color={colors.z[4-i]}/><stop {offset} stop-color={colors.z[3-i]}/>{/each}
+  <linearGradient id="hr-zones" x1="0" y1="0" x2="0" y2={H} gradientUnits="userSpaceOnUse">
+   {#each stops as floor,i}{@const offset=Math.max(0,Math.min(1,y(floor)/H))}<stop {offset} stop-color={colors.z[4-i]}/><stop {offset} stop-color={colors.z[3-i]}/>{/each}
   </linearGradient>
-  <linearGradient id="hr-area" x1="0" y1="0" x2="0" y2="1"><stop stop-color={colors.ink} stop-opacity=".28"/><stop offset="1" stop-color={colors.ink} stop-opacity="0"/></linearGradient>
  </defs>
- {#each floors.filter(f=>f>=lo && f<=hi) as f}<line x1="0" x2="326" y1={y(f)} y2={y(f)} stroke="rgba(255,255,255,.06)" stroke-dasharray="3 4"/>{/each}
- {#if d}<path d={`${d}L326,116L0,116Z`} fill="url(#hr-area)"/><path class="hr-trace" {d} fill="none" stroke={zoned?'url(#hr-zones)':colors.ink} stroke-width="2.2" stroke-linejoin="round"/>{/if}
- {#each [0,1/3,2/3,1] as part,i}<text x={part*326} y="132" fill="#8E98AC" font-size="11" text-anchor={i===0?'start':i===3?'end':'middle'}>{elapsed(maxT*part)}</text>{/each}
+ {#each ticks as t}<line x1={L} x2={w-R} y1={y(t)} y2={y(t)} stroke="rgba(255,255,255,.06)"/><text class="t" x={L-5} y={y(t)+4} text-anchor="end">{t}</text>{/each}
+ <text class="t" x="2" y="10">bpm</text>
+ {#each shownFloors as z}<line x1={L} x2={w-R} y1={y(z.f)} y2={y(z.f)} stroke={colors.z[z.zone-1]} stroke-opacity=".55" stroke-dasharray="3 4"/><text class="z" x={w-R-2} y={y(z.f)-3} text-anchor="end" fill={colors.z[z.zone-1]}>Z{z.zone} {z.f}</text>{/each}
+ {#if avg!=null && avg>lo && avg<hi}<line x1={L} x2={w-R} y1={y(avg)} y2={y(avg)} stroke={colors.ink} stroke-opacity=".7" stroke-dasharray="6 3"/><text class="z" x={L+4} y={y(avg)-3} fill={colors.ink}>avg {Math.round(avg)}</text>{/if}
+ {#if d}<path class="hr-trace" {d} fill="none" stroke={zoned?'url(#hr-zones)':colors.ink} stroke-width="2.2" stroke-linejoin="round"/>{/if}
+ {#if axis}{#each minutes as m,i}<text class="t" x={x(m*60)} y={H-4} text-anchor={i===0?'start':'middle'}>{m}{i===minutes.length-1?' min':''}</text>{/each}{/if}
 </svg>
-<style>.chart{width:100%;display:block}</style>
+</div>
+<style>.hr{width:100%}svg{display:block}.t{font:500 11px Inter;fill:#8E98AC}.z{font:600 11px Inter;paint-order:stroke;stroke:#0B0F1A;stroke-width:3px}</style>
