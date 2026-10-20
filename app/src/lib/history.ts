@@ -21,6 +21,16 @@ export function historyScale(values: (number | null)[], band: [number, number] |
   return [low - padding, high + padding];
 }
 
+/** The scale widened to round steps (whole hours for minutes) and its 2–5 ticks, low to high. */
+export function historyAxis(values: (number | null)[], band: [number, number] | null, unit = ''): {scale: [number, number], ticks: number[]} {
+  const [low, high] = historyScale(values, band);
+  const steps = unit === 'min' ? [15, 30, 60, 120, 180, 240, 360, 720] : [1, 2, 2.5, 5].flatMap(m => [-2, -1, 0, 1, 2, 3, 4].map(e => m * 10 ** e)).sort((a, b) => a - b);
+  const step = steps.find(s => Math.ceil(high / s - 1e-9) - Math.floor(low / s + 1e-9) <= 4) ?? steps.at(-1)!;
+  const lo = Math.floor(low / step + 1e-9) * step, hi = Math.ceil(high / step - 1e-9) * step;
+  const ticks = Array.from({length: Math.round((hi - lo) / step) + 1}, (_, i) => +(lo + i * step).toFixed(6));
+  return {scale: [lo, hi], ticks};
+}
+
 // Same levels as Garmin Training Readiness; not Sleep Score thresholds.
 export const readinessTone = (value: number): Tone => value >= 75 ? 'good' : value >= 50 ? 'fair' : 'poor';
 

@@ -786,6 +786,42 @@ try {
   await blank.close();
  }
  console.log('Your day timeline, nap Body Battery and Keep / Choose another: passed');
+ // Sleep · Last night (review M6, M11, M15, m8, m9, m16, m18): stage changes are neutral, the totals sit in
+ // Stages, overnight tiles open their metric with clock ends and lows/highs, history is Sleep score with one
+ // Time asleep overlay and round ticks, and naps say whether they were never checked or failed.
+ {
+  const lp=await browser.newPage({viewport:{width:390,height:844}});
+  lp.on('pageerror',e=>errors.push(e.message));
+  const sleepSample=JSON.parse(await readFile(resolve('src/lib/sample/sleep.json'),'utf8'));
+  let naps='unknown';
+  await lp.route(u=>u.pathname==='/src/lib/sample/sleep.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify({...sleepSample,napsState:naps,naps:[]})}`}));
+  await lp.goto(`${url}/#sleep/last`);
+  const stages=lp.locator('.card').filter({has:lp.locator('h3',{hasText:'Stages'})});
+  await stages.locator('.stage-legend').waitFor();
+  const deltas=await stages.locator('.stage-legend em').evaluateAll(els=>els.map(e=>getComputedStyle(e).color));
+  assert.ok(deltas.length>0 && new Set(deltas).size===1,'every stage change has one neutral colour');
+  await stages.getByText('Change vs your usual',{exact:true}).waitFor();
+  assert.equal(await lp.locator('.dashboard>.card:not(:has(h3))').count(),0,'no untitled stage-totals card');
+  assert.ok((await stages.locator('.time-label').allTextContents()).every(t=>/^\d\d:00$/.test(t)),'hypnogram ticks fall on whole hours');
+  const hrv=lp.getByRole('button',{name:/^HRV 58 ms, \d+ to \d+ overnight$/});
+  assert.ok((await hrv.textContent()).includes('22:31') && (await hrv.textContent()).includes('06:39'),'the tile names the night’s start and end');
+  await hrv.click();await lp.waitForURL('**/#metric/hrv');await lp.goBack();
+  await lp.getByText('Naps not checked yet.',{exact:true}).waitFor();
+  const history=lp.locator('.card').filter({has:lp.locator('h3',{hasText:'Sleep history'})});
+  assert.equal(await history.getByRole('combobox').count(),0,'no metric explorer on Sleep');
+  assert.equal(await history.getByRole('group',{name:'Compare'}).count(),0);
+  await history.locator('svg text').first().waitFor();
+  const ticks=(await history.locator('svg text').allTextContents()).map(Number);
+  assert.ok(ticks.length>=2 && ticks.every(t=>t%5===0),`round score ticks: ${ticks}`);
+  assert.equal(await history.locator('.stale-note').count(),0,'the preview trend includes last night');
+  await history.getByRole('button',{name:'Overlay time asleep'}).click();
+  await history.locator('.history-overlay').waitFor();
+  await history.getByRole('button',{name:'More in Health'}).waitFor();
+  naps='unavailable';
+  await lp.goto(`${url}/?naps=failed#sleep/last`);
+  await lp.getByText('Couldn’t read naps from Garmin.',{exact:true}).waitFor();
+  await lp.close();
+ }
  // Sleep: a plain #sleep opens the closer tab; Tonight is a plan with a self-report, at every width.
  {
   const sp=await browser.newPage({viewport:{width:390,height:844}});
@@ -2005,7 +2041,8 @@ function trendFixture(q){
  });
  await openSleep(live);
  await live.locator('.time-label').first().waitFor();
- assert.equal(await live.locator('.time-label').first().textContent(),'01:35','sleep chart starts at Garmin bedtime, not fixed 23:00');
+ assert.equal(await live.locator('.time-label').first().textContent(),'02:00','m8: whole-hour ticks follow Garmin bedtime (01:35), not a fixed 23:00');
+ assert.ok(parseFloat(await live.locator('.time-label').first().evaluate(el=>el.style.left))>0,'the first hour sits after the 01:35 start');
  const nights=await live.locator('rect.night').evaluateAll(nodes=>nodes.map(n=>Number(n.getAttribute('x'))));
  assert.equal(nights.length,2);assert.ok(nights[1]>300 && nights[1]-nights[0]>40,'consistency preserves calendar gaps and anchors the latest night on the right');
  await live.getByRole('navigation').getByRole('button',{name:'Today',exact:true}).click();

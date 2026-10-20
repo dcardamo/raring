@@ -376,6 +376,18 @@ faces, screens, sensors and audio prompts stay in Connect.
 
 ## Done
 
+- **Sleep · Last night reads without a legend hunt** (commit "Make Sleep's
+  overnight tiles, stages and history readable"), from the Today and Sleep
+  review (M6, M11, M15, m1 naps, m8, m9, m16, m18). Overnight tiles open
+  their metric (a past night only heart rate's dated page) with the night's
+  clock ends and low/high; stage changes are neutral and sit in the Stages
+  card, whose hypnogram ticks whole hours; Sleep history is Sleep score with
+  an "Overlay time asleep" toggle, round ticks (`historyAxis`) and "More in
+  Health"; naps say "not checked yet" or "Couldn’t read naps" and drop the
+  disclaimer. The preview's sample trend now runs to last night. The stage
+  legend, Garmin averages and Consistency key wrap at 2× text (they ran out
+  of their cards at 720 px on main too, unnoticed by the check).
+
 - **Readiness tells one effort story** (commit "Show Readiness's call on
   Today's effort bar and explain each factor"), from the Today and Sleep
   review (M9, M10, m15). Today's call is Today's chevron bar

@@ -41,7 +41,8 @@
  .consistency{width:100%;min-width:0}
  .plot{display:block;font-family:Inter,sans-serif}
  .key{display:flex;flex-wrap:wrap;gap:4px 14px;margin:8px 0 0;font-size:12px;color:var(--text2)}
- .key span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+ .key span{display:inline-flex;flex-wrap:wrap;align-items:center;gap:5px}
+ .key b{white-space:nowrap}
  .key b{color:var(--text);font-weight:500}
  .key i{width:10px;height:10px;border-radius:3px}
  .key .bed{background:rgba(169,200,255,.5)}.key .wake{background:rgba(255,214,102,.45)}

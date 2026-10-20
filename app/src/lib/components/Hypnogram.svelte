@@ -9,12 +9,15 @@
  let total=$derived(Math.max(1,...segments.map(s=>s.startMin+s.minutes)));
  const lane=(stage:string)=>names.indexOf(stage==='rem'?'REM':stage[0].toUpperCase()+stage.slice(1));
  const pct=(m:number)=>m/total*100;
- function label(minutes:number){
+ // Whole clock hours (every second one on a long night); elapsed thirds without a start time.
+ let ticks=$derived.by(()=>{
   const time=clock(startLocal);
-  if(time==='—')return elapsed(minutes*60);
-  const [h,m]=time.split(':').map(Number),value=(h*60+m+Math.round(minutes))%1440;
-  return `${String(Math.floor(value/60)).padStart(2,'0')}:${String(value%60).padStart(2,'0')}`;
- }
+  if(time==='—')return [0,1/3,2/3,1].map(p=>({at:total*p,text:elapsed(total*p*60)}));
+  const [h,m]=time.split(':').map(Number),start=h*60+m,every=total>300?120:60;
+  const out:{at:number,text:string}[]=[];
+  for(let at=Math.ceil(start/every)*every-start;at<=total;at+=every){const hour=Math.round((start+at)/60)%24;out.push({at,text:`${String(hour).padStart(2,'0')}:00`})}
+  return out;
+ });
 </script>
 <!-- HTML lanes, so the stage names keep their own column at any text size; only the transitions are drawn in SVG. -->
 <div class="hyp" role="img" aria-label="Sleep stages over the night" data-chart="stages" {@attach declutter}>
@@ -24,7 +27,7 @@
   {#each names as _,i}<b class="lane" style:top={i/names.length*100+'%'} style:height={100/names.length+'%'}></b>{/each}
   {#each segments as s}<i style:left={pct(s.startMin)+'%'} style:width={`max(1px, ${s.minutes/total*100}%)`} style:top={`calc(${lane(s.stage)/names.length*100}% + 4px)`} style:height={`calc(${100/names.length}% - 8px)`} style:background={palette[s.stage]}></i>{/each}
  </div>
- <span class="times">{#each [0,1/3,2/3,1] as part,i}<span class="time-label" data-thin={i===0||i===3?1:''} class:first={i===0} class:last={i===3} style:left={part*100+'%'}>{label(total*part)}</span>{/each}</span>
+ <span class="times">{#each ticks as t}<span class="time-label" data-thin style:left={pct(t.at)+'%'} style:translate={pct(t.at)<6?'50%':pct(t.at)>94?'-50%':'0'}>{t.text}</span>{/each}</span>
 </div>
 <style>
  .hyp{display:grid;grid-template-columns:max-content minmax(0,1fr);grid-auto-rows:30px;column-gap:8px;font:600 12.5px Inter;color:#A3ACBE}
@@ -35,5 +38,4 @@
  .plot i{position:absolute;border-radius:5px}
  .times{grid-column:2;position:relative;height:auto;min-height:1.6em;font:500 11.5px Inter}
  .time-label{position:absolute;top:4px;transform:translateX(-50%);white-space:nowrap}
- .time-label.first{transform:none}.time-label.last{transform:translateX(-100%)}
 </style>

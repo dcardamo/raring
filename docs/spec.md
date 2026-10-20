@@ -196,9 +196,12 @@ Last night:
 
 - Score gauge, and a time-asleep bar with a marker at Garmin's sleep need
   for that night (when the watch reports it), labeled as last night's need.
-- Stage timeline (awake, REM, light, deep) and a stage bar with each stage's
-  change against your usual.
-- Overnight tiles with lines: HRV, heart rate, respiration, SpO2.
+- Stage timeline (awake, REM, light, deep) with whole-hour ticks, and in the
+  same card a stage bar with each stage's change against your usual, in
+  neutral ink (Garmin rates none of them).
+- Overnight tiles with lines: HRV, heart rate, respiration, SpO2, each with
+  the night's start and end times and its low and high, opening the metric's
+  detail.
 - **Recorded naps** from Garmin's nap endpoint: dated local start/end from
   GMT timestamps plus per-end offsets (seconds), `napTimeSec` in seconds,
   and optional Garmin `napFeedback` without interpreting its enum. Display
@@ -207,14 +210,16 @@ Last night:
   Show duration separately from main overnight sleep; never add it to sleep
   score, asleep minutes or Raring's sleep plan. Garmin's own `napAdjustment`
   for tonight's sleep need is distinct. An empty array is no recorded naps;
-  absent, failed and stale reads have separate neutral labels. Other populated
+  absent ("not checked yet"), failed and stale reads have separate neutral
+  labels. Other populated
   nap fields and feedback meanings require further verification before display.
 - **Consistency**: 14-night chart with your usual bed and wake windows
   shaded and their clock ranges in the key, each week's Monday marked, a
   "Bedtime spread" pill, and Garmin's seven-day average bedtime and wake time
   above it when synced. No rhythm score or chronotype of Raring's own.
-- **Sleep history**: Garmin's sleep score as a trend chart; time asleep is
-  one overlay away.
+- **Sleep history**: Garmin's sleep score as a trend chart with round
+  ticks; time asleep is one overlay away, and other comparisons are in
+  Health.
 - **Sleep alignment**: Garmin's status (Aligned, Ahead, Behind, Jet lag) and
   last night's sleep against Garmin's optimal sleep window on an overnight
   timeline, with the last seven nights below. Garmin's window is a dashed

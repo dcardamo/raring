@@ -1,7 +1,7 @@
 <script lang="ts">
  import {untrack,getContext,onDestroy} from 'svelte';
  import type {ChartStateContext} from '../chart-state';
- import {addDays,historyScale,readinessTone} from '../history';
+ import {addDays,historyAxis,readinessTone} from '../history';
  import {dateLabel} from '../format';
  import {colors,toneColor} from '../charts';
  import {ranges,localPoints,pointLabel,axisLabel,bucketDays,trendValue,trendNames,trendDecimals,defaultOverlay,changeValue,firstDay} from '../trends';
@@ -15,9 +15,11 @@
 
  // Without `metric` the chart shows the screen's own 7 or 30 days, ending on `endDate`. With it, longer ranges and comparisons
  // come from the core, which averages long ranges into weeks or months.
- let {values,endDate='',label,unit='',decimals=0,band=null,bandLabel='Your usual range',readiness=false,nights=false,color=colors.ink,metric,initialRange='days7',openDay=null}:{
+ let {values,endDate='',label,unit='',decimals=0,band=null,bandLabel='Your usual range',readiness=false,nights=false,color=colors.ink,metric,initialRange='days7',openDay=null,overlayOnly}:{
   values:(number|null)[];endDate?:string;label:string;unit?:string;decimals?:number;band?:[number,number]|null;
   bandLabel?:string;readiness?:boolean;nights?:boolean;color?:string;metric?:TrendMetric;initialRange?:TrendRange;openDay?:((date:string)=>void)|null;
+  // One fixed metric with a single overlay toggle instead of the explorer's metric choice and comparisons.
+  overlayOnly?:TrendMetric;
  }=$props();
  const id=$props.id();
  // A caller can retain controls when its canonical detail is reopened by Back.
@@ -62,8 +64,11 @@
  // Garmin rates single days; averaged weeks and months and other metrics are ink.
  let levels=$derived(activeReadiness && bucket==='day');
  let shownBand=$derived(!primary && bucket==='day'?band:null);
- let scale=$derived<[number,number]>(activeReadiness?[0,100]:historyScale([...points,...(previous?.points ?? [])].map(p=>p.value),shownBand));
- let scale2=$derived<[number,number]>(overlay?historyScale(overlay.points.map(p=>p.value),null):[0,1]);
+ // Readiness keeps Garmin's 0–100 with its Moderate boundary; other metrics tick at round values.
+ let axis=$derived(activeReadiness?{scale:[0,100] as [number,number],ticks:[0,50,100]}:historyAxis([...points,...(previous?.points ?? [])].map(p=>p.value),shownBand,activeUnit));
+ let scale=$derived(axis.scale);
+ let axis2=$derived(overlay?historyAxis(overlay.points.map(p=>p.value),null,overlay.unit):{scale:[0,1] as [number,number],ticks:[]});
+ let scale2=$derived(axis2.scale);
  let W=$derived(Math.max(280,Math.round(width)));
  let H=$derived(W>=560?200:154);
  const L=38;
@@ -107,7 +112,7 @@
 
 <div class="history" {@attach measure} aria-busy={busy}>
  <div class="history-top">
-  {#if metric}<label class="metric-choice"><span class="sr-only">Primary metric</span><select aria-label="Primary metric" value={activeMetric} onchange={(e)=>{primary=e.currentTarget.value as TrendMetric;offset=0;if(overlayMetric===primary)overlayMetric=defaultOverlay(primary)}}>{#each pairs as m}<option value={m}>{trendNames[m]}</option>{/each}</select></label>{:else}<span class="history-label">{label}</span>{/if}
+  {#if metric && !overlayOnly}<label class="metric-choice"><span class="sr-only">Primary metric</span><select aria-label="Primary metric" value={activeMetric} onchange={(e)=>{primary=e.currentTarget.value as TrendMetric;offset=0;if(overlayMetric===primary)overlayMetric=defaultOverlay(primary)}}>{#each pairs as m}<option value={m}>{trendNames[m]}</option>{/each}</select></label>{:else}<span class="history-label">{label}</span>{/if}
   <RangePicker value={range} onchange={setRange} label="History period" custom={!!metric} local={!metric} {nights}/>
  </div>
  {#if view?.freshness?.stale && view.freshness.recordedOn}<p class="stale-note" role="note">Last reading {dateLabel(view.freshness.recordedOn)} · {view.freshness.ageDays} days ago</p>{/if}
@@ -129,12 +134,11 @@
     <line x1={L} x2={R} y1={y(shownBand[0])} y2={y(shownBand[0])} stroke="#fff" opacity=".2" stroke-dasharray="3 4"/>
     <line x1={L} x2={R} y1={y(shownBand[1])} y2={y(shownBand[1])} stroke="#fff" opacity=".2" stroke-dasharray="3 4"/>
    {/if}
-   {#each [0,1,2] as t}
-    {@const tick=[scale[1],(scale[0]+scale[1])/2,scale[0]][t]}
+   {#each axis.ticks as tick}
     <text x="0" y={y(tick)+3} fill="#8E98AC" font-size="11">{show(tick)}</text>
     <line x1={L} x2={R} y1={y(tick)} y2={y(tick)} stroke="currentColor" opacity=".08"/>
-    {#if overlay}<text x={W} y={y(tick)+3} fill="#8E98AC" font-size="11" text-anchor="end">{trendValue([scale2[1],(scale2[0]+scale2[1])/2,scale2[0]][t],overlay.unit,overlayDecimals)}</text>{/if}
    {/each}
+   {#if overlay}{#each axis2.ticks as tick}<text x={W} y={y(tick,scale2)+3} fill="#8E98AC" font-size="11" text-anchor="end">{trendValue(tick,overlay.unit,overlayDecimals)}</text>{/each}{/if}
    {#if count}<line x1={x(index)} x2={x(index)} y1="8" y2={H-12} stroke="currentColor" opacity=".35" stroke-dasharray="2 3"/>{/if}
    {#if previous}<path class="history-previous" d={path(previous.points,scale)} fill="none" stroke={colors.ink} stroke-opacity=".45" stroke-width="1.6" stroke-dasharray="4 4" stroke-linecap="round"/>{/if}
    {#if !activeReadiness}<path d={path(points,scale)} fill="none" stroke={color} stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>{/if}
@@ -174,6 +178,9 @@
  </div>
  </div>
  {#if metric}
+  {#if overlayOnly}
+  <div class="compare"><button class="overlay-toggle" aria-pressed={compare==='metric'} onclick={()=>{overlayMetric=overlayOnly;compare=compare==='metric'?'off':'metric'}}>Overlay {trendNames[overlayOnly].toLowerCase()}</button></div>
+  {:else}
   <div class="compare">
    <span class="compare-label">Compare</span>
    <div class="periods compare-options" role="group" aria-label="Compare">
@@ -185,6 +192,7 @@
     <select aria-label="Metric to overlay" value={overlayMetric} onchange={(e)=>overlayMetric=e.currentTarget.value as TrendMetric}>{#each choices as m}<option value={m}>{trendNames[m]}</option>{/each}</select>
    {/if}
   </div>
+  {/if}
   {#if compare==='previous'}<div class="dates"><label>Comparison block start<input aria-label="Comparison block start" type="date" min={firstDay} max={latestDay} bind:value={comparisonStart}/></label><button class="reset-date" onclick={()=>comparisonStart=''}>Use preceding period</button></div>{/if}
   {#if previous && shown}
    <p class="history-note">{shown.from} – {shown.to}<br/>Against {previous.points[0]?.start} – {previous.points.at(-1)?.end} · aligned by elapsed day</p>
@@ -228,6 +236,7 @@
  .history-legend i.dashed{border-top:2px dashed rgba(228,232,240,.55)}
  .record-count{margin-left:auto}
  .compare{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+ .overlay-toggle{min-height:40px;padding:8px 14px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--text);font:600 13px Inter}.overlay-toggle[aria-pressed=true]{border-color:var(--ink)}
  .compare-label{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--text2)}
  .periods{display:flex;gap:3px;border:1px solid var(--line);border-radius:13px;padding:3px;flex:none;flex-wrap:wrap}
  .periods button{border:0;border-radius:10px;background:none;color:var(--text2);min-height:38px;padding:0 10px;font-size:12px}

@@ -6,6 +6,7 @@ import type {TrendView} from '../generated/TrendView';
 import {period, spans, trendNames, bucketFor, firstDay} from '../trends';
 import today from './today.json';
 import health from './health.json';
+import sleep from './sleep.json';
 
 const SAMPLE_TODAY = '2025-10-16';
 const shape: Record<TrendMetric, [base: number, swing: number, noise: number, unit: string, first: string]> = {
@@ -20,7 +21,10 @@ const allMetrics = Object.keys(shape) as TrendMetric[];
 function hash(text: string) {
   let h = 2166136261;
   for (const c of text) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
-  return (h >>> 0) / 4294967296;
+  // A final mix, so dates differing only in their last digits don't land together.
+  h = Math.imul(h ^ (h >>> 16), 0x85ebca6b);
+  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 
 // A seasonal swing plus noise; every eleventh day and a few weeks in 2022 are missing.
@@ -29,6 +33,9 @@ function value(metric: TrendMetric, date: string): number | null {
   const age=Math.round((Date.parse(SAMPLE_TODAY)-Date.parse(date))/86400000);
   const local=metric==='readiness'?today.readinessTrend:metric==='stress'?today.stress.trend:health.vitals.readings.find(v=>v.kind===(metric==='sleepHr'?'restingHr':metric))?.trend;
   if(local && age>=0 && age<local.length)return local[local.length-1-age];
+  // Last night matches the Sleep page's gauge and time asleep.
+  if(age===0 && metric==='sleepScore')return sleep.score.value;
+  if(age===0 && metric==='sleepTime')return sleep.asleepMin;
   if (date < first || date > SAMPLE_TODAY || hash(metric + date) < 1 / 11 || (date >= '2022-06-01' && date < '2022-07-15')) return null;
   if (metric === 'vo2max' && hash(date) > .12) return null;
   const t = Date.parse(date) / 86_400_000;

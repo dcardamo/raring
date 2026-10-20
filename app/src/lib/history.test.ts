@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {addDays,historyPoints,historyScale,readinessTone} from './history';
+import {addDays,historyAxis,historyPoints,historyScale,readinessTone} from './history';
 
 describe('dated metric history',()=>{
  it('ends on the Garmin data date rather than the phone date',()=>{
@@ -26,6 +26,19 @@ describe('dated metric history',()=>{
   expect(flat[0]).toBeLessThan(5);expect(flat[1]).toBeGreaterThan(5);
   expect(historyScale([],null)).toEqual([0,100]);
   expect(historyScale([null],[48,62])).toEqual([45.9,64.1]);
+ });
+ it('ticks at round values that cover every reading',()=>{
+  expect(historyAxis([66,75,83],null)).toEqual({scale:[60,90],ticks:[60,70,80,90]});
+  expect(historyAxis([],null)).toEqual({scale:[0,100],ticks:[0,25,50,75,100]});
+  expect(historyAxis([14.1,14.4],null).ticks).toEqual([14,14.2,14.4,14.6]);
+  // Minutes tick at whole hours or their halves, never at 7:23.
+  const asleep=historyAxis([412,468,505],null,'min');
+  expect(asleep.ticks.every(t=>t%30===0)).toBe(true);
+  expect(asleep.scale[0]).toBeLessThanOrEqual(412);expect(asleep.scale[1]).toBeGreaterThanOrEqual(505);
+  for(const values of [[0,200],[5,5],[48.2,61.7],[-0.3,0.4]]){const {scale,ticks}=historyAxis(values,null);
+   expect(ticks.length).toBeGreaterThanOrEqual(2);expect(ticks.length).toBeLessThanOrEqual(5);
+   expect(ticks[0]).toBe(scale[0]);expect(ticks.at(-1)).toBe(scale[1]);
+   expect(Math.min(...values)).toBeGreaterThan(scale[0]);expect(Math.max(...values)).toBeLessThan(scale[1]);}
  });
  it('uses Garmin readiness boundaries rather than a sleep or competing score scale',()=>{
   expect([24,25,49,50,69,70,74,75,94,95,100].map(readinessTone))
