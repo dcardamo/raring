@@ -13,6 +13,7 @@
 import type {FigureChoice} from '../generated/FigureChoice';
  import type {MuscleRange} from '../generated/MuscleRange';
  import RangePicker from './RangePicker.svelte';
+ import {declutter} from '../declutter';
  // `liftSeries` reads one exercise over a range and `muscles` sets per muscle over a range, both from the core.
  let {view,navigate,liftSeries,muscles,figureChoice,setFigure}:{view:StrengthView,navigate:(route:string)=>void,liftSeries:(key:string,range:TrendRange)=>Promise<LiftSeries|null>,muscles:(range:TrendRange)=>Promise<MuscleRange|null>,figureChoice:FigureChoice,setFigure:(figure:FigureChoice)=>void}=$props();
 const figures:[FigureChoice,string][]=[['profile','Profile'],['female','Female'],['male','Male']];
@@ -37,7 +38,7 @@ const figures:[FigureChoice,string][]=[['profile','Profile'],['female','Female']
  let average=$derived(Object.fromEntries(view.average4w.map(m=>[m.muscle,m.sets])) as Record<string,number>);
  let scale=$derived(Math.max(14,...view.thisWeek.map(m=>m.sets),...view.average4w.map(m=>m.sets)));
  const short=(date:string)=>{const d=new Date(`${date}T12:00:00`);return d.toLocaleDateString('en-GB',{month:'short'})};
- // Phone and wider layouts get their own chart width so axis text keeps its size.
+ // Drawn at the measured width so axis text keeps its size.
  const H=190,pl=34,pb=22;
  const build=(W:number)=>{
   const ws=points.map(p=>p.v),present=ws.filter((w):w is number=>w!=null);
@@ -54,7 +55,8 @@ const figures:[FigureChoice,string][]=[['profile','Profile'],['female','Female']
   let d='';pts.forEach((p,i)=>{if(p)d+=`${d&&pts[i-1]?'L':'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`});
   return {W,ticks,Y,months,pts,d,base:H-pb};
  };
- let charts=$derived([build(330),build(440)]);
+ let chartWidth=$state(330);
+ let chart=$derived(build(Math.max(240,Math.round(chartWidth))));
 </script>
 <div class="strength-history">
  <div class="col exercises-col">
@@ -74,13 +76,13 @@ const figures:[FigureChoice,string][]=[['profile','Profile'],['female','Female']
     {#if latest?.top}<div class="tr-top"><div class="big n">{weight(latest.top.weight)}<span class="unit">{unit} × {latest.top.reps}</span></div><span class="dim">Heaviest set each session</span></div>{:else}<p class="dim">No weighted sets yet.</p>{/if}
     <div class="lift-ctl"><span class="segc" role="group" aria-label="Lift measure"><button class:on={metric==='max'} aria-pressed={metric==='max'} onclick={()=>metric='max'}>Max weight</button><button class:on={metric==='volume'} aria-pressed={metric==='volume'} onclick={()=>metric='volume'}>Volume</button></span><RangePicker value={range} label="Lift range" onchange={r=>range=r}/></div>
     <p class="dim">{metric==='max'?`Heaviest set each session, ${unit}`:`Volume each session: weight × reps over weighted sets, ${unit}`}{excluded?` · ${excluded} bodyweight, unweighted or flagged set${excluded===1?'':'s'} left out`:''}. No estimated one-rep max.</p>
-    {#if shown && charts.every(c=>!c)}<p class="dim">{shown.points.length?'Fewer than two sessions with weighted sets in this range.':'No sessions in this range.'}</p>{/if}
-    {#each charts as chart}{#if chart}<svg class="trend" class:narrow={chart.W<400} class:wide={chart.W>=400} viewBox={`0 0 ${chart.W} ${H}`} role="img" aria-label={`${metric==='max'?'Heaviest set':'Volume'} each session, ${points.length} sessions: ${points.map(p=>`${dateLabel(p.date)} ${p.v??'none'}`).join(', ')}`}>
-     {#each chart.ticks as t}<line x1={pl} x2={chart.W} y1={chart.Y(t)} y2={chart.Y(t)} stroke="rgba(255,255,255,.06)"/><text x="0" y={chart.Y(t)+4} class="axis n">{t}</text>{/each}
+    {#if shown && !chart}<p class="dim">{shown.points.length?'Fewer than two sessions with weighted sets in this range.':'No sessions in this range.'}</p>{/if}
+    <div bind:clientWidth={chartWidth} data-chart="lift" {@attach declutter}>{#if chart}<svg class="trend" viewBox={`0 0 ${chart.W} ${H}`} role="img" aria-label={`${metric==='max'?'Heaviest set':'Volume'} each session, ${points.length} sessions: ${points.map(p=>`${dateLabel(p.date)} ${p.v??'none'}`).join(', ')}`}>
+     {#each chart.ticks as t}<line x1={pl} x2={chart.W} y1={chart.Y(t)} y2={chart.Y(t)} stroke="rgba(255,255,255,.06)"/><text data-thin="2" x="0" y={chart.Y(t)+4} class="axis n">{t}</text>{/each}
      <path d={chart.d} fill="none" stroke={colors.ink} stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-     {#each chart.pts as p}{#if p}{#if p.last}<circle cx={p.x} cy={p.y} r="6.5" fill={p.record?colors.good:colors.ink} stroke="#0B0F1A" stroke-width="3"/>{:else}<circle cx={p.x} cy={p.y} r="3" fill="#0B0F1A" stroke={colors.ink} stroke-width="2"/>{/if}{#if p.reps!=null && latest?.top && p.reps!==latest.top.reps}<text x={p.x} y={p.y+18} text-anchor="middle" class="axis n">×{p.reps}</text>{/if}{/if}{/each}
-     {#each chart.months as m}<text x={m.x} y={H-3} text-anchor="middle" class="axis">{m.label}</text>{/each}
-    </svg>{/if}{/each}
+     {#each chart.pts as p}{#if p}{#if p.last}<circle cx={p.x} cy={p.y} r="6.5" fill={p.record?colors.good:colors.ink} stroke="#0B0F1A" stroke-width="3"/>{:else}<circle cx={p.x} cy={p.y} r="3" fill="#0B0F1A" stroke={colors.ink} stroke-width="2"/>{/if}{#if p.reps!=null && latest?.top && p.reps!==latest.top.reps}<text data-thin x={p.x} y={p.y+18} text-anchor="middle" class="axis n">×{p.reps}</text>{/if}{/if}{/each}
+     {#each chart.months as m}<text data-thin="1" x={m.x} y={H-4} text-anchor="middle" class="axis">{m.label}</text>{/each}
+    </svg>{/if}</div>
    </section>
    {@const weighted=exercise.bests.some(b=>b.weight!=null)}
    <section class="card"><h3>{weighted?'Best at each rep count':'Most reps in a set'} <small class="h-note">in available history</small></h3><div class="recs">{#if weighted}{#each exercise.bests as b}{@const fresh=b.date!=null && b.date===latest?.date && latest.record}<div class="rec" class:new={fresh}><span>{b.reps} rep{b.reps>1?'s':''}</span><b class="n">{weight(b.weight)}</b><small>{b.date?(b.date>=view.weekStart?dateLabel(b.date).split(' ')[0]:short(b.date)):''}</small></div>{/each}{/if}{#if exercise.repsBest}<div class="rec" aria-label={`Most reps in one set: ${exercise.repsBest.reps}, ${dateLabel(exercise.repsBest.date)}`}><span>Most reps</span><b class="n">{exercise.repsBest.reps}</b><small>{exercise.repsBest.date>=view.weekStart?dateLabel(exercise.repsBest.date).split(' ')[0]:short(exercise.repsBest.date)}</small></div>{/if}</div><p class="note">{weighted?`${unit} · at least that many reps`:'Reps · one set, no weight'}{#if weighted && exercise.repsBest} · bodyweight sets count reps, not weight{/if}</p></section>
@@ -113,7 +115,6 @@ const figures:[FigureChoice,string][]=[['profile','Profile'],['female','Female']
  .exchips button.on{background:var(--ink);border-color:var(--ink);color:#0B0F1A}
  .tr-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:-4px 0 12px}
  .trend{display:block;width:100%;height:auto}
- .trend.wide{display:none}
  .axis{fill:var(--text3);font:500 11px Inter}
  .recs{display:grid;grid-template-columns:repeat(auto-fit,minmax(52px,1fr));gap:6px}
  .rec{background:rgba(255,255,255,.03);border-radius:13px;padding:10px 2px;text-align:center}
@@ -144,8 +145,6 @@ const figures:[FigureChoice,string][]=[['profile','Profile'],['female','Female']
  @media(min-width:660px){
   .strength-history{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
   .col>:global(.card:first-child){margin-top:0}
-  .trend.wide{display:block}
-  .trend.narrow{display:none}
   .exchips{flex-wrap:wrap;overflow:visible}
  }
  @media(min-width:1000px){

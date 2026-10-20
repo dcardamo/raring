@@ -74,7 +74,7 @@
  .ml{display:flex;gap:6px;align-items:center;font:600 11px Inter;color:#A9C8FF}
  .sleep-fact b{display:block;font-size:30px;font-weight:600;margin:4px 0 2px}.sleep-fact small,.ready-fact small{display:block;font-size:12px;color:var(--text2)}
  .need-bar{display:block;height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin:4px 0}.need-bar i{display:block;height:100%;background:#A9C8FF}
- .ready-fact{display:flex;align-items:center;gap:10px;border-left:1px solid var(--line)!important;padding-left:12px!important}.ready-fact span{min-width:0}.ready-fact b{display:block;font:600 15px Outfit}
+ .ready-fact{display:flex;flex-wrap:wrap;align-items:center;gap:10px;border-left:1px solid var(--line)!important;padding-left:12px!important}.ready-fact span{min-width:0}.ready-fact b{display:block;font:600 15px Outfit}
  .hero{margin:6px 0 4px;max-width:620px}.hero h2{font:600 23px/1.15 Outfit;margin:8px 4px 2px}
  .line{margin:2px 4px;font-size:14px;color:var(--text)}.reason{margin:2px 4px 6px;font-size:13px;color:var(--text2)}
  .effort{display:grid;gap:4px;margin:8px 4px 6px}.effort>small{font:500 11px Inter;color:var(--text2)}
@@ -87,5 +87,6 @@
  .recognised{margin:10px 0 4px;padding:12px;border:1px solid rgba(61,220,151,.3);border-radius:18px;background:rgba(61,220,151,.06)}
  .chips{justify-content:flex-start;margin:10px 4px 0}
  .acts{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0}.acts button{width:auto;flex:1 1 140px;margin-top:0}
- @container(max-width:300px){.morning{grid-template-columns:1fr}.ready-fact{border-left:0!important;padding-left:0!important}}
+ /* In em, so larger system text stacks the halves before they overflow. */
+ @container(max-width:22em){.morning{grid-template-columns:1fr}.ready-fact{border-left:0!important;padding-left:0!important}}
 </style>

@@ -125,6 +125,7 @@
   <span>{selectedDate}{#if bucket!=='day' && selected}<small>{selected.days} of {bucketDays(selected)} days recorded</small>{:else if offset===0 && selected}<small>{range==='custom'?'Block end':nights?'Latest night':'Latest day'}</small>{/if}</span>
  </div>
  {#if canOpenDay && selected && openDay}<button class="open-day" onclick={()=>openDay(selected.start)}>Open {dateLabel(selected.start)}<Icon name="chevron" size={15}/></button>{/if}
+ <div data-chart="history">
  <button class="chart-surface" tabindex={compact?0:-1} aria-hidden={compact?undefined:true} aria-label={compact?`${activeLabel} chart. ${selectedText}. Left and right arrows choose a day.`:undefined} onclick={selectFromChart} onkeydown={compact?(e)=>{if(e.key==='ArrowLeft'&&index>0){e.preventDefault();offset++}else if(e.key==='ArrowRight'&&index<count-1){e.preventDefault();offset--}}:undefined}>
   <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${activeLabel}, ${count} ${bucketName}. ${present} recorded. Missing readings are gaps.`}>
    {#if shownBand}
@@ -134,9 +135,9 @@
    {/if}
    {#each [0,1,2] as t}
     {@const tick=[scale[1],(scale[0]+scale[1])/2,scale[0]][t]}
-    <text x="0" y={y(tick)+3} fill="#8E98AC" font-size="10">{show(tick)}</text>
+    <text x="0" y={y(tick)+3} fill="#8E98AC" font-size="11">{show(tick)}</text>
     <line x1={L} x2={R} y1={y(tick)} y2={y(tick)} stroke="currentColor" opacity=".08"/>
-    {#if overlay}<text x={W} y={y(tick)+3} fill="#8E98AC" font-size="10" text-anchor="end">{trendValue([scale2[1],(scale2[0]+scale2[1])/2,scale2[0]][t],overlay.unit,overlayDecimals)}</text>{/if}
+    {#if overlay}<text x={W} y={y(tick)+3} fill="#8E98AC" font-size="11" text-anchor="end">{trendValue([scale2[1],(scale2[0]+scale2[1])/2,scale2[0]][t],overlay.unit,overlayDecimals)}</text>{/if}
    {/each}
    {#if count}<line x1={x(index)} x2={x(index)} y1="8" y2={H-12} stroke="currentColor" opacity=".35" stroke-dasharray="2 3"/>{/if}
    {#if previous}<path class="history-previous" d={path(previous.points,scale)} fill="none" stroke={colors.ink} stroke-opacity=".45" stroke-width="1.6" stroke-dasharray="4 4" stroke-linecap="round"/>{/if}
@@ -174,6 +175,7 @@
   {#if overlay}<span><i class="line" style:border-color={colors.secondary} style:border-top-style="dashed"></i>{overlay.name}, right axis</span>{/if}
   {#if previous}<span><i class="line dashed"></i>{comparisonStart?'Comparison block':range==='year'?'Year before':range==='custom'?'Previous block':days+' '+period+' before'}</span>{/if}
   <span class="record-count">{present} / {count} {bucket==='day'?'recorded':bucketName}</span>
+ </div>
  </div>
  {#if compact && more}<button class="link-row history-more" onclick={more}>{moreLabel}<Icon name="chevron" size={15}/></button>
  {:else if metric && !compact}
@@ -216,15 +218,15 @@
  .history-reading .overlay-reading b{font-size:24px;color:var(--text2)}
  .history-reading .reading-values span{color:var(--text2);font-size:12px;margin-left:5px}
  .history-reading>span{font-size:12px;text-align:right;flex:none;max-width:130px}
- .history-reading small{display:block;color:var(--text2);font-size:10px;margin-top:4px}
+ .history-reading small{display:block;color:var(--text2);font-size:12px;margin-top:4px}
  .chart-surface{display:block;width:100%;padding:0;border:0;background:none;touch-action:pan-y}
  svg{display:block;width:100%;height:auto;overflow:visible;font-family:Inter,sans-serif}
- .history-axis{display:flex;justify-content:space-between;padding-left:38px;font-size:10px;color:var(--text2)}
+ .history-axis{display:flex;justify-content:space-between;gap:8px;padding-left:38px;font-size:11px;color:var(--text2)}
  .open-day{display:inline-flex;align-items:center;gap:4px;margin:0 0 8px;padding:0;border:0;background:none;color:var(--ink);font:600 13px Inter;min-height:40px}
  .history-controls{display:flex;align-items:center;gap:12px;margin-top:6px}
  .history-controls button{display:grid;place-items:center;flex:none;background:var(--card);border:1px solid var(--line);border-radius:12px;width:44px;height:44px}
  input{width:100%;min-width:0;height:44px;margin:0;accent-color:var(--ink);cursor:ew-resize}
- .history-legend{display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--text2);margin-top:12px;align-items:center}
+ .history-legend{display:flex;gap:4px 10px;flex-wrap:wrap;font-size:12px;color:var(--text2);margin-top:12px;align-items:center}
  .history-legend span{display:inline-flex;align-items:center;gap:5px}
  .history-legend i{width:6px;height:6px;border-radius:2px;opacity:.7}
  .history-legend i.line{width:14px;height:0;border-radius:0;border-top:2px solid;opacity:1}
@@ -241,10 +243,10 @@
  select{width:100%;min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);padding:0 12px;font:600 14px Inter,sans-serif}
  .period-averages{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}
  .period-averages div{background:rgba(255,255,255,.035);border-radius:14px;padding:10px 12px;min-width:0}
- .period-averages span,.period-averages em{display:block;font-size:11px;color:var(--text2);font-style:normal}
+ .period-averages span,.period-averages em{display:block;font-size:12px;color:var(--text2);font-style:normal}
  .period-averages b{display:block;font-size:22px;font-weight:600;margin:4px 0 2px}
  .period-averages b.muted{color:var(--text2)}
- .period-averages small{font-size:11px;color:var(--text2);margin-left:2px;font-family:Inter,sans-serif;font-weight:500}
+ .period-averages small{font-size:12px;color:var(--text2);margin-left:2px;font-family:Inter,sans-serif;font-weight:500}
  details p{margin-top:8px}summary{cursor:pointer}
  .history-note,.history-empty{font-size:12px;line-height:1.5;color:var(--text2);margin-top:12px}
  .dates{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}.dates label{flex:1;min-width:120px;font-size:12px;color:var(--text2)}.dates input{display:block;font:inherit;color:var(--text);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px;cursor:auto;box-sizing:border-box}.reset-date{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px;color:var(--text2)}.metric-choice select{width:auto;max-width:100%;font-size:12px}.history-top{min-width:0}
