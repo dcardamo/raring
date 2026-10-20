@@ -244,6 +244,33 @@ impl Raring {
         }
         Ok((self.heart_rate_day(date), client.tokens().await, report))
     }
+    /// One explicitly opened past day's missing detail, kept for later reads.
+    pub async fn fetch_day_detail(
+        &self,
+        tokens: Tokens,
+        date: &str,
+        parts: &[view::DayDetailPart],
+    ) -> Result<(Tokens, SyncReport)> {
+        let client = garmin::Client::new(tokens)?;
+        let mut report = sync::day_detail_on_demand(&self.store, &client, date, parts).await;
+        if report.rate_limited {
+            report.error = Some("Garmin is rate limiting reads; try again later".into());
+        }
+        Ok((client.tokens().await, report))
+    }
+    /// One explicitly opened workout's missing summary, charts, splits and zones.
+    pub async fn fetch_workout_detail(
+        &self,
+        tokens: Tokens,
+        id: &str,
+    ) -> Result<(Tokens, SyncReport)> {
+        let client = garmin::Client::new(tokens)?;
+        let mut report = sync::workout_detail_on_demand(&self.store, &client, id).await;
+        if report.rate_limited {
+            report.error = Some("Garmin is rate limiting reads; try again later".into());
+        }
+        Ok((client.tokens().await, report))
+    }
     /// One explicit read of a strength workout's sets, with the updated detail.
     /// Navigation never calls this; only a person asking for a Garmin refresh does.
     pub async fn refresh_strength_sets(
@@ -578,6 +605,16 @@ impl Raring {
     ) -> Result<()> {
         notifications::mark_sent(&self.store, items, now)?;
         Ok(())
+    }
+    /// Show due notifications through `show` and record only the ones the
+    /// platform accepted.
+    pub fn deliver_notifications(
+        &self,
+        items: &[Notification],
+        now: DateTime<Local>,
+        show: impl FnMut(&Notification) -> std::result::Result<(), String>,
+    ) -> Result<notifications::Delivery> {
+        Ok(notifications::deliver(&self.store, items, now, show)?)
     }
     pub fn forget_account(&self) -> Result<()> {
         let mut signed_out = self.snapshot_state.lock().unwrap();

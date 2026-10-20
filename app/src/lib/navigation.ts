@@ -11,12 +11,30 @@ export const aliases: Record<string, string> = {checkin: 'review/latest', 'plan-
 export const helpPages = ['strength-start', 'strength-sets', 'strength-muscles', 'strength-watches'] as const;
 const trainingMetrics = new Set(['vo2max', 'endurance', 'hill', 'runningTolerance']);
 
+/** A real calendar date, so a mistyped fragment opens Today rather than an empty page. */
+export function isoDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(value + 'T12:00:00Z');
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+/** One opened past day or workout: the route that names its own date. */
+export function datedDetail(route: string): { page: 'sleep' | 'health' | 'stress' | 'heartRate'; date: string } | null {
+  const sleep = /^sleep\/(\d{4}-\d{2}-\d{2})$/.exec(route);
+  if (sleep && isoDate(sleep[1])) return { page: 'sleep', date: sleep[1] };
+  const health = /^health\/(\d{4}-\d{2}-\d{2})$/.exec(route);
+  if (health && isoDate(health[1])) return { page: 'health', date: health[1] };
+  const metric = /^metric\/(stress|heartRate)\/(\d{4}-\d{2}-\d{2})$/.exec(route);
+  if (metric && isoDate(metric[2])) return { page: metric[1] as 'stress' | 'heartRate', date: metric[2] };
+  return null;
+}
+
 /** A route this app has a page for; anything else is null. */
 export function knownRoute(hashOrRoute: string): string | null {
   let route = hashOrRoute.startsWith('#') ? hashOrRoute.slice(1) : hashOrRoute;
   try { route = decodeURIComponent(route); } catch { return null; }
   route = aliases[route] ?? route;
   if (routes.has(route)) return route;
+  if (datedDetail(route)) return route;
   if (/^workout\/[\w-]+$/.test(route)) return route;
   if (/^review\/\d{4}-\d{2}-\d{2}$/.test(route)) return route;
   if (route.startsWith('metric/') && metrics.has(route.slice(7))) return route;
@@ -48,8 +66,27 @@ export function routeTrail(target: string, fromTrail: string[] = []): string[] {
   if (fromTrail.length > 1 && fromTrail.at(-1) === route) return [...fromTrail];
   if (route === 'readiness') return ['today', route];
   // Last night and Tonight are tabs of one page: switching replaces, never stacks.
-  if (route === 'sleep' || route.startsWith('sleep/')) return section(fromTrail) === 'health' ? ['today', 'health', route] : ['today', route];
+  if (route === 'sleep' || route === 'sleep/last' || route === 'sleep/tonight') return section(fromTrail) === 'health' ? ['today', 'health', route] : ['today', route];
+  // A dated night is its own page under whichever page or tab opened it.
+  if (route.startsWith('sleep/')) {
+    const last = fromTrail.at(-1);
+    if (last?.startsWith('sleep') || last?.startsWith('health/')) return [...fromTrail, route];
+    const tab = section(fromTrail);
+    return tab ? ['today', tab, route] : ['today', route];
+  }
   if (route === 'health/weight') return ['today','health',route];
+  // A dated Health day returns to its caller's section, or to Health when deep-linked.
+  if (route.startsWith('health/')) {
+    const tab = section(fromTrail);
+    return tab && tab !== 'health' ? ['today', tab, route] : ['today', 'health', route];
+  }
+  // A dated metric opens under the day page that asked for it.
+  if (route.startsWith('metric/') && datedDetail(route)) {
+    const last = fromTrail.at(-1);
+    if (last?.startsWith('health/') || last?.startsWith('sleep')) return [...fromTrail, route];
+    const tab = section(fromTrail);
+    return tab ? ['today', tab, route] : ['today', 'health', route];
+  }
   if (route === 'plan/commitments') return fromTrail.at(-1)?.startsWith('review/') ? [...fromTrail, route] : ['today', 'plan', route];
   if (route === 'reviews' || route === 'progress/milestones') return ['today', 'progress', route];
   if (route.startsWith('review/')) return fromTrail.at(-1) === 'reviews' ? [...fromTrail, route] : ['today', 'progress', route];

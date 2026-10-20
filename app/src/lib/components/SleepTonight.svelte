@@ -70,17 +70,17 @@
  <div class="nights" data-chart="nights" {@attach declutter} role="img" aria-label={`Hours asleep, last 7 nights: ${nights.map(n => `${dateLabel(n.date)} ${n.asleepMin != null ? h(n.asleepMin) : 'not recorded'}${n.needMin != null ? `, need ${h(n.needMin)}` : ''}`).join('; ')}`}>
   <span class="yl">{#each Array.from({length: topH / 2 + 1}, (_, i) => i * 2) as t}<i data-thin={t && t < topH ? 2 : 3} style:bottom={t / topH * 100 + '%'}>{t ? `${t} h` : '0'}</i>{/each}</span>
   {#each nights as n}
-   <div class="col">
+   <button class="col" aria-label={`Open ${dateLabel(n.date)}`} onclick={() => navigate('sleep/' + n.date)}>
     <div class="bar-area" style:--step={200 / topH + '%'}>
      {#if n.asleepMin != null}<b class="night-bar" class:below={n.needMin != null && n.asleepMin < n.needMin} style:height={n.asleepMin / top * 100 + '%'}></b>{:else}<span class="gap">—</span>{/if}
      {#if n.needMin != null}<u style:bottom={n.needMin / top * 100 + '%'}></u>{/if}
     </div>
     <small><span data-thin="1">{new Date(n.date + 'T12:00:00Z').toLocaleDateString('en-GB', {weekday: 'short', timeZone: 'UTC'})}</span><span class="n" data-thin>{n.asleepMin != null ? h(n.asleepMin) : '—'}</span></small>
-   </div>
+   </button>
   {/each}
  </div>
  <p class="key"><span><i class="k-bar"></i>Asleep</span><span><i class="k-need"></i>Garmin’s need that night</span></p>
- <p class="small">{recorded.length ? `${below.length} of ${recorded.length} recorded nights below Garmin’s need.` : 'No recorded nights this week.'} No running debt is computed.</p>
+ <p class="small">{recorded.length ? `${below.length} of ${recorded.length} recorded nights below Garmin’s need.` : 'No recorded nights this week.'} No running debt is computed. Open a night for its stages.</p>
 </Card>
 <style>
  .tn{display:grid;gap:14px;margin:4px 0 6px}
@@ -94,7 +94,7 @@
  .goal{margin:4px 0;font-size:14px}
  .nights{position:relative;display:grid;grid-template-columns:auto repeat(7,minmax(0,1fr));gap:4px;height:150px;align-items:end;font-size:11px;padding-bottom:calc(2.6em + 6px)}
  .yl{position:relative;height:100%;min-width:2.6em;font:500 11px Inter;color:var(--text2)}.yl i{position:absolute;right:2px;transform:translateY(50%);font-style:normal;white-space:nowrap}
- .col{position:relative;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center}
+ .col{position:relative;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;border:0;padding:0;background:none;color:inherit;font:inherit;cursor:pointer}
  .bar-area{position:relative;width:100%;height:100%;display:flex;align-items:flex-end;justify-content:center;border-bottom:1px solid var(--line);background:repeating-linear-gradient(to top,transparent 0 calc(var(--step) - 1px),rgba(255,255,255,.07) calc(var(--step) - 1px) var(--step))}
  .night-bar{position:relative;display:block;width:70%;max-width:30px;border-radius:5px 5px 0 0;background:#5C9BFF}.night-bar.below{background:#3E6FC2}
  .bar-area u{position:absolute;left:8%;right:8%;height:0;border-top:2px dashed #EEF1F7;opacity:.8}
