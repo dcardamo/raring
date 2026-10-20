@@ -278,16 +278,6 @@ body.app .scroll{padding-top:16px}
 .heat{display:grid;grid-template-columns:76px repeat(12,minmax(0,1fr));gap:3px;align-items:center;font-size:12px;color:var(--text2)}
 .heat small{font:500 9px Inter;color:var(--text3);white-space:nowrap;text-align:center;overflow:visible}
 .heat i{height:20px;border-radius:5px;display:grid;place-items:center;font:600 10px Outfit;font-style:normal;color:rgba(255,255,255,.8)}
-/* strength intro */
-.intro{text-align:center;padding:24px 8px 8px}
-.intro-art{height:200px;display:flex;align-items:center;justify-content:center;margin-bottom:18px}
-.intro h1{font-size:28px}
-.intro p{color:var(--text2);font-size:15px;line-height:1.5;margin:12px auto 0;max-width:300px}
-.intro-btns{display:grid;gap:6px;margin:28px 0 0}
-.sexpick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.sexpick>div{border-radius:16px;padding:10px 4px 12px;background:rgba(255,255,255,.03);display:flex;flex-direction:column;align-items:center;gap:8px;border:1.5px solid transparent}
-.sexpick>div.on{border-color:var(--ink)}
-.sexpick span{display:flex;align-items:center;gap:5px;font:600 13px Inter;color:var(--text2)}.sexpick svg:not(.body){width:14px;height:14px}
 /* help */
 .hgrid{display:block}
 .hrow{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
@@ -341,7 +331,6 @@ body.app .scroll{padding-top:16px}
   .cols.c3>.desk-only{display:none}
   .wide-only-b{display:block}
   .exchips{flex-wrap:wrap}
-  .intro,.intro-btns{max-width:420px;margin-left:auto;margin-right:auto}
 }
 /* desktop */
 @container (min-width:1000px){

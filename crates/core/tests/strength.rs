@@ -4,7 +4,7 @@ use raring_core::{
     screens,
     store::Store,
     strength, sync,
-    view::{Figure, Muscle, SetFlag, WeightUnit},
+    view::{Figure, FigureChoice, Muscle, SetFlag, WeightUnit},
 };
 use serde_json::{json, Value};
 use std::{
@@ -202,6 +202,33 @@ fn records_need_an_earlier_session_and_no_set_as_heavy_for_as_many_reps() {
 }
 
 #[test]
+fn bodyweight_sets_get_a_most_reps_best_not_a_weight_record() {
+    let store = with_catalog();
+    let crunch = |reps| set("CORE", Some("BICYCLE_CRUNCH"), Some(reps), 0.);
+    session(&store, "1", "2025-03-03T18:00:00", vec![crunch(20), crunch(18)]);
+    session(&store, "2", "2025-03-05T18:00:00", vec![crunch(30), crunch(30)]);
+    // 40 is flagged (1.8 × the 20-rep median of its others); the unnamed
+    // 100-rep set has no exercise to belong to.
+    session(
+        &store,
+        "3",
+        "2025-03-07T18:00:00",
+        vec![crunch(20), crunch(20), crunch(40), set("CORE", None, Some(100), 0.)],
+    );
+    let history = screens::strength(&store, "2025-03-08").unwrap();
+    let core = history.exercises.iter().find(|e| e.key == "CORE/BICYCLE_CRUNCH").unwrap();
+    assert_eq!(core.reps_best.as_ref().map(|b| (b.reps, b.date.as_str())), Some((30, "2025-03-05")));
+    assert!(core.bests.iter().all(|b| b.weight.is_none()), "no weight, no weighted best");
+    let workout = screens::workout(&store, "2").unwrap().strength.unwrap();
+    assert_eq!(workout.records, 0, "bodyweight sets never award a weighted record");
+    // Garmin's weight 0 and a missing weight are the same bodyweight set.
+    session(&store, "4", "2025-03-09T18:00:00", vec![set("CORE", Some("BICYCLE_CRUNCH"), Some(35), 0.)]);
+    let history = screens::strength(&store, "2025-03-10").unwrap();
+    let core = history.exercises.iter().find(|e| e.key == "CORE/BICYCLE_CRUNCH").unwrap();
+    assert_eq!(core.reps_best.as_ref().map(|b| b.reps), Some(35));
+}
+
+#[test]
 fn weeks_units_and_figure_follow_garmin_settings() {
     let store = with_catalog();
     store
@@ -254,6 +281,27 @@ fn weeks_units_and_figure_follow_garmin_settings() {
     );
     let safe = strength::reduce_settings(&store.get("profile_settings", "me").unwrap());
     assert_eq!(strength::reduce_settings(&safe), safe);
+}
+
+#[test]
+fn strength_s_figure_picker_overrides_the_garmin_profile() {
+    let store = with_catalog();
+    store
+        .put("profile_settings", "me", "now", &json!({"userData": {"gender": "FEMALE"}}))
+        .unwrap();
+    session(&store, "1", "2025-03-04T18:00:00", vec![set("SQUAT", Some("GOBLET_SQUAT"), Some(8), 20_000.)]);
+    let figure = |store: &Store| screens::strength(store, "2025-03-04").unwrap().figure;
+    assert_eq!(figure(&store), Figure::Female, "the profile's figure until someone picks");
+    let mut settings = store.settings();
+    settings.body_figure = FigureChoice::Male;
+    store.set_settings(&settings).unwrap();
+    assert_eq!(figure(&store), Figure::Male);
+    settings.body_figure = FigureChoice::Female;
+    store.set_settings(&settings).unwrap();
+    assert_eq!(figure(&store), Figure::Female);
+    settings.body_figure = FigureChoice::Profile;
+    store.set_settings(&settings).unwrap();
+    assert_eq!(figure(&store), Figure::Female, "Profile returns to Garmin's figure");
 }
 
 #[test]
@@ -438,6 +486,50 @@ fn mock(answer: fn(&str) -> (u16, String)) -> (Client, Arc<Mutex<Vec<String>>>) 
         Client::with_urls(tokens, &url, &url, std::time::Duration::ZERO).unwrap(),
         seen,
     )
+}
+
+#[tokio::test]
+async fn an_explicit_refresh_reads_one_workout_and_obeys_the_backoff() {
+    fn answer(line: &str) -> (u16, String) {
+        if line.contains("/exerciseSets") {
+            return (200, fixture("exercise_sets.json").to_string());
+        }
+        (404, String::new())
+    }
+    let store = with_catalog();
+    // Older than the 48-hour automatic window; still explicitly refreshable.
+    activity(&store, "123456", "2025-03-04T18:00:00");
+    activity(&store, "99", "2025-03-04T18:00:00");
+    store
+        .put("activity", "99", "now", &json!({"activityId": 99, "activityTypeDTO": {"typeKey": "running"},
+            "summaryDTO": {"startTimeLocal": "2025-03-04 18:00:00"}}))
+        .unwrap();
+    let (client, seen) = mock(answer);
+    // A non-strength activity never spends a request.
+    let ignored = sync::refresh_strength_sets(&store, &client, "99").await;
+    assert_eq!((ignored.requests, ignored.error.is_none()), (0, true));
+    assert!(seen.lock().unwrap().is_empty());
+
+    let report = sync::refresh_strength_sets(&store, &client, "123456").await;
+    assert_eq!((report.requests, report.stored), (1, 1), "{report:?}");
+    let lines: Vec<String> = seen.lock().unwrap().iter().map(|r| r.lines().next().unwrap_or_default().to_owned()).collect();
+    assert_eq!(lines, ["GET /activity-service/activity/123456/exerciseSets HTTP/1.1"]);
+    let session = screens::workout(&store, "123456").unwrap().strength.unwrap();
+    assert_eq!(session.sets, 6);
+    assert!(session.checked_at.is_some(), "the detail says when Garmin's sets were read");
+    // A demo's synthetic marker is not a real check time.
+    store
+        .put("exercise_sets", "123456", "synthetic", &fixture("exercise_sets.json"))
+        .unwrap();
+    assert_eq!(screens::workout(&store, "123456").unwrap().strength.unwrap().checked_at, None);
+
+    // Garmin's rate-limit backoff blocks every explicit read too.
+    store
+        .set_cursor("backoff_until", &(Utc::now() + Duration::hours(1)).timestamp().to_string())
+        .unwrap();
+    let blocked = sync::refresh_strength_sets(&store, &client, "123456").await;
+    assert!(blocked.rate_limited && blocked.requests == 0);
+    assert_eq!(seen.lock().unwrap().len(), 1, "no request past an active backoff");
 }
 
 #[tokio::test]

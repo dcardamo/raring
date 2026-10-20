@@ -10,10 +10,12 @@
  import type {StrengthView} from '../generated/StrengthView';
  import type {LiftSeries} from '../generated/LiftSeries';
  import type {TrendRange} from '../generated/TrendRange';
+import type {FigureChoice} from '../generated/FigureChoice';
  import type {MuscleRange} from '../generated/MuscleRange';
  import RangePicker from './RangePicker.svelte';
  // `liftSeries` reads one exercise over a range and `muscles` sets per muscle over a range, both from the core.
- let {view,navigate,liftSeries,muscles}:{view:StrengthView,navigate:(route:string)=>void,liftSeries:(key:string,range:TrendRange)=>Promise<LiftSeries|null>,muscles:(range:TrendRange)=>Promise<MuscleRange|null>}=$props();
+ let {view,navigate,liftSeries,muscles,figureChoice,setFigure}:{view:StrengthView,navigate:(route:string)=>void,liftSeries:(key:string,range:TrendRange)=>Promise<LiftSeries|null>,muscles:(range:TrendRange)=>Promise<MuscleRange|null>,figureChoice:FigureChoice,setFigure:(figure:FigureChoice)=>void}=$props();
+const figures:[FigureChoice,string][]=[['profile','Profile'],['female','Female'],['male','Male']];
  let muscleRange=$state<TrendRange>('days30'),muscleView=$state<MuscleRange|null>(null),muscleRequest=0;
  $effect(()=>{const r=muscleRange,id=++muscleRequest;void muscles(r).then(v=>{if(id===muscleRequest)muscleView=v}).catch(()=>{if(id===muscleRequest)muscleView=null})});
  let picked=$state<string|null>(null);
@@ -64,7 +66,7 @@
   </section>
  </div>
  <div class="col">
-  <section class="card"><h3><span>Muscles</span></h3><RangePicker value={muscleRange} label="Muscle range" onchange={r=>muscleRange=r}/>
+  <section class="card"><h3><span>Muscles</span></h3><RangePicker value={muscleRange} label="Muscle range" onchange={r=>muscleRange=r}/><div class="fig-row"><span class="fig-label">Figure</span><span class="segc" role="group" aria-label="Body map figure">{#each figures as [value,label]}<button class:on={figureChoice===value} aria-pressed={figureChoice===value} onclick={()=>setFigure(value)}>{label}</button>{/each}</span></div>
    {#if muscleView}<BodyMap figure={muscleView.figure} muscles={muscleView.muscles} max={Math.max(8,Math.round(muscleView.days/2))}/>{#if muscleView.gaps.length}<p class="dim">Few or no sets since {dateLabel(muscleView.from)}: {muscleView.gaps.map(m=>muscleNames[m]).join(', ')}</p>{/if}{/if}</section>
   {#if exercise}
    <div class="exchips" role="group" aria-label="Exercise">{#each view.exercises as e}<button class:on={e.key===exercise.key} aria-pressed={e.key===exercise.key} onclick={()=>pick(e.key)}>{e.name}</button>{/each}</div>
@@ -80,7 +82,8 @@
      {#each chart.months as m}<text x={m.x} y={H-3} text-anchor="middle" class="axis">{m.label}</text>{/each}
     </svg>{/if}{/each}
    </section>
-   <section class="card"><h3>Best at each rep count <small class="h-note">in available history</small></h3><div class="recs">{#each exercise.bests as b}{@const fresh=b.date!=null && b.date===latest?.date && latest.record}<div class="rec" class:new={fresh}><span>{b.reps} rep{b.reps>1?'s':''}</span><b class="n">{weight(b.weight)}</b><small>{b.date?(b.date>=view.weekStart?dateLabel(b.date).split(' ')[0]:short(b.date)):''}</small></div>{/each}</div><p class="note">{unit} · at least that many reps</p></section>
+   {@const weighted=exercise.bests.some(b=>b.weight!=null)}
+   <section class="card"><h3>{weighted?'Best at each rep count':'Most reps in a set'} <small class="h-note">in available history</small></h3><div class="recs">{#if weighted}{#each exercise.bests as b}{@const fresh=b.date!=null && b.date===latest?.date && latest.record}<div class="rec" class:new={fresh}><span>{b.reps} rep{b.reps>1?'s':''}</span><b class="n">{weight(b.weight)}</b><small>{b.date?(b.date>=view.weekStart?dateLabel(b.date).split(' ')[0]:short(b.date)):''}</small></div>{/each}{/if}{#if exercise.repsBest}<div class="rec" aria-label={`Most reps in one set: ${exercise.repsBest.reps}, ${dateLabel(exercise.repsBest.date)}`}><span>Most reps</span><b class="n">{exercise.repsBest.reps}</b><small>{exercise.repsBest.date>=view.weekStart?dateLabel(exercise.repsBest.date).split(' ')[0]:short(exercise.repsBest.date)}</small></div>{/if}</div><p class="note">{weighted?`${unit} · at least that many reps`:'Reps · one set, no weight'}{#if weighted && exercise.repsBest} · bodyweight sets count reps, not weight{/if}</p></section>
    <section class="card"><h3><span>Sessions</span><span class="h-note">{exercise.sessions.length} in 12 weeks</span></h3>{#each allSessions?exercise.sessions:exercise.sessions.slice(0,SESSIONS) as s}<button class="ses" onclick={()=>navigate('workout/'+s.activityId)}><span>{dateLabel(s.date)}</span><b class="n">{weight(s.top?.weight??null)}<small>{s.top?.weight!=null?unit:''}</small></b><span class="n rr">{s.reps.map(r=>r??'—').join(' · ')}</span><span class="pr">{#if s.record}<Icon name="star" size={13}/>{/if}</span></button>{/each}{#if exercise.sessions.length>SESSIONS}<button class="more" aria-expanded={allSessions} onclick={()=>allSessions=!allSessions}>{allSessions?'Show fewer':`Show all ${exercise.sessions.length} sessions`}</button>{/if}</section>
   {/if}
  </div>
@@ -102,6 +105,8 @@
  .segc{display:inline-flex;background:rgba(255,255,255,.05);border-radius:10px;padding:2px;letter-spacing:0;text-transform:none}
  .segc button{border:0;background:none;color:var(--text2);font:600 12px Inter;padding:6px 10px;border-radius:8px;min-height:32px}
  .segc button.on{background:rgba(255,255,255,.12);color:var(--text)}
+ .fig-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px}
+ .fig-label{font:600 12px Inter;color:var(--text3)}
  .exchips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:12px 0 0}
  .exchips::-webkit-scrollbar{display:none}
  .exchips button{flex:none;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid var(--line);font:600 13px Inter;color:var(--text2);min-height:44px}
@@ -110,7 +115,7 @@
  .trend{display:block;width:100%;height:auto}
  .trend.wide{display:none}
  .axis{fill:var(--text3);font:500 11px Inter}
- .recs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+ .recs{display:grid;grid-template-columns:repeat(auto-fit,minmax(52px,1fr));gap:6px}
  .rec{background:rgba(255,255,255,.03);border-radius:13px;padding:10px 2px;text-align:center}
  .rec span{font:500 11px Inter;color:var(--text3)}
  .rec b{display:block;font:600 20px Outfit;margin:2px 0}

@@ -9,6 +9,10 @@ import type { WeightUnit } from "./WeightUnit";
  */
 export type StrengthSession = { unit: WeightUnit, figure: Figure, 
 /**
+ * When Garmin's sets were last read, RFC 3339; missing when never read.
+ */
+checkedAt: string | null, 
+/**
  * Garmin's active sets; rests are not sets.
  */
 sets: number, 

@@ -3,7 +3,7 @@ import {flagSummary,lift,weight,repsLabel} from './strength';
 import {amountColor,textOn,figureArt} from './bodymap';
 import type {StrengthSession} from './generated/StrengthSession';
 
-const session=(zero:number,doubled:number,unnamedExercises:number):StrengthSession=>({unit:'kg',figure:'female',sets:10,reps:80,unknownRepSets:0,missingRepSets:0,restS:0,records:0,setsRecorded:true,zeroRepSets:zero,doubledSets:doubled,unnamedSets:unnamedExercises*2,muscles:[],
+const session=(zero:number,doubled:number,unnamedExercises:number):StrengthSession=>({unit:'kg',figure:'female',checkedAt:null,sets:10,reps:80,unknownRepSets:0,missingRepSets:0,restS:0,records:0,setsRecorded:true,zeroRepSets:zero,doubledSets:doubled,unnamedSets:unnamedExercises*2,muscles:[],
  exercises:Array.from({length:unnamedExercises},()=>({key:null,name:null,muscles:[],sets:[],lastDate:null,lastSets:[],record:null}))});
 
 describe('strength', () => {

@@ -10,13 +10,26 @@ export const clock=(iso:string|null|undefined)=>{
  }
  return /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(iso)?iso.slice(11,16):'—';
 };
+export const weekdays=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+// Built by hand: Android's WebView puts a comma after the weekday in en-GB
+// dates. en-GB's short month is "Sept", not "Sep".
+const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sept','Oct','Nov','Dec'];
+const calendarDay=(date:string)=>{
+ const day=new Date(`${date.slice(0,10)}T12:00:00`);
+ return Number.isNaN(day.getTime())?null:day;
+};
+export const monthName=(month:number)=>months[month];
+export const shortMonth=(date:string)=>{
+ const day=calendarDay(date);
+ return day?months[day.getMonth()]:'';
+};
 export const dateLabel=(date:string)=>{
- const day=new Date(`${date}T12:00:00`);
- return Number.isNaN(day.getTime())?'Date unavailable':day.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+ const day=calendarDay(date);
+ return day?`${weekdays[(day.getDay()+6)%7]} ${day.getDate()} ${months[day.getMonth()]}`:'Date unavailable';
 };
 export const monthLabel=(date:string)=>{
- const day=new Date(`${date.slice(0,10)}T12:00:00`);
- return Number.isNaN(day.getTime())?'Date unavailable':day.toLocaleDateString('en-GB',{month:'short',year:'numeric'});
+ const day=calendarDay(date);
+ return day?`${months[day.getMonth()]} ${day.getFullYear()}`:'Date unavailable';
 };
 export const signed=(value:number|null|undefined,unit='')=>value==null?'—':Math.abs(value)<1?'':`${value>0?'+':'−'}${num(Math.abs(value),1)}${unit}`;
 export const num=(value:number|null|undefined,precision=0)=>value==null?'—':value.toFixed(precision).replace(/\.0+$/,'');

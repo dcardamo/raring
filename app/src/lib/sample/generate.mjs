@@ -89,14 +89,18 @@ const exercises=[
  {key:'CALF_RAISE/STANDING_CALF_RAISE',name:'Standing Calf Raise',muscles:['calves'],sets:[sset(15,40),sset(15,40),sset(14,40)],lastDate:'2025-10-08',lastSets:[lift(40,15),lift(40,15),lift(40,15)],record:null},
 ];
 const strengthSummary=lowerA;
-const strengthWorkout={counted:{week:'2025-10-13',lines:[{kind:'strength',amount:1,position:2,recorded:3,target:4}],planItem:'Strength',bests:[]},along:null,more:[],effects:[],vo2maxNew:null,summary:strengthSummary,recoveryHours:14,stats:[['duration','Time',2882,'s'],['avgHr','Avg HR',118,'bpm'],['maxHr','Max HR',151,'bpm'],['calories','Calories',312,'kcal']].map(([key,label,value,unit])=>({key,label,value,unit})),route:[],heartRate:Array.from({length:192},(_,i)=>({tS:i*15,bpm:Math.round(104+Math.abs(Math.sin(i/9))*34+Math.sin(i*1.7)*3)})),zoneFloors:[120,138,154,167],splits:[],strength:{unit:'kg',figure:'female',sets:16,reps:161,unknownRepSets:0,restS:1520,records:1,setsRecorded:true,zeroRepSets:1,missingRepSets:0,doubledSets:1,unnamedSets:3,muscles:muscleSets({quads:6,glutes:9,hamstrings:3,calves:3}),exercises}};
+const strengthWorkout={counted:{week:'2025-10-13',lines:[{kind:'strength',amount:1,position:2,recorded:3,target:4}],planItem:'Strength',bests:[]},along:null,more:[],effects:[],vo2maxNew:null,summary:strengthSummary,recoveryHours:14,stats:[['duration','Time',2882,'s'],['avgHr','Avg HR',118,'bpm'],['maxHr','Max HR',151,'bpm'],['calories','Calories',312,'kcal']].map(([key,label,value,unit])=>({key,label,value,unit})),route:[],heartRate:Array.from({length:192},(_,i)=>({tS:i*15,bpm:Math.round(104+Math.abs(Math.sin(i/9))*34+Math.sin(i*1.7)*3)})),zoneFloors:[120,138,154,167],splits:[],strength:{unit:'kg',figure:'female',checkedAt:'2025-10-15T19:30:00Z',sets:16,reps:161,unknownRepSets:0,restS:1520,records:1,setsRecorded:true,zeroRepSets:1,missingRepSets:0,doubledSets:1,unnamedSets:3,muscles:muscleSets({quads:6,glutes:9,hamstrings:3,calves:3}),exercises}};
 const mondays=Array.from({length:12},(_,i)=>{const d=new Date(Date.UTC(2025,6,28+i*7));return d.toISOString().slice(0,10)});
 const weekly=mondays.map((weekStart,i)=>({weekStart,muscles:i===11?muscleSets(musclesThisWeek):muscleSets(Object.fromEntries(MUSCLES.map((m,j)=>[m,i===5?Math.round(avg4[m]*.3):Math.max(0,Math.round(avg4[m]+Math.sin(i*1.3+j)*2.5))])))}));
 const last4=Object.fromEntries(MUSCLES.map((m,j)=>[m,weekly.slice(8).reduce((a,w)=>a+w.muscles[j].sets,0)]));
 const squatTop=[85,87.5,87.5,90,90,90,92.5,95,95,97.5,97.5,100],squatReps=[5,5,5,5,5,4,5,5,5,5,5,5];
 const sessionsOf=(tops,reps,repsPerSet=3)=>tops.map((w,i)=>({activityId:String(9000000000100+i),date:new Date(Date.UTC(2025,6,30+i*7)).toISOString().slice(0,10),top:lift(w,reps[i]),reps:Array(repsPerSet).fill(reps[i]),record:i===tops.length-1})).reverse();
 const bests=(rows)=>[1,3,5,8,10].map((reps,i)=>({reps,weight:rows[i]?.[0]??null,date:rows[i]?.[1]??null}));
-const hist=(key,name,muscles,tops,reps,b)=>({key,name,muscles,sessions:sessionsOf(tops,reps),bests:bests(b)});
+const hist=(key,name,muscles,tops,reps,b)=>({key,name,muscles,sessions:sessionsOf(tops,reps),bests:bests(b),repsBest:null});
+// Bodyweight work has no weight; its best is the most reps in one set.
+const bodyweight=(key,name,muscles,reps,repsBest)=>({key,name,muscles,repsBest,
+ sessions:reps.map((r,i)=>({activityId:String(9000000000100+i),date:new Date(Date.UTC(2025,6,30+i*7)).toISOString().slice(0,10),top:null,reps:Array(3).fill(r),record:false})).reverse(),
+ bests:[1,3,5,8,10].map(n=>({reps:n,weight:null,date:null}))});
 // Eleven strength workouts: two this week with sets, one timed without lap presses, and weekly sessions back to August.
 const strengthWorkouts=[
  {activity:strengthSummary,setsRecorded:true},
@@ -110,6 +114,7 @@ const strength={unit:'kg',figure:'female',date:'2025-10-16',weekStart:'2025-10-1
  hist('DEADLIFT/ROMANIAN_DEADLIFT','Romanian Deadlift',['hamstrings','glutes'],[70,70,72.5,72.5,75,75,75,77.5,77.5,80,80,80],Array(12).fill(8),[null,null,[90,'2025-09-17'],[80,'2025-10-08'],[75,'2025-08-27']]),
  hist('ROW/ONE_ARM_DUMBBELL_ROW','One Arm Dumbbell Row',['back','arms'],[26,26,26,28,28,28,28,30,30,30,30,30],Array(12).fill(12),[null,null,[34,'2025-09-09'],[32,'2025-09-30'],[30,'2025-10-14']]),
  hist('CALF_RAISE/STANDING_CALF_RAISE','Standing Calf Raise',['calves'],[30,30,32.5,32.5,35,35,35,37.5,37.5,40,40,40],Array(12).fill(15),[null,null,null,[45,'2025-09-24'],[42.5,'2025-10-01']]),
+ bodyweight('CORE/BICYCLE_CRUNCH','Bicycle Crunch',['core'],[18,18,20,20,20,22,22,22,24,24,24,26],{reps:26,date:'2025-09-15'}),
 ],workouts:strengthWorkouts};
 
 // ID-matched workout views for every strength history link. Build their sets
@@ -125,12 +130,12 @@ for(const id of historyIds){
  // The standalone Upper B list entry has no chart row; give it its own sets.
  const rows=matches.length?matches:recorded?[{e:strength.exercises[1],index:0,s:{reps:[12,12,12],top:lift(70,12),record:false}}]:[];
  const exs=rows.map(({e,index,s})=>{const prev=matches.length?e.sessions[index+1]:null;return {
-  key:e.key,name:e.name,muscles:e.muscles,sets:s.reps.map((r,i)=>sset(r,s.top.weight,[],s.record&&i===0)),
-  lastDate:prev?.date??null,lastSets:prev?prev.reps.map(r=>lift(prev.top.weight,r)):[],record:s.record?s.top:null,
+  key:e.key,name:e.name,muscles:e.muscles,sets:s.reps.map((r,i)=>sset(r,s.top?.weight??0,[],s.record&&i===0)),
+  lastDate:prev?.date??null,lastSets:prev?prev.reps.map(r=>lift(prev.top?.weight??0,r)):[],record:s.record?s.top:null,
  }});
  const counts={};for(const e of exs)for(const m of e.muscles)counts[m]=(counts[m]??0)+e.sets.length;
  strengthWorkoutHistory[id]={counted:null,along:null,more:[],effects:[],vo2maxNew:null,summary,recoveryHours:null,stats:[{key:'duration',label:'Time',value:summary.durationS,unit:'s'}],route:[],heartRate:[],zoneFloors:[],splits:[],strength:{
-  unit:strength.unit,figure:strength.figure,sets:exs.reduce((n,e)=>n+e.sets.length,0),
+  unit:strength.unit,figure:strength.figure,checkedAt:'2025-10-15T19:30:00Z',sets:exs.reduce((n,e)=>n+e.sets.length,0),
   reps:recorded?exs.reduce((n,e)=>n+e.sets.reduce((n,s)=>n+s.reps,0),0):null,
   unknownRepSets:0,restS:0,records:exs.filter(e=>e.record).length,setsRecorded:recorded,
   zeroRepSets:0,missingRepSets:0,doubledSets:0,unnamedSets:0,muscles:muscleSets(counts),exercises:exs,

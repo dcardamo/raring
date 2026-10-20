@@ -139,6 +139,14 @@ fn sets(store: &Store, id: u64, date: &str, weight_g: f64, reps: u32) {
             {"setType": "ACTIVE", "repetitionCount": reps, "weight": weight_g, "exercises": [{"category": "SQUAT", "name": "BARBELL_BACK_SQUAT", "probability": 0.9}]}]}))
         .unwrap();
 }
+fn bodyweight(store: &Store, id: u64, date: &str, reps: u32) {
+    act(store, id, date, "strength_training", 20., None);
+    store
+        .put("exercise_sets", &id.to_string(), "now", &json!({"exerciseSets": [
+            {"setType": "ACTIVE", "repetitionCount": reps, "weight": 0, "exercises": [{"category": "CORE", "name": "BICYCLE_CRUNCH", "probability": 0.9}]},
+            {"setType": "ACTIVE", "repetitionCount": reps - 2, "weight": 0, "exercises": [{"category": "CORE", "name": "BICYCLE_CRUNCH", "probability": 0.9}]}]}))
+        .unwrap();
+}
 
 #[test]
 fn bests_are_awarded_once_and_a_garmin_edit_corrects_without_a_new_award() {
@@ -306,6 +314,24 @@ fn domains_report_weeks_bests_and_months_without_inventing_zeroes() {
     let nov = d.months.last().unwrap();
     assert_eq!((nov.start.as_str(), nov.minutes, nov.vo2max), ("2025-11-01", Some(110.), Some(48.)));
     assert_eq!(d.months[0].minutes, None, "before history");
+}
+
+#[test]
+fn a_bodyweight_best_is_the_most_reps_and_corrects_like_a_weighted_best() {
+    let f = fx("reps-milestones");
+    bodyweight(&f.store, 1, "2025-11-03", 20);
+    bodyweight(&f.store, 2, "2025-11-10", 30);
+    let m = view(&f, Period::Month, "2025-11-18", at(11, 18));
+    let best = m.milestones.iter().find(|x| x.id == "reps:CORE/BICYCLE_CRUNCH").unwrap();
+    assert_eq!((best.kind, best.value.as_str(), best.date.as_str()), (MilestoneKind::Reps, "30 reps", "2025-11-10"));
+    assert_eq!(best.title, "Bicycle Crunch · most reps in a set");
+    assert_eq!(best.route.as_deref(), Some("workout/2"));
+    // A later Garmin edit lowers the set: the same award moves back, corrected.
+    bodyweight(&f.store, 2, "2025-11-10", 15);
+    let edited = view(&f, Period::Month, "2025-11-18", at(11, 18));
+    let best = edited.milestones.iter().find(|x| x.id == "reps:CORE/BICYCLE_CRUNCH").unwrap();
+    assert_eq!((best.value.as_str(), best.date.as_str(), best.corrected), ("20 reps", "2025-11-03", true));
+    assert_eq!(edited.milestones.iter().filter(|x| x.id == "reps:CORE/BICYCLE_CRUNCH").count(), 1, "one award per exercise");
 }
 
 #[test]

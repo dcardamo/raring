@@ -3,7 +3,7 @@
 Open `index.html` for the gallery, or `index.html?app#plan` for one screen
 full-window: resize it to walk through phone, unfolded (660 px and up) and
 desktop (1000 px and up, side rail instead of tabs). Screens: `language`,
-`plan`, `plan-setup`, `checkin`, `intro-1` to `intro-4`, `strength-workout`,
+`plan`, `plan-setup`, `checkin`, `strength-workout`,
 `fix`, `strength-history`, `builder`, `catalog`, `help`, `help-sheet`,
 `widget`, `status-surfaces`, `reconcile`, `reconcile-closed`, `why-readiness`, `why-battery`,
 `why-training`. The compatibility page is `site/compatibility.html`. Screenshots
@@ -99,13 +99,15 @@ rose strength); the spec's Look section now describes it.
   the activity in Garmin.
 - **Help:** a Help screen (from the avatar on Today, and a ? on plan,
   strength and builder screens) and a bottom sheet for in-context help.
-- **Strength intro:** four steps the first time someone opens Strength: lift
-  with your watch, fix it after, plan workouts, then setup (watch check, body
-  map, weight steps, suggested weights).
+- **Help at the point of use:** there is no mandatory first-run walkthrough.
+  Strength's ? and its empty states explain lifting with the watch, how sets
+  are counted and fixing them, as the help pages and sheets do everywhere
+  else. The optional figure picker (Profile, Female, Male) sits on Strength's
+  body-map card, so the choice stays discoverable without an intro.
 - **Body map:** Raring's own front and back figures, female and male, shaded
   by sets per muscle in the amount blue. On the workout detail (this
-  session), strength history (this week or four weeks), the Training card and
-  the intro's setup.
+  session), strength history (this week or four weeks) and the Training card.
+  Strength's figure picker uses the same figures.
 
 ## Explain the numbers
 
@@ -125,8 +127,8 @@ rose strength); the spec's Look section now describes it.
   meaning.
 - Plan history shows each week's average completion across targets, each
   capped at 100%. It goes into the spec's Rules section with the weekly plan.
-- The body map figure defaults from the Garmin profile when it has one; the
-  strength intro's choice overrides it.
+- The body map figure follows the Garmin profile; Strength's Profile, Female
+  or Male picker overrides it and is saved with the other settings.
 - **Pace** decides whether a goal is amber: the share of the week's
   training days (nights, for sleep) that have passed. Yes. *Rules: add to
   the spec when the weekly plan ships.*

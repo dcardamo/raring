@@ -876,7 +876,8 @@
           "weight": 85,
           "date": "2025-08-06"
         }
-      ]
+      ],
+      "repsBest": null
     },
     {
       "key": "BENCH_PRESS/BARBELL_BENCH_PRESS",
@@ -1080,7 +1081,8 @@
           "weight": 72.5,
           "date": "2025-10-07"
         }
-      ]
+      ],
+      "repsBest": null
     },
     {
       "key": "DEADLIFT/ROMANIAN_DEADLIFT",
@@ -1285,7 +1287,8 @@
           "weight": 75,
           "date": "2025-08-27"
         }
-      ]
+      ],
+      "repsBest": null
     },
     {
       "key": "ROW/ONE_ARM_DUMBBELL_ROW",
@@ -1490,7 +1493,8 @@
           "weight": 30,
           "date": "2025-10-14"
         }
-      ]
+      ],
+      "repsBest": null
     },
     {
       "key": "CALF_RAISE/STANDING_CALF_RAISE",
@@ -1693,6 +1697,179 @@
           "reps": 10,
           "weight": 42.5,
           "date": "2025-10-01"
+        }
+      ],
+      "repsBest": null
+    },
+    {
+      "key": "CORE/BICYCLE_CRUNCH",
+      "name": "Bicycle Crunch",
+      "muscles": [
+        "core"
+      ],
+      "repsBest": {
+        "reps": 26,
+        "date": "2025-09-15"
+      },
+      "sessions": [
+        {
+          "activityId": "9000000000111",
+          "date": "2025-10-15",
+          "top": null,
+          "reps": [
+            26,
+            26,
+            26
+          ],
+          "record": false
+        },
+        {
+          "activityId": "9000000000110",
+          "date": "2025-10-08",
+          "top": null,
+          "reps": [
+            24,
+            24,
+            24
+          ],
+          "record": false
+        },
+        {
+          "activityId": "9000000000109",
+          "date": "2025-10-01",
+          "top": null,
+          "reps": [
+            24,
+            24,
+            24
+          ],
+          "record": false
+        },
+        {
+          "activityId": "9000000000108",
+          "date": "2025-09-24",
+          "top": null,
+          "reps": [
+            24,
+            24,
+            24
+          ],
+          "record": false
+        },
+        {
+          "activityId": "9000000000107",
+          "date": "2025-09-17",
+          "top": null,
+          "reps": [
+            22,
+            22,
+            22
+          ],
+          "record": false
+        },
+        {
+          "activityId": "9000000000106",
+          "date": "2025-09-10",
+          "top": null,
+          "reps": [
+            22,
+            22,
+            22
+          ],
+          "record": false
+        },
+        {
+          "activityId": "9000000000105",
+          "date": "2025-09-03",
+          "top": null,
+          "reps": [
+            22,
+            22,
+            22
+          ],
+          "record": false
+        },
+        {
+          "activityId": "9000000000104",
+          "date": "2025-08-27",
+          "top": null,
+          "reps": [
+            20,
+            20,
+            20
+          ],
+          "record": false
+        },
+        {
+          "activityId": "9000000000103",
+          "date": "2025-08-20",
+          "top": null,
+          "reps": [
+            20,
+            20,
+            20
+          ],
+          "record": false
+        },
+        {
+          "activityId": "9000000000102",
+          "date": "2025-08-13",
+          "top": null,
+          "reps": [
+            20,
+            20,
+            20
+          ],
+          "record": false
+        },
+        {
+          "activityId": "9000000000101",
+          "date": "2025-08-06",
+          "top": null,
+          "reps": [
+            18,
+            18,
+            18
+          ],
+          "record": false
+        },
+        {
+          "activityId": "9000000000100",
+          "date": "2025-07-30",
+          "top": null,
+          "reps": [
+            18,
+            18,
+            18
+          ],
+          "record": false
+        }
+      ],
+      "bests": [
+        {
+          "reps": 1,
+          "weight": null,
+          "date": null
+        },
+        {
+          "reps": 3,
+          "weight": null,
+          "date": null
+        },
+        {
+          "reps": 5,
+          "weight": null,
+          "date": null
+        },
+        {
+          "reps": 8,
+          "weight": null,
+          "date": null
+        },
+        {
+          "reps": 10,
+          "weight": null,
+          "date": null
         }
       ]
     }

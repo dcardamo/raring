@@ -112,33 +112,21 @@ From item 11, in priority order.
   planned training (item 15) or the workout builder (item 22).
 - Offline help pages "How targets count" and "Rest days and paused weeks"
   when the Help screen ships.
-- The shared `dateLabel` reads "Mon, 5 Oct" on Android's WebView (Chrome
-  124) but "Mon 5 Oct" in desktop browsers; build it by hand as `plan.ts`
-  does for week ranges.
 
 ### 8a. Strength follow-ups
 
-- **Explicit detail refresh**: add a budgeted way to refresh older strength
-  sets through the existing worker and serialized token access. Automatic
-  rechecks stop 48 hours after a workout starts; Refresh and reopening an
-  older workout do not retrieve later Connect edits. Coordinate any shared
-  on-demand refresh with the integration lane rather than adding another path.
+- Check an explicit Refresh from Garmin against a Connect edit made more than
+  48 hours after a real workout started: the button, the last-checked time and
+  a removed set need real data, and only synthetic coverage exists so far.
 - **Confirm a full Forerunner 970 session.** Read-back is only partly
   verified on the watch: no watch-recorded session with named, weighted sets
   (or one run from a structured workout) has been read yet. Record one with
   a lap press after each set and weights entered, compare Raring's workout
   screen with Connect, then decide whether the compatibility page can move
   from partial to Tested.
-- **Strength introduction and figure choice**: now that item 26's
-  progressive disclosure has shipped, Replace the mandatory-seeming four-step
-  `intro-1` to `intro-4` concept in `design/mockup/` with help at the point of
-  use; keep the optional female/male figure override discoverable in Strength.
-  The figure follows the Garmin profile until then.
 - **Exercise display names**: Raring title-cases Garmin's keys
   ("One Arm Dumbbell Row"). Look for Garmin's own localized names before
   adding a table.
-- **Bodyweight exercises**: bests and records need a weight, so bodyweight
-  sets (Garmin's weight 0 or null) get none. Consider most reps instead.
 - The weekly plan's strength target (item 7) counts Garmin strength
   activities, including ones timed without sets. `StrengthWeek.strengthActivities`
   is distinct from `sessionsWithSets`; missing lap presses must not reduce
@@ -380,6 +368,49 @@ faces, screens, sensors and audio prompts stay in Connect.
   on the emulator with the synthetic demo account: the picker listed the
   synthetic ZIP, the preview reported two rows, the import wrote them, the
   cache copy was removed, and the demo state was restored afterwards.
+
+- **8a strength introduction and figure choice** (commit "Replace the strength
+  intro with help at the point of use"). The mandatory-seeming `intro-1` to
+  `intro-4` walkthrough is gone from the mockup, its gallery entries, notes and
+  screenshots; Strength's ? and empty states carry the help instead, as item
+  26's progressive disclosure already did. The body-map figure is now a
+  visible Profile / Female / Male control on Strength's muscles card, saved as
+  the `bodyFigure` setting (Profile by default, following Garmin's profile
+  gender) and applied to every body map; core tests cover the override and the
+  three-way setting, and the browser UI test covers the picker. Settings export
+  includes it with the other preferences.
+
+- **8a explicit strength refresh** (commit "Refresh a strength workout's sets
+  only when asked"). A workout's detail now says when Garmin's sets were last
+  read and offers **Refresh from Garmin**: one explicit
+  `/activity-service/activity/{id}/exerciseSets` request, through the same
+  serialized token path as the on-demand heart-rate read (Android's existing
+  `SyncGate` and token vault, desktop's `with_desktop_tokens`) and the shared
+  request budget, retry wait and 429 backoff. It never runs from navigation or
+  an ordinary sync, keeps the previous sets when the read fails, and reports
+  Garmin's rate-limit message. Core tests use the local mock client only: a
+  strength activity spends one request and updates the detail, a non-strength
+  activity spends none, an active backoff blocks it. The Kotlin plugin and JNI
+  bridge mirror the existing heart-rate on-demand command. Unverified on a
+  real account and device.
+
+- **8a bodyweight bests** (commit "Give bodyweight sets a most-reps best").
+  Bodyweight sets (Garmin weight 0 or null) earn no weighted record or best;
+  each named exercise's best is now its most reps in one counted set in
+  available history, with the same exclusions, earliest-on-a-tie rule and
+  correction/no-repeat-award behaviour as weighted bests. Strength's exercise
+  detail shows it as "Most reps" (or "Most reps in a set" when the exercise
+  has no weighted sets) and Progress records it as "… most reps in a set"
+  with a `reps` milestone kind. Core tests cover flags, unnamed and weighted
+  sets, ties and a Garmin edit; the browser preview and UI test include a
+  bodyweight exercise.
+
+- **7a shared date labels** (commit "Build shared date labels by hand so
+  Android and desktop match"). `format.ts` builds the weekday, day and month
+  from a calendar date instead of `toLocaleDateString`, including en-GB's
+  "Sept", and `plan.ts` reuses it, so the "Mon, 5 Oct" WebView difference is
+  gone everywhere the app labels a date. Unit tests cover the labels, the
+  short month and invalid dates.
 
 - **26. A focused, adaptive Raring experience** (commits "Rebuild Raring
   around the weekly plan: Today, Plan, Training, Health, Progress", "Time

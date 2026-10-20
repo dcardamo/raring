@@ -244,6 +244,20 @@ impl Raring {
         }
         Ok((self.heart_rate_day(date), client.tokens().await, report))
     }
+    /// One explicit read of a strength workout's sets, with the updated detail.
+    /// Navigation never calls this; only a person asking for a Garmin refresh does.
+    pub async fn refresh_strength_sets(
+        &self,
+        tokens: Tokens,
+        id: &str,
+    ) -> Result<(Option<view::StrengthSession>, Tokens, SyncReport)> {
+        let client = garmin::Client::new(tokens)?;
+        let mut report = sync::refresh_strength_sets(&self.store, &client, id).await;
+        if report.rate_limited {
+            report.error = Some("Garmin is rate limiting reads; try again later".into());
+        }
+        Ok((strength::session(&self.store, id), client.tokens().await, report))
+    }
     pub fn checkin(&self, monday: &str) -> view::CheckinView {
         screens::checkin(&self.store, monday)
     }

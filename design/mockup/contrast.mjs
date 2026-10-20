@@ -9,7 +9,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const modules = process.env.RARING_NODE_MODULES ?? resolve(here, '../../app/node_modules');
 const {chromium} = createRequire(resolve(modules, 'noop.js'))('playwright');
 const url = pathToFileURL(resolve(here, 'index.html')).href;
-const screens = ['language', 'today', 'sleep', 'training', 'workout', 'health', 'plan', 'plan-setup', 'checkin', 'intro-1', 'intro-4',
+const screens = ['language', 'today', 'sleep', 'training', 'workout', 'health', 'plan', 'plan-setup', 'checkin', 
   'strength-workout', 'fix', 'strength-history', 'builder', 'catalog', 'help', 'help-sheet', 'widget', 'status-surfaces'];
 
 const browser = await chromium.launch({executablePath: process.env.CHROMIUM ?? '/run/current-system/sw/bin/chromium', args: ['--no-sandbox']});

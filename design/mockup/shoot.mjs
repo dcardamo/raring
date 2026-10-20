@@ -15,7 +15,6 @@ const screens = {
   language: ['phone', 'desktop'],
   today: ['phone', 'fold', 'desktop'], sleep: ['phone'], training: ['phone', 'fold', 'desktop'], workout: ['phone'], health: ['phone'],
   plan: ['phone', 'fold', 'desktop'], 'plan-setup': ['phone', 'fold', 'desktop'], checkin: ['phone'],
-  'intro-1': ['phone'], 'intro-2': ['phone'], 'intro-3': ['phone'], 'intro-4': ['phone'],
   'strength-workout': ['phone', 'fold', 'desktop'], fix: ['phone', 'fold', 'desktop'], 'strength-history': ['phone', 'fold', 'desktop'],
   builder: ['phone', 'fold', 'desktop'], catalog: ['phone'], help: ['phone', 'desktop'], 'help-sheet': ['phone'], widget: ['phone'], 'status-surfaces': ['phone'],
   'tod-rules': ['phone'], 'tod-wake': ['phone'], 'tod-day': ['phone', 'desktop'], 'tod-evening': ['phone', 'fold'], 'tod-winddown': ['phone'],

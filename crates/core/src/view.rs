@@ -978,6 +978,17 @@ pub enum Figure {
     Male,
 }
 
+/// Strength's optional body-map figure override; `Profile` follows Garmin.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum FigureChoice {
+    #[default]
+    Profile,
+    Female,
+    Male,
+}
+
 /// Raring's muscle groups: Garmin's catalog muscles, grouped for the body map.
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[serde(rename_all = "camelCase")]
@@ -1067,6 +1078,8 @@ pub struct StrengthExercise {
 pub struct StrengthSession {
     pub unit: WeightUnit,
     pub figure: Figure,
+    /// When Garmin's sets were last read, RFC 3339; missing when never read.
+    pub checked_at: Option<String>,
     /// Garmin's active sets; rests are not sets.
     pub sets: u32,
     /// The sum of the known rep counts; none when no set has a count.
@@ -1146,6 +1159,15 @@ pub struct RepBest {
     pub date: Option<String>,
 }
 
+/// The most reps in one set of a bodyweight exercise (no weight to compare).
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct RepCountBest {
+    pub reps: u32,
+    pub date: String,
+}
+
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -1157,6 +1179,9 @@ pub struct ExerciseHistory {
     pub sessions: Vec<ExerciseSession>,
     /// Across all stored sessions.
     pub bests: Vec<RepBest>,
+    /// Bodyweight work has no weight to compare; its best is the most reps in
+    /// one counted set, across all stored sessions.
+    pub reps_best: Option<RepCountBest>,
 }
 
 /// Strength history: the last 12 weeks.
@@ -1337,6 +1362,9 @@ pub struct Settings {
     /// Offer to plan the week at its start; off hides the prompt everywhere.
     #[serde(default = "default_plan_prompt")]
     pub plan_prompt: bool,
+    /// Strength's body-map figure; Profile follows Garmin's profile gender.
+    #[serde(default)]
+    pub body_figure: FigureChoice,
 }
 
 /// How a Garmin write ended (Rules: Garmin writes).
@@ -1419,6 +1447,7 @@ impl Default for Settings {
             adaptive_today: default_adaptive_today(),
             journal_enabled: false,
             plan_prompt: default_plan_prompt(),
+            body_figure: FigureChoice::Profile,
         }
     }
 }
@@ -2679,6 +2708,8 @@ pub struct GoalWeek {
 pub enum MilestoneKind {
     /// The heaviest set at a rep count for one exercise.
     Best,
+    /// The most reps in one bodyweight set for one exercise.
+    Reps,
     /// The longest recorded distance for a sport.
     Longest,
     /// The first counted week with every goal met.

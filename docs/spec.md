@@ -248,8 +248,9 @@ Tonight:
   time's sets as text. An exercise Garmin couldn't name is "Not recognized".
   The heart-rate chart and zones follow. A session timed without lap presses
   says no sets were recorded and links to help. A ? opens a sheet on how sets
-  are counted. Raring never changes the sets; fixing them is a later Garmin
-  write.
+  are counted. A card on the workout says when Garmin's sets were last read
+  and offers Refresh from Garmin (Rules: Explicit strength refresh). Raring
+  never changes the sets; fixing them is a later Garmin write.
 - **How it counted**: the workout's share of this week's goals, the plan
   session it completed and any milestone (Rules: How it counted).
 - **Along the way**: the stored streams this activity has (pace or speed,
@@ -268,21 +269,24 @@ Opened from Training → Strength: lifts and muscles.
   desktop): Max weight or Volume each session over a chosen range (Rules:
   Lift volume), the best weight in available history at 1,
   3, 5, 8 and 10 reps, and its sessions (heaviest set, reps of every set,
-  record star), each opening its workout. Show-all controls expose every
+  record star), each opening its workout. Bodyweight exercises show their
+  most reps in one set instead of a weight (Rules: Records and bests). Show-all controls expose every
   exercise session and workout in the supplied history, not just the initial
   six sessions or eight workouts. The strength workout list starts at the
   same first-week boundary as the chart and filters by sport before any
   pagination limit; newer workouts in other sports cannot hide strength
   activities.
 - Sets per muscle this week with a tick at the previous four weeks' weekly
-  average, and the strength workouts.
+  average, the strength workouts, and a Figure control (Profile, Female,
+  Male) that overrides the profile's figure for every body map (Rules:
+  Body-map figure).
 - Phone: one column. Unfolded (660 px+): two columns. Desktop (1000 px+):
   exercise list, exercise detail, muscles.
 
 ### Body map
 
-Raring's own front and back figures, female or male from the Garmin profile,
-with muscle groups as separate shapes: chest, back, shoulders, arms, core,
+Raring's own front and back figures, female or male from the Garmin profile
+unless Strength's figure picker overrides it, with muscle groups as separate shapes: chest, back, shoulders, arms, core,
 hips, quads, hamstrings, glutes and calves. Each is shaded in the amount blue
 by sets, gray when none.
 
@@ -867,7 +871,8 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   and overnight HRV, and the latest VO₂ max and Fitness Age estimates dated in
   it. Nothing is interpolated.
 - **Milestones**: in available history: an exercise's heaviest set for 1, 3,
-  5, 8 or 10 reps (Records and bests eligibility), the longest recorded
+  5, 8 or 10 reps (Records and bests eligibility), an exercise's most reps
+  in one bodyweight set, the longest recorded
   distance for a known sport family recorded at least three times, and the first
   completed, counted week with every action goal met. Mixed unknown sports are
   not combined into a distance record. A week with a revision or pause cannot
@@ -1257,6 +1262,11 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   time. A set's exercise is Garmin's most probable guess; an `UNKNOWN`
   category is unnamed. Weights are Garmin's grams shown in kilograms or
   pounds by Garmin's measurement setting, to 0.1.
+- **Body-map figure**: every body map uses Strength's saved figure choice:
+  Profile follows Garmin's profile gender; Female or Male overrides it. The
+  choice is a setting, exported with the rest, and every body map (workout,
+  Strength, Training) follows it. Unknown or missing profile gender falls back
+  to Female, as before.
 - **Sets per muscle**: each named set counts once for each primary-muscle
   group of its exercise in Garmin's catalog: the exercise's own entry, else
   its category's, else Raring's small category mapping. Garmin's muscles
@@ -1271,11 +1281,24 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   that session (none without another set); or for an exercise Garmin
   couldn't name. Flags never change Garmin's numbers. The card counts each
   flagged set, except an unnamed exercise counts once.
+- **Explicit strength refresh**: only a person tapping Refresh from Garmin on
+  a stored strength activity's detail reads its sets again. It spends one
+  request on `/activity-service/activity/{id}/exerciseSets`, obeys the shared
+  rate-limit backoff and per-endpoint retry wait, and keeps the previous sets
+  when the read fails. Navigation, opening the workout and ordinary syncs
+  never trigger it. The detail shows when Garmin's sets were last read;
+  before any read it says not checked yet. A refresh of a workout whose
+  Garmin sets were removed leaves no sets and says so.
 - **Records and bests**: a set is a record when an earlier session has the
   exercise and no earlier set (or earlier set in this session) was at least
   as heavy for at least as many reps. A best at N reps is the heaviest set
   with at least N reps. A session's top set is its heaviest set, then most
   reps. Only named, weighted sets that aren't flagged for reps count.
+  Bodyweight sets (Garmin weight 0 or null) have no weight to compare, so
+  they earn no weighted record or best; instead each named exercise's best
+  is the most reps in one counted bodyweight set in available history
+  (same exclusions and earliest-on-a-tie rule), shown labelled reps. The
+  weighted and reps bests are separate awards on the same stable identity.
 - **Sessions with sets**: require at least one active set with a named
   exercise or positive reps. Timer-only sessions add nothing to set, muscle
   or record aggregates, even in a week containing full set workouts. The
@@ -1319,9 +1342,9 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
 - **Strength**: sets come from `/activity-service/activity/{id}/exerciseSets`
   for activities Garmin types `strength_training`: once, then at most hourly
   for 48 hours after the start to pick up early Connect edits. Later edits
-  are not fetched by Refresh or reopening a workout; help states this limit.
-  A budgeted explicit detail refresh remains a follow-up. Older strength
-  activities found by the history download get their sets after it. Once
+  are fetched only by an explicit Refresh from Garmin on that workout (Rules:
+  Explicit strength refresh); opening a workout never reads Garmin. Older
+  strength activities found by the history download get their sets after it. Once
   there are sets, weight or a recorded threshold/acclimation response, the
   user settings (`/userprofile-service/userprofile/user-settings`) are read
   weekly and only the measurement system, time format, start of week and
