@@ -47,7 +47,7 @@
 </script>
 {@render header()}
 <section class="card wk">
- <div class="wk-h"><div><h2>{range}</h2>{#if board.pause}<small>{board.pause.reason === 'ill' ? 'Ill' : 'Paused'} {board.pause.wholeWeek ? 'all week' : `since ${dayName(board.pause.since)}`}{board.pause.until && !board.pause.wholeWeek ? ` to ${dayName(board.pause.until)}` : ''} · nothing to catch up</small>{/if}</div>
+ <div class="wk-h"><div><h2>{range}</h2>{#if board.pause}<small>{board.pause.reason === 'ill' ? 'Ill' : 'Paused'} {board.pause.wholeWeek ? 'all week' : `since ${dayName(board.pause.since)}`}{board.pause.until && !board.pause.wholeWeek ? ` to ${dayName(board.pause.until)}` : ''}{board.backlogPaused ? '' : ' · nothing to catch up'}</small>{/if}</div>
   <span class="wk-a"><HelpButton topic="plan"/><button class="small-edit" onclick={() => navigate('plan/commitments')}><Icon name="pencil" size={13}/>Goals</button></span></div>
  <WeekSummary {board} onGoals={() => navigate('plan/commitments')}/>
  {#if review.length || missed.length}

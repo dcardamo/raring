@@ -116,6 +116,27 @@ From item 11, in priority order.
 - Offline help pages "How targets count" and "Rest days and paused weeks"
   when the Help screen ships.
 
+### Plan and Progress review follow-ups
+
+From the UX review (`.data/ux-review/plan-progress.md`), in priority order;
+the rest shipped (Done: Plan and Progress review fixes).
+
+- **PP-B13**: every Progress calendar cell opens this week's Plan, and every
+  Today week cell opens Plan at today. Open the tapped day once day routes
+  (opening a past day) land; until then the tap target stays.
+- **PP-B4**: opening `#plan` directly late at night can show "Plan your week",
+  because the prompt gates on a phase only Today sets (time-of-day work).
+- **PP-N5**: sessions during an illness or pause still read Planned and count
+  as placed; show them "On hold", muted and not placed (a Goal ledger rule
+  change).
+- **PP-N12**: goal colours repeat sport colours on Progress (Zone 2 and Ride
+  blue, intensity and Swim teal, strength pink); separate the palettes in the
+  spec's Look first.
+- The review of the week in progress (`#review/<this week>`) still labels
+  every goal Not counted; say "so far" instead, or route it to Plan.
+- Progress's activity chart has uneven y ticks (143, 72); round tick steps
+  belong with the chart legibility work.
+
 ### 8a. Strength follow-ups
 
 - Check an explicit Refresh from Garmin against a Connect edit made more than
