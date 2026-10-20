@@ -2965,8 +2965,16 @@ pub fn health_at_calendar(store: &Store, date: &str, calendar: &str) -> HealthVi
         intensity: NaiveDate::parse_from_str(date, "%Y-%m-%d").ok().and_then(|d| {
             plan::intensity(store, plan::week_start(d, plan::week_starts_on(store)), d)
         }),
+        resting_hr_range: resting_hr_range(store, date),
         detail: day_detail(store, date, &[DayDetailPart::Stress, DayDetailPart::Vitals]),
     }
+}
+/// The resting-HR chart plots Garmin's daily resting HR, so its band comes
+/// from that history even when Health Status reports Sleep HR.
+fn resting_hr_range(store: &Store, date: &str) -> Option<[f64; 2]> {
+    let to = NaiveDate::parse_from_str(date, "%Y-%m-%d").ok()?;
+    let days = crate::trends::daily(store, TrendMetric::RestingHr, to - Duration::days(29), to);
+    rules::normal(&days.into_values().collect::<Vec<_>>())
 }
 pub fn checkin(store: &Store, monday: &str) -> CheckinView {
     let previous = date_sub(monday, 7);

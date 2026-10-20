@@ -22,7 +22,7 @@ try {
   const exportPage=await browser.newPage({viewport:{width,height:844}});
   await exportPage.goto(`${url}/?fixture=export#settings`);
   await exportPage.getByRole('button',{name:'Export your data'}).waitFor();
-  assert.match(await exportPage.getByText('Download a ZIP', {exact:false}).textContent(),/only when you share it/);
+  assert.match(await exportPage.getByText('A ZIP of your Garmin history', {exact:false}).textContent(),/only when you share it/);
   await exportPage.getByRole('button',{name:'Export your data'}).scrollIntoViewIfNeeded();
   await exportPage.screenshot({path:resolve(output,`export-settings-${width}.png`),fullPage:true});
   await exportPage.getByRole('button',{name:'Export your data'}).click();
@@ -33,7 +33,9 @@ try {
  for(const width of [390,1100]){
   const changes=await browser.newPage({viewport:{width,height:844}});
   await changes.goto(`${url}/#settings`);
-  await changes.getByText('Raring hasn’t changed anything in Garmin.',{exact:false}).waitFor();
+  await changes.getByRole('heading',{name:'Export',exact:true}).waitFor();
+  assert.equal(await changes.getByRole('heading',{name:'Recent Garmin changes'}).count(),0,'an empty change log takes no space');
+  assert.equal(await changes.getByRole('heading',{name:'Garmin history'}).count(),0,'history lives on Profile');
   await changes.goto(`${url}/?fixture=garmin-changes#settings`);
   const log=changes.getByRole('list',{name:'Recent Garmin changes'});
   await log.waitFor();
@@ -54,11 +56,12 @@ try {
  await importPage.goto(`${url}/?fixture=import#settings`);
  const chooseImport=importPage.getByRole('button',{name:'Choose a Raring export'});
  await chooseImport.waitFor();
+ await importPage.locator('.card',{hasText:'Restore your Raring settings'}).getByText('What’s included').click();
  await importPage.getByText('a sync downloads it again for this phone',{exact:false}).waitFor();
  await importPage.getByText('journal logs stay this phone’s own',{exact:false}).waitFor();
  await chooseImport.scrollIntoViewIfNeeded();
  await chooseImport.click();
- await importPage.getByText('rows will be applied',{exact:false}).waitFor();
+ await importPage.getByText('4 Nov 2024 – 4 Nov 2025',{exact:false}).waitFor();
  assert.equal(await importPage.getByRole('button',{name:'Import these settings'}).count(),1,'the preview is confirmed before anything is written');
  await importPage.getByText('already here',{exact:false}).first().waitFor();
  await importPage.getByText('Milestones and records',{exact:false}).waitFor();
@@ -90,6 +93,7 @@ try {
  const enabled=privatePage.locator('.card').filter({hasText:'Journal privacy'}).locator('input[type=checkbox]');
  assert.equal(await enabled.isChecked(),true);
  await enabled.uncheck();
+ await privatePage.locator('#export').getByText('What’s included').click();
  await privatePage.getByText('Previously downloaded journal logs are included even if journal reads are now off',{exact:false}).waitFor();
  await privatePage.getByRole('navigation').getByRole('button',{name:'Health'}).click();
  await privatePage.getByRole('button',{name:'Allow local journal reads'}).waitFor();
@@ -220,7 +224,7 @@ try {
  assert.equal(await page.locator('.stress-row').count(),5);
  await back('today');
  await tab('Health');
- await page.getByRole('button',{name:'Stress through today'}).click();await waitRoute('metric/stress');
+ await page.getByRole('button',{name:'Stress today and all history'}).click();await waitRoute('metric/stress');
  await back('health');
  await page.getByRole('button',{name:'View Respiration',exact:true}).click();await waitRoute('metric/respiration');
  await back('health');await back('today');
@@ -237,6 +241,22 @@ try {
  assert.equal(await page.evaluate(()=>window.__raringBack()),true);
  await waitRoute('today');
  console.log('Hierarchical browser, header and native Back: passed');
+ // Search: resting HR is Garmin's daily value, Sleep HR the overnight vital; cards open scrolled into view.
+ const search=async q=>{await page.getByRole('button',{name:'Search',exact:true}).first().click();const box=page.getByRole('searchbox',{name:'Search metrics and pages'});await box.fill(q);return page.getByRole('dialog',{name:'Search'})};
+ let found=await search('resting');
+ await found.getByRole('button',{name:'Resting heart rate (daily)'}).click();await waitRoute('metric/heartRate');
+ assert.equal(await page.locator('h1').textContent(),'Heart rate');
+ await back('today');
+ found=await search('sleep hr');
+ await found.getByRole('button',{name:'Sleep HR'}).click();await waitRoute('metric/restingHr');
+ assert.equal(await page.locator('h1').textContent(),'Sleep HR');
+ await back('today');
+ for(const [q,name] of [['spo2','SpO₂'],['vo2','VO₂ max'],['body fat','Body fat']]){found=await search(q);await found.getByRole('button',{name}).waitFor();await page.keyboard.press('Escape')}
+ found=await search('journal');
+ await found.getByRole('button',{name:'Garmin journal'}).click();await waitRoute('health');
+ await page.waitForFunction(()=>{const c=document.getElementById('journal'),m=document.querySelector('.scroll');const r=c?.getBoundingClientRect();return r && m && m.scrollTop>0 && r.top>=0 && r.top<innerHeight-200});
+ await back('today');
+ console.log('Search: plain names, Sleep HR versus resting HR, card anchors: passed');
 
  await page.getByRole('button',{name:/^Readiness \d+/}).click();await waitRoute('readiness');
  await page.getByText('Readiness history',{exact:true}).waitFor();
@@ -275,11 +295,23 @@ try {
  assert.ok((await alignment.textContent()).includes('Optimal 22:45–06:15'));
  assert.ok((await page.locator('.consistency .averages').textContent()).includes('22:55'));
  await tab('Health');
- assert.equal(await page.locator('.dashboard>.card').first().locator('h3>span').first().textContent(),'Long-term health · Fitness Age','long-term health leads (U55)');
+ assert.equal(await page.locator('.dashboard>.card').first().locator('h3>span').first().textContent(),'Fitness Age','long-term health leads (U55)');
  const titles=await page.locator('.health-dashboard>.card h3>span:first-child').allTextContents();
  assert.ok(titles.indexOf('Vitals')<titles.indexOf('Resting heart rate'),'vitals come before the metric charts: '+titles.join(', '));
  assert.equal(await page.getByText('Heart rate · all day',{exact:true}).count(),0,'Your day stays on Today');
  assert.equal(await page.locator('.over-time .history').count(),4,'daily metrics over a range');
+ // Health summarises: each card keeps its own metric and four ranges; comparisons live on the metric's detail.
+ assert.equal(await page.locator('.health-dashboard').getByRole('combobox',{name:'Primary metric'}).count(),0,'Health cards never relabel their data');
+ assert.equal(await page.locator('.health-dashboard .compare').count(),0);
+ assert.equal(await page.locator('.health-dashboard .history-controls').count(),0);
+ assert.deepEqual(await page.locator('.over-time').first().getByRole('group',{name:'History period'}).getByRole('button').allTextContents(),['7D','30D','90D','1Y']);
+ const restingCard=page.locator('.over-time').first();
+ assert.ok((await restingCard.locator('.history-legend').textContent()).includes('Raring usual range'),'resting HR is shaded by its own usual range');
+ assert.equal(await page.getByText('Fitness Age history',{exact:true}).count(),0,'Fitness Age history lives in its hero card');
+ assert.equal(await page.getByText('Biggest lever',{exact:true}).count(),0,'the lever is folded into its driver');
+ const drivers=await page.locator('.drivers').textContent();
+ assert.ok(drivers.includes('Target ≥ 150 min/wk') && drivers.includes('38 min/wk to go') && drivers.includes('Biggest lever · reach 150 for age 38'),drivers);
+ assert.ok((await page.locator('.vitals-monitor h3').textContent()).includes('Night ending Thu 16 Oct'));
  assert.equal(await page.locator('.signal-tile').count(),5);
  await page.getByRole('button',{name:'View HRV',exact:true}).click();await waitRoute('metric/hrv');
  const history=page.locator('.history'),slider=history.getByRole('slider');
@@ -371,7 +403,7 @@ try {
  console.log('Plan week, goals, check-in plan and intensity pages: passed');
  await page.goto(`${url}/#settings`);await waitRoute('settings');
  assert.equal(await page.locator('.setting.lead').count(),0,'the lead appears with the bedtime reminder');
- await page.locator('label.setting',{hasText:'Bedtime'}).locator('input').check();
+ await page.locator('label.setting',{hasText:'Wind-down reminder'}).locator('input').check();
  await page.locator('.setting.lead select').selectOption('45');
  await tab('Today');
  await openSettings(page);await waitRoute('settings');
@@ -525,7 +557,7 @@ try {
    if(route==='health'){
     await page.locator('.weight-card .fresh').waitFor();
     assert.ok((await page.locator('.weight-card .fresh').textContent()).includes('Last measured Thu 16 Oct'),`${width}/health: dated weigh-in`);
-    assert.ok(await page.getByText('recorded weigh-ins only',{exact:false}).isVisible(),`${width}/health: sparse trend label`);
+    assert.equal(await page.locator('.weight-card .changes li').count(),2,`${width}/health: a 7- and 30-day summary`);
    }
    assert.ok(layout.holes<=18,`${width}/${route}: ${layout.holes}px hole between cards`);
    if([390,840].includes(width) && ['today','sleep','training','workout/9000000000001','workout/9000000000002','strength','help/strength-sets','health','plan','plan/commitments','progress','profile'].includes(route)) {
@@ -565,17 +597,20 @@ try {
   await wp.goto(`${url}/?weight-unit=${unit}#health`);
   const card=wp.locator('.weight-card');await card.locator('.fresh.stale').waitFor();
   assert.ok((await card.locator('.weight-head').textContent()).includes(unit));
-  assert.equal(await card.locator('.changes li').count(),6);
-  assert.equal(await card.getByRole('button',{name:'Add weight',exact:true}).isDisabled(),true);
-  await card.getByRole('group',{name:'Weight range'}).getByRole('button',{name:'14 days',exact:true}).click();
-  await wp.waitForFunction(()=>document.querySelector('.weight-card')?.getAttribute('aria-busy')==='false');
-  await card.getByRole('slider',{name:'Weight readings'}).press('Home');
-  assert.ok((await card.getByRole('slider').getAttribute('aria-valuetext')).includes(unit));
+  assert.deepEqual(await card.locator('.changes li>span:first-child').allTextContents(),['7 days','30 days'],'Health summarises the week and month');
+  assert.equal(await card.getByRole('group',{name:'Weight range'}).count(),0);
+  assert.equal(await wp.getByRole('button',{name:'Add weight',exact:true}).count(),0,'adding a weight lives on Profile only');
   assert.deepEqual(await contrastFailures(wp),[],`weight ${unit} contrast`);
-  await card.getByRole('button',{name:'Weight details'}).click();
+  await card.getByRole('button',{name:'All ranges, changes and body composition'}).click();
   await wp.waitForFunction(()=>location.hash==='#health/weight');
-  await wp.locator('.weight-card .fresh').waitFor();
-  assert.equal(await wp.getByRole('group',{name:'Weight range'}).getByRole('button',{name:'14 days',exact:true}).getAttribute('aria-pressed'),'true','range persists into canonical detail');
+  const detail=wp.locator('.weight-card');await detail.locator('.fresh').waitFor();
+  assert.equal(await detail.locator('.changes li').count(),6);
+  assert.ok(!(await detail.textContent()).includes('−0.0'),'a change that rounds to nothing is 0.0');
+  await detail.getByRole('group',{name:'Weight range'}).getByRole('button',{name:'14 days',exact:true}).click();
+  await wp.waitForFunction(()=>document.querySelector('.weight-card')?.getAttribute('aria-busy')==='false');
+  await detail.getByRole('slider',{name:'Weight readings'}).press('Home');
+  assert.ok((await detail.getByRole('slider').getAttribute('aria-valuetext')).includes(unit));
+  assert.deepEqual(await contrastFailures(wp),[],`weight detail ${unit} contrast`);
   await wp.close();
  }
  console.log('Weight: core fixtures, gap markers, units, freshness, ranges and canonical detail passed');
@@ -950,11 +985,10 @@ try {
   assert.equal(await hp.getByRole('dialog').count(),0);
   await hp.getByRole('button',{name:'Help: Acute load'}).click();
   assert.deepEqual(await contrastFailures(hp),[],'Help sheet contrast');
-  await hp.getByRole('dialog').getByRole('button',{name:'All help'}).click();
-  await hp.waitForURL('**/#help');
+  assert.equal(await hp.getByRole('dialog').getByRole('button',{name:/help/i}).count(),0,'no Help link where the area has no Help pages');
   await hp.close();
  }
- console.log('Help: ? sheets on root pages and cards, Back/Escape close, link to all help: passed');
+ console.log('Help: ? sheets on root pages and cards, Back/Escape close, no dead-end help link: passed');
  // Stage-5 journeys: activity rows name average HR (U05), unsupported readiness says why (U07),
  // Fitness Age is Garmin's dated estimate (U48), and Settings says Raring doesn't learn from use (U54).
  {
@@ -1510,6 +1544,7 @@ try {
     if(command==='check_reminders'||command==='reminders_status')return null;
     if(command.startsWith('plugin:'))return 1;
     if(command==='request_notification_permission'){window.asked++;return false}
+    if(command==='notification_permission')return false;
     if(command==='app_status')return structuredClone(samples.status);
     if(command==='get_settings')return {};
     if(command in samples)return structuredClone(samples[command]);
@@ -1517,11 +1552,14 @@ try {
    }};
   },samples);
   await np.goto(`${url}/#settings`);
-  await np.getByRole('button',{name:'Enable notifications'}).click();
-  await np.getByText(/Notifications were declined\. Raring won’t ask again/).waitFor();
-  assert.equal(await np.getByRole('button',{name:'Enable notifications'}).count(),0);
+  // Android's own state decides: blocked shows one line and greys the switches.
+  await np.getByText('Android is blocking Raring’s notifications.',{exact:true}).waitFor();
+  assert.equal(await np.getByRole('checkbox',{name:/Morning readiness/}).isDisabled(),true,'switches that can’t fire are greyed');
+  await np.getByRole('button',{name:'Allow',exact:true}).click();
+  await np.getByText('Android is blocking Raring’s notifications. Allow them for Raring in Android Settings.',{exact:true}).waitFor();
+  assert.equal(await np.getByRole('button',{name:'Allow',exact:true}).count(),0);
   await np.reload();
-  await np.getByText(/Notifications were declined/).waitFor();
+  await np.getByText(/Allow them for Raring in Android Settings/).waitFor();
   assert.equal(await np.evaluate(()=>window.asked),0,'not asked again after a reload');
   await np.close();
  }
@@ -1706,7 +1744,7 @@ try {
  },samples);
  await patches.goto(`${url}/?fixture=status-offer#settings`);
  const morning=patches.getByRole('checkbox',{name:'Morning readiness'});
- const weekly=patches.getByRole('checkbox',{name:'Weekly check-in'});
+ const weekly=patches.getByRole('checkbox',{name:'Weekly review'});
  const privacy=patches.getByRole('checkbox',{name:/Persistent status/});
  await morning.waitFor();
  assert.equal(await patches.getByRole('checkbox').count(),10,'journal has its own consent control');
@@ -1737,9 +1775,9 @@ try {
  await patches.waitForFunction(()=>window.testPatch.stored.notifyWeeklyCheckin===false);
  assert.equal(await privacy.isChecked(),false,'unrelated patch after failed opt-in cannot revive consent');
  assert.equal(await patches.evaluate(()=>window.testPatch.stored.notifyStatus),false);
- await patches.getByRole('checkbox',{name:'Bedtime'}).check();
+ await patches.getByRole('checkbox',{name:'Wind-down reminder'}).check();
  await patches.waitForFunction(()=>window.testPatch.stored.notifyBedtime===true);
- await patches.getByLabel('Wind-down reminder').selectOption('45');
+ await patches.getByLabel('Wind-down starts').selectOption('45');
  await patches.waitForFunction(()=>window.testPatch.stored.bedtimeLeadMin===45);
  assert.deepEqual(await patches.evaluate(()=>window.testPatch.patches.slice(-2)),[{notifyBedtime:true},{bedtimeLeadMin:45}]);
  await privacy.click();
@@ -1841,7 +1879,7 @@ try {
  await onboarding.getByText(/Sign-in tokens are encrypted/).waitFor();
  await privacySummary.press('Enter');
  await onboarding.getByRole('button',{name:'Sign in with Garmin'}).click();
- await onboarding.getByRole('alert').getByText('Error: Synthetic sign-in failure',{exact:true}).waitFor();
+ await onboarding.getByRole('alert').getByText('Synthetic sign-in failure',{exact:true}).waitFor();
  await onboarding.evaluate(()=>{window.testOnboarding.failSignIn=false});
  await onboarding.getByRole('button',{name:'Sign in with Garmin'}).click();
  await onboarding.getByRole('heading',{name:'Stay in the loop'}).waitFor();
@@ -1851,10 +1889,13 @@ try {
  assert.equal(await onboarding.evaluate(()=>window.testOnboarding.permissions),0,'notification permission is optional');
  await openSettings(onboarding);
  await onboarding.getByText('How Raring works',{exact:true}).waitFor();
- await onboarding.locator('summary').click();
+ await onboarding.locator('.card',{hasText:'How Raring works'}).locator('summary').click();
  await onboarding.getByText(/This does not delete anything from your Garmin account/).waitFor();
- onboarding.once('dialog',dialog=>dialog.accept());
- await onboarding.getByRole('button',{name:'Sign out',exact:true}).click();
+ await onboarding.getByRole('button',{name:'Sign out and erase this phone’s data'}).click();
+ const confirmOut=onboarding.getByRole('group',{name:'Sign out'});
+ assert.ok((await confirmOut.textContent()).includes('goals, plans, limits and routines'),'the confirm names local records');
+ await confirmOut.getByRole('button',{name:'Export first'}).waitFor();
+ await confirmOut.getByRole('button',{name:'Sign out and erase',exact:true}).click();
  await onboarding.waitForURL('**/#onboarding');
  assert.equal(await onboarding.evaluate(()=>localStorage.getItem('notifications-step-done')),null);
  await onboarding.getByRole('button',{name:'Sign in with Garmin'}).click();
@@ -1999,8 +2040,8 @@ function trendFixture(q){
  assert.equal(await live.locator('.signal-grid').getByText('Not recorded',{exact:true}).count(),3);
  await live.screenshot({path:resolve(output,'health-partial.png')});
  await live.getByRole('button',{name:'View Resting HR',exact:true}).click();
- await live.getByText('Your resting heart rate from Garmin. The shaded band shows your usual range, not a medical target.',{exact:true}).waitFor();
- assert.equal(await live.getByText('Garmin’s average heart rate during sleep, compared with its Health Status baseline. This is not your resting heart rate or a medical target.',{exact:true}).count(),0,'fallback resting HR must not claim to be Sleep HR');
+ await live.getByText('Garmin’s daily resting heart rate. The shaded band is your usual range over the last 30 days.',{exact:true}).waitFor();
+ assert.equal(await live.getByText('Garmin’s average heart rate during sleep, compared with its Health Status baseline. Your daily resting heart rate is on the heart-rate page.',{exact:true}).count(),0,'fallback resting HR must not claim to be Sleep HR');
  await live.getByRole('navigation').getByRole('button',{name:'Health',exact:true}).click();
  await live.getByText('1 reading in range',{exact:true}).waitFor();
  await live.evaluate(()=>{
@@ -2098,9 +2139,9 @@ function trendFixture(q){
  assert.ok(await live.evaluate(()=>window.testBackend.samples.status.lastSync!==null),'Raring refresh does not invent a watch upload time');
  await live.evaluate(()=>{window.testBackend.samples.health.lever.ageIfMet=36.23456789});
  await live.getByRole('navigation').getByRole('button',{name:'Health',exact:true}).click();
- await live.locator('.lever').waitFor();
- assert.ok((await live.locator('.lever').textContent()).includes('age 36.2'),'Garmin fractional target ages are formatted for display');
- assert.ok(!(await live.locator('.lever').textContent()).includes('36.23456789'));
+ await live.locator('.driver-lever').waitFor();
+ assert.ok((await live.locator('.driver-lever').textContent()).includes('age 36.2'),'Garmin fractional target ages are formatted for display');
+ assert.ok(!(await live.locator('.driver-lever').textContent()).includes('36.23456789'));
  console.log('Workout dates, partial zones, real chart axes, mixed-sport splits, sleep gaps and target formatting: passed');
 
  const cached=await browser.newPage({viewport:{width:390,height:844}});
@@ -2436,14 +2477,14 @@ function trendFixture(q){
  for(const width of [390,700,1100]){
   const hr=await browser.newPage({viewport:{width,height:844}});
   await hr.goto(`${url}/?fixture=heart-rate#health`);
-  await hr.getByRole('button',{name:'Heart rate through today'}).waitFor();
+  await hr.getByRole('button',{name:'Heart rate today and all history'}).waitFor();
   await hr.screenshot({path:resolve(output,`heart-rate-health-${width}.png`)});
-  await hr.getByRole('button',{name:'Heart rate through today'}).click();
+  await hr.getByRole('button',{name:'Heart rate today and all history'}).click();
   await hr.getByRole('slider',{name:/Heart rate through the day/}).waitFor();
   assert.equal(await hr.getByText('Garmin daily resting HR',{exact:false}).count(),1);
   assert.ok(await hr.getByText('Asleep',{exact:true}).count());
   await hr.screenshot({path:resolve(output,`heart-rate-detail-${width}.png`)});
-  await hr.getByRole('button',{name:'Previous'}).click();
+  await hr.getByRole('button',{name:'← Previous day'}).click();
   await hr.waitForFunction(()=>document.querySelector('.metric-hero')?.textContent?.includes('15 Oct'));
   assert.ok(await hr.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`heart-rate detail overflow at ${width}`);
   await hr.close();
@@ -2468,12 +2509,12 @@ function trendFixture(q){
   }};
  },samples);
  await hrSwitch.goto(`${url}/#health`);
- await hrSwitch.getByRole('button',{name:'Heart rate through today'}).click();
- await hrSwitch.getByRole('button',{name:'Previous'}).click();
+ await hrSwitch.getByRole('button',{name:'Heart rate today and all history'}).click();
+ await hrSwitch.getByRole('button',{name:'← Previous day'}).click();
  const hrSlider=hrSwitch.getByRole('slider',{name:/Heart rate through the day/});
  await hrSlider.focus();await hrSwitch.keyboard.press('End');
  assert.equal(await hrSlider.getAttribute('aria-valuenow'),'719','late old-day sample selected');
- await hrSwitch.getByRole('button',{name:'Next'}).click();
+ await hrSwitch.getByRole('button',{name:'Next day →'}).click();
  await hrSwitch.waitForFunction(()=>document.querySelector('[role="slider"]')?.getAttribute('aria-valuemax')==='119');
  assert.equal(await hrSlider.getAttribute('aria-valuenow'),'119','new day resets to its real latest reading');
  assert.match(await hrSlider.getAttribute('aria-valuetext'),/90 bpm/);
@@ -2503,7 +2544,8 @@ function trendFixture(q){
 
   await opened.goto(`${url}/#health`);
   const resting=opened.locator('.card').filter({hasText:'Resting heart rate'}).first();
-  await resting.getByRole('button',{name:'Previous reading'}).click();
+  // Health's compact chart reads a day by tap or arrow keys.
+  await resting.locator('.chart-surface').press('ArrowLeft');
   await resting.getByRole('button',{name:/^Open Wed 15 Oct$/}).click();
   await opened.waitForURL('**/#metric/heartRate/2025-10-15');
   await opened.getByText('Garmin daily resting HR · Wed 15 Oct',{exact:false}).waitFor();

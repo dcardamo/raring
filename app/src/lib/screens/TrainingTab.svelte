@@ -78,7 +78,7 @@
   <p class="key" aria-label={`Line: so far this week.${tw.lanes.some(l => l.usual) ? ` Band: your usual week, the middle half of ${Math.max(...tw.lanes.map(l => l.weeks))} recent complete weeks.` : ''}${tw.lanes.some(l => l.goal) ? ' Dashed: your goal.' : ''}`}><span><i class="k-line"></i>this week</span>{#if tw.lanes.some(l => l.usual)}<span><i class="k-band"></i>usual week ({Math.max(...tw.lanes.map(l => l.weeks))} weeks)</span>{/if}{#if tw.lanes.some(l => l.goal)}<span><i class="k-goal"></i>goal</span>{/if}</p></Card>
  {:else if trainingData.week.length}<Card title="Training load, last 7 days"><WeekBars days={trainingData.week}/></Card>{/if}
 </div>
-<div class="train-tabs" role="tablist" aria-label="Training section">{#each SECTIONS as [k, l]}<button role="tab" aria-selected={section === k} onclick={() => section = k}>{l}</button>{/each}</div>
+<div class="train-tabs" id="training-sections" role="tablist" aria-label="Training section">{#each SECTIONS as [k, l]}<button role="tab" aria-selected={section === k} onclick={() => section = k}>{l}</button>{/each}</div>
 <div class="dashboard" {@attach masonry}>
 {#if section === 'fitness'}
  <Card title="Enough, or too much?" extra="q-load" help="acute-load">

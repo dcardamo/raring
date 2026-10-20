@@ -96,7 +96,10 @@ synthetic data. `design/mockup/index.html` shows the app before the redesign.
 
 Bottom tabs: **Today · Plan · Training · Health · Progress**. Each root header
 has the date, the watch's upload time, **Adapt** (labelled with today's
-circumstance), search (pages and Garmin metrics by name) and a profile button.
+circumstance), search (pages, cards and Garmin metrics by name, with plain
+spellings such as "spo2" and synonyms; a card result opens its page scrolled to
+it; "resting heart rate" finds Garmin's daily resting HR, and Sleep HR appears
+under its own name only when Health Status supplies it) and a profile button.
 Sleep opens from Today and Health. Tapping a dial or card opens its detail;
 Back closes an open sheet first, then returns to the page that opened it,
 keeping its section, period and scroll. Short "?" sheets explain a page or
@@ -344,18 +347,21 @@ by sets, gray when none.
 Short offline pages, opened from Settings, the "?" sheets, the ? on Strength
 and the strength workout sheet: lifting with the watch, how sets are counted,
 the body map and which watches work. The "?" sheets on pages and cards say in
-two or three lines what a number is, where it comes from and how to read it. Each area ships its pages with the feature.
+two or three lines what a number is, where it comes from and how to read it,
+and link a Help page only where their area has one. Each area ships its pages with the feature.
 Questions go to GitHub; the address is shown as text.
 
 ### Health
 
-In this order: long-term health (Fitness Age, its drivers and the biggest
-lever), this morning's vitals, then resting heart rate, overnight HRV,
-average stress and Body Battery as range charts (Trends) with the usual band
-and links to their intraday details, weight, intensity minutes, Fitness Age
-history and the journal. Your day stays on Today. A daily metric whose newest
-reading is older than two days says so on its chart (Rules: Reading
-freshness).
+In this order: long-term health (Fitness Age with its history, and its
+drivers with the biggest lever), this morning's vitals, then resting heart
+rate, overnight HRV, average stress and Body Battery's daily high as compact
+range charts with the usual band, weight, intensity minutes and the journal.
+Health summarises: each chart keeps its own metric, offers 7D, 30D, 90D and
+1Y, and a tap reads a day; one link opens the metric's canonical detail (today
+and the full Trends control: comparisons, dates and all history). Your day
+stays on Today. A daily metric whose newest reading is older than two days
+says so on its chart (Rules: Reading freshness).
 
 - **Garmin journal**: a private, short dated view of the last seven lifestyle
   log days, opened explicitly in Health and off by default until local consent.
@@ -366,7 +372,8 @@ freshness).
   refresh, pacing and before any 401 retry; atomically check consent again
   when caching each reply. Closing or leaving Health hides entries.
   Garmin's `dailyLogsReport` rows may carry `name`, `logStatus`
-  (YES/NO) and `details` with `amount` and `subTypeName` (no generic unit).
+  (YES/NO) and `details` with `amount` and `subTypeName` (no generic unit;
+  shown as words, "2 coffee").
   A null report or unknown log status is not a recorded zero/no; completion
   tracking statistics do not prove individual entries. Populated report rows
   are known from community examples, not verified on this account. No new
@@ -386,7 +393,8 @@ freshness).
 - **Stress**: the daily-average range chart, with a link to today's
   three-minute readings (the same detail as Today).
 - **All-day heart rate** (opened from the resting heart-rate chart):
-  Garmin's daily resting HR (bpm) and a day chart in two-minute elapsed slots, with recorded sleep and activities shaded
+  Garmin's daily resting HR (bpm), its history with Raring's usual range
+  (Rules: Normal range), the day's minimum and maximum, and a day chart in two-minute elapsed slots, with recorded sleep and activities shaded
   or marked. Include the next morning's sleep as the previous evening's
   interval, clipped to each displayed day. Missing timestamps, null and
   off-wrist readings are gaps, never zero. The latest sample is synced, not
@@ -397,22 +405,25 @@ freshness).
   backoff. Older days open from the previous/next day controls on the detail.
 - **Weight and body composition**: a Health card and canonical `health/weight`
   detail (`metric/weight` alias) show Garmin scale weight beside Raring's trend,
-  range average/change, neutral 1–90-day changes with sparklines, the last
-  weigh-in's date/age and recorded BMI/body fat. Scale and trend use one accent
-  with distinct lines and dated markers; 7D–Max ranges, axes, and a keyboard
-  reading selector expose the evidence. Help explains smoothing. Add weight
-  stays disabled and labelled not yet available. Weight follows Garmin's
+  range average/change, neutral 1–90-day changes with sparklines (7 days and
+  longer), the last weigh-in's date/age and recorded BMI/body fat as labelled
+  values. The Health card summarises the last 30 days with the 7- and 30-day
+  changes and opens the detail, which has every range and change. Scale and
+  trend use one accent with distinct lines and dated markers; 7D–Max ranges,
+  axes with the unit, and a keyboard reading selector expose the evidence.
+  Help explains smoothing. Adding a weight lives on Profile only (Profile and
+  Settings). Weight follows Garmin's
   measurement system (kg/lb), not activity-set units in isolation. Missing
   measurements stay gaps, never zero; no notifications or unsolicited weight
   targets. Until the account units sync, the card waits rather than guessing.
-- **Long-term health · Fitness Age**: large number labelled as Garmin's
-  estimate with its date, years younger or older than your age, trend line,
-  and a bar placing it against your real age.
-- **Biggest lever**: a progress ring toward Garmin's target for the driver
-  that would help most (for example vigorous minutes), with the age you'd
-  reach.
+- **Fitness Age**: large number labelled as Garmin's estimate with its date,
+  years younger or older than your age, a bar placing it against your real
+  age, its change in years against a year ago, and its history as a compact
+  chart (90D, 1Y, Max) that opens on the latest estimate.
 - **Drivers**: VO2max, resting heart rate, BMI or body fat, and vigorous
-  minutes as tiles with range bars. Garmin's Fitness Age component owns its
+  minutes as tiles with range bars, Garmin's target in words ("Target ≥ 150
+  min/wk") and Met or how far off it is; no trend arrows. The driver that would
+  help most (the biggest lever) adds the age you'd reach at its target. Garmin's Fitness Age component owns its
   target and age estimate; a recorded weigh-in can supply a missing BMI or
   body-fat value measured in the last 30 days but never creates a target or
   Fitness Age prediction.
@@ -437,6 +448,8 @@ freshness).
 
 Every trend chart (Readiness, the vitals, stress, Body Battery, VO2max,
 acute load, Fitness Age and Sleep's history card) is the same interactive chart, drawn from local data.
+Health's cards use its compact form (Health). Garmin's sparse estimates (VO2max,
+Fitness Age) open on the latest estimate rather than an empty latest day.
 
 - Shared range control: 7D, 14D, 30D, 90D, 1Y and Max (All history), plus Dates for a chosen training block. Up to 90 days shows each day; longer
   ranges show weekly or monthly averages, and the selected point says how many
@@ -517,9 +530,15 @@ Follow-through and measured change stay apart; nothing is a grade.
   Adapt, My routines).
 - **Settings**: notifications, the wind-down lead, persistent status, Follow
   my day (and that Raring doesn't learn from how you use the app), the
-  plan-your-week prompt, journal consent, history, recent Garmin changes
-  (Rules: Recent Garmin changes), export, a validated import of another
+  plan-your-week prompt, journal consent, recent Garmin changes once there are
+  any (Rules: Recent Garmin changes), export, a validated import of another
   export's settings (Rules: Import), sign-out, help and how Raring works.
+  History on the phone is on Profile. Export and Import each lead with one
+  line, the rest behind "What's included"; an import preview (with years)
+  replaces the intro and puts Import and Cancel first. Sign-out ("Sign out and
+  erase this phone's data") confirms in place, names what it erases (Garmin
+  history, journal logs, goals, plans, limits and routines; nothing in Garmin)
+  and offers Export first.
 
 ### Weekly check-in
 
@@ -616,21 +635,23 @@ names that plan.
 
 ## Notifications
 
-A declined notification permission is remembered on the phone: Settings
-says so, offers no button and Raring doesn't ask again (Android Settings can
-still allow it). Granting it later through the persistent-status switch
-clears the note.
+Settings reads whether Android allows Raring's notifications each time it
+opens. When Android blocks them, one line at the top of Notifications says so
+and the switches are greyed; it offers Allow until a request is declined. A
+declined request is remembered on the phone: the line then points to Android
+Settings and Raring doesn't ask again. Granting it later through the
+persistent-status switch clears the note. Each switch says when it fires.
 
 Sent by the phone itself.
 
 | Notification                  | When                                         | Default |
 | ----------------------------- | -------------------------------------------- | ------- |
 | Morning readiness             | Last night's sleep and readiness have synced; while resting, ill, paused or limited, a factual update with that line and no training call | On      |
-| Weekly check-in               | Monday 08:00                                 | On      |
+| Weekly review                 | Monday 08:00                                 | On      |
 | VO2max or Fitness Age changed | Either direction                             | On      |
-| Vitals off                    | Two or more vitals outside normal range      | On      |
+| Vitals outside your ranges    | Two or more vitals outside normal range      | On      |
 | Training status changed       | On sync                                      | Off     |
-| Bedtime                       | Wind-down time of tonight's plan (lead 30 min, configurable) | Off     |
+| Wind-down reminder            | Wind-down time of tonight's plan (lead 30 min before bedtime, configurable) | Off     |
 | Persistent status (Android)   | Existing sync; silent, no extra Garmin requests | Off     |
 
 The morning readiness notification opens Today, the weekly check-in the
@@ -1224,7 +1245,10 @@ next pending wind-down while signed in.
   When Garmin has no Health Status metric, use the middle 80% of the last 30
   recorded nights (at least 14) and count readings outside that fallback
   range too; HRV retains Garmin's existing HRV baseline. Never compare Garmin's overnight
-  average HR to resting-HR history. Health Status's nightly HRV status is
+  average HR to resting-HR history: the resting-HR chart's band is always this
+  fallback computed from Garmin's daily resting HR over the last 30 days, even
+  when Health Status supplies Sleep HR, and Sleep HR's baseline shades only
+  Sleep HR. Health Status's nightly HRV status is
   separate from Garmin's seven-day HRV status. Personal ranges are not
   medical targets.
 - **Stress bars**: the Today card averages each 15 minutes of Garmin's
@@ -1235,8 +1259,9 @@ next pending wind-down while signed in.
   Use Garmin's UTC start and completed-day end as elapsed bounds: a source day
   can span 23 or 25 hours. A partial day reserves a 24-hour axis (and extends
   it if later real samples require it). The axis explicitly says elapsed
-  hours from day start, not wall-clock time; source-local travel/DST clocks
-  cannot be reconstructed from a single start offset. Sleep and activities
+  hours from day start ("6 h", readout "23 h 58 m into the day"), never
+  clock-style times; a 23- or 25-hour day says how long it is. Source-local
+  travel/DST clocks cannot be reconstructed from a single start offset. Sleep and activities
   use their GMT instants, or local-only times only when start/end source
   offsets agree for a completed day. Their intervals clip at day bounds.
   Ungraded heart rate uses neutral ink, not a poor-status color.

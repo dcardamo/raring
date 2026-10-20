@@ -39,6 +39,11 @@ export const weekLetters=(start:string)=>{
  const first=calendarDay(start);
  return Array.from({length:7},(_,i)=>first?'MTWTFSS'[(first.getDay()+6+i)%7]:'');
 };
+/** "4 Nov 2024": a date that may lie in another year. */
+export const yearDate=(date:string)=>{
+ const day=calendarDay(date);
+ return day?`${day.getDate()} ${months[day.getMonth()]} ${day.getFullYear()}`:'Date unavailable';
+};
 // When Raring read a value, with its weekday unless it was read today: an old reading never looks like today's.
 export const readAt=(iso:string,now=new Date())=>{
  const date=new Date(iso);

@@ -1338,6 +1338,11 @@ pub struct HealthView {
     pub body_weight: Option<BodyWeightCard>,
     /// This week's intensity minutes, when Garmin reported any day of it.
     pub intensity: Option<IntensityCard>,
+    /// Raring's usual range for Garmin's daily resting HR over the last 30
+    /// days (Rules: Normal range), the band on the resting-HR chart. Never
+    /// Health Status's Sleep HR baseline, which measures something else.
+    #[serde(default)]
+    pub resting_hr_range: Option<[f64; 2]>,
     /// A past day's detail an explicit open can fetch.
     #[serde(default)]
     pub detail: DayDetail,

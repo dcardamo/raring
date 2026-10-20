@@ -23,7 +23,8 @@ describe('import preview text', () => {
   });
 
   it('names the export, its date range and the change count', () => {
-    expect(importSummary(preview)).toBe('Made Sun 19 Oct · Mon 4 Nov – Tue 4 Nov · 4 rows will be applied');
+    // A year of plans never reads as one day.
+    expect(importSummary(preview)).toBe('Exported 19 Oct 2025 · Raring 0.1.30 · 4 Nov 2024 – 4 Nov 2025 · 4 changes');
   });
 
   it('says when nothing would change', () => {

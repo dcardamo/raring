@@ -742,6 +742,29 @@ fn request_notification_permission(app: tauri::AppHandle) -> Result<bool, String
     }
 }
 
+/// Whether Android lets Raring post notifications now; `None` where the
+/// platform has no such permission.
+#[tauri::command]
+fn notification_permission(app: tauri::AppHandle) -> Result<Option<bool>, String> {
+    #[cfg(target_os = "android")]
+    {
+        #[derive(Deserialize)]
+        struct Response {
+            granted: bool,
+        }
+        return vault(&app)
+            .0
+            .run_mobile_plugin::<Response>("notificationPermission", serde_json::json!({}))
+            .map(|r| Some(r.granted))
+            .map_err(|e| e.to_string());
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = app;
+        Ok(None)
+    }
+}
+
 #[cfg(desktop)]
 #[tauri::command]
 fn check_reminders(app: tauri::AppHandle) {
@@ -1231,6 +1254,7 @@ pub fn run() {
                     sign_out,
                     open_garmin_connect,
                     request_notification_permission,
+                    notification_permission,
                     get_settings,
                     garmin_changes,
                     patch_settings,
@@ -1276,6 +1300,7 @@ pub fn run() {
                     sign_out,
                     open_garmin_connect,
                     request_notification_permission,
+                    notification_permission,
                     get_settings,
                     garmin_changes,
                     patch_settings,

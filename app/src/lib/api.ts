@@ -164,6 +164,7 @@ const sampleImport:ImportPreview = {exportedAt:'2025-10-19T08:12:00+02:00',appVe
 export const choose_import = ():Promise<ImportPreview> => call('choose_import',undefined,sampleImport);
 export const apply_import = ():Promise<ImportPreview> => call('apply_import',undefined,sampleImport);
 export const request_notification_permission = ():Promise<boolean> => call('request_notification_permission',undefined,true);
+export const notification_permission = ():Promise<boolean|null> => call('notification_permission',undefined,new URLSearchParams(location.search).get('fixture')!=='notifications-blocked');
 // Desktop re-reads due reminders on resume and after a settings change.
 export const check_reminders = ():Promise<void> => call('check_reminders',undefined,undefined);
 export const reminders_status = ():Promise<ReminderStatus|null> => call('reminders_status',undefined,null);

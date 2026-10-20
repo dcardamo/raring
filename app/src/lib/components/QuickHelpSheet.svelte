@@ -15,7 +15,7 @@
   <span class="grab"></span>
   <div class="sheet-h"><h2 id="qh-title">{h.title}</h2><button class="close" aria-label="Close" onclick={close}><Icon name="close" size={20}/></button></div>
   {#each h.body as p}<p>{p}</p>{/each}
-  <button class="link" onclick={() => { close(); navigate('help'); }}>All help</button>
+  {#if h.more}<button class="link" onclick={() => { close(); navigate(h.more!.route); }}>{h.more.label}</button>{/if}
  </div>
 {/if}
 <style>
