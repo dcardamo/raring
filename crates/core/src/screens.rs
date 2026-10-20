@@ -186,7 +186,7 @@ fn sleep_need_minutes(need: &Value) -> Option<f64> {
                 })
         })
 }
-fn sleep_need(v: &Value) -> Option<f64> {
+pub(crate) fn sleep_need(v: &Value) -> Option<f64> {
     sleep_need_minutes(&sleep(v)["sleepNeed"])
 }
 fn parse_local(s: &str) -> Option<NaiveDateTime> {

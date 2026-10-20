@@ -21,7 +21,11 @@
       "highIntensityMin": null,
       "intensityMin": 140,
       "strength": 3,
-      "vo2max": null
+      "vo2max": null,
+      "zone2Goal": null,
+      "highIntensityGoal": null,
+      "intensityGoal": null,
+      "strengthGoal": null
     },
     {
       "start": "2025-08-04",
@@ -31,7 +35,11 @@
       "highIntensityMin": null,
       "intensityMin": 160,
       "strength": 4,
-      "vo2max": null
+      "vo2max": null,
+      "zone2Goal": null,
+      "highIntensityGoal": null,
+      "intensityGoal": null,
+      "strengthGoal": null
     },
     {
       "start": "2025-08-11",
@@ -41,7 +49,11 @@
       "highIntensityMin": null,
       "intensityMin": 150,
       "strength": 3,
-      "vo2max": 50
+      "vo2max": 50,
+      "zone2Goal": null,
+      "highIntensityGoal": null,
+      "intensityGoal": null,
+      "strengthGoal": null
     },
     {
       "start": "2025-08-18",
@@ -51,7 +63,11 @@
       "highIntensityMin": null,
       "intensityMin": null,
       "strength": null,
-      "vo2max": null
+      "vo2max": null,
+      "zone2Goal": null,
+      "highIntensityGoal": null,
+      "intensityGoal": null,
+      "strengthGoal": null
     },
     {
       "start": "2025-08-25",
@@ -61,7 +77,11 @@
       "highIntensityMin": null,
       "intensityMin": 175,
       "strength": 4,
-      "vo2max": null
+      "vo2max": null,
+      "zone2Goal": 120,
+      "highIntensityGoal": null,
+      "intensityGoal": 150,
+      "strengthGoal": 3
     },
     {
       "start": "2025-09-01",
@@ -71,7 +91,11 @@
       "highIntensityMin": null,
       "intensityMin": 150,
       "strength": 4,
-      "vo2max": 51
+      "vo2max": 51,
+      "zone2Goal": 120,
+      "highIntensityGoal": null,
+      "intensityGoal": 150,
+      "strengthGoal": 3
     },
     {
       "start": "2025-09-08",
@@ -81,7 +105,11 @@
       "highIntensityMin": null,
       "intensityMin": 180,
       "strength": 3,
-      "vo2max": null
+      "vo2max": null,
+      "zone2Goal": 120,
+      "highIntensityGoal": null,
+      "intensityGoal": 150,
+      "strengthGoal": 3
     },
     {
       "start": "2025-09-15",
@@ -91,7 +119,11 @@
       "highIntensityMin": null,
       "intensityMin": 165,
       "strength": 4,
-      "vo2max": null
+      "vo2max": null,
+      "zone2Goal": 120,
+      "highIntensityGoal": null,
+      "intensityGoal": 150,
+      "strengthGoal": 3
     },
     {
       "start": "2025-09-22",
@@ -101,7 +133,11 @@
       "highIntensityMin": null,
       "intensityMin": 60,
       "strength": 1,
-      "vo2max": 52
+      "vo2max": 52,
+      "zone2Goal": 150,
+      "highIntensityGoal": null,
+      "intensityGoal": 150,
+      "strengthGoal": 4
     },
     {
       "start": "2025-09-29",
@@ -111,7 +147,11 @@
       "highIntensityMin": null,
       "intensityMin": 155,
       "strength": 4,
-      "vo2max": null
+      "vo2max": null,
+      "zone2Goal": 150,
+      "highIntensityGoal": null,
+      "intensityGoal": 150,
+      "strengthGoal": 4
     },
     {
       "start": "2025-10-06",
@@ -121,7 +161,11 @@
       "highIntensityMin": null,
       "intensityMin": 170,
       "strength": 4,
-      "vo2max": null
+      "vo2max": null,
+      "zone2Goal": 150,
+      "highIntensityGoal": null,
+      "intensityGoal": 150,
+      "strengthGoal": 4
     },
     {
       "start": "2025-10-13",
@@ -131,27 +175,11 @@
       "highIntensityMin": null,
       "intensityMin": 124,
       "strength": 3,
-      "vo2max": 52
-    }
-  ],
-  "bests": [
-    {
-      "key": "SQUAT/BARBELL_BACK_SQUAT",
-      "name": "Barbell Back Squat",
-      "weight": 105,
-      "unit": "kg",
-      "reps": 3,
-      "date": "2025-10-15",
-      "activity": "9000000000111"
-    },
-    {
-      "key": "BENCH_PRESS/BARBELL_BENCH_PRESS",
-      "name": "Barbell Bench Press",
-      "weight": 72.5,
-      "unit": "kg",
-      "reps": 5,
-      "date": "2025-10-08",
-      "activity": "9000000000109"
+      "vo2max": 52,
+      "zone2Goal": 150,
+      "highIntensityGoal": null,
+      "intensityGoal": 150,
+      "strengthGoal": 4
     }
   ],
   "months": [

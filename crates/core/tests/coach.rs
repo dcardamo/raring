@@ -147,3 +147,15 @@ fn a_workout_says_how_it_counted_toward_the_week() {
     assert!(c.plan_item.is_none() && c.bests.is_empty());
     assert!(f.core.workout("6").unwrap().counted.is_none(), "only live reads say how it counted");
 }
+
+#[test]
+fn progress_marks_coach_days_exactly_when_plan_shows_them() {
+    let f = fx("progress-gate", adaptive());
+    let garmin = |days: &[DayCell]| days.iter().filter(|d| d.date.as_str() >= "2025-03-10" && d.date.as_str() <= "2025-03-16" && d.garmin > 0).count();
+    for (when, fresh) in [(at(13, 18), true), (at(14, 9), false)] {
+        let plan = f.core.plan_board("2025-03-13", when).unwrap();
+        let progress = f.core.progress(Period::Month, "2025-03-13", when).unwrap();
+        assert_eq!(garmin(&progress.ring_days), garmin(&plan.days), "fresh {fresh}");
+        assert_eq!(garmin(&plan.days) > 0, fresh, "a snapshot older than 12 hours plans nothing");
+    }
+}

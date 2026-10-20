@@ -435,22 +435,30 @@ Backlog, Garmin Coach).
 Four sections, the choice kept across a detail and Back:
 
 - **Overall**: the period report (week, month, 3 months, year; previous and
-  next; known totals and a comparison only when comparable, Rules: Progress
-  periods), the ring calendar for month and past week periods (whole plan
+  next; known totals as amounts, never clock times ("19 h 54 min", "278 h" from
+  100 hours), and one "Compared with" line with each total's signed change only
+  when comparable, Rules: Progress periods; sleep against need for the period;
+  activity by sport on a chart with axes, minutes per day or hours per week or
+  month, days to come left blank and the current day or bucket outlined), the
+  ring calendar for month and past week periods (whole plan
   weeks, days outside the period faint; the current week is Plan's day strip;
   without goals, the activity calendar), the weekly goal rings for the last 12
   weeks (passed weeks open their review and this week opens Plan; a week that
   didn't count is faded, hatched when ill or paused and dotted when data was
   missing) with one link to all reviews, and the latest 12 records and
-  milestones with a link to all of them (`#progress/milestones`, by month).
-- **Cardio**: Zone 2, Zone 4–5 (with its goal) and intensity minutes per week
-  for 12 weeks against the goal, and Garmin's VO2max estimates on the same
-  weeks (Rules: Progress domains).
-- **Strength**: strength sessions per week against the goal, bests in
-  available history, and the two heaviest lifts' heaviest set per session over
-  a year.
+  milestones (dated with the year when it isn't this one) with a link to all
+  of them (`#progress/milestones`, by month).
+- **Cardio**: Zone 2, Zone 4–5 (while it has a goal) and intensity minutes per
+  week for 12 weeks, each week against its own target as a stepped dashed line
+  (intensity following Garmin's goal says "Garmin goal"), and Garmin's VO2max
+  estimates on the same weeks (Rules: Progress domains). The current week is
+  outlined and labelled This week.
+- **Strength**: strength sessions per week against each week's goal, with
+  whole-number ticks, and a link to Training · Strength for bests and lifts
+  (shown there once, with its ranges and measures).
 - **Long-term**: training hours, resting heart rate, overnight HRV, VO2max and
-  Fitness Age by month, then the latest readings and sleep against need.
+  Fitness Age by month, each opening its detail; the current month is marked
+  "so far".
 
 Follow-through and measured change stay apart; nothing is a grade.
 
@@ -866,9 +874,7 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
 - **Milestone archive**: `progress/milestones` lists every milestone in
   available history, newest first and grouped by month, from the same awards
   as Progress (read once more awards nothing; corrections keep their award).
-  Progress shows the latest 12 and links to it. Progress · Strength charts the
-  heaviest set per session over the last year for the two exercises with the
-  heaviest bests (the Lift volume rule's counted sets).
+  Progress shows the latest 12 and links to it.
 - **Progress domains**: from local data only. Week and month periods carry
   ring cells for the whole plan weeks covering them (the Rings rule). Cardio
   and Strength show the 12 plan weeks ending this week from covered history:
@@ -876,8 +882,9 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   or the activity list is incomplete), Garmin's weekly intensity minutes
   (Plan progress), strength activities, and Garmin's latest VO₂ max estimate
   dated in the week; a week with two or more ill or paused days, or an
-  incomplete list, carries that mark. Strength bests are each exercise's
-  heaviest counted set in available history (ties: more reps). Long-term
+  incomplete list, carries that mark. Each week carries its own targets (Goal
+  ledger: in effect at its end, Garmin's weekly goal for intensity following
+  it), none before goals began or while a goal was off. Long-term
   shows 12 calendar months: recorded minutes (none before history or with an
   uncovered day), the month's average of Garmin's daily resting heart rate
   and overnight HRV, and the latest VO₂ max and Fitness Age estimates dated in
@@ -888,7 +895,9 @@ latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
   distance for a known sport family recorded at least three times, and the first
   completed, counted week with every action goal met. Mixed unknown sports are
   not combined into a distance record. A week with a revision or pause cannot
-  earn this whole-week award; observations alone never qualify.
+  earn this whole-week award; observations alone never qualify. A set that is
+  the heaviest for several rep counts is shown as one row with its weight and
+  reps and the counts it holds ("12 kg × 10 · heaviest for 1–10 reps").
   Records use stable identities and canonical units (grams for lifts), so a
   display-unit change is not an improvement. A genuinely better value recorded
   on a later date can be new; backfill is quiet. Lower, earlier, replaced or

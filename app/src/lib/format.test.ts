@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {duration,elapsed,pace,clock,dateLabel,monthLabel,shortMonth,signed,num} from './format';
+import {duration,elapsed,pace,clock,dateLabel,dateLabelIn,dayMonthYear,hoursMinutes,monthLabel,shortMonth,signed,signedTime,num} from './format';
 describe('Garmin formatting',()=>{
  it('renders durations and times',()=>{expect(duration(468)).toBe('7:48');expect(duration(null)).toBe('—');expect(elapsed(3134)).toBe('52:14');expect(elapsed(5050)).toBe('1:24:10');expect(clock('2025-10-16T06:12:00')).toBe('06:12')});
  it('renders paces and deltas',()=>{expect(pace(307)).toBe('5:07/km');expect(signed(-4,'m')).toBe('−4m');expect(signed(1)).toBe('+1');expect(signed(0)).toBe('');expect(signed(0.8,'m')).toBe('');expect(signed(1.714285)).toBe('+1.7');expect(num(null)).toBe('—')});
@@ -20,5 +20,11 @@ describe('Garmin formatting',()=>{
   const instant='2025-10-16T20:12:00Z';
   expect(clock(instant)).toBe(new Date(instant).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
   expect(clock('invalid')).toBe('—');expect(clock(null)).toBe('—');
+ });
+ it('writes amounts of time and dates whose year matters',()=>{
+  expect(hoursMinutes(1194)).toBe('19 h 54 min');expect(hoursMinutes(16701)).toBe('278 h');expect(hoursMinutes(45)).toBe('45 min');expect(hoursMinutes(null)).toBe('—');
+  expect(signedTime(185)).toBe('+3 h 05');expect(signedTime(-44)).toBe('−44 min');expect(signedTime(0)).toBe('');
+  expect(dayMonthYear('2025-10-23')).toBe('23 Oct 2025');
+  expect(dateLabelIn('2025-10-23','2026-10-22')).toBe('Thu 23 Oct 2025');expect(dateLabelIn('2026-10-19','2026-10-22')).toBe('Mon 19 Oct');
  });
 });

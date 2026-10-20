@@ -36,3 +36,22 @@ export const num=(value:number|null|undefined,precision=0)=>value==null?'—':va
 
 // Minutes from local midnight as a 24-hour clock time.
 export const minuteClock=(m:number)=>`${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(Math.floor(m%60)).padStart(2,'0')}`;
+// "23 Oct 2025": a date whose year matters, such as where history starts.
+export const dayMonthYear=(date:string)=>{
+ const day=calendarDay(date);
+ return day?`${day.getDate()} ${months[day.getMonth()]} ${day.getFullYear()}`:'Date unavailable';
+};
+// dateLabel, with the year when it isn't `today`'s.
+export const dateLabelIn=(date:string,today:string)=>date.slice(0,4)===today.slice(0,4)?dateLabel(date):`${dateLabel(date)} ${date.slice(0,4)}`;
+// Amounts of time, never shaped like a clock: "45 min", "19 h 54 min", and
+// whole hours from 100 h ("278 h").
+export const hoursMinutes=(minutes:number|null|undefined)=>{
+ if(minutes==null)return '—';
+ const m=Math.round(Math.abs(minutes)),h=Math.floor(m/60);
+ return h>=100?`${Math.round(Math.abs(minutes)/60)} h`:h?`${h} h ${String(m%60).padStart(2,'0')} min`:`${m} min`;
+};
+// A signed change in time: "+3 h 05", "−44 min".
+export const signedTime=(minutes:number)=>{
+ const m=Math.round(Math.abs(minutes)),h=Math.floor(m/60),sign=minutes<0?'−':'+';
+ return m===0?'':h?`${sign}${h} h ${String(m%60).padStart(2,'0')}`:`${sign}${m} min`;
+};

@@ -77,7 +77,7 @@
  import {colors,toneColor,batteryColor,stressColors,stressNames} from './lib/charts';import {duration,elapsed,pace,clock,dateLabel,monthLabel,signed,num,minuteClock} from './lib/format';
  type StrengthPage={strengthPage:StrengthView|null};
  type ProgressView=import('./lib/generated/ProgressView').ProgressView;
- type ProgressPage={progress:ProgressView;health:HealthView};
+ type ProgressPage={progress:ProgressView};
  let progressQuery:{period:import('./lib/generated/Period').Period,date?:string}={period:'month'};
  let progressRevision=0;
  type PageData=TodayView|SleepView|TrainingView|WorkoutView|HealthView|CheckinView|PlanBoard|StrengthPage|ProgressPage|WeightView|ProfileView;
@@ -203,11 +203,11 @@
  // Keep Progress's selection with its cached page, not a component that is
  // destroyed on a detail visit. Older reads may not replace a newer selection.
  function saveProgress(progress:ProgressView){
-  if(route!=='progress' || !data || !('health' in data))return;
+  if(route!=='progress' || !data || !('progress' in data))return;
   progressQuery={period:progress.period,date:progress.current?undefined:progress.end};
   progressRevision++;requestId++;
   pendingViews.delete('progress');
-  const next:ProgressPage={progress,health:data.health};
+  const next:ProgressPage={progress};
   views.set('progress',next);data=next;pendingSwap=null;loading=false;
  }
  function clearSessionViews(){progressQuery={period:'month'};progressRevision++;weightRange='days30';clearViews()}
@@ -224,7 +224,7 @@
    // The check-in is keyed by the Monday after its week; a review route names the week's start.
    case 'review':return api.checkin(id==='latest'?undefined:addDays(id,7));
    case 'plan':return api.plan_board();
-   case 'progress':{const [progress,health]=await Promise.all([api.progress(progressQuery.period,progressQuery.date),api.health()]);return {progress,health}}
+   case 'progress':return {progress:await api.progress(progressQuery.period,progressQuery.date)};
    case 'profile':return api.profile();
    case 'gear':case 'activities':return api.training();
    case 'metric':return api[metricSource(id)]();
@@ -435,7 +435,7 @@
 {:else if route.startsWith('help/') && route.slice(5) in helpContent}
  {@const page=helpContent[route.slice(5) as keyof typeof helpContent]}<Header title={page.title} eyebrow="HELP" back={back} backLabel={parentLabel}/><div class="help-list"><Card><p class="help-intro">{page.intro}</p><ol class="help-steps">{#each page.steps as step,i}<li><span class="n">{i+1}</span>{step}</li>{/each}</ol></Card><p class="small help-foot">Still stuck? Ask at {GITHUB_QUESTIONS}</p></div>
 {:else if route==='progress/milestones'}
- <Header title="Records and milestones" eyebrow="Progress" back={back} backLabel={parentLabel}/>{#if milestoneRows}{#each [...new Set(milestoneRows.map(m=>m.date.slice(0,7)))] as month}<section class="card archive-month" aria-label={monthLabel(month+'-01')}><h3>{monthLabel(month+'-01')}</h3>{#each milestoneRows.filter(m=>m.date.startsWith(month)) as m (m.id)}<button class="ms" disabled={!m.route} onclick={()=>m.route&&navigate(m.route)}><span><b>{m.title}</b><small>{m.value} · {dateLabel(m.date)}{m.corrected?' · corrected after a Garmin edit':''}</small></span>{#if m.route}<Icon name="chevron" size={15}/>{/if}</button>{/each}</section>{:else}<p class="small">Bests and other milestones appear here as Garmin records them.</p>{/each}<p class="small">In available history. Each is awarded once; a Garmin edit corrects it without a new award.</p>{:else}<p class="small">Reading your records…</p>{/if}
+ <Header title="Records and milestones" eyebrow="Progress" back={back} backLabel={parentLabel}/>{#if milestoneRows}{#each [...new Set(milestoneRows.map(m=>m.date.slice(0,7)))] as month}<section class="card archive-month" aria-label={monthLabel(month+'-01')}><h3>{monthLabel(month+'-01')}</h3>{#each milestoneRows.filter(m=>m.date.startsWith(month)) as m (m.id)}<button class="ms" disabled={!m.route} onclick={()=>m.route&&navigate(m.route)}><span><b>{m.title}</b><small>{[m.value,dateLabel(m.date)].filter(Boolean).join(' · ')}{m.corrected?' · corrected after a Garmin edit':''}</small></span>{#if m.route}<Icon name="chevron" size={15}/>{/if}</button>{/each}</section>{:else}<p class="small">Bests and other milestones appear here as Garmin records them.</p>{/each}{:else}<p class="small">Reading your records…</p>{/if}
 {:else if route==='reviews'}
  <Header title="Weekly reviews" eyebrow="Progress" back={back} backLabel={parentLabel}/>{#if reviewRows}{#each reviewRows as r}<button class="card review-row" onclick={()=>navigate('review/'+r.start)}><span><b>Week of {dateLabel(r.start)}</b><small>{r.counted?`${r.met} of ${r.goals} goals met`:'Not counted'}{r.reasons.length?' · '+r.reasons.join(' · '):''}</small></span><Icon name="chevron" size={16}/></button>{:else}<p class="small">Weeks appear here once you've chosen goals.</p>{/each}{:else}<p class="small">Loading…</p>{/if}
 {:else if loading && !hasRendered}<div class="empty"><BrandMark/><h2>{status?.lastSync?'Loading your day…':'Syncing your Garmin data…'}</h2></div>
@@ -476,7 +476,7 @@
 {:else if boardData && route==='plan/commitments'}
  <Header title="Weekly goals" eyebrow="Plan" back={back} backLabel={parentLabel}/><GoalEditor initial={boardData.goals?.targets??null} garminGoal={boardData.garminIntensityGoal} busy={changing} save={targets=>act({action:'setGoals',targets},back)}/>
 {:else if progressData}
- {#snippet progressHeader()}<Header title="Progress" eyebrow="Trends and reviews" {...rootControls}/>{/snippet}<ProgressTab initial={progressData.progress} health={progressData.health} {navigate} header={progressHeader} onChange={saveProgress} bind:section={progressSection}/>
+ {#snippet progressHeader()}<Header title="Progress" eyebrow="Trends and reviews" {...rootControls}/>{/snippet}<ProgressTab initial={progressData.progress} {navigate} header={progressHeader} onChange={saveProgress} bind:section={progressSection}/>
 {:else if profilePage && route==='profile'}
  {#snippet profileHeader()}<Header title="Profile" eyebrow="RARING" back={back} backLabel={parentLabel}/>{/snippet}<ProfileScreen {status} profile={profilePage} {navigate} limits={()=>{adaptLimits=true;adaptOpen=true}} header={profileHeader}/>
 {:else if profileData && route==='gear'}

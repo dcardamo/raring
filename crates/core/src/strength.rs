@@ -865,6 +865,8 @@ pub(crate) struct AllTimeBest {
     pub key: String,
     pub name: String,
     pub reps: u32,
+    /// The best set's own reps (at least `reps`).
+    pub set_reps: u32,
     pub grams: f64,
     pub date: String,
     pub activity: String,
@@ -872,7 +874,7 @@ pub(crate) struct AllTimeBest {
 
 pub(crate) fn all_time_bests(store: &Store, through: &str) -> Vec<AllTimeBest> {
     let all = analyse(recorded_sessions(store).into_iter().filter(|s| s.date() <= through).collect());
-    let mut best: BTreeMap<(String, u32), (f64, String, String)> = BTreeMap::new();
+    let mut best: BTreeMap<(String, u32), (f64, u32, String, String)> = BTreeMap::new();
     for a in &all {
         for (i, s) in a.session.sets.iter().enumerate() {
             if !s.active || !counts_for_records(s, &a.flags[i]) {
@@ -881,18 +883,18 @@ pub(crate) fn all_time_bests(store: &Store, through: &str) -> Vec<AllTimeBest> {
             let (Some(key), Some(grams), Some(reps)) = (&s.key, s.grams, s.reps) else { continue };
             for n in [1, 3, 5, 8, 10] {
                 if reps >= n {
-                    let e = best.entry((key.clone(), n)).or_insert((0., String::new(), String::new()));
-                    // Ties keep the earliest set.
-                    if grams > e.0 {
-                        *e = (grams, a.session.date().to_owned(), a.session.id.clone());
+                    let e = best.entry((key.clone(), n)).or_insert((0., 0, String::new(), String::new()));
+                    // Ties keep the earliest set; within it, the most reps.
+                    if grams > e.0 || (grams == e.0 && a.session.id == e.3 && reps > e.1) {
+                        *e = (grams, reps, a.session.date().to_owned(), a.session.id.clone());
                     }
                 }
             }
         }
     }
     best.into_iter()
-        .map(|((key, reps), (grams, date, activity))| {
-            AllTimeBest { name: display_name(&key), key, reps, grams, date, activity }
+        .map(|((key, reps), (grams, set_reps, date, activity))| {
+            AllTimeBest { name: display_name(&key), key, reps, set_reps, grams, date, activity }
         })
         .collect()
 }

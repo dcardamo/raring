@@ -210,8 +210,9 @@ training.lanes={start:'2025-10-13',today:'2025-10-16',lanes:[
  const zones=[90,120,140,0,155,130,160,150,40,135,165,100],ims=[140,160,150,null,175,150,180,165,60,155,170,124],str=[3,4,3,2,4,4,3,4,1,4,4,3];
  const months=['2024-11','2024-12','2025-01','2025-02','2025-03','2025-04','2025-05','2025-06','2025-07','2025-08','2025-09','2025-10'];
  var progressDomains={today:'2025-10-16',goals:goalTargets,
-  weeks:zones.map((z,i)=>({start:weekStart(i),current:i===11,mark:i===8?'ill':i===3?'unknown':null,zone2Min:i===3?null:z,highIntensityMin:null,intensityMin:ims[i],strength:i===3?null:str[i],vo2max:i%3===2?50+Math.floor(i/4):null})),
-  bests:[{key:'SQUAT/BARBELL_BACK_SQUAT',name:'Barbell Back Squat',weight:105,unit:'kg',reps:3,date:'2025-10-15',activity:'9000000000111'},{key:'BENCH_PRESS/BARBELL_BENCH_PRESS',name:'Barbell Bench Press',weight:72.5,unit:'kg',reps:5,date:'2025-10-08',activity:'9000000000109'}],
+  weeks:zones.map((z,i)=>({start:weekStart(i),current:i===11,mark:i===8?'ill':i===3?'unknown':null,zone2Min:i===3?null:z,highIntensityMin:null,intensityMin:ims[i],strength:i===3?null:str[i],vo2max:i%3===2?50+Math.floor(i/4):null,
+   // No goals for the first four weeks, then 120 min and three sessions, then today's targets.
+   zone2Goal:i<4?null:i<8?120:150,highIntensityGoal:null,intensityGoal:i<4?null:150,strengthGoal:i<4?null:i<8?3:4})),
   months:months.map((m,i)=>({start:m+'-01',minutes:i<1?null:1200+i*90+(i%3)*120,restingHr:i<1?null:Math.round((60-i*0.3)*10)/10,hrv:i<1?null:Math.round((50+i*0.6)*10)/10,vo2max:i<1?null:48+Math.floor(i/3),fitnessAge:i<1?null:43-Math.floor(i/3)}))};
  globalThis.progressDomains=progressDomains;
 }

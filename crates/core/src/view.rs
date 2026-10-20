@@ -3140,19 +3140,12 @@ pub struct DomainWeek {
     pub strength: Option<f64>,
     /// Garmin's latest VO₂ max estimate dated in the week.
     pub vo2max: Option<f64>,
-}
-
-#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-#[ts(export)]
-pub struct DomainBest {
-    pub key: String,
-    pub name: String,
-    pub weight: Option<f64>,
-    pub unit: WeightUnit,
-    pub reps: u32,
-    pub date: String,
-    pub activity: String,
+    /// That week's own targets (Goal ledger); None before goals or while a
+    /// goal was off. Intensity following Garmin's goal is Garmin's weekly goal.
+    pub zone2_goal: Option<f64>,
+    pub high_intensity_goal: Option<f64>,
+    pub intensity_goal: Option<f64>,
+    pub strength_goal: Option<f64>,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
@@ -3180,8 +3173,6 @@ pub struct ProgressDomains {
     pub goals: Option<GoalTargets>,
     /// Twelve plan weeks ending this week, oldest first, from history.
     pub weeks: Vec<DomainWeek>,
-    /// Each exercise's heaviest counted set in available history, heaviest first.
-    pub bests: Vec<DomainBest>,
     /// Twelve calendar months ending this month, oldest first.
     pub months: Vec<DomainMonth>,
 }

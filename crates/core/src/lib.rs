@@ -303,24 +303,24 @@ impl Raring {
     /// The review of the plan week containing `date`, with next week's proposals.
     pub fn week_review(&self, date: &str, now: DateTime<Local>) -> Result<view::WeekReview> {
         let anchor = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d").map_err(|_| Error::InvalidLocal("date"))?;
-        Ok(review::week_review(&self.store, anchor, now.date_naive()))
+        Ok(review::week_review(&self.store, anchor, now.date_naive(), now.with_timezone(&chrono::Utc)))
     }
     /// Progress for the period containing `date`.
     /// Every milestone in available history, newest first.
     pub fn milestone_archive(&self, now: DateTime<Local>) -> Result<Vec<view::Milestone>> {
-        progress::milestone_archive(&self.store, now.date_naive())
+        progress::milestone_archive(&self.store, now.date_naive(), now.with_timezone(&chrono::Utc))
     }
     /// Progress's Cardio, Strength and Long-term views, from local data only.
     pub fn progress_domains(&self, now: DateTime<Local>) -> view::ProgressDomains {
-        progress::domains(&self.store, now.date_naive())
+        progress::domains(&self.store, now.date_naive(), now.with_timezone(&chrono::Utc))
     }
     pub fn progress(&self, period: view::Period, date: &str, now: DateTime<Local>) -> Result<view::ProgressView> {
         let anchor = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d").map_err(|_| Error::InvalidLocal("date"))?;
-        progress::progress(&self.store, period, anchor, now.date_naive())
+        progress::progress(&self.store, period, anchor, now.date_naive(), now.with_timezone(&chrono::Utc))
     }
     /// Reviewed weeks with goals, newest first.
     pub fn reviews(&self, now: DateTime<Local>) -> Vec<view::ReviewRow> {
-        review::list(&self.store, now.date_naive(), 26)
+        review::list(&self.store, now.date_naive(), 26, now.with_timezone(&chrono::Utc))
     }
     /// Goals, sessions, links, circumstances, prompts and events, migrated.
     pub fn local_records(&self) -> local::LocalRecords {
@@ -344,7 +344,7 @@ impl Raring {
         // Proposals are recomputed now, so only what the review offers can be accepted.
         let proposals = match action {
             view::LocalAction::DecideReview { week, .. } => chrono::NaiveDate::parse_from_str(week, "%Y-%m-%d")
-                .map(|w| review::proposals(&self.store, w, now.date_naive()))
+                .map(|w| review::proposals(&self.store, w, now.date_naive(), now.with_timezone(&chrono::Utc)))
                 .unwrap_or_default(),
             _ => vec![],
         };

@@ -7,7 +7,7 @@ use crate::{
     store::Store,
     view::*,
 };
-use chrono::{Duration, NaiveDate, Utc};
+use chrono::{DateTime, Duration, NaiveDate, Utc};
 
 const HISTORY_WEEKS: i64 = 8;
 
@@ -28,8 +28,8 @@ pub(crate) fn days_with(local: &LocalRecords, start: NaiveDate, reason: Option<P
         .count() as u32
 }
 
-pub(crate) fn week(store: &Store, local: &LocalRecords, start: NaiveDate, today: NaiveDate) -> Week {
-    let board = ledger::board_with(store, local, start, today, Utc::now());
+pub(crate) fn week(store: &Store, local: &LocalRecords, start: NaiveDate, today: NaiveDate, now: DateTime<Utc>) -> Week {
+    let board = ledger::board_with(store, local, start, today, now);
     let ill = days_with(local, start, Some(PauseReason::Ill));
     let paused = days_with(local, start, None) - ill;
     let rest = board.days.iter().filter(|d| local.circumstances.rest.iter().any(|r| r.date == d.date)).count() as u32;
@@ -104,7 +104,7 @@ fn round5(n: f64) -> f64 {
 }
 
 /// Next week's proposals after reviewing the week starting `start`.
-fn propose(store: &Store, local: &LocalRecords, start: NaiveDate, today: NaiveDate, last: &Week) -> Vec<GoalProposal> {
+fn propose(store: &Store, local: &LocalRecords, start: NaiveDate, today: NaiveDate, now: DateTime<Utc>, last: &Week) -> Vec<GoalProposal> {
     let Some(version) = local::goals_in_week(&local.goals, start, start + Duration::days(6)) else {
         return vec![];
     };
@@ -112,7 +112,7 @@ fn propose(store: &Store, local: &LocalRecords, start: NaiveDate, today: NaiveDa
     let history: Vec<Week> = (0..HISTORY_WEEKS)
         .map(|i| start - Duration::days(7 * i))
         .filter(|w| (*w + Duration::days(6)).to_string() >= first_goal)
-        .map(|w| if w == start { Week { review: last.review.clone(), goals: last.goals.clone(), rings: last.rings.clone() } } else { week(store, local, w, today) })
+        .map(|w| if w == start { Week { review: last.review.clone(), goals: last.goals.clone(), rings: last.rings.clone() } } else { week(store, local, w, today, now) })
         .collect();
     let t = &version.targets;
     let kinds: Vec<(GoalKind, f64, bool, f64)> = [
@@ -166,21 +166,21 @@ fn propose(store: &Store, local: &LocalRecords, start: NaiveDate, today: NaiveDa
 }
 
 /// The review of the plan week containing `anchor`.
-pub fn week_review(store: &Store, anchor: NaiveDate, today: NaiveDate) -> WeekReview {
+pub fn week_review(store: &Store, anchor: NaiveDate, today: NaiveDate, now: DateTime<Utc>) -> WeekReview {
     let local = local::load(store);
     let start = crate::plan::week_start(anchor, crate::plan::week_starts_on(store));
-    let last = week(store, &local, start, today);
-    let proposals = propose(store, &local, start, today, &last);
+    let last = week(store, &local, start, today, now);
+    let proposals = propose(store, &local, start, today, now, &last);
     WeekReview { proposals, ..last.review }
 }
 
 /// The proposals a decision on the week starting `start` may accept.
-pub fn proposals(store: &Store, start: NaiveDate, today: NaiveDate) -> Vec<GoalProposal> {
-    week_review(store, start, today).proposals
+pub fn proposals(store: &Store, start: NaiveDate, today: NaiveDate, now: DateTime<Utc>) -> Vec<GoalProposal> {
+    week_review(store, start, today, now).proposals
 }
 
 /// Past weeks with goals, newest first, for the review list.
-pub fn list(store: &Store, today: NaiveDate, weeks: i64) -> Vec<ReviewRow> {
+pub fn list(store: &Store, today: NaiveDate, weeks: i64, now: DateTime<Utc>) -> Vec<ReviewRow> {
     let local = local::load(store);
     let first = crate::plan::week_starts_on(store);
     let this = crate::plan::week_start(today, first);
@@ -189,7 +189,7 @@ pub fn list(store: &Store, today: NaiveDate, weeks: i64) -> Vec<ReviewRow> {
         .map(|i| this - Duration::days(7 * i))
         .filter(|w| first_goal.as_deref().is_some_and(|g| (*w + Duration::days(6)).to_string().as_str() >= g))
         .map(|w| {
-            let wk = week(store, &local, w, today);
+            let wk = week(store, &local, w, today, now);
             ReviewRow {
                 start: wk.review.start,
                 counted: wk.review.counted,

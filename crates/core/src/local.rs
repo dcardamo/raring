@@ -82,6 +82,9 @@ pub struct MilestoneRecord {
     pub title: String,
     pub route: Option<String>,
     pub withdrawn: bool,
+    /// The set's own rep count, for showing a best; evidence only, never stored.
+    #[serde(skip)]
+    pub set_reps: Option<u32>,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug, PartialEq)]

@@ -1210,7 +1210,7 @@ try {
   await progressPage.waitForFunction(()=>document.querySelector('.rep-h h2')?.textContent.includes('6 Oct')&&document.querySelector('.report')?.getAttribute('aria-busy')==='false');
   const historicalLabel=await progressPage.locator('.rep-h h2').textContent();
   await progressPage.getByRole('tab',{name:'Long-term'}).click();
-  await progressPage.locator('.tiles2 button').filter({hasText:'HRV'}).click();
+  await progressPage.getByRole('region',{name:'Overnight HRV by month'}).getByRole('button',{name:'Details'}).click();
   await progressPage.waitForFunction(()=>location.hash==='#metric/hrv');
   await progressPage.goBack();
   await progressPage.waitForFunction(()=>document.querySelector('[role=tab][aria-selected=true]')?.textContent==='Long-term');
@@ -1250,12 +1250,11 @@ try {
   assert.ok((await pd.getByRole('region',{name:'VO₂ max, same weeks'}).getByRole('img').getAttribute('aria-label')).includes('none'),'weeks without an estimate stay empty');
   await pd.getByRole('tab',{name:'Strength'}).click();
   await pd.getByRole('region',{name:'Strength sessions per week'}).waitFor();
-  const bests=pd.getByRole('region',{name:'Bests in available history'});
-  assert.ok((await bests.textContent()).includes('Barbell Back Squat') && (await bests.textContent()).includes('105 kg × 3'));
-  const squat=pd.getByRole('region',{name:'Barbell Back Squat over the year'});
-  await squat.waitFor();
-  assert.ok((await squat.getByRole('img').getAttribute('aria-label')).startsWith('Barbell Back Squat: heaviest set per session'));
-  assert.equal(await pd.getByRole('region',{name:/over the year$/}).count(),2,'the two heaviest lifts');
+  // Bests and lift charts live in Training · Strength; Progress links there.
+  assert.equal(await pd.getByRole('region',{name:/Bests in available history|over the year$/}).count(),0);
+  await pd.getByRole('button',{name:/^Bests and lifts/}).waitFor();
+  const ticks=await pd.getByRole('region',{name:'Strength sessions per week'}).locator('text.yt').allTextContents();
+  assert.ok(ticks.every(t=>/^\d+$/.test(t)),'whole-number ticks for counts: '+ticks);
   await pd.getByRole('tab',{name:'Overall'}).click();
   await pd.getByRole('button',{name:/^All records and milestones/}).click();
   await pd.waitForURL('**/#progress/milestones');

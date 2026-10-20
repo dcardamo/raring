@@ -8,7 +8,7 @@ use crate::{
     sync::activities_listed,
     view::*,
 };
-use chrono::{Datelike, Duration, Months, NaiveDate};
+use chrono::{DateTime, Datelike, Duration, Months, NaiveDate, Utc};
 use serde_json::Value;
 use std::collections::BTreeMap;
 
@@ -168,7 +168,7 @@ fn sleep_need(store: &Store, from: NaiveDate, end: NaiveDate) -> Option<SleepNee
         let Some(raw) = store.get("sleep", &d.to_string()) else { continue };
         let s = screens::sleep(&raw);
         let asleep = number(s, "sleepTimeSeconds").map(|v| v / 60.);
-        let need = s["sleepNeed"]["actual"].as_f64().filter(|n| *n > 0.);
+        let need = screens::sleep_need(&raw);
         if let (Some(a), Some(n)) = (asleep, need) {
             nights += 1;
             if a <= n - 60. {
@@ -192,14 +192,14 @@ fn sport_name(s: Sport) -> &'static str {
 }
 
 /// Evidence bounded by the selected day, in canonical units.
-fn evidence(store: &Store, local: &LocalRecords, today: NaiveDate, history: Option<NaiveDate>) -> Vec<MilestoneRecord> {
+fn evidence(store: &Store, local: &LocalRecords, today: NaiveDate, history: Option<NaiveDate>, now: DateTime<Utc>) -> Vec<MilestoneRecord> {
     let mut records = vec![];
     for b in strength::all_time_bests(store, &today.to_string()) {
         let id = format!("best:{}:{}", b.key, b.reps);
         records.push(MilestoneRecord {
             id, value: b.grams, date: b.date, kind: Some(MilestoneKind::Best),
             title: format!("{} · best for {} reps", b.name, b.reps),
-            route: Some(format!("workout/{}", b.activity)), activity: Some(b.activity), ..Default::default()
+            route: Some(format!("workout/{}", b.activity)), activity: Some(b.activity), set_reps: Some(b.set_reps), ..Default::default()
         });
     }
     for b in strength::all_time_reps_bests(store, &today.to_string()) {
@@ -237,7 +237,7 @@ fn evidence(store: &Store, local: &LocalRecords, today: NaiveDate, history: Opti
         let mut w = plan::week_start(first, wk);
         let this = plan::week_start(today, wk);
         while w < this {
-            let week = review::week(store, local, w, today);
+            let week = review::week(store, local, w, today, now);
             let end = w + Duration::days(6);
             // No award from lowering a target or pausing. Sleep observations
             // alone are not an action-completion achievement.
@@ -258,7 +258,7 @@ fn evidence(store: &Store, local: &LocalRecords, today: NaiveDate, history: Opti
     records
 }
 
-pub fn progress(store: &Store, period: Period, anchor: NaiveDate, today: NaiveDate) -> crate::Result<ProgressView> {
+pub fn progress(store: &Store, period: Period, anchor: NaiveDate, today: NaiveDate, now: DateTime<Utc>) -> crate::Result<ProgressView> {
     let earliest = NaiveDate::from_ymd_opt(1990, 1, 1).unwrap();
     if anchor < earliest || anchor > today || today.year() > 9999 {
         return Err(crate::Error::InvalidLocal("progress date must be between 1990 and today"));
@@ -291,7 +291,7 @@ pub fn progress(store: &Store, period: Period, anchor: NaiveDate, today: NaiveDa
             .map(|i| last_week - Duration::days(7 * i))
             .filter(|w| (*w + Duration::days(6)).to_string() >= first_goal)
             .map(|w| {
-                let week = review::week(store, &local, w, end);
+                let week = review::week(store, &local, w, end, now);
                 let current = w + Duration::days(6) >= today;
                 let (ill, paused) = (week.review.ill_days, week.review.paused_days);
                 let mark = (!current && !week.review.counted).then(|| {
@@ -314,9 +314,9 @@ pub fn progress(store: &Store, period: Period, anchor: NaiveDate, today: NaiveDa
             })
             .collect()
     };
-    let evidence = evidence(store, &local, end, history);
-    let records = if current { local::sync_milestones(store, &evidence, today)? } else { evidence };
-    let mut milestones = present(store, records, current);
+    let evidence = evidence(store, &local, end, history, now);
+    let records = if current { local::sync_milestones(store, &evidence, today)? } else { evidence.clone() };
+    let mut milestones = present(store, records, current, &set_reps(&evidence));
     let milestones_total = milestones.len() as u32;
     milestones.truncate(12);
     Ok(ProgressView {
@@ -337,13 +337,12 @@ pub fn progress(store: &Store, period: Period, anchor: NaiveDate, today: NaiveDa
         milestones,
         sleep: sleep_need(store, from, end),
         milestones_total,
-        ring_days: if matches!(period, Period::Week | Period::Month) { ring_days(store, &local, from, to, today) } else { vec![] },
+        ring_days: if matches!(period, Period::Week | Period::Month) { ring_days(store, &local, from, to, today, now) } else { vec![] },
         totals: totals_now,
     })
 }
 
-fn ring_days(store: &Store, local: &LocalRecords, from: NaiveDate, to: NaiveDate, today: NaiveDate) -> Vec<DayCell> {
-    let now = chrono::Utc::now();
+fn ring_days(store: &Store, local: &LocalRecords, from: NaiveDate, to: NaiveDate, today: NaiveDate, now: DateTime<Utc>) -> Vec<DayCell> {
     let mut out = vec![];
     let mut week = plan::week_start(from, plan::week_starts_on(store));
     while week <= to {
@@ -353,40 +352,87 @@ fn ring_days(store: &Store, local: &LocalRecords, from: NaiveDate, to: NaiveDate
     out
 }
 
-/// Milestones as shown, newest first; `current` marks unseen ones new.
-fn present(store: &Store, records: Vec<MilestoneRecord>, current: bool) -> Vec<Milestone> {
+fn set_reps(evidence: &[MilestoneRecord]) -> BTreeMap<String, u32> {
+    evidence.iter().filter_map(|e| Some((e.id.clone(), e.set_reps?))).collect()
+}
+
+/// "1–10 reps" for a run of rep counts, "1 rep", or "1, 5 reps".
+fn rep_counts(n: &[u32]) -> String {
+    const ALL: [u32; 5] = [1, 3, 5, 8, 10];
+    let unit = if n == [1] { "rep" } else { "reps" };
+    let run = ALL.iter().position(|r| Some(r) == n.first()).is_some_and(|i| ALL.get(i..i + n.len()) == Some(n));
+    match n {
+        [one] => format!("{one} {unit}"),
+        [first, .., last] if run => format!("{first}–{last} {unit}"),
+        _ => format!("{} {unit}", n.iter().map(u32::to_string).collect::<Vec<_>>().join(", ")),
+    }
+}
+
+/// Milestones as shown, newest first; `current` marks unseen ones new. A
+/// set that is the heaviest for several rep counts is one row naming its reps.
+fn present(store: &Store, records: Vec<MilestoneRecord>, current: bool, reps: &BTreeMap<String, u32>) -> Vec<Milestone> {
     let unit = strength::weight_unit(store);
-    let mut out: Vec<Milestone> = records.into_iter().filter_map(|m| {
-        let kind = m.kind?;
+    let kg = |g: f64| Some(format!("{:.1} {}", strength::weight(Some(g), unit)?, if unit == WeightUnit::Lb { "lb" } else { "kg" }).replace(".0 ", " "));
+    // Bests by exercise, set (activity, weight, date) and withdrawal, each with its rep counts.
+    type SetKey = (String, Option<String>, u64, String, bool);
+    let mut sets: BTreeMap<SetKey, Vec<(u32, MilestoneRecord)>> = BTreeMap::new();
+    let mut out: Vec<Milestone> = vec![];
+    for m in records {
+        let Some(kind) = m.kind else { continue };
+        if kind == MilestoneKind::Best {
+            let mut parts = m.id.rsplitn(2, ':');
+            let n = parts.next().and_then(|n| n.parse::<u32>().ok()).unwrap_or(0);
+            let exercise = parts.next().unwrap_or_default().to_owned();
+            sets.entry((exercise, m.activity.clone(), m.value.to_bits(), m.date.clone(), m.withdrawn)).or_default().push((n, m));
+            continue;
+        }
         let value = if m.withdrawn { "Evidence no longer available".into() } else {
             match kind {
-                MilestoneKind::Best => format!("{:.1} {}", strength::weight(Some(m.value), unit)?, if unit == WeightUnit::Lb { "lb" } else { "kg" }).replace(".0 ", " "),
                 MilestoneKind::Reps => format!("{} reps", m.value as u32),
                 MilestoneKind::Longest => format!("{:.1} km", m.value),
-                MilestoneKind::GoalWeek => format!("Week ending {}", m.date),
+                MilestoneKind::Best | MilestoneKind::GoalWeek => String::new(),
             }
         };
-        Some(Milestone { id: m.id, kind, title: m.title, value, date: m.date, route: m.route, new: current && !m.seen, corrected: m.corrected })
-    }).collect();
+        out.push(Milestone { id: m.id, kind, title: m.title, value, date: m.date, route: m.route, new: current && !m.seen, corrected: m.corrected });
+    }
+    for (_, mut group) in sets {
+        group.sort_by_key(|(n, _)| *n);
+        let counts: Vec<u32> = group.iter().map(|(n, _)| *n).collect();
+        let set_reps = group.iter().find_map(|(_, m)| reps.get(&m.id).copied());
+        let new = current && group.iter().any(|(_, m)| !m.seen);
+        let corrected = group.iter().any(|(_, m)| m.corrected);
+        let m = group.swap_remove(0).1;
+        let name = m.title.split(" · ").next().unwrap_or_default().to_owned();
+        let heaviest = format!("heaviest for {}", rep_counts(&counts));
+        let value = if m.withdrawn {
+            format!("Evidence no longer available · {heaviest}")
+        } else {
+            let Some(weight) = kg(m.value) else { continue };
+            match set_reps {
+                Some(r) => format!("{weight} × {r} · {heaviest}"),
+                None => format!("{weight} · {heaviest}"),
+            }
+        };
+        out.push(Milestone { id: m.id, kind: MilestoneKind::Best, title: name, value, date: m.date, route: m.route, new, corrected });
+    }
     out.sort_by(|a, b| b.date.cmp(&a.date).then(a.id.cmp(&b.id)));
     out
 }
 
 /// Every milestone in available history, newest first: the same awards as
 /// Progress, never a second award.
-pub fn milestone_archive(store: &Store, today: NaiveDate) -> crate::Result<Vec<Milestone>> {
+pub fn milestone_archive(store: &Store, today: NaiveDate, now: DateTime<Utc>) -> crate::Result<Vec<Milestone>> {
     let local = local::load(store);
     let history = store.cursor("listed:lo").and_then(|d| NaiveDate::parse_from_str(&d, "%Y-%m-%d").ok());
-    let evidence = evidence(store, &local, today, history);
-    Ok(present(store, local::sync_milestones(store, &evidence, today)?, true))
+    let evidence = evidence(store, &local, today, history, now);
+    Ok(present(store, local::sync_milestones(store, &evidence, today)?, true, &set_reps(&evidence)))
 }
 
 const DOMAIN_WEEKS: i64 = 12;
 
-/// Weeks, bests and months for Progress's Cardio, Strength and Long-term.
-pub fn domains(store: &Store, today: NaiveDate) -> ProgressDomains {
+/// Weeks and months for Progress's Cardio, Strength and Long-term.
+pub fn domains(store: &Store, today: NaiveDate, now: DateTime<Utc>) -> ProgressDomains {
     let local = local::load(store);
-    let now = chrono::Utc::now();
     let wk = plan::week_starts_on(store);
     let this_week = plan::week_start(today, wk);
     let history = store.cursor("listed:lo").and_then(|d| NaiveDate::parse_from_str(&d, "%Y-%m-%d").ok());
@@ -403,6 +449,7 @@ pub fn domains(store: &Store, today: NaiveDate) -> ProgressDomains {
             let ill = review::days_with(&local, w, Some(PauseReason::Ill));
             let paused = review::days_with(&local, w, None) - ill;
             let end = (w + Duration::days(6)).min(today);
+            let goal = |kind| board.ledger.iter().find(|l| l.kind == kind && !l.observation).map(|l| l.target);
             DomainWeek {
                 start: w.to_string(),
                 current: w == this_week,
@@ -412,24 +459,13 @@ pub fn domains(store: &Store, today: NaiveDate) -> ProgressDomains {
                 intensity_min: plan::intensity(store, w, today).map(|c| c.total),
                 strength: complete.then(|| recs.iter().filter(|r| r.sport == Sport::Strength).count() as f64),
                 vo2max: vo2.range(w..=end).next_back().map(|(_, v)| *v),
+                zone2_goal: goal(GoalKind::Zone2),
+                high_intensity_goal: goal(GoalKind::HighIntensity),
+                intensity_goal: goal(GoalKind::Intensity),
+                strength_goal: goal(GoalKind::Strength),
             }
         })
         .collect();
-    let unit = strength::weight_unit(store);
-    let mut heaviest: BTreeMap<String, strength::AllTimeBest> = BTreeMap::new();
-    for b in strength::all_time_bests(store, &today.to_string()) {
-        match heaviest.get(&b.key) {
-            Some(h) if h.grams > b.grams || (h.grams == b.grams && h.reps >= b.reps) => {}
-            _ => {
-                heaviest.insert(b.key.clone(), b);
-            }
-        }
-    }
-    let mut bests: Vec<DomainBest> = heaviest
-        .into_values()
-        .map(|b| DomainBest { weight: strength::weight(Some(b.grams), unit), unit, key: b.key, name: b.name, reps: b.reps, date: b.date, activity: b.activity })
-        .collect();
-    bests.sort_by(|a, b| b.weight.unwrap_or(0.).total_cmp(&a.weight.unwrap_or(0.)));
     let first_month = month_start(today) - Months::new(11);
     let span_from = first_month;
     let acts = activities(store, span_from, today);
@@ -458,7 +494,6 @@ pub fn domains(store: &Store, today: NaiveDate) -> ProgressDomains {
         today: today.to_string(),
         goals: ledger::board_with(store, &local, today, today, now).goals.map(|g| g.targets),
         weeks,
-        bests,
         months,
     }
 }

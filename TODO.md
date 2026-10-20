@@ -359,6 +359,18 @@ faces, screens, sensors and audio prompts stay in Connect.
   gauges and score colours; the win needs a change of 1 or more (it said
   "Fitness age improved" beside "Steady"); the focus names Garmin's metric;
   "Keep the momentum" is gone.
+  Commit "Make Progress readable and judge each week by its own goals":
+  Cardio and Strength draw each week's own target as a stepped line
+  (`DomainWeek.*Goal`; intensity following Garmin's goal now has its line),
+  sleep against need reads the need Sleep reads (Garmin's seconds field too)
+  and sits in the period report, Progress and reviews take the caller's clock
+  so a stale Garmin Coach snapshot plans nothing on both Plan and Progress,
+  one milestone row per set with its reps, dates carry the year when it isn't
+  this one, totals read "19 h 54 min" under one "Compared with" line, the
+  activity bars are an axis chart with blank days to come, the current week
+  and month are outlined, counts get whole-number ticks and measured zeros a
+  label; the causal copy, Latest readings tiles and the Strength bests and
+  lift charts (Training · Strength has them) are cut.
 
 - **21. Write rules** (commit "Add the Garmin write rules and a log of
   recent changes"). One core write path (`crates/core/src/writes.rs`): only

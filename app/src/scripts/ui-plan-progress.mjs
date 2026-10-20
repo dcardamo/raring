@@ -136,4 +136,42 @@ export async function planProgressChecks({browser,url,errors}){
   await page.close();
  }
  console.log('Weekly review: decision first, one readings grid, score colours only for scores: passed');
+ // Progress reads as amounts and dates with years, compares once, and charts
+ // each week against its own target (PP-B8, B10, B11, M8, M9, M13–M16).
+ {
+  const progress=structuredClone(samples.progress);
+  progress.previous={...progress.totals,activeMin:91,distanceKm:52.9,activities:4};progress.previousFrom='2025-09-01';progress.previousTo='2025-09-16';
+  progress.historyStart='2024-10-23';
+  progress.milestones.push({id:'best:ROW/ONE_ARM_DUMBBELL_ROW:1',kind:'best',title:'One Arm Dumbbell Row',value:'12 kg × 10 · heaviest for 1–10 reps',date:'2024-11-02',route:null,new:false,corrected:false});
+  const page=await mocked(browser,errors,{...base,progress});
+  await page.goto(`${url}/#progress`);
+  const report=page.locator('.report');
+  await report.waitFor();
+  const text=await report.textContent();
+  assert.ok(text.includes('4 h 36 min') && text.includes('+3 h 05') && text.includes('−4.3 km'),text);
+  assert.equal((text.match(/Compared with/g)??[]).length,1,'one comparison line');
+  assert.ok(!text.includes(' vs '),text);
+  const chart=report.getByRole('img',{name:/^Activity by day, minutes/});
+  await chart.waitFor();
+  assert.ok((await chart.getAttribute('aria-label')).includes('Thu 16 Oct: 52 min'));
+  assert.ok((await report.locator('text.yu').textContent())==='min','the activity chart has a unit axis');
+  const records=await page.locator('.ms').allTextContents();
+  assert.ok(records.some(r=>r.includes('12 kg × 10 · heaviest for 1–10 reps · Sat 2 Nov 2024')),records.join('|'));
+  assert.ok((await page.locator('main').textContent()).includes('since 23 Oct 2024'));
+  await page.getByRole('tab',{name:'Cardio'}).click();
+  const im=page.getByRole('region',{name:'Intensity minutes per week'});
+  await im.waitFor();
+  assert.ok((await im.textContent()).includes('Garmin goal 150'),'the intensity chart follows Garmin’s goal');
+  const z2=page.getByRole('region',{name:'Zone 2 minutes per week'});
+  const step=await z2.locator('path[stroke-dasharray="4 3"]').getAttribute('d');
+  assert.ok(step && step.split('L').length>12,'a stepped goal line across the weeks: '+step);
+  assert.ok((await z2.getByRole('img').getAttribute('aria-label')).includes('This week'));
+  assert.equal(await z2.locator('rect[fill="none"][stroke-dasharray="3 2"]').count(),1,'this week is outlined');
+  await page.getByRole('tab',{name:'Long-term'}).click();
+  await page.getByRole('region',{name:'Training per month'}).waitFor();
+  const long=await page.locator('main').textContent();
+  for(const gone of ['Latest readings','What happened','fitness follows'])assert.ok(!long.includes(gone),gone);
+  await page.close();
+ }
+ console.log('Progress: readable totals, one comparison, dated records, per-week goals, current period marked: passed');
 }
