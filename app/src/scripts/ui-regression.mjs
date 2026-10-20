@@ -1302,6 +1302,35 @@ try {
   await np.close();
  }
  console.log('U57: declined notifications are remembered and not asked again: passed');
+ // Desktop reminders: Settings states the next wind-down, or why one could not be shown.
+ {
+  const settingsPage=async status=>{
+   const dp=await browser.newPage({viewport:{width:390,height:844}});
+   await dp.addInitScript(payload=>{
+    window.isTauri=true;localStorage.setItem('notifications-step-done','1');
+    window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command)=>{
+     if(command.startsWith('plugin:'))return 1;
+     if(command==='reminders_status')return payload.status;
+     if(command==='check_reminders')return;
+     if(command==='app_status')return structuredClone(payload.samples.status);
+     if(command==='get_settings')return {};
+     if(command in payload.samples)return structuredClone(payload.samples[command]);
+     return null;
+    }};
+   },{status,samples});
+   await dp.goto(`${url}/#settings`);
+   return dp;
+  };
+  const next=await settingsPage({supported:true,granted:true,error:null,nextAt:'2025-10-16T21:45:00'});
+  await next.getByText(/next wind-down 21:45/).waitFor();
+  assert.equal(await next.getByRole('button',{name:'Enable notifications'}).count(),0,'no Android prompt on desktop');
+  await next.close();
+  const failed=await settingsPage({supported:true,granted:true,error:'no desktop notification service',nextAt:null});
+  await failed.getByText(/couldn’t show a reminder \(no desktop notification service\)/).waitFor();
+  await failed.getByText(/stays unmarked and Raring tries again/).waitFor();
+  await failed.close();
+ }
+ console.log('Desktop reminders: Settings states the next wind-down or why it could not be shown: passed');
  // Plan edits and tonight's wind-down go to the core as local actions.
  {
   const ep=await browser.newPage({viewport:{width:390,height:844}});
