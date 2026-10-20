@@ -41,10 +41,9 @@ In priority order; the redesign shipped (Done, item 26) without them.
 
 ### Data presentation prototype follow-ups
 
-- Maintainer review of the built branch-only chart prototype. Dan accepted
-  period means as history headlines with inspected readings below, small visible
-  30-night stage averages with actual counts, and keeping Today/Tonight and
-  the five tabs. That direction approval is not merge or release approval.
+- Dan approved the prototype for coordinator merge after consolidating
+  Sleep's repeated stage-average copy. The tidy-up is done below; this lane
+  does not merge, push or release.
 - Check the new amount rows and comparison controls with TalkBack and the
   largest system text on a phone. Browser geometry checks are not a physical
   WebView or screen-reader check.
@@ -518,6 +517,12 @@ faces, screens, sensors and audio prompts stay in Connect.
 
 ## Done
 
+- **Sleep stage comparison copy** (commit "Say the sleep stage comparison once").
+  One subheading explains the 30-night average and recorded-night coverage;
+  each stage keeps its small average value and full accessible label. Different
+  stage counts remain distinct rather than implying equal coverage. The repeated
+  explanations and trailing note are gone; no data or core rule changed.
+
 - **Data presentation prototype** (commit "Make metric comparisons and chart evidence explicit"). Shared period summaries separate existing core means and changes from the
   inspected day; current range bounds, source dates and recorded counts stay
   visible. History uses fixed 0–100 domains for bounded Garmin metrics,
@@ -533,7 +538,8 @@ faces, screens, sensors and audio prompts stay in Connect.
   lead with Garmin's input and rating, not an unexplained percent. Today,
   Plan, Tonight, weight rules and the five tabs remain. Private research and
   comparison captures stay ignored; no new endpoints or account requests.
-  Branch-only and awaiting review, not released.
+  Dan approved coordinator merge subject to the stage-copy tidy-up above;
+  this lane remains branch-only, not released.
 
 - **Visual language on the current Today/Sleep layouts** (commit "Apply the
   refined language to the current Today and Sleep components"). Main's four

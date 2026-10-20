@@ -1,5 +1,5 @@
 <script lang="ts" module>
- export type AmountRow={label:string;value:number|null;text:string;detail?:string;color?:string;comparison?:number|null;comparisonText?:string;band?:[number,number]|null};
+ export type AmountRow={label:string;value:number|null;text:string;detail?:string;color?:string;comparison?:number|null;comparisonText?:string;accessibleLabel?:string;band?:[number,number]|null};
 </script>
 <script lang="ts">
  import {plotAxis} from '../plot';
@@ -15,7 +15,7 @@
 <div class="amount-rows" data-chart="amount-rows" role="group" aria-label={label}>
  <div class="axis"><span>{format(0)}</span>{#if unit}<span class="axis-unit">{unit}</span>{/if}<span>{format(top)}</span></div>
  {#each rows as row}
-  <div class="amount-row">
+  <div class="amount-row" role={row.accessibleLabel?'group':undefined} aria-label={row.accessibleLabel}>
    <div class="heading"><span>{row.label}{#if row.detail}<small>{row.detail}</small>{/if}</span><b class="n">{row.value==null?'Not recorded':row.text}</b></div>
    <div class="rail" aria-hidden="true">
     {#if row.band}<span class="band" style:left={position(row.band[0])} style:width={position(row.band[1]-row.band[0])}></span>{/if}

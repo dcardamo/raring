@@ -58,20 +58,44 @@ export async function dataPresentationChecks(browser,url,output){
   assert.match(await page.locator('.metric-hero').textContent(),/Garmin daily resting HR/);
 
   const sample=JSON.parse(await readFile(resolve('src/lib/sample/sleep.json'),'utf8'));
+  let sleepFixture=sample;
   const match=u=>u.pathname==='/src/lib/sample/sleep.json';
-  await page.route(match,r=>r.fulfill({contentType:'text/javascript',body:'export default '+JSON.stringify({...sample,asleepMin:null,totals:[
+  await page.route(match,r=>r.fulfill({contentType:'text/javascript',body:'export default '+JSON.stringify(sleepFixture)}));
+  const stages=page.getByRole('group',{name:'Garmin sleep stage durations'});
+  async function openStages(heading){
+   await page.goto('about:blank');await page.goto(url+'/#sleep/last');await stages.waitFor();
+   await page.getByRole('heading',{name:heading,exact:true}).waitFor();
+   assert.equal((await page.locator('.stage-amounts').innerText()).match(/30-night average/g)?.length,1,'comparison context is visible once');
+   assert.equal(await stages.locator('.key').count(),0,'no trailing comparison note');
+  }
+  await openStages('Ticks: your 30-night average · 26 or 28 nights');
+  assert.deepEqual(await stages.locator('.comparison-text').allTextContents(),['Avg 0:26','Avg 1:51','Avg 4:16','Avg 1:24']);
+  await stages.getByRole('group',{name:/^Awake, 0:20 h:mm\. Raring 30-night average 0:26 h:mm from 26 recorded nights, through Thu 16 Oct\.$/}).waitFor();
+  await stages.getByRole('group',{name:/^Deep, 1:36 h:mm\. Raring 30-night average 1:24 h:mm from 28 recorded nights/}).waitFor();
+  await stages.scrollIntoViewIfNeeded();await page.screenshot({path:resolve(output,'stage-comparison-tidy.png')});
+
+  sleepFixture={...sample,totals:sample.totals.map(s=>({...s,comparisonNights:28}))};
+  await openStages('Ticks: your 30-night average · 28 nights');
+  assert.equal(await stages.getByRole('group',{name:/from 28 recorded nights/}).count(),4,'each stage retains its accessible coverage');
+
+  sleepFixture={...sample,asleepMin:null,totals:[
    {stage:'awake',minutes:0,usualDeltaMin:-10,comparisonMin:10,comparisonNights:2},
    {stage:'deep',minutes:96,usualDeltaMin:null,comparisonMin:null,comparisonNights:0}
-  ]})}));
-  await page.goto('about:blank');await page.goto(url+'/#sleep/last');
-  const stages=page.getByRole('group',{name:'Garmin sleep stage durations'});
-  await stages.waitFor();
+  ]};
+  await openStages('Ticks: your 30-night average · 2 nights');
   assert.equal(await stages.locator('.amount-row').count(),2,'unrecorded stages are not fabricated');
   assert.equal(await stages.locator('.amount-row').first().locator('.amount').count(),0,'known zero has no minimum fill');
-  assert.match(await stages.locator('.amount-row').first().textContent(),/Awake.*0:00.*vs your 30-night average \(2 nights\) · 0:10/);
+  assert.match(await stages.locator('.amount-row').first().textContent(),/Awake.*0:00.*Avg 0:10/);
+  await stages.getByRole('group',{name:/^Awake, 0:00 h:mm.*from 2 recorded nights/}).waitFor();
+  await stages.getByRole('group',{name:'Deep, 1:36 h:mm. 30-night average unavailable.',exact:true}).waitFor();
   assert.equal(await stages.locator('.amount-row').last().locator('.comparison').count(),0,'no comparator without evidence');
   assert.equal(await page.locator('.needbar i').count(),0,'missing sleep duration never fills a zero bar');
   assert.deepEqual(await contrastFailures(page),[],'sleep stage evidence text contrast');
+
+  sleepFixture={...sample,totals:sample.totals.map(s=>({...s,comparisonMin:null,comparisonNights:0}))};
+  await openStages('Your 30-night average is unavailable');
+  assert.equal(await stages.locator('.comparison').count(),0);
+  assert.deepEqual(await stages.locator('.comparison-text').allTextContents(),Array(4).fill('Average unavailable'));
   await page.unroute(match);
   assert.deepEqual(errors,[]);
   console.log('Data presentation: period vs selected evidence, bounded domains, stage coverage/zero/unknown, aligned zones and resting-HR route: passed');

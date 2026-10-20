@@ -951,7 +951,10 @@ try {
   await stages.locator('.stage-amounts').waitFor();
   const comparisons=await stages.locator('.comparison-text').evaluateAll(els=>els.map(e=>getComputedStyle(e).color));
   assert.ok(comparisons.length===4 && new Set(comparisons).size===1,'every stage comparison has one neutral colour');
-  await stages.getByText(/Tick · Raring average, 30 nights/).waitFor();
+  await stages.getByRole('heading',{name:'Ticks: your 30-night average · 26 or 28 nights'}).waitFor();
+  assert.equal((await stages.innerText()).match(/30-night average/g)?.length,1,'one visible stage comparison explanation');
+  assert.deepEqual(await stages.locator('.comparison-text').allTextContents(),['Avg 0:26','Avg 1:51','Avg 4:16','Avg 1:24']);
+  assert.equal(await stages.locator('.stage-amounts .key').count(),0,'no trailing comparison note');
   assert.equal(await lp.locator('.dashboard>.card:not(:has(h3))').count(),0,'no untitled stage-totals card');
   assert.ok((await stages.locator('.time-label').allTextContents()).every(t=>/^\d\d:00$/.test(t)),'hypnogram ticks fall on whole hours');
   const hrv=lp.getByRole('button',{name:/^HRV 58 ms, \d+ to \d+ overnight$/});

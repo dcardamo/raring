@@ -244,9 +244,12 @@ Last night:
   verdict. A missing duration has no fill.
 - Stage timeline (awake, REM, light, deep) with whole-hour ticks, and in the
   same card aligned duration rows in that order. A tick marks each stage's
-  recorded mean, with small visible text “vs your 30-night average (N nights)”
-  and the mean's value (Rules: Sleep stage comparison). The key names the
-  window's end and says missing nights are excluded. The mean is descriptive, never a target or a stage rating.
+  recorded mean. One small subheading says “Ticks: your 30-night average”
+  with the recorded-night count (distinct counts are listed when stages have
+  different coverage). Each bar keeps only its average value alongside it;
+  there is no trailing comparison note. Each stage's accessible label names
+  its duration, average, recorded-night count, source and window end (Rules:
+  Sleep stage comparison). The mean is descriptive, never a target or rating.
 - Overnight tiles with lines: HRV, heart rate, respiration, SpO2, each with
   the night's start and end times and its low and high, opening the metric's
   detail.
