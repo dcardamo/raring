@@ -46,6 +46,8 @@
   catch(e){ if(id === request)error = String(e); }
   finally { if(id === request)busy = false; }
  }
+ // A day opens its own Health page; a future day still opens the plan.
+ const openCalendarDay = (date: string) => navigate(date < view.today ? 'health/' + date : date > view.today ? 'plan' : 'health');
  const shift = (n: number) => {
   const d = new Date(view.to + 'T12:00:00Z');
   if(view.period==='week')d.setUTCDate(d.getUTCDate()+7*n);
@@ -95,12 +97,12 @@
 </section>
 {#if view.ringDays.length}
  <section class="card ring-cal"><h3><span>Calendar</span><HelpButton topic="rings"/></h3>
-  <DayCells days={view.ringDays.filter((_, i, all) => all.slice(Math.floor(i / 7) * 7, Math.floor(i / 7) * 7 + 7).some(d => d.date >= view.from && d.date <= view.to))} select={() => navigate('plan')} size={28} within={[view.from, view.to]}/>
+  <DayCells days={view.ringDays.filter((_, i, all) => all.slice(Math.floor(i / 7) * 7, Math.floor(i / 7) * 7 + 7).some(d => d.date >= view.from && d.date <= view.to))} select={openCalendarDay} size={28} within={[view.from, view.to]}/>
   <p class="small">Rings show what was recorded toward each goal that day; moon: rest, hatched: ill or paused, dotted: awaiting data. Days outside {view.period === 'week' ? 'the week' : 'the month'} are faint.</p>
  </section>
 {:else if view.calendar.length}
  <section class="card"><h3>Calendar</h3>
-  <div class="cal">{#each Array(lead) as _}<span></span>{/each}{#each view.calendar as d}<span class="day {d.state}" class:uncovered={!d.covered && d.state === 'active'} aria-label={`${dateLabel(d.date)}${STATE[d.state] ? ', ' + STATE[d.state] : ''}${d.activities > 1 ? `, ${d.activities} activities` : ''}`}>{Number(d.date.slice(8))}</span>{/each}</div>
+  <div class="cal">{#each Array(lead) as _}<span></span>{/each}{#each view.calendar as d}<button class="day {d.state}" class:uncovered={!d.covered && d.state === 'active'} disabled={d.state === 'future' || d.state === 'before'} aria-label={`${dateLabel(d.date)}${STATE[d.state] ? ', ' + STATE[d.state] : ''}${d.activities > 1 ? `, ${d.activities} activities` : ''}`} onclick={() => openCalendarDay(d.date)}>{Number(d.date.slice(8))}</button>{/each}</div>
   <p class="legend"><span><i class="k active"></i>Active</span><span><i class="k rest"></i>Rest</span><span><i class="k paused"></i>Ill or paused</span><span><i class="k unknown"></i>List incomplete</span></p>
  </section>
 {/if}
@@ -168,7 +170,7 @@
  .axis{display:flex;justify-content:space-between;color:var(--text2);font-size:12px;margin-top:4px}
  .bars{display:flex;align-items:flex-end;gap:2px;height:90px;margin-top:14px;border-bottom:1px solid var(--line)}.bar{flex:1;height:100%;display:flex;flex-direction:column-reverse;min-width:0}.bar i{display:block;width:100%;border-radius:2px 2px 0 0}.bar.unknown{background:repeating-linear-gradient(45deg,transparent 0 3px,rgba(255,255,255,.07) 3px 5px)}
  .legend{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0 0;font-size:12px;color:var(--text2)}.legend span{display:flex;align-items:center;gap:5px}.legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
- .cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.day{display:grid;place-items:center;height:34px;border-radius:10px;font:600 12px Outfit;color:var(--text2);background:rgba(255,255,255,.03)}
+ .cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.day{display:grid;place-items:center;height:34px;border-radius:10px;border:0;padding:0;font:600 12px Outfit;color:var(--text2);background:rgba(255,255,255,.03);cursor:pointer}.day:disabled{cursor:default}
  .day.active{background:rgba(61,220,151,.22);color:var(--text)}.day.uncovered{outline:1px dashed var(--text3)}.day.rest{background:rgba(169,200,255,.14)}.day.ill,.day.paused{background:repeating-linear-gradient(45deg,rgba(169,200,255,.22) 0 3px,transparent 3px 6px)}.day.unknown{outline:1px dotted var(--text3);background:none}.day.future,.day.before{background:none;color:var(--text3)}
  .k{width:12px;height:12px;border-radius:4px}.k.active{background:rgba(61,220,151,.4)}.k.rest{background:rgba(169,200,255,.3)}.k.paused{background:repeating-linear-gradient(45deg,rgba(169,200,255,.5) 0 2px,transparent 2px 4px)}.k.unknown{outline:1px dotted var(--text3)}
  .gw{display:flex;gap:4px;overflow-x:auto;padding-bottom:4px}.gw button{display:grid;justify-items:center;gap:3px;background:none;border:0;color:var(--text2);min-width:40px;min-height:44px}.gw small{font-size:10px}

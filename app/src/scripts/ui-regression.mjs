@@ -2217,6 +2217,97 @@ function trendFixture(q){
  assert.equal(await trace.first().getAttribute('fill'),'#E4E8F0','ungraded HR uses neutral ink');
  await hrSwitch.close();
  console.log('Heart-rate date change resets selection; gaps and ungraded palette: passed');
+
+ // Opening a past day keeps its own date: a calendar day, a selected trend point and a
+ // seven-night bar each open that day, and Back returns to the page that asked.
+ {
+  const opened=await browser.newPage({viewport:{width:390,height:844}});
+  await opened.goto(`${url}/#progress`);
+  await opened.getByRole('button',{name:/Wednesday 1 Oct/}).click();
+  await opened.waitForURL('**/#health/2025-10-01');
+  assert.ok(await opened.getByText('Wed 1 Oct',{exact:true}).count()>0,'a calendar day opens its own Health day');
+  await opened.getByRole('button',{name:'Stress for this day'}).click();
+  await opened.waitForURL('**/#metric/stress/2025-10-01');
+  assert.ok(await opened.getByText('Wed 1 Oct',{exact:true}).count()>0,'the stress detail keeps the day');
+  await opened.locator('button.back').click();
+  await opened.waitForURL('**/#health/2025-10-01');
+  await opened.locator('button.back').click();
+  await opened.waitForURL('**/#progress');
+
+  await opened.goto(`${url}/#health`);
+  const resting=opened.locator('.card').filter({hasText:'Resting heart rate'}).first();
+  await resting.getByRole('button',{name:'Previous reading'}).click();
+  await resting.getByRole('button',{name:/^Open Wed 15 Oct$/}).click();
+  await opened.waitForURL('**/#metric/heartRate/2025-10-15');
+  await opened.getByText('Garmin daily resting HR · Wed 15 Oct',{exact:false}).waitFor();
+  await opened.locator('button.back').click();
+  await opened.waitForURL('**/#health');
+
+  await opened.goto(`${url}/#sleep`);
+  await opened.getByRole('tab',{name:'Tonight'}).click();
+  await opened.getByRole('button',{name:'Open Fri 10 Oct'}).click();
+  await opened.waitForURL('**/#sleep/2025-10-10');
+  assert.ok(await opened.getByText('Fri 10 Oct',{exact:true}).count()>0,'a seven-night bar opens its own night');
+  assert.equal(await opened.getByRole('tablist',{name:'Sleep'}).count(),0,'a past night has no Tonight tab');
+  await opened.locator('button.back').click();
+  await opened.waitForURL('**/#sleep/tonight');
+  await opened.close();
+ }
+ console.log('Past day: calendar, trend point and seven nights open their own date with caller-aware Back: passed');
+
+ // A dated page fetches its missing detail once, keeps it, and says when Garmin has none.
+ {
+  const detail=await browser.newPage({viewport:{width:390,height:844}});
+  await detail.addInitScript(samples=>{
+   localStorage.setItem('notifications-step-done','1');
+   window.isTauri=true;
+   window.detailCalls=[];
+   window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
+    if(command.startsWith('plugin:event|'))return 1;
+    if(command==='app_status')return {...samples.status,signedIn:true,lastSync:new Date().toISOString()};
+    if(command==='fetch_day_detail'){window.detailCalls.push(args.date);return null}
+    if(command==='fetch_workout_detail'){window.detailCalls.push(args.id);return null}
+    if(command==='sleep' && args.date){
+     const view=structuredClone(samples.sleep);view.date=args.date;
+     view.detail={missing:window.detailCalls.includes(args.date)?[]:['sleep'],unavailable:[]};
+     return view;
+    }
+    if(command==='health' && args.date){
+     const view=structuredClone(samples.health);view.date=args.date;
+     view.detail=window.detailCalls.includes(args.date)?{missing:[],unavailable:['stress','vitals']}:{missing:['stress','vitals'],unavailable:[]};
+     return view;
+    }
+    if(command==='workout'){
+     const view=structuredClone(samples.workout);
+     view.detail={missing:window.detailCalls.includes(args.id)?[]:['workout'],unavailable:[]};
+     return view;
+    }
+    if(command in samples)return structuredClone(samples[command]);
+    throw Error('Unexpected detail command '+command);
+   }};
+  },samples);
+  await detail.goto(`${url}/#sleep/2025-10-09`);
+  await detail.waitForFunction(()=>window.detailCalls?.length===1);
+  assert.deepEqual(await detail.evaluate(()=>window.detailCalls),['2025-10-09']);
+  await detail.evaluate(()=>{location.hash='#today'});await detail.waitForURL('**/#today');
+  await detail.evaluate(()=>{location.hash='#sleep/2025-10-09'});
+  await detail.waitForURL('**/#sleep/2025-10-09');
+  await detail.waitForTimeout(100);
+  assert.deepEqual(await detail.evaluate(()=>window.detailCalls),['2025-10-09'],'a second visit reads nothing again');
+  await detail.evaluate(()=>{location.hash='#health/2025-10-01'});
+  await detail.waitForURL('**/#health/2025-10-01');
+  await detail.getByText('Garmin has no stress readings for this day.',{exact:false}).waitFor();
+  await detail.getByText('Garmin has no vitals for this day.',{exact:false}).waitFor();
+  assert.ok((await detail.evaluate(()=>window.detailCalls)).includes('2025-10-01'),'the Health day was fetched once');
+  const workoutId=samples.workout.summary.id;
+  await detail.evaluate(id=>{location.hash=`#workout/${id}`},workoutId);
+  await detail.waitForURL(`**/#workout/${workoutId}`);
+  await detail.waitForFunction(id=>window.detailCalls?.includes(id),workoutId);
+  await detail.getByText('Morning Run',{exact:false}).first().waitFor();
+  await detail.close();
+ }
+ console.log('Past day and older workout: one fetch, kept, with loading and unavailable states: passed');
+
  assert.deepEqual(errors,[],'no browser errors');
 } finally {
  await browser?.close();
