@@ -7,6 +7,7 @@ use serde_json::Value;
 use std::collections::BTreeMap;
 
 mod explain;
+mod recorded;
 mod thresholds;
 
 fn at<'a>(v: &'a Value, keys: &[&str]) -> &'a Value {
@@ -1034,21 +1035,15 @@ pub(crate) fn activity_kind(store: &Store, id: &str) -> Option<String> {
 
 pub(crate) fn activity(store: &Store, id: &str) -> Option<ActivityCard> {
     let v = activity_payload(store, id)?;
-    let kind = v.kind();
-    let icon = if kind.contains("run") {
-        Icon::Run
-    } else if kind.contains("cycl") || kind.contains("bike") {
-        Icon::Bike
-    } else if kind.contains("swim") {
-        Icon::Swim
-    } else if kind.contains("walk") {
-        Icon::Walk
-    } else if kind.contains("hik") {
-        Icon::Hike
-    } else if kind.contains("strength") {
-        Icon::Strength
-    } else {
-        Icon::Other
+    // The plan's sport families, so `road_biking` and `virtual_ride` read as rides.
+    let icon = match crate::local::sport_of(&v.kind()) {
+        Sport::Running => Icon::Run,
+        Sport::Cycling => Icon::Bike,
+        Sport::Swimming => Icon::Swim,
+        Sport::Walking => Icon::Walk,
+        Sport::Hiking => Icon::Hike,
+        Sport::Strength => Icon::Strength,
+        Sport::Other => Icon::Other,
     };
     let zones = store.get("zones", id).unwrap_or(Value::Null);
     let statute = store
@@ -2586,10 +2581,16 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
         })
     };
     // Cadence: both feet for runs and walks, rpm for rides; never single-leg.
-    let stream_keys: [(StreamKind, &str, &[&str]); 8] = [
+    let stream_keys: [(StreamKind, &str, &[&str]); 14] = [
         (StreamKind::Speed, "km/h", &["directSpeed"]),
         (StreamKind::Elevation, "m", &["directElevation"]),
         (StreamKind::Cadence, if summary.icon == Icon::Bike { "rpm" } else { "spm" }, &["directDoubleCadence", "directBikeCadence"]),
+        (StreamKind::StrideLength, "cm", &["directStrideLength"]),
+        (StreamKind::GroundContactTime, "ms", &["directGroundContactTime"]),
+        (StreamKind::VerticalOscillation, "cm", &["directVerticalOscillation"]),
+        (StreamKind::VerticalRatio, "%", &["directVerticalRatio"]),
+        (StreamKind::StrokeRate, "strokes/min", &["directStrokeCadence"]),
+        (StreamKind::StrokeDistance, "m", &["directStrokeDistance"]),
         (StreamKind::Power, "W", &["directPower"]),
         (StreamKind::Respiration, "brpm", &["directRespirationRate"]),
         (StreamKind::Stamina, "%", &["directAvailableStamina"]),
@@ -2667,21 +2668,22 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
         }
     }
     let splits = store.get("splits", id).unwrap_or(Value::Null);
+    // The activity list names the averages differently and sends 0 for what
+    // wasn't recorded, so an average of 0 is not a reading.
     let mut stats: Vec<Stat> = [
-        ("distance", "Distance", "km", 1000.),
-        ("duration", "Time", "s", 1.),
-        ("averageHR", "Avg HR", "bpm", 1.),
-        ("maxHR", "Max HR", "bpm", 1.),
-        ("calories", "Calories", "kcal", 1.),
-        ("elevationGain", "Ascent", "m", 1.),
-        ("averagePower", "Avg power", "W", 1.),
-        ("averageBikeCadence", "Cadence", "rpm", 1.),
-        ("averageRunCadence", "Cadence", "spm", 1.),
+        ("distance", "Distance", "km", 1000., &[][..], recorded::positive as fn(f64) -> bool),
+        ("duration", "Time", "s", 1., &[], recorded::any),
+        ("averageHR", "Avg HR", "bpm", 1., &[], recorded::any),
+        ("maxHR", "Max HR", "bpm", 1., &[], recorded::any),
+        ("calories", "Calories", "kcal", 1., &[], recorded::any),
+        ("elevationGain", "Ascent", "m", 1., &[], recorded::any),
+        ("averagePower", "Avg power", "W", 1., &[("avgPower", 1.)], recorded::positive),
+        ("averageBikeCadence", "Cadence", "rpm", 1., &[("averageBikingCadenceInRevPerMinute", 1.)], recorded::positive),
+        ("averageRunCadence", "Cadence", "spm", 1., &[("averageRunningCadenceInStepsPerMinute", 1.)], recorded::positive),
     ]
     .iter()
-    .filter_map(|(key, label, unit, div)| {
-        v.number(&[*key])
-            .filter(|v| *key != "distance" || *v > 0.)
+    .filter_map(|(key, label, unit, div, listed, keep)| {
+        recorded::reading(&v, key, listed, *keep)
             .map(|v| Stat {
                 key: (*key).into(),
                 label: (*label).into(),
@@ -2722,41 +2724,9 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
         .map(|((kind, unit, _), values)| StreamSeries { kind: *kind, unit: (*unit).into(), values })
         .collect();
     let along = (!series.is_empty()).then_some(AlongTheWay { t_s: along_t, series });
-    let mut more: Vec<Stat> = [
-        ("movingDuration", "Moving time", "s"),
-        ("moderateIntensityMinutes", "Moderate intensity", "min"),
-        ("vigorousIntensityMinutes", "Vigorous intensity", "min"),
-        ("differenceBodyBattery", "Body Battery", "points"),
-        ("beginPotentialStamina", "Stamina at start", "%"),
-        ("endPotentialStamina", "Stamina at end", "%"),
-        ("elevationLoss", "Descent", "m"),
-        ("normalizedPower", "Normalized power", "W"),
-        ("intensityFactor", "Intensity factor", ""),
-        ("maxPowerTwentyMinutes", "Best 20 min power", "W"),
-        ("functionalThresholdPower", "FTP", "W"),
-        ("strideLength", "Stride length", "cm"),
-        ("avgRespirationRate", "Breathing rate", "brpm"),
-        ("recoveryHeartRate", "Recovery heart rate", "bpm"),
-        // Pool swims (unverified against a real swim; see TODO).
-        ("activeLengths", "Lengths", ""),
-        ("averageSwolf", "Avg SWOLF", ""),
-        ("averageStrokes", "Strokes per length", ""),
-        ("averageSwimCadenceInStrokesPerMinute", "Stroke rate", "strokes/min"),
-        ("averageStrokeDistance", "Distance per stroke", "m"),
-        ("averageTemperature", "Watch temperature, average", "°C"),
-        ("minTemperature", "Watch temperature, lowest", "°C"),
-        ("maxTemperature", "Watch temperature, highest", "°C"),
-    ]
-    .iter()
-    .filter_map(|(key, label, unit)| {
-        v.number(&[*key]).filter(|n| n.is_finite()).map(|value| Stat { key: (*key).into(), label: (*label).into(), value, unit: (*unit).into() })
-    })
-    .collect();
-    // Garmin sends the pool length in the pool's own unit.
-    if let Some(length) = v.number(&["poolLength"]).filter(|l| *l > 0.) {
-        let unit = if summary.distance_unit == DistanceUnit::Yd { "yd" } else { "m" };
-        more.insert(0, Stat { key: "poolLength".into(), label: "Pool length".into(), value: length, unit: unit.into() });
-    }
+    let more = recorded::did(&v);
+    let groups = recorded::groups(&v, &summary);
+    let self_evaluation = recorded::self_evaluation(&v);
     let effects: Vec<EffectLine> = [
         (EffectKind::Aerobic, summary.aerobic_te, summary.aerobic_label.clone()),
         (EffectKind::Anaerobic, summary.anaerobic_te, summary.anaerobic_label.clone()),
@@ -2779,6 +2749,8 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
         counted: None,
         along,
         more,
+        recorded: groups,
+        self_evaluation,
         effects,
         vo2max_new,
         summary,
@@ -2836,6 +2808,11 @@ pub fn stream_unit_ok(key: &str, unit: Option<&str>) -> bool {
         "directElevation" => &["meter"],
         "directDoubleCadence" => &["stepsPerMinute"],
         "directBikeCadence" => &["rpm"],
+        "directStrideLength" | "directVerticalOscillation" => &["centimeter"],
+        "directGroundContactTime" => &["ms"],
+        "directVerticalRatio" => &["dimensionless"],
+        "directStrokeCadence" => &["strokesPerMinute"],
+        "directStrokeDistance" => &["meter"],
         "directPower" => &["watt"],
         "directRespirationRate" => &["breathsPerMinute"],
         "directAvailableStamina" | "directPerformanceCondition" => &["dimensionless"],

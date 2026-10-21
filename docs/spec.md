@@ -426,6 +426,12 @@ night is never shown in its place.
 
 - Training load, aerobic and anaerobic Training Effect gauges, primary
   benefit and recovery time.
+- **How it felt**: the self-evaluation the watch asks for after saving an
+  activity, when it was given: Garmin's feel answer (Very weak, Weak, Normal,
+  Strong, Very strong) as one of five steps and perceived effort as filled
+  steps out of 10, in the neutral blue and labelled as the person's own
+  rating. Either answer can be skipped; with neither the card is left out.
+  It follows the stats, or a strength session's sets.
 - Stats grid, route map over streets, water and parks (Rules: Street maps),
   heart-rate chart colored by zone (bpm axis, each
   zone's floor labelled, the average marked, round minute ticks), time-in-zone
@@ -458,11 +464,18 @@ night is never shown in its place.
   session it completed, any milestone and its vigorous minutes toward
   Fitness Age (Rules: How it counted).
 - **Along the way**: the stored streams this activity has (pace or speed,
-  elevation, cadence, power, breathing rate, stamina, performance condition,
-  watch temperature) on heart rate's time axis; **What it did**: Garmin's
-  training effect with its band in plain words, intensity minutes, Body
-  Battery change and stamina; **Recorded by your watch**: the other summary
-  fields it has (Rules: Workout detail).
+  elevation, cadence, running form — stride length, ground contact time,
+  vertical oscillation, vertical ratio — stroke rate and distance per stroke,
+  power, breathing rate, stamina, performance condition, watch temperature)
+  on heart rate's time axis; **What it did**: Garmin's training effect with
+  its band in plain words, intensity minutes, Body Battery change and
+  stamina (potential at start and end, lowest available); **Recorded by
+  your watch**: the other
+  summary fields it has in groups, each under a small heading — Time, Pace
+  (Speed on a ride), Running form (Steps and cadence on foot, Cadence on a
+  ride), Power, Swim or Strokes, Elevation, Heart rate, Breathing rate,
+  Stress, Watch temperature, Calories and fluid — with a ? on Running form
+  (Rules: Workout detail).
 - An activity the history download listed but never detailed opens with its
   stored summary and fills in its charts, route, splits and zones once when
   opened (Rules: Opened past days and workouts).
@@ -1122,28 +1135,63 @@ next pending wind-down while signed in.
   nothing. Only the latest completed week's review offers the choice, until it
   is decided; older and ongoing weeks show their outcomes, and a decided week
   the proposals it saw and what was accepted.
-- **Workout detail**: from the stored activity only. Streams beyond heart
-  rate (`directSpeed` in km/h, `directElevation`, `directDoubleCadence` or
-  `directBikeCadence`, `directPower`, `directRespirationRate`,
+- **Workout detail**: from the stored activity only. An activity's sport
+  follows the plan's sport families (`road_biking` and `virtual_ride` are
+  rides). Streams beyond heart rate (`directSpeed` in km/h,
+  `directElevation`, `directDoubleCadence` or `directBikeCadence`,
+  `directStrideLength`, `directGroundContactTime`,
+  `directVerticalOscillation`, `directVerticalRatio`, `directStrokeCadence`,
+  `directStrokeDistance`, `directPower`, `directRespirationRate`,
   `directAvailableStamina`, `directPerformanceCondition`,
   `directAirTemperature`) share the samples'
   elapsed-time axis (at most ~300 points) and appear only when recorded; a
-  missing sample is a gap. Runs, walks and swims show speed as pace, drawn
-  faster-up. Summary fields appear
-  only when Garmin sent them (moving time, moderate and vigorous intensity
-  minutes — shown as moderate + 2 × vigorous, Garmin's figures — Body Battery
-  change, stamina at start and end, descent, normalized power, intensity
-  factor, best 20-minute power, FTP, stride length, breathing rate, recovery
-  heart rate). Training effect keeps Garmin's value and label and adds its
-  band (below 1 no benefit, 1 minor, 2 maintaining, 3 improving, 4 highly
+  missing sample is a gap. Everything but rides shows speed as pace, drawn
+  faster-up. Summary fields appear only when Garmin sent them, read from the
+  activity detail and otherwise from the activity list under its own names
+  (`averageRunningCadenceInStepsPerMinute`, `avgPower`, `normPower`,
+  `avgStrideLength`, `avgGroundContactTime`, `avgVerticalOscillation`,
+  `avgVerticalRatio`, `avgStrokes`, `strokes`, and `avgStrokeDistance` in
+  centimetres); a swim's and a paddle's stroke rates are one field. Garmin
+  sends 0 for what a sport or sensor didn't record, so averages, maxima,
+  moving time, steps, strokes, power and running-form figures, breathing
+  rates, calories and fluid of 0 are left out, and a 0 from one source
+  never hides the other's reading; Body Battery, intensity minutes,
+  stamina, stress, elevation and temperature keep a measured 0.
+  What it did: moderate and vigorous intensity minutes (shown as moderate + 2
+  × vigorous, Garmin's figures), Body Battery change, and potential stamina at
+  start and end with the lowest available stamina. Recorded by your watch, by
+  group: Time (moving time; elapsed time only when it differs from the time by
+  a second or more); Pace or Speed (moving pace or speed, best pace or max
+  speed from `maxSpeed`, and grade-adjusted pace except on rides); Running
+  form, or steps and cadence (steps, only with a distance; max cadence; stride
+  length in m or ft; ground contact time; vertical oscillation in cm or in;
+  vertical ratio; step speed loss in cm/s and as a share of speed,
+  `avgStepSpeedLoss` and `avgStepSpeedLossPercent`); Power (max and normalized
+  power, intensity factor, Training Stress Score, best 20-minute power, FTP,
+  each leg's share from `leftBalance` and `rightBalance`); Swim or Strokes
+  (pool length, lengths, SWOLF, strokes per length, stroke rate and its
+  maximum, distance per stroke in m or ft, total strokes, which on a ride are
+  pedal strokes and are left out); Elevation (descent, lowest, highest); Heart
+  rate (recovery heart rate); Breathing rate (average, lowest, highest);
+  Stress (Garmin's 0–100 at start and end, average and highest); Watch
+  temperature; Calories and fluid (resting calories, estimated sweat loss, and
+  the calories and fluid logged as consumed, in ml or fl oz). Garmin stores
+  the pool length in centimetres with `unitOfPoolLength.factor` to the pool's
+  unit (100 for metres); both are read from the same record. Self-evaluation
+  is in the activity detail only (`directWorkoutFeel`, 0–100 in steps of 25,
+  read to the nearest of Garmin's five answers; `directWorkoutRpe`, perceived
+  effort ×10, read as 1–10 from 10–100, where 0 is Garmin's None); either may
+  be absent. Training effect keeps Garmin's value and label and adds its band
+  (below 1 no benefit, 1 minor, 2 maintaining, 3 improving, 4 highly
   improving, 5 overreaching) with one fixed plain line per band and kind. A
   VO₂ max link appears only when the stored estimate for the activity's date
   differs from the one before it. A stream is used only when its
   descriptor's unit key is the expected one (mps, meter, stepsPerMinute, rpm,
-  watt, breathsPerMinute, dimensionless, celcius); its values are already in
-  that unit and the descriptor's factor is never applied. The watch's
-  temperature (`directAirTemperature` and the summary's average, lowest and
-  highest) is labelled as the watch's own sensor, never the weather.
+  centimeter, ms, strokesPerMinute, watt, breathsPerMinute, dimensionless,
+  celcius); its values are already in that unit and the descriptor's factor
+  is never applied. The watch's temperature (`directAirTemperature` and the
+  summary's average, lowest and highest) is labelled as the watch's own
+  sensor, never the weather.
 - **How it counted**: a live workout read names, for its plan week's goals
   on, its share (a strength recording is that week's Nth strength session of
   the target; Zone 2 and Zone 4–5 add its own zone minutes), the week's
@@ -1691,8 +1739,8 @@ next pending wind-down while signed in.
   - Your age: a Fitness Age estimate below your age now is good, equal fair,
     above poor.
   - Neutral: weight, VO₂ max, time asleep, Progress's monthly averages, sleep's
-    overnight curves and lift history, and range metrics without a shown
-    band, in the neutral blue. Fitness Age's six-week vigorous bars are this
+    overnight curves and lift history, a workout's running form and stroke
+    streams, and range metrics without a shown band, in the neutral blue. Fitness Age's six-week vigorous bars are this
     blue, with today's minutes green and Garmin's target a dashed ink line.
 - **Plan week**: Garmin's intensity-minutes week, taken from the dates of its
   weekly intensity rows (Monday until they sync). Garmin's intensity week

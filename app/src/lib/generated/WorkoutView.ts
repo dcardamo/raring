@@ -4,7 +4,9 @@ import type { AlongTheWay } from "./AlongTheWay";
 import type { DayDetail } from "./DayDetail";
 import type { EffectLine } from "./EffectLine";
 import type { HrSample } from "./HrSample";
+import type { RecordedGroup } from "./RecordedGroup";
 import type { RouteMapView } from "./RouteMapView";
+import type { SelfEvaluation } from "./SelfEvaluation";
 import type { Split } from "./Split";
 import type { Stat } from "./Stat";
 import type { StrengthSession } from "./StrengthSession";
@@ -33,9 +35,19 @@ strength: StrengthSession | null,
  */
 along: AlongTheWay | null, 
 /**
- * Garmin's summary fields this activity has, beyond `stats`.
+ * What it did beyond training effect: intensity minutes, Body Battery,
+ * stamina and impact load, as Garmin sent them.
  */
 more: Array<Stat>, 
+/**
+ * Garmin's other summary fields this activity has, beyond `stats` and
+ * `more`, in groups; a group without fields is left out.
+ */
+recorded: Array<RecordedGroup>, 
+/**
+ * The person's own rating on the watch after the activity, when given.
+ */
+selfEvaluation: SelfEvaluation | null, 
 /**
  * Garmin's training effect in its bands, with one plain line each.
  */

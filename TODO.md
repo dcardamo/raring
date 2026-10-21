@@ -101,6 +101,10 @@ From the chart colour pass, in priority order.
 - Remaining ink data marks: all-day heart rate (detail and Your day), sleep
   consistency bars, load focus bars and the training lanes' line. Decide for
   each: neutral blue, a zone colour, or ink as a reference mark.
+- A workout's Along the way keeps a colour per stream (pace teal, elevation
+  tan, cadence purple, power ochre, performance condition ink) from before
+  the chart colour pass; its running form and stroke streams are the
+  neutral blue. Decide whether the older streams follow.
 - The Fitness Age detail offers 7D–30D, which Garmin's sparse estimates
   usually leave empty (as on VO₂ max); consider 90D, 1Y and Max only.
 
@@ -330,6 +334,45 @@ From the activities calendar, in priority order.
   stored recordings ("parkrun", "marathon") in the same section, from local
   data. Not started; a maintainer decision.
 
+### Workout fields follow-ups
+
+From the self-evaluation and workout fields pass, in priority order. Field
+names and units were read from a real account's stored detail and list
+payloads and Garmin's Forerunner 970 manual; nothing was compared with
+Connect's own screens.
+
+- Compare a real Forerunner 970 run with an HRM 600 against Connect: feel
+  and perceived effort (a stored feel of 0 reads Very weak), running form
+  and step speed loss. The detail's own names for step speed loss are
+  unknown; Raring reads the list's `avgStepSpeedLoss` and
+  `avgStepSpeedLossPercent`, which only reach the workout while its list
+  row is stored.
+- Impact load (`impactLoad` on a run's detail) isn't shown: its unit is
+  unverified. Metres, as running tolerance sends, gave more impact than the
+  run's distance on a run with long walking stretches, which Garmin says
+  count half. Compare with Connect, or with that day's change in running
+  tolerance's `acuteImpactLoad`.
+- A self-evaluation added or changed in Connect later isn't seen: the
+  activity detail is read once. Consider re-reading it for 48 hours after
+  the activity, as strength sets are, or with an explicit refresh.
+- Time in power zones: the list carries `powerTimeInZone_1`–`_5` on runs and
+  `_1`–`_7` on rides; the zones' watt bounds need Garmin's power zones
+  (`/activity-service/activity/{id}/powerTimeInZones` is unverified).
+- Ground contact time balance: the list's `avgGroundContactBalance`
+  doesn't say which foot it is; add it once a real run shows the side in
+  Connect.
+- Garmin's `totalWork` matched average power × time in kilocalories on real
+  runs and rides; Connect's unit for Work is unverified, so it isn't shown.
+- Lap rows (`lapDTOs`) carry per-lap cadence, power and running form; the
+  splits show pace and heart rate only. Garmin's intervals (`typedsplits`)
+  and weather (`/activity-service/activity/{id}/weather`) are unverified.
+- A ride's power curve (`maxAvgPower_1` … `_18000` in the list), cycling
+  dynamics (torque effectiveness, pedal smoothness), mountain-bike grit and
+  flow, rucking pack weight (`beginPackWeight`, grams) and Garmin's stress
+  change (`differenceStress`, sign unverified) aren't shown.
+- Self-evaluation in the Activities list: only details carry it, so older
+  list-only recordings would show it only once opened.
+
 ## Next
 
 ### 7a. Weekly plan follow-ups
@@ -386,17 +429,21 @@ the rest shipped (Done: Plan and Progress review fixes).
 
 From the read-only UX review of Training and workouts, in priority order.
 
-- **Real swim and walk**: the pool-swim fields (`poolLength` in the pool's
-  unit, `unitOfPoolLength.unitKey`, `activeLengths`, `averageSwolf`,
-  `averageStrokes`, `averageSwimCadenceInStrokesPerMinute`,
-  `averageStrokeDistance`) and a yard pool are synthetic; compare a real
-  pool swim (and an open-water swim) with Connect. Stroke-rate streams
-  (`directStrokeCadence`) aren't read. Add a swim and a walk to `raring demo`.
+- **Real swim and walk**: a real metric pool swim's list row has
+  `poolLength` in centimetres with `unitOfPoolLength.factor` 100, plus
+  `averageSwolf`, `avgStrokes`, `strokes` and the stroke rate; the activity
+  detail's swim fields (`activeLengths`, `averageStrokes`,
+  `averageStrokeDistance`) and a yard pool's factor are still synthetic.
+  Compare a real pool swim (and an open-water swim) with Connect. Stroke
+  rate and distance per stroke streams (`directStrokeCadence`,
+  `directStrokeDistance`) are verified on paddleboarding only. Add a swim and
+  a walk to `raring demo`.
 - **Endurance and hill levels**: show Garmin's classification word and the
   reading's date beside Endurance, Hill score and Run tolerance once their
   fields are verified (the tiles now carry a chevron only).
 - **Units elsewhere**: running tolerance, Progress distance totals and gear
-  still read km; follow Garmin's measurement setting there too.
+  still read km, and the watch temperature reads °C; follow Garmin's
+  measurement setting there too.
 - **Acute-load band per day**: the 30-day chart and metric detail use today's
   optimal range; draw Garmin's stored range for each day where it exists
   (each day's Training Status carries `minTrainingLoadChronic` and
@@ -664,6 +711,22 @@ faces, screens, sensors and audio prompts stay in Connect.
   1×/2× text and live resizing; chart and card-spill checks on all 42 pages
   at 360/390/720/1100px and 1×/1.3×/2× text. Synthetic screenshots are in
   `.data/screens/today-layout-*.png` and `.data/screens/adaptive-*.png`.
+
+- **Self-evaluation and Garmin's workout fields in groups** (commit "Show
+  how a workout felt and Garmin's workout fields in groups"). A workout shows
+  the watch's self-evaluation as How it felt (Garmin's feel answer of five and
+  perceived effort out of 10), and the summary fields Garmin sends that
+  Raring left out: running form (max cadence, ground contact time, vertical
+  oscillation and ratio, step speed loss), moving, best and grade-adjusted
+  pace, elapsed time, max power, Training Stress Score, each leg's power,
+  max cadence, strokes and stroke rate for paddling, lowest and highest
+  elevation, breathing range, yoga's stress, sweat loss, resting calories,
+  fluid and calories consumed, and lowest available stamina. Recorded by
+  your watch groups them under headings, and Along the way adds the running
+  form and paddle stroke streams. List-only recordings read the activity
+  list's names for the same fields. Two bugs found on real data: rides
+  recorded as `road_biking` or `virtual_ride` read as other sports (pace, not
+  speed), and a pool's length read 100 times too long.
 
 - **Dated stress pages name their day** (commit "Name the day on dated
   stress pages and read the calendar again with it"). An opened past day's

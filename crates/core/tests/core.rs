@@ -1389,8 +1389,9 @@ fn activities_read_in_garmin_units_and_swims_in_the_pool_unit() {
     let unit = |id: &str| raring_core::screens::workout(&store, id).unwrap().summary.distance_unit;
     assert_eq!((unit("1"), unit("2"), unit("3")), (DistanceUnit::Km, DistanceUnit::M, DistanceUnit::Yd));
     let swim = raring_core::screens::workout(&store, "2").unwrap();
-    let more: Vec<_> = swim.more.iter().map(|s| (s.key.as_str(), s.value, s.unit.as_str())).collect();
-    assert_eq!(&more[..3], &[("poolLength", 25., "m"), ("activeLengths", 60., ""), ("averageSwolf", 38., "")]);
+    let strokes = swim.recorded.iter().find(|g| g.group == raring_core::view::FieldGroup::Strokes).unwrap();
+    let fields: Vec<_> = strokes.fields.iter().map(|s| (s.key.as_str(), s.value, s.unit.as_str())).collect();
+    assert_eq!(&fields[..3], &[("poolLength", 25., "m"), ("activeLengths", 60., ""), ("averageSwolf", 38., "")]);
     store.put("profile_settings", "me", "now", &json!({"measurementSystem": "statute_us"})).unwrap();
     assert_eq!((unit("1"), unit("2"), unit("3")), (DistanceUnit::Mi, DistanceUnit::M, DistanceUnit::Yd), "a metre pool stays in metres");
 }

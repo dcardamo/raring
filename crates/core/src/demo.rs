@@ -534,6 +534,12 @@ pub fn seed_variant(store: &Store, day: NaiveDate, recorded_today: bool) -> rusq
             activity["vigorousIntensityMinutes"] = json!(24);
             activity["differenceBodyBattery"] = json!(-9);
             activity["movingDuration"] = json!(3101);
+            // The watch's self-evaluation and running form, as Garmin's detail names them.
+            for (key, value) in [("directWorkoutFeel", 75.), ("directWorkoutRpe", 60.), ("averageRunCadence", 172.), ("maxRunCadence", 184.),
+                ("strideLength", 113.4), ("groundContactTime", 238.), ("verticalOscillation", 8.4), ("verticalRatio", 7.4),
+                ("averageMovingSpeed", 3.29), ("maxSpeed", 4.2), ("avgGradeAdjustedSpeed", 3.31), ("steps", 9120.), ("waterEstimated", 820.)] {
+                activity[key] = json!(value);
+            }
         }
         store.put("activity", id, &format!("{when}T09:00:00Z"), &activity)?;
         store.put("zones", id, "synthetic", &json!(zones.iter().enumerate().map(|(i, s)| json!({"zoneNumber":i+1,"secsInZone":s,"minHeartRate":([0,120,138,154,167][i])})).collect::<Vec<_>>()))?;
@@ -603,11 +609,19 @@ pub fn seed_variant(store: &Store, day: NaiveDate, recorded_today: bool) -> rusq
         // Speed in m/s and elevation in metres, as Garmin's unit keys say.
         let speed = 3.3 + 0.25 * (angle * 3.).sin() - (hr - 150.) / 200.;
         let elevation = 60. + 8. * (angle * 2.).sin();
-        json!({"metrics":[t * 3134., hr, 45.501 + (0.5 - y) * 0.008, -73.601 + (x - 0.5) * 0.012, speed, elevation]})
+        // Running form follows the pace: longer strides and shorter ground contact when faster.
+        let cadence = (172. + 3. * (angle * 7.).sin()).round();
+        let stride = speed * 60. / cadence * 100.;
+        let contact = (238. - (speed - 3.3) * 40.).round();
+        let bounce = 8.4 + 0.3 * (angle * 4.).sin();
+        json!({"metrics":[t * 3134., hr, 45.501 + (0.5 - y) * 0.008, -73.601 + (x - 0.5) * 0.012, speed, elevation, cadence, stride, contact, bounce, bounce / stride * 100.]})
     }).collect();
     store.put("details", WORKOUT_ID, "synthetic", &json!({
         "metricDescriptors":[{"key":"directTimestamp"},{"key":"directHeartRate"},{"key":"directLatitude"},{"key":"directLongitude"},
-            {"key":"directSpeed","metricsIndex":4,"unit":{"key":"mps","factor":0.1}},{"key":"directElevation","metricsIndex":5,"unit":{"key":"meter","factor":100.0}}],
+            {"key":"directSpeed","metricsIndex":4,"unit":{"key":"mps","factor":0.1}},{"key":"directElevation","metricsIndex":5,"unit":{"key":"meter","factor":100.0}},
+            {"key":"directDoubleCadence","metricsIndex":6,"unit":{"key":"stepsPerMinute","factor":1.0}},{"key":"directStrideLength","metricsIndex":7,"unit":{"key":"centimeter","factor":1.0}},
+            {"key":"directGroundContactTime","metricsIndex":8,"unit":{"key":"ms","factor":1.0}},{"key":"directVerticalOscillation","metricsIndex":9,"unit":{"key":"centimeter","factor":1.0}},
+            {"key":"directVerticalRatio","metricsIndex":10,"unit":{"key":"dimensionless","factor":1.0}}],
         "activityDetailMetrics":points
     }))?;
     let times = [321, 308, 302, 298, 305, 295, 301, 297, 310, 318];

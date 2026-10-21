@@ -238,8 +238,10 @@ fn the_planned_demo_day_lets_a_session_lead() {
     assert_eq!(core.today_live_at(DAY, day).lead.unwrap().kind, LeadKind::Done, "the standard demo records a run today");
     let run = raring_core::screens::workout(&store, raring_core::demo::WORKOUT_ID).unwrap();
     let kinds: Vec<_> = run.along.unwrap().series.iter().map(|s| s.kind).collect();
-    assert_eq!(kinds, vec![StreamKind::Speed, StreamKind::Elevation], "the demo run has streams with Garmin's unit keys");
+    assert_eq!(kinds, vec![StreamKind::Speed, StreamKind::Elevation, StreamKind::Cadence, StreamKind::StrideLength, StreamKind::GroundContactTime,
+        StreamKind::VerticalOscillation, StreamKind::VerticalRatio], "the demo run has streams with Garmin's unit keys");
     assert!(run.more.iter().any(|m| m.key == "vigorousIntensityMinutes"));
+    assert_eq!(run.self_evaluation.and_then(|e| e.effort), Some(6), "the demo run was rated");
     drop(core);
     let _ = std::fs::remove_dir_all(dir);
 }
