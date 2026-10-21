@@ -1120,11 +1120,6 @@ try {
   await ts.goto(`${url}/#training`);
   await ts.getByRole('tablist',{name:'Training section'}).waitFor();
   for(const q of ['Enough, or too much?','Is my fitness improving?','What am I ready for?'])assert.equal(await ts.getByText(q,{exact:true}).count(),1,q);
-  // VO₂ max leads beside Garmin's training status, once, and opens its history.
-  const vo2Lead=ts.locator('.page-hero').getByRole('button',{name:'VO₂ max 52, +1 in 30 days. Open its history'});
-  await vo2Lead.click();await ts.waitForURL(/#metric\/vo2max$/);
-  await ts.goBack();await ts.waitForURL(/#training$/);
-  assert.equal(await ts.getByText('VO₂ max · Garmin',{exact:true}).count(),1,'VO₂ max is shown once');
   assert.equal(await ts.locator('.semi').count(),0,'no full-width load gauge');
   assert.ok((await ts.locator('.q-load .lbar').getAttribute('aria-label')).includes("Garmin's optimal range 420–760"));
   assert.equal(await ts.locator('.gear').count(),0,'gear lives in Profile');

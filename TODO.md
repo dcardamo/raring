@@ -566,10 +566,9 @@ faces, screens, sensors and audio prompts stay in Connect.
 
 - **Phone feedback on Today and Training** (commits "Today: score ring for
   Sleep, green in-range vitals and no closing line", "Join Garmin's VO₂ max
-  and Fitness Age estimates in one line", "Training: lead with VO₂ max
-  beside the training status", "Name the Sleep Score with Garmin's word"
-  and "Read Garmin's optimal acute-load range and show it on Today after a
-  workout"), from the maintainer's phone. Today's Sleep stat is Garmin's
+  and Fitness Age estimates in one line", "Name the Sleep Score with
+  Garmin's word" and "Read Garmin's optimal acute-load range and show it on
+  Today after a workout"), from the maintainer's phone. Today's Sleep stat is Garmin's
   Sleep Score in a ring in its level's colour, like Readiness, with Garmin's
   word and the time asleep under it ("Good · 7:33"), instead of time asleep
   in a full ring against the need; every rating word in the row takes its
@@ -578,9 +577,10 @@ faces, screens, sensors and audio prompts stay in Connect.
   vitals and the charts. "That's today." is gone. VO₂ max and Fitness Age
   histories join Garmin's estimates in one line, dotted where it crosses
   days without one, with no gap marks; before, a line appeared only where
-  two estimates fell on consecutive days. Training leads with VO₂ max and
-  its 30-day change beside the status; "Is my fitness improving?" keeps
-  endurance, hill and run tolerance. Garmin sets no daily load target, so
+  two estimates fell on consecutive days. VO₂ max beside the status at the
+  top of Training was tried and reverted: it looked wrong to the
+  maintainer, pushed the status's Why below it and took VO₂ max out of "Is
+  my fitness improving?". Garmin sets no daily load target, so
   under Done today acute load is a dot on Garmin's optimal range, as on
   Training. Verified on the maintainer's account: Training Status sends that
   range as `acuteTrainingLoadDTO.minTrainingLoadChronic` and
