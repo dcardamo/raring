@@ -1940,6 +1940,10 @@ pub struct TrendQuery {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct TrendPoint {
+    /// Garmin's chronological age on this estimate's day, never inferred.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub chronological_age: Option<f64>,
     /// First and last day covered, YYYY-MM-DD.
     pub start: String,
     pub end: String,

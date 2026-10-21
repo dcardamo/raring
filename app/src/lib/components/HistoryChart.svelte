@@ -6,7 +6,7 @@
  import {dateLabel} from '../format';
  import {colors,toneColor} from '../charts';
  import {chartScale,chartColor,gradientStops} from '../levels';
- import {ranges,localPoints,pointLabel,axisLabel,bucketDays,trendValue,trendNames,trendDecimals,defaultOverlay,changeValue,firstDay} from '../trends';
+ import {estimateAge,ranges,localPoints,pointLabel,axisLabel,bucketDays,trendValue,trendNames,trendDecimals,defaultOverlay,changeValue,firstDay} from '../trends';
  import * as api from '../api';
  import type {TrendMetric} from '../generated/TrendMetric';
  import type {TrendRange} from '../generated/TrendRange';
@@ -22,7 +22,7 @@
  let {values,endDate='',label,unit='',decimals=0,band=null,bandLabel='Your usual range',readiness=false,nights=false,color=colors.neutral,metric,initialRange='days7',compact=false,ranges:compactRanges=['days7','days30','days90','year'],more,moreLabel='Compare and all history',openDay=null,overlayOnly,age=null}:{
   values:(number|null)[];endDate?:string;label:string;unit?:string;decimals?:number;band?:[number,number]|null;
   bandLabel?:string;readiness?:boolean;nights?:boolean;color?:string;metric?:TrendMetric;initialRange?:TrendRange;compact?:boolean;ranges?:TrendRange[];more?:()=>void;moreLabel?:string;openDay?:((date:string)=>void)|null;
-  // Fitness Age's chart compares each estimate with this age (Garmin's current chronological age).
+  // Explicit fallback only when Garmin did not store an age with the estimate.
   age?:number|null;
   // One fixed metric with a single overlay toggle instead of the explorer's metric choice and comparisons.
   overlayOnly?:TrendMetric;
@@ -75,13 +75,16 @@
  });
  // A usual range is shown, and colours readings, only on daily points: it is current, not each week's.
  let shownBand=$derived(!primary && bucket==='day'?band:null);
- let ageLine=$derived(activeMetric==='fitnessAge' && !primary?age:null);
+ let ageLine=$derived(activeMetric==='fitnessAge'?age:null);
+ let agePoints=$derived(activeMetric==='fitnessAge'?points.map(p=>({...p,value:p.value==null?null:estimateAge(p,ageLine).age})):[]);
+ const pointTint=(p:TrendPoint)=>activeMetric==='fitnessAge'?chartColor(chartScale('fitnessAge',{age:estimateAge(p,ageLine).age}).tone(p.value!)):tint(p.value!);
+ let ageReadout=$derived(activeMetric==='fitnessAge' && selected?.value!=null?estimateAge(selected,ageLine).label:'');
  // Garmin's levels colour every reading; a shown range colours readings in or out of it; otherwise neutral blue.
  let palette=$derived(chartScale(activeReadiness?'readiness':activeMetric,{band:shownBand,age:ageLine}));
- let colored=$derived(palette.edges.length>0);
+ let colored=$derived(activeMetric!=='fitnessAge' && palette.edges.length>0);
  const tint=(v:number)=>colored?chartColor(palette.tone(v)):color;
  // Bounded Garmin metrics share a stable domain; a quiet day must not fill the scale.
- let axis=$derived(metricAxis(activeReadiness?'readiness':activeMetric,[...points,...(previous?.points??[])].map(p=>p.value),shownBand ?? (ageLine!=null?[ageLine,ageLine]:null),activeUnit));
+ let axis=$derived(metricAxis(activeReadiness?'readiness':activeMetric,[...points,...agePoints,...(previous?.points??[])].map(p=>p.value),shownBand ?? (ageLine!=null?[ageLine,ageLine]:null),activeUnit));
  let scale=$derived(axis.scale);
  let stops=$derived(gradientStops(palette,scale));
  let axis2=$derived(overlay?metricAxis(overlay.metric,overlay.points.map(p=>p.value),null,overlay.unit):{scale:[0,1] as [number,number],ticks:[]});
@@ -108,7 +111,7 @@
  let tileUnit=$derived(activeUnit.startsWith('/') || activeUnit==='min'?'':activeUnit);
  let canOpenDay=$derived(!!openDay && !!selected && bucket==='day' && (selected.value!=null || selected.partial!=null) && selected.start<latestDay);
  let selectedDate=$derived(selected?bucket==='day'?dateLabel(selected.start)+(range==='custom'||range==='all'?' '+selected.start.slice(0,4):''):pointLabel(selected,bucket):'');
- let selectedText=$derived(selected?`${selectedDate}: ${selected.value==null?selected.partial!=null?show(selected.partial)+', partly worn, not in the average':none:show(selected.value)+' '+(activeUnit==='min'?'h:mm':activeUnit)}`:'');
+ let selectedText=$derived(selected?`${selectedDate}${ageReadout?`, ${ageReadout}`:''}: ${selected.value==null?selected.partial!=null?show(selected.partial)+', partly worn, not in the average':none:show(selected.value)+' '+(activeUnit==='min'?'h:mm':activeUnit)}`:'');
  let barWidth=$derived(Math.max(1.5,Math.min(22,(R-L)/Math.max(count,1)*.62)));
  const pairs=Object.keys(trendNames) as TrendMetric[];
  let choices=$derived(pairs.filter(m=>m!==activeMetric));
@@ -144,11 +147,11 @@
  {#snippet inspectedReading()}
  <div class="history-reading" class:inspected={!local} aria-live="polite" aria-atomic="true">
   <div class="reading-values">
-   <div><b class="n" style:color={selected?.value==null?toneColor('neutral'):tint(selected.value)}>{show(selected?.value ?? selected?.partial)}</b><span>{selected?.value==null?selected?.partial!=null?'partly worn · not averaged':none:bucket==='week'?'weekly average':bucket==='month'?'monthly average':activeUnit==='min'?'h:mm':activeUnit}</span></div>
+   <div><b class="n" style:color={selected?.value==null?toneColor('neutral'):pointTint(selected)}>{show(selected?.value ?? selected?.partial)}</b><span>{selected?.value==null?selected?.partial!=null?'partly worn · not averaged':none:bucket==='week'?'weekly average':bucket==='month'?'monthly average':activeUnit==='min'?'h:mm':activeUnit}</span></div>
    {#if overlay && selected}<div class="overlay-reading"><b class="n">{trendValue(overlay.points[index]?.value,overlay.unit,overlayDecimals)}</b><span>{overlay.name}</span></div>{/if}
    {#if previous && selected}<div class="overlay-reading"><b class="n">{show(previous.points[index]?.value)}</b><span>{comparisonStart?'comparison block':'period before'}</span></div>{/if}
   </div>
-  <span>{selectedDate}{#if bucket!=='day' && selected}<small>{selected.days} of {bucketDays(selected)} days recorded</small>{:else if offset===0 && selected}<small>{range==='custom'?'Block end':period==='nights'?'Latest night':'Latest day'}</small>{/if}</span>
+  <span>{selectedDate}{#if ageReadout}<small>{ageReadout}</small>{/if}{#if bucket!=='day' && selected}<small>{selected.days} of {bucketDays(selected)} days recorded</small>{:else if offset===0 && selected}<small>{range==='custom'?'Block end':period==='nights'?'Latest night':'Latest day'}</small>{/if}</span>
  </div>
  {#if canOpenDay && selected && openDay}<button class="open-day" onclick={()=>openDay(selected.start)}>Open {dateLabel(selected.start)}<Icon name="chevron" size={15}/></button>{/if}
  {/snippet}
@@ -178,7 +181,7 @@
     <line x1={L} x2={R} y1={y(tick)} y2={y(tick)} stroke="var(--chart-grid)" stroke-width="var(--stroke-grid)"/>
    {/each}
    {#if overlay}{#each axis2.ticks as tick}<text x={W} y={y(tick,scale2)+3} fill="var(--text3)" font-size="11" text-anchor="end">{trendValue(tick,overlay.unit,overlayDecimals)}</text>{/each}{/if}
-   {#if ageLine!=null}<line class="age-line" x1={L} x2={R} y1={y(ageLine)} y2={y(ageLine)} stroke={colors.ink} stroke-opacity=".6" stroke-dasharray="5 4" stroke-width="1.2"/>{/if}
+   {#if agePoints.some(p=>p.value!=null)}<path class="age-line" d={path(agePoints,scale,true)} fill="none" stroke={colors.ink} stroke-opacity=".6" stroke-dasharray="5 4" stroke-width="1.2"/>{/if}
    {#if count}<line x1={x(index)} x2={x(index)} y1="8" y2={H-12} stroke="currentColor" opacity=".35" stroke-dasharray="2 3"/>{/if}
    {#if previous}<path class="history-previous" d={path(previous.points,scale,sparse)} fill="none" stroke={colors.ink} stroke-opacity=".45" stroke-width="1.6" stroke-dasharray="4 4" stroke-linecap="round"/>{/if}
    {#if !activeReadiness && !sparse}<path class="history-bridge" d={bridges(points,scale)} fill="none" stroke={colored?`url(#${id}-tone)`:color} stroke-width="1.5" stroke-dasharray="3 4" stroke-linecap="round" stroke-opacity=".6"/>{/if}
@@ -187,8 +190,8 @@
     {#if p.value!=null}
      {#if activeReadiness}
       <rect class="history-bar" x={x(i)-barWidth/2} y={Math.min(H-18,y(p.value))} width={barWidth} height={Math.max(2,H-16-y(p.value))} rx={Math.min(2,barWidth/2)} fill={tint(p.value)} opacity={index===i?1:overlay?.4:.55}/>
-     {:else if index===i || count<=40 || dotted(points,i,sparse)}
-      <circle cx={x(i)} cy={y(p.value)} r={index===i?4:2.5} fill={tint(p.value)} stroke="var(--card)" stroke-width={index===i?2:0}/>
+     {:else if activeMetric==='fitnessAge' || index===i || count<=40 || dotted(points,i,sparse)}
+      <circle cx={x(i)} cy={y(p.value)} r={index===i?4:2.5} fill={pointTint(p)} stroke="var(--card)" stroke-width={index===i?2:0}/>
      {/if}
     {:else if p.partial!=null && bucket==='day'}<circle class="history-partial" cx={x(i)} cy={y(p.partial)} r={index===i?4:3} fill="var(--card)" stroke={colors.secondary} stroke-width={index===i?2:1.5}/>
     {:else if !sparse}<circle class="history-gap" cx={x(i)} cy={H-9} r="1.5" fill="currentColor" opacity=".3"/>{/if}
@@ -213,7 +216,7 @@
  <span id={id} class="sr-only">{activeLabel}, {count} {bucketName}. {sparse?`${present} with an estimate, joined in order.`:`${present} recorded.${partlyWorn?` ${partlyWorn} partly worn, not averaged.`:''} Missing readings are gaps.`} Use the slider to select a date.</span>
  <div class="history-legend">
   {#if shownBand}<span><i class="band"></i>{bandLabel} · {show(shownBand[0])}–{show(shownBand[1])}{activeUnit && activeUnit!=='min'?' '+activeUnit:''}</span>{/if}
-  {#if ageLine!=null}<span><i class="line dashed"></i>Your age {show(ageLine)}</span>{/if}
+  {#if agePoints.some(p=>p.value!=null)}<span><i class="line dashed"></i>Your age at each estimate</span>{/if}
   {#if bucket!=='day'}<span><i style:background={colored?colors.secondary:color}></i>{bucket==='week'?'Weekly':'Monthly'} average of recorded days</span>{/if}
   {#if partlyWorn}<span><i class="hollow"></i>Partly worn · not averaged</span>{/if}
   {#if overlay}<span><i class="line" style:border-color={colors.secondary} style:border-top-style="dashed"></i>{overlay.name}, right axis</span>{/if}

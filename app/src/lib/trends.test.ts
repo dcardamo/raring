@@ -1,8 +1,14 @@
 import {describe, expect, it} from 'vitest';
-import {bucketFor, localPoints, monday, period, pointLabel, spans, trendValue, changeValue} from './trends';
+import {estimateAge, bucketFor, localPoints, monday, period, pointLabel, spans, trendValue, changeValue} from './trends';
 import {sampleTrend, sampleStressMonth} from './sample/trend';
 
 describe('trend periods', () => {
+  it('uses the estimate age and labels only a missing-age fallback', () => {
+    expect(estimateAge({chronologicalAge:45},46)).toEqual({age:45,label:'Age then 45'});
+    expect(estimateAge({chronologicalAge:46},46)).toEqual({age:46,label:'Age then 46'});
+    expect(estimateAge({},46)).toEqual({age:46,label:'Age then not stored · your age now 46'});
+    expect(estimateAge({},null)).toEqual({age:null,label:'Age unavailable'});
+  });
   it('matches the core: days to 90, weeks to two years, months beyond', () => {
     expect([bucketFor(90), bucketFor(91), bucketFor(731), bucketFor(732)]).toEqual(['day', 'week', 'week', 'month']);
   });

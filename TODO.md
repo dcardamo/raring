@@ -22,8 +22,7 @@ availability on every account or watch.
 ## Build next
 
 In progress on branch `feat-five-followups` (worktree
-`~/.paseo/worktrees/1c8zm467/feat-five-followups`): Fitness Age compared
-with the age then (in 9), units (6), core-generated fixtures with a swim and
+`~/.paseo/worktrees/1c8zm467/feat-five-followups`): units (6), core-generated fixtures with a swim and
 a walk (8), desktop notification clicks (in 11) and naps when an old day is
 opened (approved). Move each to `docs/done.md` when it merges.
 
@@ -129,7 +128,8 @@ them from `raring demo` as `raring show` does, and add a swim and a walk to
 
 - **VO₂ max and Fitness Age** (review M5): plot one point per Garmin estimate
   with a faint step line, no weekly or monthly averaging and no missing-day
-  marks, and date the VO₂ max hero ("52 · Garmin estimate · Sun 12 Oct").
+  marks, and date the VO₂ max hero (Fitness Age already keeps daily points in
+  every range) ("52 · Garmin estimate · Sun 12 Oct").
   First confirm with a read-only probe whether stored `max_metrics` and
   `fitness_age` rows repeat the estimate daily or appear only on the day
   Garmin made it.
@@ -137,9 +137,6 @@ them from `raring demo` as `raring show` does, and add a swim and a walk to
   number. Carry the estimate's date and Garmin's level (classification word)
   in `TrainingView` and show them on the detail once the fields are verified,
   or stop the tiles from opening a detail until there is history.
-- **Fitness Age compared with the age then**: history compares every estimate
-  with your age now. Stored `fitness_age` rows carry Garmin's
-  `chronologicalAge`; carry it in the trend.
 - **Fitness Age history backfill**: a past date's `fitnessage/{date}` returns
   that day's estimate, so one budgeted read per month (its last day) would
   give the history chart and Progress's Long-term months a point each.

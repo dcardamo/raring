@@ -325,19 +325,37 @@ fn mean(values: impl Iterator<Item = f64>) -> (Option<f64>, u32) {
     ((n > 0).then(|| sum / n as f64), n)
 }
 
+/// Garmin's chronological age stored with each Fitness Age estimate.
+fn ages(store: &Store, from: NaiveDate, to: NaiveDate) -> BTreeMap<NaiveDate, f64> {
+    let paths = ["$.chronologicalAge", "$.fitnessAgeData.chronologicalAge"];
+    store
+        .day_numbers("fitness_age", &paths, &from.to_string(), &to.to_string())
+        .into_iter()
+        .filter(|(_, age)| age.is_finite() && *age > 0.)
+        .filter_map(|(key, age)| Some((day(&key)?, age)))
+        .collect()
+}
+
 /// `partial` marks daily points on the days Garmin rated only in part.
 fn series(
+    store: &Store,
     metric: TrendMetric,
     days: &BTreeMap<NaiveDate, f64>,
     partial: Option<&BTreeMap<NaiveDate, f64>>,
     spans: &[(NaiveDate, NaiveDate)],
 ) -> TrendSeries {
     let (name, unit) = name_unit(metric);
+    let ages = match (metric, spans.first(), spans.last()) {
+        (TrendMetric::FitnessAge, Some((from, _)), Some((_, to))) => ages(store, *from, *to),
+        _ => BTreeMap::new(),
+    };
     let points = spans
         .iter()
         .map(|(start, end)| {
             let (value, days) = mean(days.range(start..=end).map(|(_, v)| *v));
             TrendPoint {
+                // Daily buckets only (see `trend`), so the day's age is the point's.
+                chronological_age: value.and_then(|_| ages.get(start).copied()),
                 start: start.to_string(),
                 end: end.to_string(),
                 value,
@@ -411,23 +429,30 @@ pub fn trend(store: &Store, query: &TrendQuery, today: &str) -> Result<TrendView
             ));
         }
     }
+    // Each Fitness Age estimate keeps its own age, so long ranges keep daily
+    // points rather than averaging estimates (and ages) across a birthday.
+    let bucket = if query.metric == TrendMetric::FitnessAge {
+        TrendBucket::Day
+    } else {
+        bucket
+    };
     let spans = buckets(from, end, bucket);
     let partial_points = (bucket == TrendBucket::Day).then_some(&partial);
-    let series_now = series(query.metric, &days, partial_points, &spans);
+    let series_now = series(store, query.metric, &days, partial_points, &spans);
     let previous = shift.filter(|_| query.previous).map(|shift| {
         let back = Duration::days(comparison.map_or(shift, |start| (from - start).num_days()));
         let spans: Vec<_> = spans.iter().map(|(s, e)| (*s - back, *e - back)).collect();
         if comparison.is_some() {
             let recorded = daily(store, query.metric, spans[0].0, spans.last().unwrap().1);
-            series(query.metric, &recorded, None, &spans)
+            series(store, query.metric, &recorded, None, &spans)
         } else {
-            series(query.metric, &days, None, &spans)
+            series(store, query.metric, &days, None, &spans)
         }
     });
     let overlay = query
         .overlay
         .filter(|m| *m != query.metric)
-        .map(|metric| series(metric, &daily(store, metric, from, end), None, &spans));
+        .map(|metric| series(store, metric, &daily(store, metric, from, end), None, &spans));
     let change = previous
         .as_ref()
         .and_then(|p| Some(series_now.average? - p.average?));

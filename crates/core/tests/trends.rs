@@ -32,6 +32,51 @@ fn values(view: &TrendView) -> Vec<Option<f64>> {
 }
 
 #[test]
+fn fitness_age_keeps_each_estimates_age_across_birthdays_and_sparse_ranges() {
+    let store = Store::open(":memory:").unwrap();
+    put(
+        &store,
+        "fitness_age",
+        &day(4),
+        json!({"fitnessAge":45.5,"chronologicalAge":45}),
+    );
+    put(
+        &store,
+        "fitness_age",
+        &day(2),
+        json!({"fitnessAgeData":{"fitnessAge":45.5,"chronologicalAge":46}}),
+    );
+    put(&store, "fitness_age", &day(0), json!({"fitnessAge":44}));
+    for range in [TrendRange::Days7, TrendRange::Year, TrendRange::All] {
+        let view = trend(&store, &query(TrendMetric::FitnessAge, range), TODAY);
+        assert_eq!(view.bucket, TrendBucket::Day);
+        let estimates: Vec<_> = view
+            .series
+            .points
+            .iter()
+            .filter(|p| p.value.is_some())
+            .map(|p| (p.start.clone(), p.value, p.chronological_age))
+            .collect();
+        assert_eq!(
+            estimates,
+            vec![
+                (day(4), Some(45.5), Some(45.)),
+                (day(2), Some(45.5), Some(46.)),
+                (day(0), Some(44.), None)
+            ]
+        );
+        assert!(view
+            .series
+            .points
+            .iter()
+            .filter(|p| p.value.is_none())
+            .all(|p| p.chronological_age.is_none()));
+        assert_eq!(view.series.days, 3);
+        assert_eq!(view.series.average, Some(45.));
+    }
+}
+
+#[test]
 fn daily_ranges_read_recent_and_history_rows_and_leave_gaps() {
     let store = Store::open(":memory:").unwrap();
     // Recent per-day rows and an older history row, side by side.

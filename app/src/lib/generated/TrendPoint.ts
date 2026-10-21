@@ -6,6 +6,10 @@
  */
 export type TrendPoint = { 
 /**
+ * Garmin's chronological age on this estimate's day, never inferred.
+ */
+chronologicalAge?: number, 
+/**
  * First and last day covered, YYYY-MM-DD.
  */
 start: string, end: string, value: number | null, 

@@ -19,6 +19,12 @@ export const trendNames: Record<TrendMetric, string> = {
 /** The core's lower bound for every trend date. */
 export const firstDay = '1990-01-01';
 
+/** Keep a stored age distinct from the explicitly labelled current-age fallback. */
+export function estimateAge(point: Pick<TrendPoint, 'chronologicalAge'>, current: number | null) {
+  const age = point.chronologicalAge ?? current;
+  return {age, label: age == null ? 'Age unavailable' : point.chronologicalAge == null ? `Age then not stored · your age now ${num(age)}` : `Age then ${num(age)}`};
+}
+
 export const trendDecimals = (metric: TrendMetric) => metric === 'respiration' || metric === 'skinTemp' ? 1 : 0;
 
 // A sensible first pairing when someone turns the overlay on.

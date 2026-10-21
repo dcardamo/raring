@@ -77,8 +77,9 @@ export function sampleTrend(query: TrendQuery): TrendView {
   }
   if(query.range==='custom' && (!query.start || query.start>end))throw Error('Choose a block start on or before its end');
   const length=Math.round((Date.parse(end)-Date.parse(query.start ?? end))/86400000)+1;
-  const {from, bucket, shift} = query.range==='custom'?{from:query.start??end,bucket:bucketFor(length),shift:length}:period(query.range, end, shape[query.metric][4]);
+  const {from, bucket: periodBucket, shift} = query.range==='custom'?{from:query.start??end,bucket:bucketFor(length),shift:length}:period(query.range, end, shape[query.metric][4]);
   if(query.previous && query.comparisonStart && shift && Date.parse(query.comparisonStart)+(shift-1)*86400000>Date.parse(SAMPLE_TODAY))throw Error(`The comparison block runs past today (${SAMPLE_TODAY}); choose an earlier start`);
+  const bucket = query.metric==='fitnessAge'?'day':periodBucket;
   const list = spans(from, end, bucket);
   const now = series(query.metric, list, bucket === 'day');
   const offset=query.comparisonStart?Math.round((Date.parse(from)-Date.parse(query.comparisonStart))/86400000):(shift??0);

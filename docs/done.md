@@ -4,6 +4,16 @@ Shipped backlog items, newest first, each with its commit and the endpoint
 facts verified while building it. The open backlog is [TODO.md](../TODO.md).
 "Verified" means a read against a real account returned the data.
 
+- **Fitness Age compared with the age then** (commit "Compare Fitness Age
+  with each estimate's stored age"). Each Fitness Age trend point carries
+  Garmin's `chronologicalAge` from that day's stored `fitness_age` row
+  (`chronologicalAge` or `fitnessAgeData.chronologicalAge`), and the history
+  colours each estimate against it, with the dashed age reference stepping
+  at a birthday. Fitness Age keeps daily points in every range so ages are
+  never averaged. A row without an age falls back to the current age and the
+  point's readout says so; the hero and "N years younger" keep the latest
+  estimate's own age. Synthetic tests only; no Garmin requests.
+
 - **Status and gesture bars match the app** (commit "Paint the system bar
   strips the app's graphite"). The Android window background and the WebView
   `theme-color` were the earlier navy `#0B0F1A`, which showed as a strip

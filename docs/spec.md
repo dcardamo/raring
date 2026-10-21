@@ -604,8 +604,11 @@ says so on its chart (Rules: Reading freshness).
   the bar is green younger than your age; older is coral when the estimate is
   older than your age and neutral otherwise, and YOU takes its status colour. The bar and a "Fitness Age history" link open
   `metric/fitnessAge`: the estimate, your age and the difference, then the full
-  history chart (opening on the latest estimate) with your age now as a dashed
-  line and each estimate coloured against it (Rules: Chart colours).
+  history chart (opening on the latest estimate) with Garmin's age stored on
+  each estimate as a dashed reference and each point coloured against its own
+  age. Missing ages explicitly use the current age on that point's readout;
+  without either age the point stays neutral. The hero and difference keep
+  the latest estimate's own age (Rules: Chart colours).
 - **Drivers**: VO2max, resting heart rate, BMI or body fat, and vigorous
   minutes as tiles with range bars, Garmin's target in words ("Target ≥ 75
   min/wk") and Met or how far off it is; no trend arrows. The driver that would
@@ -669,7 +672,8 @@ keeps its gap mark, and a faint dashed line joins the readings either side.
   Selecting a point changes only the smaller dated readout below the plot,
   never that mean. A previous-period comparison puts both means, counts and
   the neutral signed change above the plot. This also applies to VO2max and
-  Fitness Age: their inspected readout starts at the latest available bucket,
+  Fitness Age: their inspected readout starts at the latest available point,
+  with Fitness Age kept as individual daily estimates rather than buckets;
   explicitly labelled as a weekly/monthly average where applicable. No
   deduplicated estimate cadence is inferred. Current bands print their bounds and source. Readiness, Sleep
   Score, stress and Body Battery use a fixed 0–100 domain on either axis;
@@ -1741,8 +1745,13 @@ next pending wind-down while signed in.
     outside it either way: attention, not a rating. Acute load against
     Garmin's optimal range is good inside it, fair below and poor above, as
     on Training's gauge.
-  - Your age: a Fitness Age estimate below your age now is good, equal fair,
-    above poor.
+  - Your age: a Fitness Age estimate below Garmin's chronological age stored
+    with it is good, equal fair, above poor. Missing per-row ages fall back to
+    the current age, explicitly labelled on that point; no age is inferred.
+    Fitness Age keeps daily estimate points in every range (and its previous
+    period), so a birthday never produces an averaged age; as an overlay it
+    is neutral and follows the primary metric's buckets.
+    Its connecting line stays neutral; each estimate dot carries its rating.
   - Neutral: weight, VO₂ max, time asleep, Progress's monthly averages, sleep's
     overnight curves and lift history, a workout's running form and stroke
     streams, and range metrics without a shown band, in the neutral blue. Fitness Age's six-week vigorous bars are this
