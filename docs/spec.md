@@ -187,6 +187,9 @@ A briefing, in this order:
   another** sit inside it (Rules: Today's choice), so they act on the
   session. There is no effort scale
   beside a recorded workout (the day can finish) or from the evening on.
+  Under a "Done today" headline acute load takes its place: a dot on
+  Garmin's optimal-range bar, as on Training, opening its history. Garmin
+  sets no daily load target; its target is that range for the 7-day load.
   Evening, wind-down and late night lead with tonight's sleep (the evening
   and wind-down cards carry the same sleep clock, compact, beside the
   wind-down, in-bed and window times) and keep any

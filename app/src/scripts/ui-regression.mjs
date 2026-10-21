@@ -1213,10 +1213,16 @@ try {
   assert.ok((await sp.locator('.card.recorded').textContent()).includes('avg HR 152'),'U05');
   assert.equal(await sp.locator('.card.recorded h3',{hasText:'Recorded today'}).count(),1,'titled when the headline isn’t Done today');
   const dp=await browser.newPage({viewport:{width:390,height:844}});
-  await dp.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify({...sample,lead:{id:'done:1',kind:'done',headline:'Done today',line:null,action:null,dismissable:false,kept:false,garmin:null,activity:null,intention:null,reasons:[],session:null}})}`}));
+  await dp.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify({...sample,load:{value:250,max:500,label:'Optimal',tone:'good',band:[180.8,339]},lead:{id:'done:1',kind:'done',headline:'Done today',line:null,action:null,dismissable:false,kept:false,garmin:null,activity:null,intention:null,reasons:[],session:null}})}`}));
   await dp.goto(`${url}/#today`);
   await dp.getByText('Done today',{exact:true}).waitFor();
   assert.equal(await dp.locator('.card.recorded h3').count(),0,'Done today already heads the list');
+  // After a workout, acute load against Garmin's optimal range sits where the effort scale was, and opens its history.
+  assert.equal(await sp.locator('.done-load').count(),0,'no load bar before anything is done');
+  const doneLoad=dp.locator('.hero .done-load');
+  assert.ok((await doneLoad.textContent()).includes('Optimal 181–339'),'Garmin’s range prints whole');
+  await doneLoad.getByRole('button',{name:"Acute load 250, Optimal; Garmin's optimal range 181–339. Open its history"}).click();
+  await dp.waitForURL(/#metric\/acuteLoad$/);
   await dp.close();
   const rp=await browser.newPage({viewport:{width:390,height:844}});
   await rp.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify({...sample,readiness:null,missingMetricReasons:{readiness:'This watch can’t record Training Readiness.'}})}`}));

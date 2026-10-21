@@ -876,9 +876,12 @@ pub(crate) fn acute(v: &Value) -> Option<f64> {
         )
     })
 }
+/// Garmin's optimal acute-load range. Training Status sends it as the
+/// chronic-load bounds (`minTrainingLoadChronic`, `maxTrainingLoadChronic`),
+/// the range its `acwrStatus` rates OPTIMAL.
 fn band(v: &Value) -> Option<[f64; 2]> {
     let nested = &training_device(v)["acuteTrainingLoadDTO"];
-    let low = num(nested, &[&["minOptimalLoad"], &["optimalRangeMin"]]).or_else(|| {
+    let low = num(nested, &[&["minTrainingLoadChronic"], &["minOptimalLoad"], &["optimalRangeMin"]]).or_else(|| {
         num(
             v,
             &[
@@ -888,7 +891,7 @@ fn band(v: &Value) -> Option<[f64; 2]> {
             ],
         )
     })?;
-    let high = num(nested, &[&["maxOptimalLoad"], &["optimalRangeMax"]]).or_else(|| {
+    let high = num(nested, &[&["maxTrainingLoadChronic"], &["maxOptimalLoad"], &["optimalRangeMax"]]).or_else(|| {
         num(
             v,
             &[
@@ -899,6 +902,30 @@ fn band(v: &Value) -> Option<[f64; 2]> {
         )
     })?;
     Some([low, high])
+}
+/// Acute load on a scale with Garmin's optimal range as its band, as Today
+/// and Training draw it: Low, Optimal or High against that range.
+fn acute_gauge(training: &Value) -> Option<Gauge> {
+    let amount = acute(training)?;
+    let band = band(training);
+    Some(gauge(
+        amount,
+        // A round scale end, so the bar's last tick is a tidy number.
+        ((amount * 1.3).max(band.map(|b| b[1] * 1.2).unwrap_or(1000.)) / 100.).ceil() * 100.,
+        match band {
+            Some([lo, _]) if amount < lo => "Low",
+            Some([_, hi]) if amount > hi => "High",
+            Some(_) => "Optimal",
+            None => "",
+        },
+        match band {
+            Some([lo, hi]) if amount >= lo && amount <= hi => Tone::Good,
+            Some([_, hi]) if amount > hi => Tone::Poor,
+            Some(_) => Tone::Fair,
+            None => Tone::Neutral,
+        },
+        band,
+    ))
 }
 /// Garmin's rating as a tone. Without a rating the factor stays neutral:
 /// Raring doesn't rate Garmin's percentages itself.
@@ -1928,7 +1955,6 @@ pub fn today_at_calendar(store: &Store, date: &str, now: DateTime<FixedOffset>, 
     // The factor Garmin rates worst, its percentage breaking ties; unrated
     // factors never count.
     let biggest_drag = rules::limiting_factor(&factors).map(|f| f.name.clone());
-    let load = acute(&t);
     let b = store.get("battery", date).unwrap_or(Value::Null);
     let b = b.as_array().and_then(|a| a.first()).unwrap_or(&b);
     let summary = store.get("summary", date).unwrap_or(Value::Null);
@@ -2012,20 +2038,7 @@ pub fn today_at_calendar(store: &Store, date: &str, now: DateTime<FixedOffset>, 
             )
         }),
         sleep: sleep_gauge(&s),
-        load: load.map(|v| {
-            gauge(
-                v,
-                (v * 1.3).max(band(&t).map(|b| b[1] * 1.2).unwrap_or(1000.)),
-                "Acute load",
-                match band(&t) {
-                    Some([lo, hi]) if v >= lo && v <= hi => Tone::Good,
-                    Some([_, hi]) if v > hi => Tone::Poor,
-                    Some(_) => Tone::Fair,
-                    None => Tone::Neutral,
-                },
-                band(&t),
-            )
-        }),
+        load: acute_gauge(&t),
         headline,
         factors,
         readiness_why: None,
@@ -2415,26 +2428,7 @@ pub fn training_at_calendar(store: &Store, date: &str, calendar: NaiveDate, now:
     .collect();
     let (race_state, race) = planned::race(store, &calendar.to_string(), now);
     let mut view = TrainingView {
-        acute: load.map(|amount| {
-            gauge(
-                amount,
-                // A round scale end, so the bar's last tick is a tidy number.
-                ((amount * 1.3).max(band(&v).map(|b| b[1] * 1.2).unwrap_or(1000.)) / 100.).ceil() * 100.,
-                match band(&v) {
-                    Some([lo, _]) if amount < lo => "Low",
-                    Some([_, hi]) if amount > hi => "High",
-                    Some(_) => "Optimal",
-                    None => "",
-                },
-                match band(&v) {
-                    Some([lo, hi]) if amount >= lo && amount <= hi => Tone::Good,
-                    Some([_, hi]) if amount > hi => Tone::Poor,
-                    Some(_) => Tone::Fair,
-                    None => Tone::Neutral,
-                },
-                band(&v),
-            )
-        }),
+        acute: acute_gauge(&v),
         status: status.clone().map(|s| label(Some(s))),
         status_tone: status
             .as_ref()
