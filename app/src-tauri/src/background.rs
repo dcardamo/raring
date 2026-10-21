@@ -409,6 +409,49 @@ pub extern "system" fn Java_app_raring_NativeBridge_fetchDetail(
     }
 }
 
+/// One Garmin write the person asked for; Kotlin holds `SyncGate` and saves
+/// the returned tokens. Errors are refusals before any request.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_app_raring_NativeBridge_garminWrite(
+    mut env: JNIEnv<'_>,
+    _class: JClass<'_>,
+    db_path: JString<'_>,
+    tokens_json: JString<'_>,
+    request_json: JString<'_>,
+) -> jni::sys::jstring {
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(
+        || -> Result<String, String> {
+            let mut text = |s: &JString<'_>| env.get_string(s).map(|v| v.to_string_lossy().into_owned()).map_err(|e| e.to_string());
+            let (db, tokens, request) = (text(&db_path)?, text(&tokens_json)?, text(&request_json)?);
+            let core = Raring::open(db).map_err(|e| e.to_string())?;
+            core.session_identity().ok_or("Account verification required")?;
+            let tokens: Tokens = serde_json::from_str(&tokens).map_err(|e| e.to_string())?;
+            let request: raring_core::view::GarminWrite = serde_json::from_str(&request).map_err(|e| e.to_string())?;
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .map_err(|e| e.to_string())?;
+            let (change, tokens) = rt.block_on(async {
+                let client = raring_core::garmin::Client::new(tokens).map_err(|e| e.to_string())?;
+                let change = core.write_garmin(&client, &request, Utc::now()).await.map_err(|e| e.to_string())?;
+                Ok::<_, String>((change, client.tokens().await))
+            })?;
+            let auth_failed = change.outcome == raring_core::view::WriteOutcome::NeedsSignIn;
+            Ok(serde_json::json!({"change":change,"tokensJson":serde_json::to_string(&tokens).map_err(|e| e.to_string())?,"authFailed":auth_failed,"error":null}).to_string())
+        },
+    ));
+    let json = match result {
+        Ok(Ok(json)) => json,
+        Ok(Err(error)) => serde_json::json!({ "error": error }).to_string(),
+        Err(_) => "{\"error\":\"Garmin write failed before sending\"}".into(),
+    };
+    match env.new_string(json) {
+        Ok(v) => v.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "system" fn Java_app_raring_NativeBridge_refreshStrength(

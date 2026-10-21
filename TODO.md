@@ -27,27 +27,17 @@ with the age then (in 9), units (6), core-generated fixtures with a swim and
 a walk (8), desktop notification clicks (in 11) and naps when an old day is
 opened (approved). Move each to `docs/done.md` when it merges.
 
-### 1. Garmin writes, starting with weight
+### 1. Garmin writes: hydration and blood pressure
 
-In progress on branch `feat-weight-write`. The weight spike and the write
-rules' create and delete shipped (docs/done.md); weigh-ins are proven against
-a local mock and the real-account spike. Weight goes first because the Add a
-weight button already exists on Profile (disabled) and Connect shows a
-weigh-in without waiting for a watch sync.
+Weigh-ins shipped (docs/done.md): Profile adds one, the weight detail deletes
+the last one, through the write rules' create and delete. Next, on the same
+rules and each with an approved real-account spike first:
 
-1. **24a. Add a weight** on Profile: the weight only (Garmin's measurement
-   system sets kg or lb), time defaulting to now. Hold Android's `SyncGate` or
-   the desktop credential gate around the write as sync does, and save
-   refreshed tokens. The core stores the read-back day, so Health shows it
-   without a sync. In the same change, rewrite the website's privacy page and
-   the README, which say Raring only reads from Garmin, and update the spec's
-   Profile entry.
-2. **Delete a weigh-in** from the weight detail, with confirmation.
-3. **24b. Hydration** (`/usersummary-service/usersummary/hydration/log`),
-   then **24c. blood pressure** (`/bloodpressure-service/bloodpressure`; it
-   can't be edited, only deleted and added again). Both unverified.
+1. **24b. Hydration** (`/usersummary-service/usersummary/hydration/log`).
+2. **24c. Blood pressure** (`/bloodpressure-service/bloodpressure`; it can't
+   be edited, only deleted and added again).
 
-Body fat, BMI and other composition fields are out of scope for the first
+Both unverified. Body fat, BMI and other composition fields stay out of the
 weight write.
 
 ### 2. Stress timeline on clock-change days (before 1 Nov)
@@ -139,6 +129,8 @@ each day's Training Status `minTrainingLoadChronic`/`maxTrainingLoadChronic`.
 
 ### 11. Smaller items
 
+- **Delete an older weigh-in**: the weight detail deletes only the last one;
+  the chart's tap-to-read weigh-in could offer the same confirmed delete.
 - **Sign-in error wording**: map the native sign-in failures (no network,
   cancelled, Garmin refused) to one plain line each once their messages are
   known; Raring now only drops the "Error:" prefix.
@@ -226,6 +218,15 @@ TalkBack or Doze.
 - History backfill: the first background run (budget 1400) takes about
   7 minutes at real pacing, close to WorkManager's 10-minute stop. If phones
   stop it, use shorter chained runs.
+
+### Garmin writes on a phone
+
+- **Add and delete a weigh-in on a signed-in phone** (approved writes only):
+  `garminWrite` under `SyncGate`, refreshed tokens saved to the vault, the
+  weigh-in on Health and Profile at once, and Connect showing the same entry.
+  So far only desktop and the core's mocks run it; the Android JNI path is
+  compiled but unrun, and the demo's refusal wasn't checked on the emulator
+  (it was busy, and this worktree had no project debug key).
 
 ### Notifications, widgets and background sync
 

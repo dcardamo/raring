@@ -1661,7 +1661,15 @@ try {
   await facts.waitFor();
   const text=await facts.textContent();
   for(const want of ['Age46','72.4 kg','Last weigh-in Tue 14 Oct','Metric · km, kg','Last upload'])assert.ok(text.includes(want),`${want} in ${text}`);
-  assert.ok(await pp.getByRole('button',{name:'Add a weight'}).isDisabled(),'adding a weight stays disabled');
+  // The preview has no Garmin: adding a weight is refused, saying nothing was sent.
+  await pp.getByRole('button',{name:'Add a weight'}).click();
+  const form=pp.getByRole('form',{name:'Add a weight'});
+  assert.match(await form.locator('input[type=datetime-local]').inputValue(),/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/,'the time defaults to now');
+  assert.ok((await form.textContent()).includes('kg'),'the weight is in Garmin’s unit');
+  await form.getByRole('spinbutton').fill('81.3');
+  await form.getByRole('button',{name:'Save to Garmin'}).click();
+  await form.getByRole('status').filter({hasText:'nothing was sent'}).waitFor();
+  await form.getByRole('button',{name:'Cancel'}).click();
   assert.ok((await pp.getByRole('region',{name:'Limitations and injuries'}).textContent()).includes('Avoiding run · “No overhead pressing”'));
   await pp.getByRole('button',{name:/^Manage limitations/}).click();
   await pp.getByRole('dialog',{name:'Your limits'}).waitFor();
@@ -1671,7 +1679,43 @@ try {
   assert.deepEqual(await contrastFailures(pp),[],'Profile contrast');
   await pp.close();
  }
- console.log('Profile: Garmin facts with dates, limitations, gear, disabled weight write: passed');
+ console.log('Profile: Garmin facts with dates, limitations, gear, refused weight write in the preview: passed');
+ // Adding a weight: an unconfirmed save keeps the form and its time; trying again finds the first attempt.
+ {
+  const wp=await browser.newPage({viewport:{width:390,height:844}});
+  wp.on('pageerror',e=>errors.push(e.message));
+  await wp.goto(`${url}/?fixture=weight-write&outcome=unconfirmed#profile`);
+  await wp.getByRole('button',{name:'Add a weight'}).click();
+  const form=wp.getByRole('form',{name:'Add a weight'});
+  const time=await form.locator('input[type=datetime-local]').inputValue();
+  await form.getByRole('spinbutton').fill('81.3');
+  await form.getByRole('button',{name:'Save to Garmin'}).click();
+  await form.getByRole('status').filter({hasText:/Sent, not confirmed\..*Try again: Raring checks Garmin first/}).waitFor();
+  assert.equal(await form.locator('input[type=datetime-local]').inputValue(),time,'a retry keeps the same time');
+  await wp.screenshot({path:resolve(output,'profile-add-weight-unconfirmed-390.png'),fullPage:true});
+  await form.getByRole('button',{name:'Save to Garmin'}).click();
+  await wp.getByRole('status').filter({hasText:'Saved in Garmin. Already in Garmin from an earlier attempt; not sent again.'}).waitFor();
+  assert.equal(await wp.getByRole('form',{name:'Add a weight'}).count(),0,'a saved weight closes the form');
+  for(const width of [320,700]){await wp.setViewportSize({width,height:900});assert.equal(await wp.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`Profile with the form fits ${width}px`)}
+  assert.deepEqual(await contrastFailures(wp),[],'Add a weight contrast');
+  // The weight detail deletes its last weigh-in only after confirming in place.
+  await wp.setViewportSize({width:390,height:844});
+  await wp.goto(`${url}/?fixture=weight-write#health/weight`);
+  const last=wp.locator('.card').filter({has:wp.getByRole('heading',{name:'Last weigh-in'})});
+  await last.waitFor();
+  assert.match(await last.textContent(),/72\.9 kg · Thu 16 Oct · 08:00.*Entered by hand/);
+  await last.getByRole('button',{name:'Delete this weigh-in'}).click();
+  const confirm=last.getByRole('group',{name:'Delete this weigh-in'});
+  assert.match(await confirm.textContent(),/Delete 72\.9 kg · Thu 16 Oct · 08:00 from Garmin\?/);
+  await confirm.getByRole('button',{name:'Cancel'}).click();
+  assert.equal(await last.getByRole('group').count(),0,'cancel sends nothing');
+  await last.getByRole('button',{name:'Delete this weigh-in'}).click();
+  await last.getByRole('button',{name:'Delete from Garmin'}).click();
+  await last.getByRole('status').filter({hasText:'Deleted from Garmin.'}).waitFor();
+  assert.deepEqual(await contrastFailures(wp),[],'Weight detail contrast');
+  await wp.close();
+ }
+ console.log('Add a weight with an unconfirmed retry, and a confirmed weigh-in delete: passed');
  console.log('Sleep tabs: closer default, Tonight plan, wind-down self-report, recent nights and widths: passed');
 
  // Today through the day: the same data at different clocks. Only the leading card changes; the hero,

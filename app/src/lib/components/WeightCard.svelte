@@ -12,11 +12,13 @@
  import HelpButton from './HelpButton.svelte';
  import Card from './Card.svelte';
  import Icon from './Icon.svelte';
+ import DeleteWeighIn from './DeleteWeighIn.svelte';
  // Garmin scale weight and Raring's labelled trend, laid out like every other history card in the neutral blue.
  // All metric math and freshness come from Rust. On Health (`navigate` given) it is the compact card that opens
  // the detail; the detail adds every range, each change and body composition.
  // `endDate` anchors the card to an opened past day; otherwise it ends today.
- let {range=$bindable('days30'),initial,navigate,endDate}:{range?:TrendRange,initial?:WeightView,navigate?:(route:string)=>void,endDate?:string}=$props();
+ // The detail can delete its last weigh-in from Garmin; `onwrite` lets the app reread its views.
+ let {range=$bindable('days30'),initial,navigate,endDate,onwrite}:{range?:TrendRange,initial?:WeightView,navigate?:(route:string)=>void,endDate?:string,onwrite?:()=>void}=$props();
  let compact=$derived(!!navigate);
  // Health offers four of the detail's ranges; one chosen only on the detail (14D, Max) shows here as 30D.
  const COMPACT:TrendRange[]=['days7','days30','days90','year'];
@@ -71,6 +73,9 @@
    <div class="picker"><RangePicker value={range} onchange={r=>range=r} label="Weight range"/></div>
    {@render history()}
   </section>
+  {#if ready && view?.lastWeighIn && view.unit && !endDate}
+   <Card title="Last weigh-in"><DeleteWeighIn weighIn={view.lastWeighIn} unit={view.unit} {onwrite}/></Card>
+  {/if}
   {#if ready && view?.changes.length}
    <Card title={`Trend change · ending ${dateLabel(view.to!)}`} extra="weight-changes">
     <!-- Under a week, a sparkline's own scale turns a steady 0.1 into a steep line. -->

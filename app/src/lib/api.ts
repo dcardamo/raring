@@ -53,6 +53,8 @@ import type { ProgressView } from './generated/ProgressView';
 import type { Period } from './generated/Period';
 import sampleProgress from './sample/progress.json';
 import type { GarminChange } from './generated/GarminChange';
+import type { GarminWrite } from './generated/GarminWrite';
+import type { WriteOutcome } from './generated/WriteOutcome';
 import { sampleGarminChanges } from './sample/garminChanges';
 import type { ImportPreview } from './generated/ImportPreview';
 export const previewOnly = !isTauri();
@@ -166,6 +168,22 @@ export const local_action = (action:LocalAction):Promise<void> => {
 };
 // Recent Garmin writes; the preview has none unless the garmin-changes fixture asks.
 export const garmin_changes = ():Promise<GarminChange[]> => call('garmin_changes',undefined,new URLSearchParams(location.search).get('fixture')==='garmin-changes'?sampleGarminChanges:[]);
+// A write the person asked for. The preview sends nothing: it refuses, unless the
+// weight-write fixture answers as Garmin would (`&outcome=` picks the first answer;
+// a retry after `unconfirmed` finds the first attempt).
+let previewWrites=0;
+export const garmin_write = (request:GarminWrite):Promise<GarminChange> => {
+ if(isTauri())return invoke<GarminChange>('garmin_write',{request});
+ const query=new URLSearchParams(location.search);
+ if(query.get('fixture')!=='weight-write')return Promise.reject(new Error('Writing to Garmin needs the Raring app; nothing was sent'));
+ const first=previewWrites++===0,wanted=(query.get('outcome')??'applied') as WriteOutcome;
+ const outcome:WriteOutcome=first?wanted:'applied';
+ const message=outcome==='unconfirmed'?'Couldn’t reach Garmin; Garmin may or may not have saved it':!first&&wanted==='unconfirmed'?'Already in Garmin from an earlier attempt; not sent again':outcome==='duplicate'?'Garmin already has that weight that day':null;
+ const field=request.kind==='addWeight'
+  ?{field:`weighIn:${request.at}`,label:'Weigh-in added',before:null,after:`${request.value.toFixed(1)} ${request.unit} at ${request.at.slice(11,16)}`}
+  :{field:`weighIn:${request.timestampGmt}`,label:'Weigh-in deleted',before:'sample weigh-in',after:null};
+ return Promise.resolve({at:new Date().toISOString(),resource:'Weight',fields:[field],outcome,message,mismatches:[],waitingForWatch:false});
+};
 export const sync_now = ():Promise<void> => call('sync_now',undefined,undefined);
 export const open_garmin_connect = ():Promise<boolean> => call('open_garmin_connect',undefined,false);
 export const begin_sign_in = ():Promise<void> => call('begin_sign_in',undefined,undefined);

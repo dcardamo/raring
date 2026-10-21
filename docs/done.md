@@ -4,6 +4,24 @@ Shipped backlog items, newest first, each with its commit and the endpoint
 facts verified while building it. The open backlog is [TODO.md](../TODO.md).
 "Verified" means a read against a real account returned the data.
 
+- **24a. Add a weight and delete a weigh-in** (commit "Add a weight on
+  Profile and delete a weigh-in from the weight detail"; TODO 1, steps 3–4).
+  Profile's Add a weight opens a form: the weight in Garmin's unit (20–300 kg
+  or the same in lb) and a time defaulting to now, fixed while the form is
+  open so a retry after "sent, not confirmed" repeats the same weigh-in. The
+  weight detail shows the last weigh-in and deletes it after an in-place
+  confirmation. One `garmin_write` command: desktop holds the credential gate
+  and saves refreshed tokens; Android's `garminWrite` plugin command holds
+  `SyncGate`, refuses without stored tokens (the demo) before any request,
+  saves refreshed tokens and suspends the session on sign-in again. Both
+  views reread after a write; the core stored Garmin's answer. The README,
+  the website's privacy page and Profile's help no longer say Raring only
+  reads from Garmin. UI tests: the preview's refusal, an unconfirmed save
+  kept with its time then confirmed on retry, cancel and confirm of a
+  delete, widths and contrast. The debug APK builds (Android JNI and Kotlin
+  compile); it wasn't installed or run (see Check on a phone: Garmin writes
+  on a phone).
+
 - **Weigh-ins in the write rules** (commit "Add weigh-in create and delete
   to the Garmin write rules"; TODO 1, steps 1–2). Spike on the maintainer's
   account (approved 2026-10-21), one request at a time: one weigh-in created

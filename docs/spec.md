@@ -593,7 +593,9 @@ says so on its chart (Rules: Reading freshness).
   Garmin's recorded BMI/body fat as labelled values. Scale weigh-ins are dots
   on a faint line, the trend a solid line, axes name the unit.
   Help ("?") explains smoothing. Adding a weight lives on Profile only (Profile and
-  Settings). Weight follows Garmin's
+  Settings). The detail's Last weigh-in (value, date, time, entered by hand
+  or from Garmin) can be deleted from Garmin after an in-place confirmation
+  (Rules: Garmin writes). Weight follows Garmin's
   measurement system (kg/lb), not activity-set units in isolation. Missing
   measurements stay gaps, never zero; no notifications or unsolicited weight
   targets. Until the account units sync, the card waits rather than guessing.
@@ -778,8 +780,12 @@ page, never the overnight Sleep HR detail.
 - **Profile** (the header's profile button): what Garmin knows (age, latest
   weigh-in with its date, units, the watch's last upload, history on the
   phone), limitations and injuries (opening Adapt's limits), gear, Settings
-  and Help (Rules: Profile). Add a weight is disabled: it would write to
-  Garmin.
+  and Help (Rules: Profile). Add a weight opens a form under the facts:
+  the weight in Garmin's unit and a time that defaults to now, saved to
+  Garmin (Rules: Garmin writes). The time stays fixed while the form is open,
+  so trying again after "sent, not confirmed" repeats the same weigh-in. A
+  saved weight closes the form with Garmin's answer; any other answer stays
+  in the form. Until Garmin's units sync, the button waits.
 - **Adapt** (every root header): Rest today, I'm ill, Pause training,
   Lighter week, Limits and My routines; Resume shows the goals first (Rules:
   Adapt, My routines).
@@ -1411,7 +1417,7 @@ next pending wind-down while signed in.
   after 7 days), the primary watch's last upload, history on the phone, gear,
   and your limitations (edited in Adapt's limits). The watch's model name is
   not shown until its device-list field is verified. Adding a weight is a
-  Garmin write and stays disabled.
+  Garmin write (Rules: Garmin writes) and the only one on Profile.
 - **Sleep tabs**: Sleep has Last night and Tonight (`sleep/last`,
   `sleep/tonight`; switching replaces the page, never stacks). A plain `sleep`
   link opens Tonight when Today's phase is evening, wind-down or late night,
@@ -2044,7 +2050,11 @@ next pending wind-down while signed in.
   Android generation changes and profile verification/promotion hold that same
   gate, so the generation cannot change during the profile request. Auth failure and a new
   sign-in suspend presentation immediately, clear notifications/widgets and
-  stop reminders without erasing history. Before saving candidate credentials,
+  stop reminders without erasing history. A Garmin write the person asks for
+  (`garminWrite`) holds `SyncGate` like an on-demand read, saves refreshed
+  tokens and suspends the session when Garmin needs a new sign-in; without
+  stored credentials (the demo) nothing is sent. Desktop writes hold the
+  desktop credential gate. Before saving candidate credentials,
   Rust reads `/userprofile-service/socialProfile` fresh with that candidate and
   binds its numeric `profileId` (the user-profile identifier, not the separate
   social `id`, display name or full name). This field's meaning is supported by

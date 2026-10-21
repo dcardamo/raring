@@ -221,6 +221,32 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
             finally { StatusSurfaces.refresh(activity) }
         }
     }
+    // A Garmin write the person asked for, under the same gate as sync. The demo
+    // and a signed-out session have no tokens, so nothing is sent.
+    @Command fun garminWrite(invoke: Invoke) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val request = invoke.getArgs().getString("request")
+                val change = SyncGate.mutex.withLock {
+                    check(AccountSession.active(activity)) { "Sign in again; nothing was sent" }
+                    val tokens = AccountSession.loadLocked(activity)
+                        ?: throw IllegalStateException("Not connected to Garmin; nothing was sent")
+                    val db = java.io.File(activity.filesDir, "raring.db").absolutePath
+                    val response = JSONObject(NativeBridge.garminWrite(db, tokens, request))
+                    if (!response.isNull("error")) throw IllegalStateException(response.getString("error"))
+                    if (response.optBoolean("authFailed")) {
+                        AccountSession.suspendLocked(activity)
+                        SyncScheduler.cancel(activity)
+                    } else {
+                        response.optString("tokensJson").takeIf { it.isNotEmpty() }?.let { TokenVault.save(activity, it) }
+                    }
+                    response.getJSONObject("change")
+                }
+                invoke.resolve(JSObject().apply { put("change", change) })
+            } catch (e: Exception) { invoke.reject(e.message ?: "Nothing was sent to Garmin", e) }
+            finally { StatusSurfaces.refresh(activity) }
+        }
+    }
     @Command fun prepareExport(invoke: Invoke) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
