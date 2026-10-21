@@ -4,6 +4,18 @@ Shipped backlog items, newest first, each with its commit and the endpoint
 facts verified while building it. The open backlog is [TODO.md](../TODO.md).
 "Verified" means a read against a real account returned the data.
 
+- **Naps when an old day is opened** (commit "Read an opened night's naps
+  on demand"). Opening a past night (`sleep/YYYY-MM-DD`) now reads that
+  day's `sleep-service/sleep/naps/{date}` after its sleep and HRV, through
+  the same on-demand path: explicit open only, the open's small budget, the
+  shared per-endpoint retry wait and 429 backoff, serialized tokens and
+  Android's `SyncGate`, never today. A new `DayDetailPart::Naps` makes the
+  page's missing parts include naps, so the existing per-page open dedupe
+  covers it. Empty answers (`[]`, and 403/404 kept as null) are kept; a
+  failed read stores nothing and leaves "Naps not checked yet". Synthetic
+  server tests cover present, empty, failed and budget; no Garmin requests.
+  How far back Garmin answers the nap endpoint is unverified.
+
 - **Distances follow Garmin's measurement setting** (commit "Read every
   distance in Garmin's measurement units"). Running tolerance (Training tile
   and detail), Progress's distance totals and longest-distance records, and

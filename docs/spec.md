@@ -328,7 +328,8 @@ Last night:
   score, asleep minutes or Raring's sleep plan. Garmin's own `napAdjustment`
   for tonight's sleep need is distinct. An empty array is no recorded naps;
   absent ("not checked yet"), failed and stale reads have separate neutral
-  labels. Other populated
+  labels. Sync reads the last two days' naps; an opened older night reads
+  its day's naps once (Rules: Opened past days and workouts). Other populated
   nap fields and feedback meanings require further verification before display.
 - **Consistency**: 14-night chart with your usual bed and wake windows
   shaded and their clock ranges in the key, each week's Monday marked, a
@@ -1446,6 +1447,12 @@ next pending wind-down while signed in.
   the page or section that opened it, and the plain `sleep`, `sleep/last`,
   `sleep/tonight`, `health`, `metric/stress` and workout links keep their
   current meaning. The all-day heart-rate read keeps its own one-day rule.
+  An opened night (`sleep/YYYY-MM-DD`) reads its sleep and HRV, then that
+  day's naps (`sleep-service/sleep/naps/{date}`), which sync reads only for
+  the last two days; a Health day reads its Fitness Age, stress and Health
+  Status, and a dated stress page its stress and Health Status. A nap read
+  that fails stores nothing, so the card still reads "not checked yet" and
+  the next open after the retry wait tries again.
 - **Your day**: live Today only, the local calendar day on one 00–24 axis:
   last night's recorded stages at their clock times, clipped at midnight;
   Garmin's intraday Body Battery and stress in three-minute slots and heart

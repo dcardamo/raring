@@ -1,7 +1,14 @@
 //! Opening a past day or an older workout: missing per-day detail is fetched
 //! once, explicitly, and kept. Synthetic server only; no Garmin account.
 use chrono::{Duration, Local, Utc};
-use raring_core::{garmin::Client, screens, store::Store, sync, view::DayDetailPart, Tokens};
+use raring_core::{
+    garmin::Client,
+    screens,
+    store::Store,
+    sync,
+    view::{DayDetailPart, ReadState},
+    Tokens,
+};
 use serde_json::json;
 use std::{
     io::{Read, Write},
@@ -55,6 +62,12 @@ fn sleep_body() -> serde_json::Value {
             {"activityLevel": 3, "startGMT": "2025-06-02T22:30:00.0", "endGMT": "2025-06-02T22:40:00.0"}
         ]
     })
+}
+
+/// One synthetic nap, GMT wall clock plus Garmin's offsets in seconds.
+fn naps_body() -> serde_json::Value {
+    json!([{"napStartTimestampGMT": "2025-06-03T11:10:00", "napStartTimeOffset": 7200,
+        "napEndTimestampGMT": "2025-06-03T11:35:00", "napEndTimeOffset": 7200, "napTimeSec": 1500}])
 }
 
 fn stress_body() -> serde_json::Value {
@@ -136,33 +149,43 @@ fn server(count: usize, answer: impl Fn(&str) -> String + Send + 'static) -> (St
 async fn opened_past_day_fetches_only_the_page_it_opens_once_and_keeps_it() {
     let store = Store::open(":memory:").unwrap();
     profile(&store);
-    // A past night reads the night and its HRV, never the day's stress.
-    let (url, seen, thread) = server(2, |line| {
+    // A past night reads the night, its HRV and that day's naps, never the day's stress.
+    let night = screens::day_detail_parts("sleep").unwrap();
+    assert_eq!(night, [DayDetailPart::Sleep, DayDetailPart::Naps]);
+    assert_eq!(screens::sleep_view(&store, "2025-06-03").detail.missing, night);
+    let (url, seen, thread) = server(3, |line| {
         if line.contains("dailySleepData") {
             sleep_body().to_string()
+        } else if line.contains("/sleep/naps/") {
+            naps_body().to_string()
         } else {
             hrv_body().to_string()
         }
     });
     let client = test_client(&url);
-    let report = sync::day_detail_on_demand(&store, &client, "2025-06-03", &[DayDetailPart::Sleep]).await;
+    let report = sync::day_detail_on_demand(&store, &client, "2025-06-03", night).await;
     thread.join().unwrap();
-    assert_eq!(report.requests, 2);
-    assert_eq!(report.stored, 2);
+    assert_eq!(report.requests, 3);
+    assert_eq!(report.stored, 3);
     assert!(report.error.is_none());
     {
         let lines = seen.lock().unwrap();
         assert!(lines[0].starts_with("GET /wellness-service/wellness/dailySleepData/Synthetic?"));
         assert!(lines[0].contains("date=2025-06-03"));
         assert!(lines[1].starts_with("GET /hrv-service/hrv/2025-06-03"));
+        assert!(lines[2].starts_with("GET /sleep-service/sleep/naps/2025-06-03 "));
     }
     assert!(store.get("stress", "2025-06-03").is_none(), "a night does not read the day");
     let sleep = screens::sleep_view(&store, "2025-06-03");
     assert_eq!(sleep.stages.len(), 3);
     assert_eq!(sleep.asleep_min, Some(450.));
+    assert_eq!(sleep.naps_state, ReadState::Available);
+    assert_eq!(sleep.naps.len(), 1);
+    assert_eq!(sleep.naps[0].start_local.as_deref(), Some("2025-06-03T13:10:00"));
+    assert_eq!(sleep.naps[0].duration_min, Some(25.));
     assert!(sleep.detail.missing.is_empty() && sleep.detail.unavailable.is_empty());
     assert_eq!(
-        sync::day_detail_on_demand(&store, &client, "2025-06-03", &[DayDetailPart::Sleep])
+        sync::day_detail_on_demand(&store, &client, "2025-06-03", night)
             .await
             .requests,
         0
@@ -236,7 +259,7 @@ async fn opened_past_day_keeps_garmin_empty_answers() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
     let thread = std::thread::spawn(move || {
-        for _ in 0..6 {
+        for _ in 0..7 {
             let (mut stream, _) = listener.accept().unwrap();
             let mut buf = [0; 4096];
             let _ = stream.read(&mut buf).unwrap();
@@ -246,23 +269,24 @@ async fn opened_past_day_keeps_garmin_empty_answers() {
         }
     });
     let client = test_client(&url);
-    let report = sync::day_detail_on_demand(&store, &client, "2025-06-03", &[DayDetailPart::Sleep]).await;
-    assert_eq!(report.requests, 2);
+    let night = screens::day_detail_parts("sleep").unwrap();
+    let report = sync::day_detail_on_demand(&store, &client, "2025-06-03", night).await;
+    assert_eq!(report.requests, 3);
     let day = screens::day_detail_parts("day").unwrap();
     let report = sync::day_detail_on_demand(&store, &client, "2025-06-03", day).await;
     thread.join().unwrap();
     assert_eq!(report.requests, 4);
-    for kind in ["sleep", "hrv", "fitness_age", "stress", "summary", "health_status"] {
+    for kind in ["sleep", "hrv", "naps", "fitness_age", "stress", "summary", "health_status"] {
         assert_eq!(store.get(kind, "2025-06-03"), Some(serde_json::Value::Null));
     }
     let sleep = screens::sleep_view(&store, "2025-06-03");
-    assert_eq!(sleep.detail.unavailable, vec![DayDetailPart::Sleep]);
+    assert_eq!(sleep.detail.unavailable, night);
     let health = screens::health(&store, "2025-06-03");
     assert_eq!(health.detail.unavailable, day);
     assert_eq!(health.fitness_age.fitness_age, None);
     // Empty answers are kept, as for an opened all-day heart-rate read.
     assert_eq!(
-        sync::day_detail_on_demand(&store, &client, "2025-06-03", &[DayDetailPart::Sleep])
+        sync::day_detail_on_demand(&store, &client, "2025-06-03", night)
             .await
             .requests,
         0
@@ -273,6 +297,62 @@ async fn opened_past_day_keeps_garmin_empty_answers() {
             .requests,
         0
     );
+}
+
+/// Answers each request with the next status and body, recording request lines.
+fn scripted(answers: Vec<(&'static str, &'static str)>) -> (String, Arc<Mutex<Vec<String>>>, std::thread::JoinHandle<()>) {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let requests = Arc::clone(&seen);
+    let thread = std::thread::spawn(move || {
+        for (status, body) in answers {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut buf = [0; 4096];
+            let n = stream.read(&mut buf).unwrap();
+            requests.lock().unwrap().push(String::from_utf8_lossy(&buf[..n]).lines().next().unwrap_or_default().to_owned());
+            let reply = format!("HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len());
+            stream.write_all(reply.as_bytes()).unwrap();
+        }
+    });
+    (url, seen, thread)
+}
+
+#[tokio::test]
+async fn an_opened_night_reads_only_its_missing_naps_keeps_an_empty_day_and_retries_a_failure_later() {
+    let store = Store::open(":memory:").unwrap();
+    profile(&store);
+    let night = screens::day_detail_parts("sleep").unwrap();
+    // Nights synced earlier, without that day's naps (sync reads only the last two days).
+    for date in ["2025-06-03", "2025-06-04"] {
+        store.put("sleep", date, "synthetic", &sleep_body()).unwrap();
+        store.put("hrv", date, "synthetic", &hrv_body()).unwrap();
+        assert_eq!(screens::sleep_view(&store, date).detail.missing, [DayDetailPart::Naps]);
+        assert_eq!(screens::sleep_view(&store, date).naps_state, ReadState::Unknown);
+    }
+    // Garmin's empty answer: one request, inside the open's budget, kept as "no naps".
+    let (url, seen, thread) = scripted(vec![("200 OK", "[]"), ("500 Internal Server Error", "{}")]);
+    let client = test_client(&url);
+    let empty = sync::day_detail_on_demand(&store, &client, "2025-06-03", night).await;
+    assert_eq!(empty.requests, 1);
+    assert_eq!(store.get("naps", "2025-06-03"), Some(json!([])));
+    let view = screens::sleep_view(&store, "2025-06-03");
+    assert_eq!(view.naps_state, ReadState::Empty);
+    assert!(view.detail.missing.is_empty() && view.detail.unavailable.is_empty());
+    assert_eq!(sync::day_detail_on_demand(&store, &client, "2025-06-03", night).await.requests, 0);
+    // A failed read stores nothing, so the day still says naps weren't checked,
+    // and the endpoint's shared retry wait holds a second open back.
+    let failed = sync::day_detail_on_demand(&store, &client, "2025-06-04", night).await;
+    thread.join().unwrap();
+    assert_eq!((failed.requests, failed.data_failures), (1, 1));
+    assert!(store.get("naps", "2025-06-04").is_none());
+    let view = screens::sleep_view(&store, "2025-06-04");
+    assert_eq!(view.detail.missing, [DayDetailPart::Naps]);
+    assert_eq!(view.naps_state, ReadState::Unknown);
+    assert_eq!(sync::day_detail_on_demand(&store, &client, "2025-06-04", night).await.requests, 0);
+    let lines = seen.lock().unwrap();
+    assert!(lines[0].starts_with("GET /sleep-service/sleep/naps/2025-06-03 "));
+    assert!(lines[1].starts_with("GET /sleep-service/sleep/naps/2025-06-04 "));
 }
 
 #[tokio::test]
@@ -295,7 +375,14 @@ async fn only_an_opened_past_day_is_fetched() {
     let today_view = screens::sleep_view(&store, &today);
     assert!(today_view.detail.missing.is_empty());
     let past = screens::sleep_view(&store, "2025-06-03");
-    assert_eq!(past.detail.missing, vec![DayDetailPart::Sleep]);
+    assert_eq!(past.detail.missing, [DayDetailPart::Sleep, DayDetailPart::Naps]);
+    // Opening today never reads its naps on demand either: sync owns the last two days.
+    assert_eq!(
+        sync::day_detail_on_demand(&store, &client, &today, screens::day_detail_parts("sleep").unwrap())
+            .await
+            .requests,
+        0
+    );
 }
 
 #[tokio::test]

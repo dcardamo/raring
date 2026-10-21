@@ -3056,7 +3056,11 @@ function trendFixture(q){
     if(command==='fetch_workout_detail'){window.detailCalls.push(args.id);return null}
     if(command==='sleep' && args.date){
      const view=structuredClone(samples.sleep);view.date=args.date;
-     view.detail={missing:window.detailScopes.includes(args.date+' sleep')?[]:['sleep'],unavailable:[]};
+     // The opened night's parts include that day's naps, which sync reads for two days only.
+     const read=window.detailScopes.includes(args.date+' sleep');
+     view.detail={missing:read?[]:['sleep','naps'],unavailable:[]};
+     view.napsState=read?'available':'unknown';
+     view.naps=read?[{startLocal:args.date+'T13:10:00',endLocal:args.date+'T13:35:00',durationMin:25,feedback:null}]:[];
      return view;
     }
     if(command==='health' && args.date){
@@ -3080,6 +3084,9 @@ function trendFixture(q){
   await detail.goto(`${url}/#sleep/2025-10-09`);
   await detail.waitForFunction(()=>window.detailCalls?.length===1);
   assert.deepEqual(await detail.evaluate(()=>window.detailCalls),['2025-10-09']);
+  const napCard=detail.locator('.naps');
+  await napCard.locator('.nap-row').waitFor();
+  assert.match(await napCard.textContent(),/13:10.*13:35/s,'the opened night shows that day’s naps');
   await detail.evaluate(()=>{location.hash='#today'});await detail.waitForURL('**/#today');
   await detail.evaluate(()=>{location.hash='#sleep/2025-10-09'});
   await detail.waitForURL('**/#sleep/2025-10-09');

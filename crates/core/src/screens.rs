@@ -2184,15 +2184,18 @@ pub(crate) fn detail_kinds(part: DayDetailPart) -> &'static [&'static str] {
         DayDetailPart::Vitals => &["health_status"],
         DayDetailPart::FitnessAge => &["fitness_age"],
         DayDetailPart::Workout => &["activity", "splits", "zones", "details"],
+        DayDetailPart::Naps => &["naps"],
     }
 }
+/// An opened past night's parts: the night and its HRV, then that day's naps.
+const SLEEP_DAY: &[DayDetailPart] = &[DayDetailPart::Sleep, DayDetailPart::Naps];
 /// An opened past Health day's parts, in order: its Fitness Age, then its stress and vitals.
 const HEALTH_DAY: &[DayDetailPart] = &[DayDetailPart::FitnessAge, DayDetailPart::Stress, DayDetailPart::Vitals];
 /// The parts an explicit open of a page scope fetches: a night (`sleep`), a
 /// Health day (`day`) or a day's stress detail (`stress`), which shows no Fitness Age.
 pub fn day_detail_parts(scope: &str) -> Option<&'static [DayDetailPart]> {
     match scope {
-        "sleep" => Some(&[DayDetailPart::Sleep]),
+        "sleep" => Some(SLEEP_DAY),
         "day" => Some(HEALTH_DAY),
         "stress" => Some(&HEALTH_DAY[1..]),
         _ => None,
@@ -2378,7 +2381,7 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
         tonight_first: false,
         wound_down: false,
         wind_down_open: false,
-        detail: day_detail(store, date, &[DayDetailPart::Sleep]),
+        detail: day_detail(store, date, SLEEP_DAY),
     }
 }
 fn hour(s: &str) -> Option<f64> {

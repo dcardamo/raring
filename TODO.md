@@ -22,9 +22,9 @@ availability on every account or watch.
 ## Build next
 
 In progress on branch `feat-five-followups` (worktree
-`~/.paseo/worktrees/1c8zm467/feat-five-followups`): core-generated fixtures with a swim and
-a walk (8), desktop notification clicks (in 11) and naps when an old day is
-opened (approved). Move each to `docs/done.md` when it merges.
+`~/.paseo/worktrees/1c8zm467/feat-five-followups`): core-generated fixtures
+with a swim and a walk (8) and desktop notification clicks (in 11). Move each
+to `docs/done.md` when it merges.
 
 ### 1. Garmin writes, starting with weight
 
@@ -319,8 +319,9 @@ Read-only unless noted, serialized, within the budget, notes in `.data/`.
   phone (cold start and Progress timings).
 - **Opened past days and workouts**: `raring day-detail YYYY-MM-DD` and
   `raring workout-detail ID` run the app's path. Record how far back
-  `dailySleepData`, `dailyStress`, the daily summary, Health Status and an
-  activity's splits/zones/charts answer.
+  `dailySleepData`, `dailyStress`, the daily summary, Health Status, the nap
+  endpoint (`sleep-service/sleep/naps/{date}`) and an activity's
+  splits/zones/charts answer.
 - **Populated schedule and races**: on an account with a scheduled plan and a
   race, compare the next session's name and day and the race countdown with
   Connect. `workoutScheduleByPeriod` entries stay read-only by name and date

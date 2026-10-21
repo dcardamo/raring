@@ -215,7 +215,7 @@ async fn main() -> Result<()> {
         },
         Some("day-detail")=>{
             let date=args.get(1).context("day-detail YYYY-MM-DD")?;
-            let parts=[raring_core::view::DayDetailPart::Sleep,raring_core::view::DayDetailPart::FitnessAge,raring_core::view::DayDetailPart::Stress,raring_core::view::DayDetailPart::Vitals];
+            let parts=[raring_core::view::DayDetailPart::Sleep,raring_core::view::DayDetailPart::Naps,raring_core::view::DayDetailPart::FitnessAge,raring_core::view::DayDetailPart::Stress,raring_core::view::DayDetailPart::Vitals];
             let (tokens,report)=core.fetch_day_detail(read_tokens()?,date,&parts).await?;
             save_tokens(&tokens)?;if report.auth_failed{bail!("sign in again")};
             if report.rate_limited{bail!("rate limited")};

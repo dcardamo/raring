@@ -959,6 +959,8 @@ pub enum DayDetailPart {
     /// Garmin's Fitness Age estimate as of that day.
     FitnessAge,
     Workout,
+    /// Garmin's naps that day; sync reads only the last two days.
+    Naps,
 }
 
 /// Per-day reads this phone has stored or still needs for an opened day.
