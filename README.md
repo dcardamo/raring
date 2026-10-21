@@ -30,9 +30,9 @@ Early releases, Android only for now.
 - **Progress**: a weekly review each Monday, goal rings over time, records
   and monthly trends.
 
-Home-screen widgets, an optional status notification, reminders and an export
-of your downloaded data come with it. Raring shows Garmin's numbers and
-doesn't invent scores; what you see depends on your watch.
+Home-screen widgets, reminders and an export of your downloaded data come
+with it. Raring shows Garmin's numbers and doesn't invent scores; what you
+see depends on your watch.
 
 ## Install
 

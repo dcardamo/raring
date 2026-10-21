@@ -49,6 +49,26 @@ facts verified while building it. The open backlog is [TODO.md](../TODO.md).
   unconfirmed. `raring add-weight` and `raring delete-weigh-in` run the same
   path; no real write was sent beyond the spike.
 
+- **Cleaner widgets** (commit "Redesign the home-screen widgets"). Both use
+  the app's card surface, ink and status colours (they kept the old navy and
+  an outline), the launcher's corner radius, and the app's gauge with its
+  marker; the "Raring" header is gone. The small widget is a true 2×2 (it
+  was declared 140×300 dp, four rows, mostly empty) with the readiness label
+  inside the gauge and the focus below. The medium widget lists sleep, Body
+  Battery and stress beside the gauge instead of four touching tiles. A
+  missing reading is a muted dash. The layout test renders the production
+  RemoteViews builder rather than a copy of it.
+
+- **Persistent status notification removed** (commit "Remove the persistent
+  status notification"). Body Battery, stress and heart rate reach Raring
+  only when the watch uploads to Connect, so the always-on readout was
+  usually behind and, for heart rate, often far off. Gone: the notification,
+  its Today offer and Settings switch, the `notifyStatus` and
+  `statusOfferSeen` settings, and the snapshot's `enabled`, `focusReason` and
+  `heartRate` fields. Widgets are unchanged. Each status refresh (sync, app
+  open, settings, package replaced) cancels a leftover notification and
+  deletes its `raring-status` channel (API 26+).
+
 - **Status and gesture bars match the app** (commit "Paint the system bar
   strips the app's graphite"). The Android window background and the WebView
   `theme-color` were the earlier navy `#0B0F1A`, which showed as a strip

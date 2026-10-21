@@ -6,7 +6,6 @@ import android.graphics.Rect
 import android.util.Xml
 import android.view.View
 import android.view.ViewGroup
-import android.widget.RemoteViews
 import android.widget.TextView
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -22,6 +21,7 @@ class StatusWidgetLayoutTest {
     private val app = ApplicationProvider.getApplicationContext<Context>()
     private val eveningFocus = "Wind down at 22:00 tonight"
     private val eveningAsOf = "As of 28 Sep, 23:59"
+    private val waitingFocus = "Waiting for last night's sleep"
 
     private data class Size(val width: Int, val height: Int)
 
@@ -48,23 +48,14 @@ class StatusWidgetLayoutTest {
         } finally { parser.close() }
     }
 
+    private fun snapshot(missing: Boolean) = if (missing) StatusSnapshot("As of unavailable", waitingFocus, "today",
+        StatusMetric(null, "neutral"), StatusMetric(null, "neutral"), StatusMetric(null, "neutral"), StatusMetric(null, "neutral"))
+    else StatusSnapshot(eveningAsOf, eveningFocus, "sleep", StatusMetric(87.0, "good"), StatusMetric(100.0, "good"),
+        StatusMetric(100.0, "good"), StatusMetric(100.0, "neutral"))
+
     private fun rendered(context: Context, medium: Boolean, missing: Boolean): Pair<View, Size> {
         val size = providerSize(context, if (medium) R.xml.status_widget_medium else R.xml.status_widget_small)
-        val remote = RemoteViews(context.packageName,
-            if (medium) R.layout.status_widget_medium else R.layout.status_widget_small)
-        remote.setImageViewBitmap(R.id.status_gauge,
-            StatusSurfaces.gauge(StatusMetric(if (missing) null else 87.0, "good"),
-                context.resources.displayMetrics.density))
-        remote.setTextViewText(R.id.status_readiness, if (missing) "" else "87")
-        remote.setTextViewText(R.id.status_asof, if (missing) "As of unavailable" else eveningAsOf)
-        if (medium) {
-            remote.setTextViewText(R.id.status_sleep, if (missing) "" else "100")
-            remote.setTextViewText(R.id.status_battery, if (missing) "" else "100")
-            remote.setTextViewText(R.id.status_stress, if (missing) "" else "100")
-        } else {
-            remote.setTextViewText(R.id.status_focus, if (missing) "" else eveningFocus)
-        }
-        val root = remote.apply(context, null)
+        val root = StatusSurfaces.widgetViews(context, medium, snapshot(missing)).apply(context, null)
         root.measure(View.MeasureSpec.makeMeasureSpec(size.width, View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec(size.height, View.MeasureSpec.EXACTLY))
         root.layout(0, 0, size.width, size.height)
@@ -115,102 +106,46 @@ class StatusWidgetLayoutTest {
         }
     }
 
-    private fun notificationStatus(missing: Boolean) = StatusSnapshot(true,
-        if (missing) "As of unavailable" else eveningAsOf, eveningFocus,
-        if (missing) "" else "Garmin's window starts at 22:30", "sleep",
-        StatusMetric(if (missing) null else 87.0, "good"), StatusMetric(if (missing) null else 84.0, "good"),
-        StatusMetric(if (missing) null else 100.0, "good"), StatusMetric(if (missing) null else 100.0, "neutral"),
-        StatusMetric(if (missing) null else 188.0, "neutral"))
-
-    // The decorated notification gives custom content about 300 dp on a phone.
-    private fun renderedNotification(context: Context, layout: Int, missing: Boolean): View {
-        val root = StatusSurfaces.statusViews(context, layout, notificationStatus(missing)).apply(context, null)
-        val width = (300 * context.resources.displayMetrics.density).toInt()
-        root.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
-        root.layout(0, 0, root.measuredWidth, root.measuredHeight)
-        return root
-    }
-
-    @Test fun notificationReadoutsFitAtLargeFonts() {
-        for (fontScale in listOf(1f, 1.3f, 1.5f)) for (missing in listOf(false, true)) {
-            val config = Configuration(app.resources.configuration).apply { this.fontScale = fontScale }
-            val context = app.createConfigurationContext(config)
-            val expanded = renderedNotification(context, R.layout.status_notification_expanded, missing)
-            for (label in listOf("Body Battery", "Stress", "Heart rate", eveningFocus)) {
-                checkText(expanded, textViews(expanded).single { it.text.toString() == label }, label)
-            }
-            for ((id, value) in listOf(R.id.status_battery to "100", R.id.status_stress to "100", R.id.status_hr to "188")) {
-                checkText(expanded, expanded.findViewById(id), if (missing) "" else value)
-            }
-            val reason = expanded.findViewById<TextView>(R.id.status_reason)
-            if (missing) assertEquals(View.GONE, reason.visibility)
-            else checkText(expanded, reason, "Garmin's window starts at 22:30")
-            for (bar in listOf(R.id.status_battery_bar, R.id.status_stress_bar)) {
-                assertEquals("a missing reading hides its bar rather than showing zero",
-                    if (missing) View.INVISIBLE else View.VISIBLE, expanded.findViewById<View>(bar).visibility)
-            }
-            assertTrue("expanded content fits Android's 252 dp limit",
-                expanded.height <= 252 * context.resources.displayMetrics.density)
-            val compact = renderedNotification(context, R.layout.status_notification_compact, missing)
-            checkText(compact, compact.findViewById(R.id.status_asof), if (missing) "As of unavailable" else eveningAsOf)
-            for ((id, value) in listOf(R.id.status_battery to "100", R.id.status_stress to "100", R.id.status_hr to "188")) {
-                checkText(compact, compact.findViewById(id), if (missing) "" else value)
-            }
-            for ((name, view) in listOf("expanded" to expanded, "compact" to compact)) {
-                val image = android.graphics.Bitmap.createBitmap(view.width, view.height, android.graphics.Bitmap.Config.ARGB_8888)
-                view.draw(android.graphics.Canvas(image))
-                java.io.File(app.filesDir, "notification-$name-$fontScale-${if (missing) "missing" else "values"}.png")
-                    .outputStream().use { image.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
-                image.recycle()
-            }
-        }
-    }
-
     @Test fun remoteWidgetsFitAtProviderMinimumForLargeFontsAndMissingReadings() {
         for (fontScale in listOf(1f, 1.3f, 1.5f)) {
             val config = Configuration(app.resources.configuration).apply { this.fontScale = fontScale }
             val context = app.createConfigurationContext(config)
             for (medium in listOf(false, true)) for (missing in listOf(false, true)) {
                 val (root, size) = rendered(context, medium, missing)
-                assertEquals(size.width, root.width)
-                assertEquals(size.height, root.height)
-                val title = textViews(root).single { it.text.toString() == "Raring" }
-                checkText(root, title, "Raring")
-                assertEquals("the RemoteViews must actually use the requested font scale",
-                    android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, 12f, context.resources.displayMetrics),
-                    title.textSize, 0.5f)
-                val asOf = root.findViewById<TextView>(R.id.status_asof)
-                checkText(root, asOf, if (missing) "As of unavailable" else eveningAsOf)
-                val readiness = root.findViewById<TextView>(R.id.status_readiness)
-                checkText(root, readiness, if (missing) "" else "87")
-                val gauge = root.findViewById<View>(R.id.status_gauge)
-                checkInside(root, gauge, "gauge tap region")
-                for (label in listOf("Readiness") + if (medium) listOf("Sleep", "Body Battery", "Stress") else emptyList()) {
-                    checkText(root, textViews(root).single { it.text.toString() == label }, label)
-                }
-                if (medium) {
-                    val tiles = listOf(R.id.status_tile_readiness, R.id.status_tile_sleep,
-                        R.id.status_tile_battery, R.id.status_tile_stress)
-                        .map { root.findViewById<View>(it) }
-                    tiles.forEachIndexed { i, tile -> checkInside(root, tile, "tile $i tap region") }
-                    for (i in 0 until tiles.size - 1) {
-                        assertTrue("tile tap regions overlap", boundsInRoot(tiles[i], root).right <=
-                            boundsInRoot(tiles[i + 1], root).left)
-                    }
-                    for (id in listOf(R.id.status_sleep, R.id.status_battery, R.id.status_stress)) {
-                        checkText(root, root.findViewById(id), if (missing) "" else "100")
-                    }
-                } else {
-                    checkInside(root, root.findViewById(R.id.status_widget_root), "widget tap region")
-                    checkInside(root, readiness, "readiness tap region")
-                    checkText(root, root.findViewById(R.id.status_focus), if (missing) "" else eveningFocus)
-                }
                 val image = android.graphics.Bitmap.createBitmap(root.width, root.height, android.graphics.Bitmap.Config.ARGB_8888)
                 root.draw(android.graphics.Canvas(image))
                 val name = "widget-${if(medium) "medium" else "small"}-$fontScale-${if(missing) "missing" else "values"}.png"
                 java.io.File(app.filesDir, name).outputStream().use { image.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
                 image.recycle()
+                assertEquals(size.width, root.width)
+                assertEquals(size.height, root.height)
+                val caption = textViews(root).single { it.text.toString() == "Readiness" }
+                checkText(root, caption, "Readiness")
+                assertEquals("the RemoteViews must actually use the requested font scale",
+                    android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, 10f, context.resources.displayMetrics),
+                    caption.textSize, 0.5f)
+                val asOf = root.findViewById<TextView>(R.id.status_asof)
+                checkText(root, asOf, if (missing) "As of unavailable" else eveningAsOf)
+                // A missing reading is a dash, never a blank or a zero.
+                val value = if (missing) "\u2014" else "100"
+                checkText(root, root.findViewById(R.id.status_readiness), if (missing) "\u2014" else "87")
+                checkInside(root, root.findViewById(R.id.status_gauge), "gauge")
+                val tiles = (listOf(R.id.status_tile_readiness) + if (medium) listOf(R.id.status_tile_sleep,
+                    R.id.status_tile_battery, R.id.status_tile_stress) else emptyList()).map { root.findViewById<View>(it) }
+                tiles.forEachIndexed { i, tile -> checkInside(root, tile, "tile $i tap region") }
+                for (i in tiles.indices) for (j in i + 1 until tiles.size) {
+                    assertTrue("tile tap regions overlap", !Rect.intersects(boundsInRoot(tiles[i], root), boundsInRoot(tiles[j], root)))
+                }
+                if (medium) {
+                    for (label in listOf("Sleep", "Body Battery", "Stress")) {
+                        checkText(root, textViews(root).single { it.text.toString() == label }, label)
+                    }
+                    for (id in listOf(R.id.status_sleep, R.id.status_battery, R.id.status_stress)) {
+                        checkText(root, root.findViewById(id), value)
+                    }
+                } else {
+                    checkText(root, root.findViewById(R.id.status_focus), if (missing) waitingFocus else eveningFocus)
+                }
             }
         }
     }

@@ -1,7 +1,6 @@
 package app.raring
 
 import android.Manifest
-import android.app.NotificationManager
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.os.Build
@@ -31,7 +30,7 @@ class AccountSessionTest {
     private var isolated = false
     private val dbPath get() = AccountSession.db(context)
     private val snapshot get() = File(context.filesDir, "raring.status.json")
-    private val settings = JSONObject("""{"notifyMorningReadiness":false,"notifyWeeklyCheckin":false,"notifyMetricChanges":false,"notifyVitals":false,"notifyTrainingStatus":false,"notifyBedtime":false,"notifyStatus":true,"statusOfferSeen":true,"bedtimeLeadMin":30,"adaptiveToday":true}""")
+    private val settings = JSONObject("""{"notifyMorningReadiness":false,"notifyWeeklyCheckin":false,"notifyMetricChanges":false,"notifyVitals":false,"notifyTrainingStatus":false,"notifyBedtime":false,"bedtimeLeadMin":30,"adaptiveToday":true}""")
 
     private fun tokens(account: String) = JSONObject().put("access_token", "synthetic-$account")
         .put("refresh_token", "synthetic-refresh-$account").put("client_id", "synthetic-client")
@@ -42,15 +41,6 @@ class AccountSessionTest {
         var value: String? = null
         sql { db -> db.rawQuery("SELECT value FROM settings WHERE key=?", arrayOf(key)).use { if (it.moveToFirst()) value = it.getString(0) } }
         return value
-    }
-    private fun assertNotification(present: Boolean) {
-        val manager = context.getSystemService(NotificationManager::class.java)
-        val deadline = android.os.SystemClock.elapsedRealtime() + 3000
-        do {
-            android.os.SystemClock.sleep(25) // NotificationManager processes posts/cancels asynchronously.
-            if (manager.activeNotifications.any { it.id == 7002 } == present) return
-        } while (android.os.SystemClock.elapsedRealtime() < deadline)
-        assertEquals(present, manager.activeNotifications.any { it.id == 7002 })
     }
     private fun seedHistory() = sql { db ->
         db.execSQL("INSERT OR REPLACE INTO raw VALUES ('summary','2025-03-12','synthetic',?)", arrayOf("""{"bodyBatteryMostRecentValue":88}"""))
@@ -167,7 +157,6 @@ class AccountSessionTest {
         assertTrue(context.getSharedPreferences("credential-session", Context.MODE_PRIVATE).getBoolean("suspended", false))
         StatusSurfaces.applySettings(context)
         BedtimeScheduler.run(context)
-        assertNotification(false)
         assertEquals("synthetic-targets-A", setting("plan"))
     }
 
@@ -186,7 +175,6 @@ class AccountSessionTest {
             assertTrue(context.getSharedPreferences("credential-session", Context.MODE_PRIVATE).getBoolean("suspended", false))
             StatusSurfaces.applySettings(context)
             BedtimeScheduler.run(context)
-            assertNotification(false)
             assertEquals("synthetic-targets-A", setting("plan"))
         } finally { android.system.Os.chmod(context.noBackupFilesDir.absolutePath, 448) } // 0700
         bind(101, "A-reauth")
@@ -198,10 +186,8 @@ class AccountSessionTest {
         seedHistory()
         assertFalse(call("testSettings", settings.toString()).has("error"))
         val old = snapshot.readText()
-        StatusSurfaces.applySettings(context)
-        assertNotification(true)
+        assertFalse(call("snapshot").isNull("snapshot"))
         runBlocking { SyncGate.mutex.withLock { AccountSession.suspendLocked(context) } }
-        assertNotification(false)
         assertFalse(AccountSession.active(context))
         assertTrue(call("snapshot").isNull("snapshot"))
         bind(202, "B")
@@ -218,8 +204,6 @@ class AccountSessionTest {
         // Even if cache deletion/publication had failed, A's old file cannot render for B.
         snapshot.writeText(old)
         assertTrue(call("snapshot").isNull("snapshot"))
-        StatusSurfaces.applySettings(context)
-        assertFalse(context.getSystemService(NotificationManager::class.java).activeNotifications.any { it.id == 7002 })
     }
 
     @Test fun sameAccountKeepsPlansAndFailedVerificationKeepsHistorySuspended() {
@@ -250,7 +234,6 @@ class AccountSessionTest {
             """{"dailyLogsReport":[{"name":"PRIVATE_SYNTHETIC_JOURNAL","logStatus":"YES"}]}"""
         )) }
         StatusSurfaces.refresh(context)
-        assertNotification(true)
         assertFalse(snapshot.readText().contains("PRIVATE_SYNTHETIC_JOURNAL"))
         val old = File(context.filesDir, "status-test-old.json")
         assertTrue(snapshot.renameTo(old)); assertTrue(snapshot.mkdir())
@@ -267,89 +250,13 @@ class AccountSessionTest {
             assertFalse(JSONObject(setting("settings")!!).getBoolean("journalEnabled"))
             release.countDown(); assertFalse(older.get(10, TimeUnit.SECONDS).has("error"))
             val saved = JSONObject(setting("settings")!!)
-            assertFalse(saved.getBoolean("journalEnabled")); assertTrue(saved.getBoolean("notifyStatus"))
+            assertFalse(saved.getBoolean("journalEnabled")); assertTrue(saved.getBoolean("notifyVitals"))
             assertTrue(snapshot.delete()); assertTrue(old.renameTo(snapshot))
             StatusSurfaces.refresh(context)
-            assertNotification(true)
             val native = call("snapshot").getJSONObject("snapshot")
             assertFalse(native.has("journal")); assertFalse(native.has("journalEnabled"))
             assertFalse(native.toString().contains("PRIVATE_SYNTHETIC_JOURNAL"))
-            val notice = context.getSystemService(NotificationManager::class.java).activeNotifications.single { it.id == 7002 }.notification
-            assertFalse(notice.extras.toString().contains("PRIVATE_SYNTHETIC_JOURNAL"))
         } finally { release.countDown(); executor.shutdownNow() }
-    }
-
-    @Test fun delayedUnrelatedPreferencePatchCannotRepostAfterOptOut() {
-        bind(101, "A")
-        assertFalse(call("testSettings", settings.toString()).has("error"))
-        StatusSurfaces.applySettings(context)
-        assertNotification(true)
-        val queued = CountDownLatch(1)
-        val release = CountDownLatch(1)
-        val executor = Executors.newSingleThreadExecutor()
-        try {
-            val older = executor.submit<JSONObject> {
-                val patch = """{"notifyVitals":true}"""
-                queued.countDown()
-                check(release.await(10, TimeUnit.SECONDS))
-                val result = call("testSettingsPatch", patch)
-                StatusSurfaces.applySettings(context)
-                result
-            }
-            assertTrue(queued.await(10, TimeUnit.SECONDS))
-            assertFalse(call("testSettingsPatch", """{"notifyStatus":false}""").has("error"))
-            StatusSurfaces.applySettings(context)
-            assertNotification(false)
-            release.countDown()
-            assertFalse(older.get(10, TimeUnit.SECONDS).has("error"))
-            val saved = JSONObject(setting("settings")!!)
-            assertTrue(saved.getBoolean("notifyVitals"))
-            assertFalse(saved.getBoolean("notifyStatus"))
-            assertFalse(call("snapshot").getJSONObject("snapshot").getBoolean("enabled"))
-            assertTrue(AccountSession.active(context))
-            assertNotification(false)
-        } finally { release.countDown(); executor.shutdownNow() }
-    }
-
-    @Test fun failedOptInThenUnrelatedPreferencePatchKeepsNotificationOff() {
-        bind(101, "A")
-        assertFalse(call("testSettingsPatch", """{"notifyStatus":false}""").has("error"))
-        assertTrue(snapshot.delete()); assertTrue(snapshot.mkdir())
-        assertTrue(call("testSettingsPatch", """{"notifyStatus":true}""").has("error"))
-        assertFalse(JSONObject(setting("settings")!!).getBoolean("notifyStatus"))
-        assertFalse(call("testSettingsPatch", """{"notifyVitals":false}""").has("error"))
-        StatusSurfaces.applySettings(context)
-        assertNotification(false)
-        assertTrue(snapshot.delete())
-        StatusSurfaces.refresh(context)
-        assertFalse(JSONObject(setting("settings")!!).getBoolean("notifyStatus"))
-        assertFalse(call("snapshot").getJSONObject("snapshot").getBoolean("enabled"))
-        assertTrue(AccountSession.active(context))
-        assertNotification(false)
-    }
-
-    @Test fun optOutWinsPublicationFailureAndInFlightSync() {
-        bind(101, "A")
-        assertFalse(call("testSettings", settings.toString()).has("error"))
-        StatusSurfaces.applySettings(context)
-        assertNotification(true)
-        val old = File(context.filesDir, "status-test-old.json")
-        assertTrue(snapshot.renameTo(old)); assertTrue(snapshot.mkdir())
-        // Simulate the worker owning SyncGate; the independent settings/cancel path must finish.
-        assertTrue(SyncGate.mutex.tryLock())
-        try {
-            assertFalse(call("testSettingsPatch", """{"notifyStatus":false}""").has("error"))
-            StatusSurfaces.applySettings(context)
-            assertNotification(false)
-            assertFalse(JSONObject(setting("settings")!!).getBoolean("notifyStatus"))
-            assertTrue(snapshot.delete()); assertTrue(old.renameTo(snapshot))
-            assertTrue(JSONObject(snapshot.readText()).getBoolean("enabled"))
-            StatusSurfaces.applySettings(context)
-            assertNotification(false)
-            assertFalse(call("snapshot").getJSONObject("snapshot").getBoolean("enabled"))
-        } finally { SyncGate.mutex.unlock() }
-        StatusSurfaces.refresh(context)
-        assertNotification(false)
     }
 
     private class TicketServer(account: String, blocked: Boolean = false) : AutoCloseable {

@@ -574,22 +574,14 @@ impl Raring {
             return Err(Error::InvalidSetting);
         }
         let previous = self.store.settings();
-        let mut settings = update(&previous)?;
+        let settings = update(&previous)?;
         self.store.set_settings(&settings)?;
         if previous.street_maps && !settings.street_maps {
             self.store.erase_maps()?;
         }
-        if let Err(error) = self.write_status_snapshot(Local::now(), *signed_out) {
-            // Only a new status opt-in depends on publishing its cache. Never
-            // restore an older settings object: all other edits, particularly
-            // revocations (including journalEnabled=false), stay
-            // authoritative even if the native presentation cache cannot update.
-            if settings.notify_status && !previous.notify_status {
-                settings.notify_status = false;
-                self.store.set_settings(&settings)?;
-                return Err(error);
-            }
-        }
+        // Settings stay authoritative even if the widget cache cannot update;
+        // it is retried offline.
+        let _ = self.write_status_snapshot(Local::now(), *signed_out);
         Ok(())
     }
     /// Suspend presentation without discarding the account's history or local plans.
@@ -624,7 +616,7 @@ impl Raring {
         }
         Ok(())
     }
-    /// Read the cache with authoritative privacy/opt-out policy. Never trust file enablement.
+    /// Read the cache only for the verified active account.
     pub fn surface_snapshot(&self) -> Result<Option<serde_json::Value>> {
         let _write = status::WRITE_LOCK.lock().unwrap();
         let Some(identity) = self.session_identity() else { return Ok(None) };
@@ -634,11 +626,10 @@ impl Raring {
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
             Err(e) => return Err(e.into()),
         };
-        let Ok(mut snapshot) = serde_json::from_slice::<serde_json::Value>(&bytes) else { return Ok(None) };
+        let Ok(snapshot) = serde_json::from_slice::<serde_json::Value>(&bytes) else { return Ok(None) };
         if snapshot["version"] != 1 || snapshot["accountId"].as_str() != Some(&identity) {
             return Ok(None);
         }
-        snapshot["enabled"] = self.settings().notify_status.into();
         Ok(Some(snapshot))
     }
     /// Recompute the native snapshot from local data without network access.
@@ -664,7 +655,6 @@ impl Raring {
             "vitals" => s.notify_vitals,
             "training-status" => s.notify_training_status,
             "bedtime" => s.notify_bedtime,
-            "status" => s.notify_status,
             _ => false,
         }
     }
@@ -677,7 +667,6 @@ impl Raring {
             "vitals" => s.notify_vitals = value,
             "training-status" => s.notify_training_status = value,
             "bedtime" => s.notify_bedtime = value,
-            "status" => s.notify_status = value,
             _ => return Err(Error::InvalidSetting),
         }
         self.set_settings(s)

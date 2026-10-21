@@ -62,11 +62,11 @@ export const previewOnly = !isTauri();
 export type { Settings } from './generated/Settings';
 export type { ImportPreview } from './generated/ImportPreview';
 export type SettingsPatch = Partial<Settings>;
-export const supportsStatusSurfaces = (isTauri() && /Android/.test(navigator.userAgent)) || new URLSearchParams(location.search).get('fixture')==='status-offer';
+export const supportsStatusSurfaces = isTauri() && /Android/.test(navigator.userAgent);
 // Desktop delivers reminders itself while the app runs; Android schedules them natively.
 export const desktopReminders = isTauri() && !/Android/.test(navigator.userAgent);
 export type ReminderStatus = {supported:boolean;granted:boolean;error:string|null;nextAt:string|null};
-export const defaultSettings = {notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,notifyStatus:false,statusOfferSeen:false,bedtimeLeadMin:30,fallAsleepMin:15,adaptiveToday:true,journalEnabled:false,planPrompt:true,bodyFigure:'profile',streetMaps:true} satisfies Settings;
+export const defaultSettings = {notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,bedtimeLeadMin:30,fallAsleepMin:15,adaptiveToday:true,journalEnabled:false,planPrompt:true,bodyFigure:'profile',streetMaps:true} satisfies Settings;
 let previewSettings:Settings = {...defaultSettings};
 const copy = <T>(value:T):T => structuredClone(value);
 const call = <T>(name:string,args:Record<string,unknown>|undefined,fallback:T):Promise<T> => isTauri()?invoke<T>(name,args):Promise.resolve(copy(fallback));
