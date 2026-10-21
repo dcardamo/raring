@@ -1927,6 +1927,9 @@ pub struct PlanCheckin {
 pub struct IntensityCard {
     pub start: String,
     pub end: String,
+    /// The last day the total covers: the day asked for, or the week's end
+    /// when it is Garmin's weekly row.
+    pub through: String,
     /// Garmin's weekly total: moderate minutes plus twice the vigorous ones.
     pub total: f64,
     pub moderate: f64,

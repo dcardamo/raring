@@ -2829,20 +2829,23 @@ function trendFixture(q){
   await detail.addInitScript(samples=>{
    localStorage.setItem('notifications-step-done','1');
    window.isTauri=true;
-   window.detailCalls=[];
+   window.detailCalls=[];window.detailScopes=[];
    window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
     if(command.startsWith('plugin:event|'))return 1;
     if(command==='app_status')return {...samples.status,signedIn:true,lastSync:new Date().toISOString()};
-    if(command==='fetch_day_detail'){window.detailCalls.push(args.date);return null}
+    if(command==='fetch_day_detail'){window.detailCalls.push(args.date);window.detailScopes.push(args.date+' '+args.scope);return null}
     if(command==='fetch_workout_detail'){window.detailCalls.push(args.id);return null}
     if(command==='sleep' && args.date){
      const view=structuredClone(samples.sleep);view.date=args.date;
-     view.detail={missing:window.detailCalls.includes(args.date)?[]:['sleep'],unavailable:[]};
+     view.detail={missing:window.detailScopes.includes(args.date+' sleep')?[]:['sleep'],unavailable:[]};
      return view;
     }
     if(command==='health' && args.date){
      const view=structuredClone(samples.health);view.date=args.date;
-     view.detail=window.detailCalls.includes(args.date)?{missing:[],unavailable:['stress','vitals']}:{missing:['stress','vitals'],unavailable:[]};
+     // 2 Oct already has its stress and vitals; only its Fitness Age was never read.
+     const parts=args.date==='2025-10-02'?['fitnessAge']:['fitnessAge','stress','vitals'];
+     view.detail=window.detailScopes.includes(args.date+' day')?{missing:[],unavailable:parts}:{missing:parts,unavailable:[]};
+     if(view.detail.unavailable.includes('fitnessAge'))view.fitnessAge={...view.fitnessAge,fitnessAge:null,recordedOn:null};
      return view;
     }
     if(command==='workout'){
@@ -2866,7 +2869,19 @@ function trendFixture(q){
   await detail.waitForURL('**/#health/2025-10-01');
   await detail.getByText('Garmin has no stress readings for this day.',{exact:false}).waitFor();
   await detail.getByText('Garmin has no vitals for this day.',{exact:false}).waitFor();
-  assert.ok((await detail.evaluate(()=>window.detailCalls)).includes('2025-10-01'),'the Health day was fetched once');
+  await detail.getByText('Garmin has no Fitness Age estimate for this day.',{exact:true}).waitFor();
+  assert.ok((await detail.evaluate(()=>window.detailScopes)).includes('2025-10-01 day'),'the Health day was fetched once, with its Fitness Age');
+  // The same date's night and Health day are separate opens.
+  await detail.evaluate(()=>{location.hash='#health/2025-10-09'});
+  await detail.waitForFunction(()=>window.detailScopes.includes('2025-10-09 day'));
+  // A dated stress page never reads Fitness Age: with stress and vitals stored it reads nothing.
+  await detail.evaluate(()=>{location.hash='#metric/stress/2025-10-02'});
+  await detail.waitForURL('**/#metric/stress/2025-10-02');
+  await detail.waitForTimeout(150);
+  assert.ok(!(await detail.evaluate(()=>window.detailCalls)).includes('2025-10-02'),'nothing to fetch for the stress page');
+  assert.equal(await detail.getByText('Garmin didn’t return this detail',{exact:false}).count(),0);
+  await detail.evaluate(()=>{location.hash='#health/2025-10-02'});
+  await detail.waitForFunction(()=>window.detailScopes.includes('2025-10-02 day'));
   const workoutId=samples.workout.summary.id;
   await detail.evaluate(id=>{location.hash=`#workout/${id}`},workoutId);
   await detail.waitForURL(`**/#workout/${workoutId}`);

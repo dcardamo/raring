@@ -270,8 +270,10 @@
  function navigate(to:string){navigation.navigate(to)}
  function back(){return closeSheet() || navigation.back()}
  function openedDetail(current:string){return datedDetail(current) ?? (/^workout\/\d+$/.test(current)?{page:'workout',date:current.slice(8)}:null)}
- function detailKey(opened:{page:string,date:string}){return (opened.page==='workout'?'workout:':'day:')+opened.date}
- function detailMissing(view:PageData){return 'detail' in view && view.detail.missing.length>0}
+ function detailKey(opened:{page:string,date:string}){return opened.page+':'+opened.date}
+ // A dated stress page reads the day's stress and vitals, never its Fitness Age.
+ const detailScope=(page:string)=>page==='sleep'?'sleep':page==='stress'?'stress':'day';
+ function detailMissing(view:PageData,page:string){return 'detail' in view && view.detail.missing.some(part=>page!=='stress'||part!=='fitnessAge')}
  // Only a page whose route names its own day or workout fetches. Prefetched tabs never do.
  async function fetchOpenedDetail(current:string){
   const opened=openedDetail(current);
@@ -283,10 +285,10 @@
   detailState={kind:'loading',message:''};
   try{
    if(opened.page==='workout')await api.fetch_workout_detail(opened.date);
-   else await api.fetch_day_detail(opened.date,opened.page==='sleep'?'sleep':'day');
+   else await api.fetch_day_detail(opened.date,detailScope(opened.page));
    const next=await loadView(current);
    if(route===current){data=next;views.set(current,next);pendingSwap=null}
-   if(detailMissing(next))detailState={kind:'failed',message:'Garmin didn’t return this detail. Try again later.'};
+   if(detailMissing(next,opened.page))detailState={kind:'failed',message:'Garmin didn’t return this detail. Try again later.'};
    else detailState=null;
   }catch(e){detailState={kind:'failed',message:String(e)}}
   if(route!==current)detailState=null;
@@ -362,7 +364,7 @@
     if(touching && data && updated)pendingSwap={route:current,data:updated};
     else data=updated;
     if(data){hasRendered=true;prefetchTabs()}
-    if(updated && detailMissing(updated))void fetchOpenedDetail(current);
+    if(updated && detailMissing(updated,openedDetail(current)?.page??''))void fetchOpenedDetail(current);
     if(current==='today' && updated){adaptState=(updated as TodayView).adapt??adaptState;lastPhase=(updated as TodayView).focus.phase}
     if(current==='plan' && updated)weekBoard=updated as PlanBoard;
     else if((tabs as readonly string[]).includes(current)||current.startsWith('sleep'))void readView('plan').then(b=>{if(request===requestId)weekBoard=b as PlanBoard}).catch(()=>{});

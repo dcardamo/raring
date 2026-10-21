@@ -544,9 +544,12 @@ says so on its chart (Rules: Reading freshness).
   `#health/YYYY-MM-DD`, anchored to that date: its charts and weight end
   there; its Fitness Age (Garmin's estimate as of that date, with that
   estimate's drivers), stress and vitals are that day's; intensity minutes
-  are its plan week up to that day, named by those days (a passed week opens
-  its review, this week the plan); and the journal's seven days end there.
-  The stress detail (`#metric/stress/YYYY-MM-DD`) shows that day's timeline;
+  are its plan week up to that day (Garmin's whole-week row when the days
+  are incomplete), named by the days they cover (a passed week opens its
+  review, this week the plan); the weigh-in's age is counted from that day;
+  and the journal's seven days end there.
+  The stress detail (`#metric/stress/YYYY-MM-DD`) shows that day's timeline
+  and reads only that day's stress and vitals;
   the all-day heart-rate detail (`#metric/heartRate/YYYY-MM-DD`) opens that
   day and reads its heart-rate day on demand. Missing per-day detail (Fitness
   Age, sleep, HRV, stress, the daily summary, Health Status) is fetched once

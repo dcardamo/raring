@@ -37,7 +37,7 @@
  // The period's direction word, where the core has one for a change that long.
  let direction=$derived.by(()=>{const v=view;return v?v.changes.find(c=>c.days===DAYS[v.range]) ?? null:null});
  let ready=$derived(!!view?.unit && view.trend!=null);
- const ago=(days:number|null)=>days==null?'':days===0?'today':days===1?'1 day ago':`${days} days ago`;
+ const ago=(days:number|null)=>days==null?'':endDate?(days===0?'that day':days===1?'1 day before':`${days} days before`):days===0?'today':days===1?'1 day ago':`${days} days ago`;
 </script>
 {#snippet history()}
  {#if error}<p class="warning" role="status">{error}</p>{/if}

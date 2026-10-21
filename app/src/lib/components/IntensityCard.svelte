@@ -5,13 +5,13 @@
  import {weekRange} from '../plan';
  import Card from './Card.svelte';
  import Gauge from './Gauge.svelte';
- // A past day's card shows the week up to that day (`through`).
- let {intensity,open,id,through}:{intensity:IntensityCard;open?:()=>void;id?:string;through?:string}=$props();
+ // A past day's card names the days its total covers: up to that day, or the whole week when it is Garmin's weekly row.
+ let {intensity,open,id,partial=false}:{intensity:IntensityCard;open?:()=>void;id?:string;partial?:boolean}=$props();
  let met=$derived(intensity.goal!=null && intensity.total>=intensity.goal);
 </script>
 
 <Card title="Intensity minutes" onclick={open} extra="intensity-card" {id}>
- {#snippet aside()}<span class="pill">{weekRange(intensity.start,through && through<intensity.end?through:intensity.end)}</span>{/snippet}
+ {#snippet aside()}<span class="pill">{weekRange(intensity.start,partial?intensity.through:intensity.end)}</span>{/snippet}
  <div class="ring">
   <Gauge size={112} stroke={11} value={intensity.total} max={intensity.goal??Math.max(intensity.total,1)} display={num(intensity.total)} caption={intensity.goal!=null?`of ${num(intensity.goal)}`:'min'} color={met?colors.good:goalColors.intensity}/>
   <div class="split">

@@ -39,10 +39,12 @@
  let weekly = $derived(section !== 'long');
  // Back and forward move a whole window; one reaching this week or month follows today again.
  const firstOfMonth = (date: string, months: number) => { const d = new Date(date.slice(0, 7) + '-01T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() + months); return d.toISOString().slice(0, 10); };
+ const domainEnd = (n: number) => weekly ? addDays(domainQuery.weeksEnd ?? view.today, 7 * domainQuery.weeks * n) : firstOfMonth(domainQuery.monthsEnd ?? view.today, domainQuery.months * n);
+ // The core reads dates from 1990 on.
+ let earliest = $derived(domainEnd(-1) < '1990-01-01');
  function shiftDomain(n: number) {
-  const today = view.today;
-  if (weekly) { const end = addDays(domainQuery.weeksEnd ?? today, 7 * domainQuery.weeks * n); domainQuery = {...domainQuery, weeksEnd: end >= today ? null : end}; }
-  else { const end = firstOfMonth(domainQuery.monthsEnd ?? today, domainQuery.months * n); domainQuery = {...domainQuery, monthsEnd: end.slice(0, 7) >= today.slice(0, 7) ? null : end}; }
+  const end = domainEnd(n), today = view.today;
+  domainQuery = weekly ? {...domainQuery, weeksEnd: end >= today ? null : end} : {...domainQuery, monthsEnd: end.slice(0, 7) >= today.slice(0, 7) ? null : end};
  }
  const dayMonth = (date: string) => `${Number(date.slice(8))} ${shortMonth(date)}`;
  let domainLabel = $derived(!domains ? '' : weekly ? `${domains.weeksFrom.slice(0, 4) === domains.weeksTo.slice(0, 4) ? dayMonth(domains.weeksFrom) : dayMonthYear(domains.weeksFrom)} – ${dayMonthYear(domains.weeksTo)}` : `${monthLabel(domains.monthsFrom)} – ${monthLabel(domains.monthsTo)}`);
@@ -51,7 +53,7 @@
  let longMonths = $derived((domains?.months.length ?? 0) > 12);
  let monthEvery = $derived(longMonths ? ((domains?.months.length ?? 0) > 24 ? 12 : 6) : 0);
  // The current week and month are unfinished: outlined, and labelled so.
- const wkLabel = (w: DomainWeek) => w.current ? 'This week' : `${Number(w.start.slice(8))} ${shortMonth(w.start)}`;
+ const wkLabel = (w: DomainWeek) => w.current ? 'This week' : `${Number(w.start.slice(8))} ${shortMonth(w.start)}${w.start.slice(0, 4) === domains?.today.slice(0, 4) ? '' : ' ' + w.start.slice(0, 4)}`;
  // Ticks stay dates (the outline marks the current one); text labels name it.
  const weekPoints = (pick: (w: DomainWeek) => number | null) => (domains?.weeks ?? []).map(w => ({x: `${Number(w.start.slice(8))} ${shortMonth(w.start)}`, v: pick(w), current: w.current, mark: w.mark === 'rest' || w.mark == null ? undefined : w.mark}));
  const monthPoints = (pick: (m: DomainMonth) => number | null) => (domains?.months ?? []).map((m) => ({x: longMonths ? monthLabel(m.start) : shortMonth(m.start), v: pick(m), current: m.start.slice(0, 7) === domains?.today.slice(0, 7)}));
@@ -155,7 +157,7 @@
 <div class="periods" role="group" aria-label="Period">{#each weekly ? WEEK_SPANS : MONTH_SPANS as [n, name]}<button aria-pressed={(weekly ? domainQuery.weeks : domainQuery.months) === n} disabled={api.previewOnly} onclick={() => domainQuery = weekly ? {...domainQuery, weeks: n} : {...domainQuery, months: n}}>{name}</button>{/each}</div>
 {#if api.previewOnly}<p class="small">Browser preview · fixed synthetic period. Period controls work in the app.</p>{/if}
 {#if domainsError}<p class="warning" role="alert">{domainsError}</p>{/if}
-{#if domains}<div class="rep-h dom-range" aria-busy={domainsBusy}><button class="nav" aria-label="Previous period" disabled={api.previewOnly} onclick={() => shiftDomain(-1)}><Icon name="arrow-left" size={18}/></button><h2>{domainLabel}</h2><button class="nav" aria-label="Next period" disabled={api.previewOnly || (weekly ? domainQuery.weeksEnd : domainQuery.monthsEnd) == null} onclick={() => shiftDomain(1)}><Icon name="arrow-right" size={18}/></button></div>{/if}
+{#if domains}<div class="rep-h dom-range" aria-busy={domainsBusy}><button class="nav" aria-label="Previous period" disabled={api.previewOnly || earliest} onclick={() => shiftDomain(-1)}><Icon name="arrow-left" size={18}/></button><h2>{domainLabel}</h2><button class="nav" aria-label="Next period" disabled={api.previewOnly || (weekly ? domainQuery.weeksEnd : domainQuery.monthsEnd) == null} onclick={() => shiftDomain(1)}><Icon name="arrow-right" size={18}/></button></div>{/if}
 {#if !domains}{#if !domainsError}<p class="small">Reading your history…</p>{/if}
 {:else if weekly && !domains.weeks.length}<p class="small foot">No weeks of downloaded history in these dates.</p>
 {:else if section === 'cardio'}

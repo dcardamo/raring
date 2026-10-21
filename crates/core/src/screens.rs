@@ -2115,11 +2115,13 @@ pub(crate) fn detail_kinds(part: DayDetailPart) -> &'static [&'static str] {
 }
 /// An opened past Health day's parts, in order: its Fitness Age, then its stress and vitals.
 const HEALTH_DAY: &[DayDetailPart] = &[DayDetailPart::FitnessAge, DayDetailPart::Stress, DayDetailPart::Vitals];
-/// The parts an explicit open of a page scope fetches: a night (`sleep`) or a Health day (`day`).
+/// The parts an explicit open of a page scope fetches: a night (`sleep`), a
+/// Health day (`day`) or a day's stress detail (`stress`), which shows no Fitness Age.
 pub fn day_detail_parts(scope: &str) -> Option<&'static [DayDetailPart]> {
     match scope {
         "sleep" => Some(&[DayDetailPart::Sleep]),
         "day" => Some(HEALTH_DAY),
+        "stress" => Some(&HEALTH_DAY[1..]),
         _ => None,
     }
 }

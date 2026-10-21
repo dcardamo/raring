@@ -170,6 +170,8 @@ async fn opened_past_day_fetches_only_the_page_it_opens_once_and_keeps_it() {
     // A past Health day reads its Fitness Age, stress and Health Status, never the night.
     let day = screens::day_detail_parts("day").unwrap();
     assert_eq!(day, [DayDetailPart::FitnessAge, DayDetailPart::Stress, DayDetailPart::Vitals]);
+    // A day's stress detail shows no Fitness Age, so it never reads one.
+    assert_eq!(screens::day_detail_parts("stress").unwrap(), [DayDetailPart::Stress, DayDetailPart::Vitals]);
     assert_eq!(screens::health(&store, "2025-06-03").detail.missing, day);
     let (url, seen, thread) = server(4, |line| {
         if line.contains("/graphql-gateway/graphql") {

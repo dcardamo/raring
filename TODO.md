@@ -568,37 +568,43 @@ faces, screens, sensors and audio prompts stay in Connect.
   across gaps"), from the maintainer: Long-term's VO₂ max and Fitness Age
   were bare dots, hard to read as a trend. Line and dot charts (Progress's
   domain charts, every trend chart on Health and the metric details) now
-  join neighbouring readings, with a faint dashed line across a gap; gaps
-  stay marked under the axis and nothing is plotted for them. A monthly
-  average with no neighbour was invisible on a line chart and now has a dot.
-  Fitness Age still has at most one point a month, only where estimates are
-  stored (see the Trends follow-up on its history download).
+  join neighbouring readings, with a faint dashed line across a gap; nothing
+  is plotted for a gap, and the trend charts still mark missing days under
+  the axis. A monthly average with no neighbour was invisible on a line
+  chart and now has a dot. Fitness Age still has at most one point a month,
+  only where estimates are stored (see the Trends follow-up on its history
+  download).
 
 - **Dates for Progress's Cardio, Strength and Long-term** (commit "Choose
   the weeks and months on Progress's Cardio, Strength and Long-term"), from
   the maintainer: only Overall had a period picker. Cardio and Strength now
   choose 12 weeks, 6 months or a year of plan weeks and Long-term a year, 2
-  or 5 years of months, each with previous and next like Overall and kept
-  across a detail and Back. An empty window says so and a chart without
-  readings keeps its baseline instead of a 0–1 scale (Overall's activity
-  chart drew one when the list was incomplete). On a copy of the
-  full-history database (desktop release build) the default read took 21
-  ms, a year of weeks 20 ms and five years of months 146 ms; phone timings
-  are unverified.
+  or 5 years of months, each with previous and next like Overall (previous
+  stops where the core's dates start, 1990) and kept across a detail and
+  Back. An empty window says so and a chart without readings keeps its
+  baseline instead of a 0–1 scale (Overall's activity chart drew one when
+  the list was incomplete). On a copy of the full-history database (desktop
+  release build) the default read took 21 ms, a year of weeks 20 ms and
+  five years of months 146 ms; phone timings are unverified.
 
-- **A past Health day's own Fitness Age, weight and week** (commit "Show a
-  past Health day's own Fitness Age, weight and week"), from the maintainer
-  opening a day from Progress's calendar: Fitness Age was blank and "What
-  sets it" gone on any day before the first synced estimate, the weight card
-  showed today's weigh-ins, intensity minutes looked like the whole week's
-  with this week's Plan behind them, and Body Battery's link said "today".
-  Opening a past Health day now also reads that day's Fitness Age once (one
-  more request in the day's budget; Garmin returns the estimate as of the
-  date), the drivers come from the estimate the card shows, and a day Garmin
-  has none for says so. Weight ends on the day, intensity minutes name the
-  days they cover and a passed week opens its review, and the journal says
-  its seven days end there. Checked in a browser preview on a copy of the
-  full-history database; the phone's real fetch is unverified.
+- **A past Health day's own Fitness Age, weight and week** (commits "Show a
+  past Health day's own Fitness Age, weight and week" and "Past days: name
+  intensity's real days, date weigh-ins by the day, read stress alone"),
+  from the maintainer opening a day from Progress's calendar: Fitness Age
+  was blank and "What sets it" gone on any day before the first synced
+  estimate, the weight card showed today's weigh-ins, intensity minutes
+  looked like the whole week's with this week's Plan behind them, and Body
+  Battery's link said "today". Opening a past Health day now also reads that
+  day's Fitness Age once (one more request in the day's budget; Garmin
+  returns the estimate as of the date), the drivers come from the estimate
+  the card shows, and a day Garmin has none for says so; the dated stress
+  page never reads Fitness Age, and a night and a Health day of the same
+  date are separate opens. Weight ends on the day and counts the weigh-in's
+  age from it, intensity minutes name the days they cover (Garmin's
+  whole-week row says the whole week) and a passed week opens its review,
+  and the journal says its seven days end there. Checked in a browser
+  preview on a copy of the full-history database; the phone's real fetch is
+  unverified.
 
 - **Instant page opens** (commits "Read stored nights without their
   samples" and "Open pages whole and keep cached views through a sync"),
