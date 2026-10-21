@@ -509,6 +509,10 @@ fn partly_worn_stress_days_stay_out_of_values_and_averages() {
     put(&store, "daily_summary", &day(1), json!({"stress": {"avgLevel": 30, "qualifier": "unknown"}}));
     let view = trend(&store, &query(TrendMetric::Stress, TrendRange::Days7), TODAY);
     assert_eq!(view.series.points[5].value, Some(30.));
+    // All starts at the first reading, even a partly worn one.
+    put(&store, "summary", &day(40), json!({"averageStressLevel": 47, "stressQualifier": "BALANCED_AWAKE"}));
+    let all = trend(&store, &query(TrendMetric::Stress, TrendRange::All), TODAY);
+    assert_eq!((all.from.as_str(), all.series.points[0].partial, all.series.days), (day(40).as_str(), Some(47.), 3));
     // Other metrics never carry partial days.
     put(&store, "hrv", &day(0), json!({"hrvSummary": {"lastNightAvg": 41}}));
     let hrv = trend(&store, &query(TrendMetric::Hrv, TrendRange::Days7), TODAY);

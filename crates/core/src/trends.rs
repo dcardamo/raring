@@ -394,7 +394,9 @@ pub fn trend(store: &Store, query: &TrendQuery, today: &str) -> Result<TrendView
     // their own period and, when compared, the one before it.
     let (days, partial, (from, bucket, shift)) = if query.range == TrendRange::All {
         let (days, partial) = split(store, query.metric, first_day(), end);
-        let period = period(query.range, end, days.keys().next().copied());
+        // Partly worn days still start the history, though no average counts them.
+        let first = days.keys().chain(partial.keys()).min().copied();
+        let period = period(query.range, end, first);
         (days, partial, period)
     } else {
         let (from, bucket, shift) = custom.unwrap_or_else(|| period(query.range, end, None));

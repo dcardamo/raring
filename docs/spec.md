@@ -1512,8 +1512,9 @@ next pending wind-down while signed in.
   (too little wear) or an awake-only word (no sleep measured), stays out of
   every value, average, count and comparison; a daily point draws Garmin's
   average for it hollow, saying "partly worn", and it still counts as a
-  reading for freshness. The daily summary's word wins over a history row's;
-  a day without a word keeps its average. Up to 90 days shows days; up to
+  reading for freshness and for where All starts. The daily summary's word
+  wins over a history row's; a day without a word keeps its average. Up to
+  90 days shows days; up to
   two years, weeks (Monday to Sunday); longer, calendar months, the last one
   ending on the selected date. 1Y shows 52 Monday-start weeks through that
   date, including the partial last week. Custom blocks use consecutive seven-day
