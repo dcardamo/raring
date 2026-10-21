@@ -950,12 +950,6 @@
     },
     "more": [
       {
-        "key": "poolLength",
-        "label": "Pool length",
-        "value": 25,
-        "unit": "m"
-      },
-      {
         "key": "moderateIntensityMinutes",
         "label": "Moderate intensity",
         "value": 20,
@@ -966,38 +960,52 @@
         "label": "Vigorous intensity",
         "value": 5,
         "unit": "min"
-      },
-      {
-        "key": "activeLengths",
-        "label": "Lengths",
-        "value": 60,
-        "unit": ""
-      },
-      {
-        "key": "averageSwolf",
-        "label": "Avg SWOLF",
-        "value": 38,
-        "unit": ""
-      },
-      {
-        "key": "averageStrokes",
-        "label": "Strokes per length",
-        "value": 16,
-        "unit": ""
-      },
-      {
-        "key": "averageSwimCadenceInStrokesPerMinute",
-        "label": "Stroke rate",
-        "value": 28,
-        "unit": "strokes/min"
-      },
-      {
-        "key": "averageStrokeDistance",
-        "label": "Distance per stroke",
-        "value": 1.6,
-        "unit": "m"
       }
     ],
+    "recorded": [
+      {
+        "group": "strokes",
+        "fields": [
+          {
+            "key": "poolLength",
+            "label": "Pool length",
+            "value": 25,
+            "unit": "m"
+          },
+          {
+            "key": "activeLengths",
+            "label": "Lengths",
+            "value": 60,
+            "unit": ""
+          },
+          {
+            "key": "averageSwolf",
+            "label": "Avg SWOLF",
+            "value": 38,
+            "unit": ""
+          },
+          {
+            "key": "averageStrokes",
+            "label": "Strokes per length",
+            "value": 16,
+            "unit": ""
+          },
+          {
+            "key": "averageStrokeCadence",
+            "label": "Stroke rate",
+            "value": 28,
+            "unit": "strokes/min"
+          },
+          {
+            "key": "averageStrokeDistance",
+            "label": "Distance per stroke",
+            "value": 1.6,
+            "unit": "m"
+          }
+        ]
+      }
+    ],
+    "selfEvaluation": null,
     "effects": [
       {
         "kind": "aerobic",
@@ -1890,14 +1898,21 @@
       }
     ],
     "along": null,
-    "more": [
+    "more": [],
+    "recorded": [
       {
-        "key": "movingDuration",
-        "label": "Moving time",
-        "value": 2830,
-        "unit": "s"
+        "group": "time",
+        "fields": [
+          {
+            "key": "movingDuration",
+            "label": "Moving time",
+            "value": 2830,
+            "unit": "s"
+          }
+        ]
       }
     ],
+    "selfEvaluation": null,
     "effects": [
       {
         "kind": "aerobic",

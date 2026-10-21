@@ -1077,9 +1077,17 @@ pub struct WorkoutView {
     /// ones this activity recorded.
     #[serde(default)]
     pub along: Option<AlongTheWay>,
-    /// Garmin's summary fields this activity has, beyond `stats`.
+    /// What it did beyond training effect: intensity minutes, Body Battery,
+    /// stamina and impact load, as Garmin sent them.
     #[serde(default)]
     pub more: Vec<Stat>,
+    /// Garmin's other summary fields this activity has, beyond `stats` and
+    /// `more`, in groups; a group without fields is left out.
+    #[serde(default)]
+    pub recorded: Vec<RecordedGroup>,
+    /// The person's own rating on the watch after the activity, when given.
+    #[serde(default)]
+    pub self_evaluation: Option<SelfEvaluation>,
     /// Garmin's training effect in its bands, with one plain line each.
     #[serde(default)]
     pub effects: Vec<EffectLine>,
@@ -3265,6 +3273,18 @@ pub enum StreamKind {
     Elevation,
     /// Steps per minute (both feet) or, for rides, rpm.
     Cadence,
+    /// Centimetres.
+    StrideLength,
+    /// Milliseconds.
+    GroundContactTime,
+    /// Centimetres.
+    VerticalOscillation,
+    /// Percent: vertical oscillation over stride length.
+    VerticalRatio,
+    /// Paddle strokes per minute.
+    StrokeRate,
+    /// Metres per paddle stroke.
+    StrokeDistance,
     /// Watts.
     Power,
     /// Breaths per minute.
@@ -3294,6 +3314,59 @@ pub struct AlongTheWay {
     /// Seconds from the first sample, at most ~300 points.
     pub t_s: Vec<f64>,
     pub series: Vec<StreamSeries>,
+}
+
+/// Garmin's five feel answers (`directWorkoutFeel` 0, 25, 50, 75, 100).
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum Feel {
+    VeryWeak,
+    Weak,
+    Normal,
+    Strong,
+    VeryStrong,
+}
+
+/// The self-evaluation the watch asks for after an activity. Either answer
+/// can be skipped.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SelfEvaluation {
+    pub feel: Option<Feel>,
+    /// Perceived effort, 1–10.
+    pub effort: Option<u8>,
+}
+
+/// Groups of Garmin's summary fields, in display order.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum FieldGroup {
+    Time,
+    /// Pace, or speed for rides.
+    Pace,
+    /// Running form; steps and cadence on foot; cadence on a ride.
+    Form,
+    Power,
+    /// Swim and paddle strokes.
+    Strokes,
+    Elevation,
+    HeartRate,
+    Breathing,
+    Stress,
+    Temperature,
+    /// Calories and fluid.
+    Energy,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct RecordedGroup {
+    pub group: FieldGroup,
+    pub fields: Vec<Stat>,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]

@@ -67,9 +67,23 @@ const workout={detail:noDetail,summary:run,recoveryHours:18,stats:[['distance','
 workout.along={tS:workout.heartRate.map(s=>s.tS),series:[
  {kind:'speed',unit:'km/h',values:workout.heartRate.map((s,i)=>i===80||i===81?null:Math.round((11.2+Math.sin(i/9)*.8+(s.bpm-150)/40)*10)/10)},
  {kind:'elevation',unit:'m',values:workout.heartRate.map((_,i)=>Math.round(70+Math.sin(i/30)*9))},
- {kind:'cadence',unit:'spm',values:workout.heartRate.map((_,i)=>172+Math.round(Math.sin(i/7)*3))}]};
-workout.more=[{key:'movingDuration',label:'Moving time',value:3101,unit:'s'},{key:'moderateIntensityMinutes',label:'Moderate intensity',value:14,unit:'min'},{key:'vigorousIntensityMinutes',label:'Vigorous intensity',value:24,unit:'min'},
- {key:'differenceBodyBattery',label:'Body Battery',value:-9,unit:'points'},{key:'elevationLoss',label:'Descent',value:41,unit:'m'},{key:'strideLength',label:'Stride length',value:113.4,unit:'cm'},{key:'recoveryHeartRate',label:'Recovery heart rate',value:31,unit:'bpm'}];
+ {kind:'cadence',unit:'spm',values:workout.heartRate.map((_,i)=>172+Math.round(Math.sin(i/7)*3))},
+ // Running form follows the pace; ground contact drops out with the speed sensor gap.
+ {kind:'strideLength',unit:'cm',values:workout.heartRate.map((s,i)=>Math.round((108+Math.sin(i/9)*5+(s.bpm-150)/4)*10)/10)},
+ {kind:'groundContactTime',unit:'ms',values:workout.heartRate.map((s,i)=>i===80||i===81?null:Math.round(240-Math.sin(i/9)*8-(s.bpm-150)/2))},
+ {kind:'verticalOscillation',unit:'cm',values:workout.heartRate.map((_,i)=>Math.round((8.4+Math.sin(i/11)*.3)*10)/10)},
+ {kind:'verticalRatio',unit:'%',values:workout.heartRate.map((_,i)=>Math.round((7.6+Math.sin(i/11)*.3-Math.sin(i/9)*.2)*10)/10)}]};
+const stat=([key,label,value,unit])=>({key,label,value,unit});
+workout.more=[['moderateIntensityMinutes','Moderate intensity',14,'min'],['vigorousIntensityMinutes','Vigorous intensity',24,'min'],['differenceBodyBattery','Body Battery',-9,'points'],
+ ['beginPotentialStamina','Stamina at start',100,'%'],['endPotentialStamina','Stamina at end',68,'%'],['minAvailableStamina','Lowest available stamina',66,'%']].map(stat);
+// Garmin's other fields in the core's groups: pace in s/km, stride and bounce in cm.
+workout.recorded=[['time',[['movingDuration','Moving time',3101,'s']]],
+ ['pace',[['averageMovingSpeed','Moving pace',304,'s/km'],['maxSpeed','Best pace',251,'s/km'],['avgGradeAdjustedSpeed','Grade-adjusted pace',302,'s/km']]],
+ ['form',[['steps','Steps',8920,''],['maxRunCadence','Max cadence',184,'spm'],['strideLength','Stride length',113.4,'cm'],['groundContactTime','Ground contact time',238,'ms'],['verticalOscillation','Vertical oscillation',8.4,'cm'],['verticalRatio','Vertical ratio',7.4,'%']]],
+ ['elevation',[['elevationLoss','Descent',41,'m'],['minElevation','Lowest',61,'m'],['maxElevation','Highest',79,'m']]],
+ ['heartRate',[['recoveryHeartRate','Recovery heart rate',31,'bpm']]],
+ ['energy',[['bmrCalories','Resting calories',96,'kcal'],['waterEstimated','Estimated sweat loss',820,'ml']]]].map(([group,fields])=>({group,fields:fields.map(stat)}));
+workout.selfEvaluation={feel:'strong',effort:6};
 workout.effects=[{kind:'aerobic',value:3.8,band:'Improving',line:'builds your aerobic base',garminLabel:'Improving'},{kind:'anaerobic',value:1.2,band:'Minor benefit',line:'little sprint or hard work',garminLabel:'Minor'}];
 workout.vo2maxNew=null;
 // A pool swim (25 m lengths, 100 m splits, swim fields as Garmin's summary names them) and a walk without streams.
@@ -78,14 +92,14 @@ const otherWorkouts={
  [swim.id]:{detail:noDetail,summary:swim,recoveryHours:8,stats:[['distance','Distance',1.5,'km'],['duration','Time',1920,'s'],['pace','Pace',1280,'s/km'],['averageHR','Avg HR',132,'bpm'],['maxHR','Max HR',151,'bpm'],['calories','Calories',310,'kcal']].map(([key,label,value,unit])=>({key,label,value,unit})),
   route:[],heartRate:swimHr,zoneFloors:[120,138,154,167],splits:[124,126,125,128,127,129,126,130,128,131,129,132,130,127,124].map((seconds,i)=>({index:i+1,distanceKm:.1,seconds,avgHr:124+i})),
   along:{tS:swimHr.map(s=>s.tS),series:[{kind:'speed',unit:'km/h',values:swimHr.map((_,i)=>i%25===24?null:Math.round((2.85+Math.sin(i/5)*.12)*100)/100)}]},
-  more:[{key:'poolLength',label:'Pool length',value:25,unit:'m'},{key:'moderateIntensityMinutes',label:'Moderate intensity',value:20,unit:'min'},{key:'vigorousIntensityMinutes',label:'Vigorous intensity',value:5,unit:'min'},
-   {key:'activeLengths',label:'Lengths',value:60,unit:''},{key:'averageSwolf',label:'Avg SWOLF',value:38,unit:''},{key:'averageStrokes',label:'Strokes per length',value:16,unit:''},
-   {key:'averageSwimCadenceInStrokesPerMinute',label:'Stroke rate',value:28,unit:'strokes/min'},{key:'averageStrokeDistance',label:'Distance per stroke',value:1.6,unit:'m'}],
+  more:[{key:'moderateIntensityMinutes',label:'Moderate intensity',value:20,unit:'min'},{key:'vigorousIntensityMinutes',label:'Vigorous intensity',value:5,unit:'min'}],
+  recorded:[{group:'strokes',fields:[{key:'poolLength',label:'Pool length',value:25,unit:'m'},{key:'activeLengths',label:'Lengths',value:60,unit:''},{key:'averageSwolf',label:'Avg SWOLF',value:38,unit:''},{key:'averageStrokes',label:'Strokes per length',value:16,unit:''},
+   {key:'averageStrokeCadence',label:'Stroke rate',value:28,unit:'strokes/min'},{key:'averageStrokeDistance',label:'Distance per stroke',value:1.6,unit:'m'}]}],selfEvaluation:null,
   effects:[{kind:'aerobic',value:2.4,band:'Maintaining',line:'keeps your aerobic fitness',garminLabel:'Improving'},{kind:'anaerobic',value:1.2,band:'Minor benefit',line:'little sprint or hard work',garminLabel:'Minor'}],
   vo2maxNew:null,counted:{week:'2025-10-06',goals:true,lines:[],planItem:null,bests:[]},strength:null},
  [walk.id]:{detail:noDetail,summary:walk,recoveryHours:null,stats:[['distance','Distance',4.1,'km'],['duration','Time',2880,'s'],['pace','Pace',702,'s/km'],['averageHR','Avg HR',104,'bpm']].map(([key,label,value,unit])=>({key,label,value,unit})),
   route:[],heartRate:Array.from({length:192},(_,i)=>({tS:i*15,bpm:Math.round(98+Math.sin(i/11)*6)})),zoneFloors:[120,138,154,167],splits:[[1,690],[1,701],[1,708],[1,712],[.1,69]].map(([distanceKm,seconds],i)=>({index:i+1,distanceKm,seconds,avgHr:102+i})),
-  along:null,more:[{key:'movingDuration',label:'Moving time',value:2830,unit:'s'}],effects:[{kind:'aerobic',value:1.1,band:'Minor benefit',line:'easy movement',garminLabel:'Improving'}],vo2maxNew:null,counted:{week:'2025-10-06',goals:true,lines:[],planItem:null,bests:[]},strength:null}};
+  along:null,more:[],recorded:[{group:'time',fields:[{key:'movingDuration',label:'Moving time',value:2830,unit:'s'}]}],selfEvaluation:null,effects:[{kind:'aerobic',value:1.1,band:'Minor benefit',line:'easy movement',garminLabel:'Improving'}],vo2maxNew:null,counted:{week:'2025-10-06',goals:true,lines:[],planItem:null,bests:[]},strength:null}};
 writeFileSync(new URL('otherWorkouts.json',import.meta.url),JSON.stringify(otherWorkouts,null,2)+'\n');
 workout.counted={week:'2025-10-13',goals:true,lines:[{kind:'zone2',amount:18,position:null,recorded:100,target:150}],planItem:null,bests:['Longest run']};
 const health={detail:noDetail,nightVitals,date:today.date,bodyWeight:{value:72.4,unit:'kg',measuredOn:'2025-10-14',bmi:23.8,bodyFat:null,trend:[71.8,null,72.1,null,72.6,72.3,null,72.5,72.4,null,72.2,72.4]},fitnessAge:age,lever:{key:'vigorousMinutes',name:'Vigorous minutes',current:112,target:150,unit:'min/wk',ageIfMet:38},stress,intensity:{start:'2025-10-13',end:'2025-10-19',total:124,moderate:64,vigorous:30,goal:150},drivers:[['vo2max','VO₂ max',52,'',55,true,'good'],['restingHr','Resting HR',46,'bpm',54,true,'good'],['bmi','BMI',23.8,'',25,true,'good'],['vigorousMinutes','Vigorous',112,'min/wk',150,false,'fair']].map(([key,name,value,unit,target,met,tone])=>({key,name,value,unit,target,met,tone})),vitals};
@@ -109,7 +123,7 @@ const exercises=[
  {key:'CALF_RAISE/STANDING_CALF_RAISE',name:'Standing Calf Raise',muscles:['calves'],sets:[sset(15,40),sset(15,40),sset(14,40)],lastDate:'2025-10-08',lastSets:[lift(40,15),lift(40,15),lift(40,15)],record:null},
 ];
 const strengthSummary=lowerA;
-const strengthWorkout={detail:noDetail,counted:{week:'2025-10-13',goals:true,lines:[{kind:'strength',amount:1,position:2,recorded:3,target:4}],planItem:'Strength',bests:[]},along:null,more:[],effects:[],vo2maxNew:null,summary:strengthSummary,recoveryHours:14,stats:[['duration','Time',2882,'s'],['avgHr','Avg HR',118,'bpm'],['maxHr','Max HR',151,'bpm'],['calories','Calories',312,'kcal']].map(([key,label,value,unit])=>({key,label,value,unit})),route:[],heartRate:Array.from({length:192},(_,i)=>({tS:i*15,bpm:Math.round(104+Math.abs(Math.sin(i/9))*34+Math.sin(i*1.7)*3)})),zoneFloors:[120,138,154,167],splits:[],strength:{unit:'kg',figure:'female',checkedAt:'2025-10-15T19:30:00Z',sets:16,reps:161,unknownRepSets:0,restS:1520,records:1,setsRecorded:true,zeroRepSets:1,missingRepSets:0,doubledSets:1,unnamedSets:3,muscles:muscleSets({quads:6,glutes:9,hamstrings:3,calves:3}),exercises}};
+const strengthWorkout={detail:noDetail,counted:{week:'2025-10-13',goals:true,lines:[{kind:'strength',amount:1,position:2,recorded:3,target:4}],planItem:'Strength',bests:[]},along:null,more:[],recorded:[],selfEvaluation:{feel:null,effort:7},effects:[],vo2maxNew:null,summary:strengthSummary,recoveryHours:14,stats:[['duration','Time',2882,'s'],['avgHr','Avg HR',118,'bpm'],['maxHr','Max HR',151,'bpm'],['calories','Calories',312,'kcal']].map(([key,label,value,unit])=>({key,label,value,unit})),route:[],heartRate:Array.from({length:192},(_,i)=>({tS:i*15,bpm:Math.round(104+Math.abs(Math.sin(i/9))*34+Math.sin(i*1.7)*3)})),zoneFloors:[120,138,154,167],splits:[],strength:{unit:'kg',figure:'female',checkedAt:'2025-10-15T19:30:00Z',sets:16,reps:161,unknownRepSets:0,restS:1520,records:1,setsRecorded:true,zeroRepSets:1,missingRepSets:0,doubledSets:1,unnamedSets:3,muscles:muscleSets({quads:6,glutes:9,hamstrings:3,calves:3}),exercises}};
 const mondays=Array.from({length:12},(_,i)=>{const d=new Date(Date.UTC(2025,6,28+i*7));return d.toISOString().slice(0,10)});
 const weekly=mondays.map((weekStart,i)=>({weekStart,muscles:i===11?muscleSets(musclesThisWeek):muscleSets(Object.fromEntries(MUSCLES.map((m,j)=>[m,i===5?Math.round(avg4[m]*.3):Math.max(0,Math.round(avg4[m]+Math.sin(i*1.3+j)*2.5))])))}));
 const last4=Object.fromEntries(MUSCLES.map((m,j)=>[m,weekly.slice(8).reduce((a,w)=>a+w.muscles[j].sets,0)]));
@@ -154,7 +168,7 @@ for(const id of historyIds){
   lastDate:prev?.date??null,lastSets:prev?prev.reps.map(r=>lift(prev.top?.weight??0,r)):[],record:s.record?s.top:null,
  }});
  const counts={};for(const e of exs)for(const m of e.muscles)counts[m]=(counts[m]??0)+e.sets.length;
- strengthWorkoutHistory[id]={detail:noDetail,counted:null,along:null,more:[],effects:[],vo2maxNew:null,summary,recoveryHours:null,stats:[{key:'duration',label:'Time',value:summary.durationS,unit:'s'}],route:[],heartRate:[],zoneFloors:[],splits:[],strength:{
+ strengthWorkoutHistory[id]={detail:noDetail,counted:null,along:null,more:[],recorded:[],selfEvaluation:null,effects:[],vo2maxNew:null,summary,recoveryHours:null,stats:[{key:'duration',label:'Time',value:summary.durationS,unit:'s'}],route:[],heartRate:[],zoneFloors:[],splits:[],strength:{
   unit:strength.unit,figure:strength.figure,checkedAt:'2025-10-15T19:30:00Z',sets:exs.reduce((n,e)=>n+e.sets.length,0),
   reps:recorded?exs.reduce((n,e)=>n+e.sets.reduce((n,s)=>n+s.reps,0),0):null,
   unknownRepSets:0,restS:0,records:exs.filter(e=>e.record).length,setsRecorded:recorded,

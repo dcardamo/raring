@@ -312,6 +312,10 @@ fn a_stream_needs_its_expected_unit_key() {
         ("directAvailableStamina", Some("dimensionless"), true), ("directPerformanceCondition", Some("dimensionless"), true),
         ("directAirTemperature", Some("celcius"), true), ("directAirTemperature", Some("fahrenheit"), false),
         ("directRunCadence", Some("stepsPerMinute"), false),
+        ("directStrideLength", Some("centimeter"), true), ("directStrideLength", Some("meter"), false),
+        ("directGroundContactTime", Some("ms"), true), ("directVerticalOscillation", Some("centimeter"), true),
+        ("directVerticalRatio", Some("dimensionless"), true), ("directStrokeCadence", Some("strokesPerMinute"), true),
+        ("directStrokeDistance", Some("meter"), true), ("directStrokeDistance", Some("centimeter"), false),
     ] {
         assert_eq!(screens::stream_unit_ok(key, unit), ok, "{key} in {unit:?}");
     }
@@ -337,5 +341,149 @@ fn unexpected_units_drop_the_stream_and_factors_are_never_applied() {
     assert_eq!(kinds, vec![StreamKind::Speed, StreamKind::Temperature], "power in an unexpected unit and cadence without one are dropped");
     assert_eq!(series[0].values, vec![Some(18.), Some(18.)], "5 m/s is 18 km/h whatever the factor");
     assert_eq!(series[1].values, vec![Some(31.), Some(31.)], "the watch's °C as recorded");
-    assert!(w.more.iter().any(|m| m.key == "averageTemperature" && m.value == 27.), "the summary's watch temperature");
+    let temperature = w.recorded.iter().find(|g| g.group == raring_core::view::FieldGroup::Temperature).unwrap();
+    assert_eq!((temperature.fields[0].key.as_str(), temperature.fields[0].value), ("averageTemperature", 27.), "the summary's watch temperature");
+}
+
+#[test]
+fn self_evaluation_reads_garmins_feel_and_perceived_effort() {
+    use raring_core::view::{Feel, SelfEvaluation};
+    let store = Store::open(":memory:").unwrap();
+    let rated = |feel: Value, effort: Value| {
+        store.put("activity", "90", "now", &json!({"activityId": 90, "activityTypeDTO": {"typeKey": "running"},
+            "summaryDTO": {"startTimeLocal": "2025-03-12T07:00:00", "duration": 600, "directWorkoutFeel": feel, "directWorkoutRpe": effort}})).unwrap();
+        screens::workout(&store, "90").unwrap().self_evaluation
+    };
+    let both = |feel, effort| Some(SelfEvaluation { feel, effort });
+    for (raw, feel) in [(0, Feel::VeryWeak), (25, Feel::Weak), (50, Feel::Normal), (75, Feel::Strong), (100, Feel::VeryStrong)] {
+        assert_eq!(rated(json!(raw), json!(60)), both(Some(feel), Some(6)), "feel {raw}");
+    }
+    assert_eq!(rated(Value::Null, json!(100)), both(None, Some(10)), "feel skipped");
+    assert_eq!(rated(json!(75), json!(0)), both(Some(Feel::Strong), None), "an effort of 0 is Garmin's None");
+    assert_eq!(rated(Value::Null, Value::Null), None, "no self-evaluation");
+    assert_eq!(rated(json!(140), json!(110)), None, "outside Garmin's scales");
+}
+
+#[test]
+fn a_runs_fields_come_in_groups_only_when_recorded() {
+    use raring_core::view::FieldGroup::*;
+    let store = Store::open(":memory:").unwrap();
+    store.put("activity", "91", "now", &json!({"activityId": 91, "activityName": "Tempo", "activityTypeDTO": {"typeKey": "running"},
+        "summaryDTO": {"startTimeLocal": "2025-03-12T07:00:00", "duration": 1800.0, "elapsedDuration": 1800.4, "movingDuration": 1790.0,
+            "distance": 6000.0, "averageMovingSpeed": 3.4, "maxSpeed": 5.0, "avgGradeAdjustedSpeed": 3.5, "steps": 5200,
+            "maxRunCadence": 190.0, "strideLength": 110.0, "groundContactTime": 240.0, "verticalOscillation": 8.5, "verticalRatio": 7.6,
+            "maxPower": 480.0, "normalizedPower": 300.0, "elevationLoss": 0.0, "minElevation": -3.0, "maxElevation": 40.0,
+            "minRespirationRate": 0.0, "bmrCalories": 0, "waterEstimated": 500.0, "impactLoad": 7500.0, "minAvailableStamina": 70.0}})).unwrap();
+    // The activity list's names for what the detail lacks; its 0 W means no power was recorded.
+    store.put("listed", "91", "now", &json!({"activityId": 91, "activityType": {"typeKey": "running"}, "startTimeLocal": "2025-03-12 07:00:00",
+        "avgStepSpeedLoss": 14.5, "avgStepSpeedLossPercent": 4.5, "avgPower": 0.0})).unwrap();
+    let w = screens::workout(&store, "91").unwrap();
+    let groups: Vec<_> = w.recorded.iter().map(|g| (g.group, g.fields.iter().map(|f| f.key.as_str()).collect::<Vec<_>>())).collect();
+    assert_eq!(groups, vec![
+        (Time, vec!["movingDuration"]),
+        (Pace, vec!["averageMovingSpeed", "maxSpeed", "avgGradeAdjustedSpeed"]),
+        (Form, vec!["steps", "maxRunCadence", "strideLength", "groundContactTime", "verticalOscillation", "verticalRatio", "avgStepSpeedLoss", "avgStepSpeedLossPercent"]),
+        (Power, vec!["maxPower", "normalizedPower"]),
+        (Elevation, vec!["elevationLoss", "minElevation", "maxElevation"]),
+        (Energy, vec!["waterEstimated"]),
+    ], "elapsed time equal to the time, a lowest breathing rate of 0 and 0 resting calories are left out");
+    let best = &w.recorded[1].fields[1];
+    assert_eq!((best.label.as_str(), best.value, best.unit.as_str()), ("Best pace", 200., "s/km"), "5 m/s is 3:20/km");
+    assert!(!w.stats.iter().any(|s| s.key == "averagePower"), "the list's 0 W is no reading");
+    let more: Vec<_> = w.more.iter().map(|m| (m.key.as_str(), m.value, m.unit.as_str())).collect();
+    assert_eq!(more, vec![("minAvailableStamina", 70., "%")], "impact load waits for its unit");
+}
+
+#[test]
+fn a_zero_from_either_source_never_hides_the_others_reading() {
+    let store = Store::open(":memory:").unwrap();
+    store.put("activity", "96", "now", &json!({"activityId": 96, "activityTypeDTO": {"typeKey": "running"},
+        "summaryDTO": {"startTimeLocal": "2025-03-12T07:00:00", "duration": 1800.0, "distance": 5000.0, "averagePower": 0.0, "maxPower": 0.0, "strideLength": 104.0}})).unwrap();
+    store.put("listed", "96", "now", &json!({"activityId": 96, "activityType": {"typeKey": "running"}, "startTimeLocal": "2025-03-12 07:00:00",
+        "avgPower": 250.0, "maxPower": 400.0, "avgStrideLength": 0.0})).unwrap();
+    let w = screens::workout(&store, "96").unwrap();
+    assert_eq!(w.stats.iter().find(|s| s.key == "averagePower").map(|s| s.value), Some(250.), "under another name");
+    let field = |key: &str| w.recorded.iter().flat_map(|g| &g.fields).find(|f| f.key == key).map(|f| f.value);
+    assert_eq!((field("maxPower"), field("strideLength")), (Some(400.), Some(104.)), "under the same name, and the detail first");
+}
+
+#[test]
+fn running_form_streams_share_the_axis_in_garmins_units() {
+    use raring_core::view::StreamKind;
+    let store = Store::open(":memory:").unwrap();
+    store.put("activity", "95", "now", &json!({"activityId": 95, "activityTypeDTO": {"typeKey": "running"},
+        "summaryDTO": {"startTimeLocal": "2025-03-12T07:00:00", "duration": 60}})).unwrap();
+    // Walking steps have no ground contact time: that sample stays a gap.
+    let row = |t: i64, gct: Option<f64>| json!({"metrics": [t, 140.0, 104.0, gct, 8.1, 7.4]});
+    store.put("details", "95", "now", &json!({
+        "metricDescriptors": [{"key": "directTimestamp", "metricsIndex": 0}, {"key": "directHeartRate", "metricsIndex": 1},
+            {"key": "directStrideLength", "metricsIndex": 2, "unit": {"key": "centimeter", "factor": 1.0}},
+            {"key": "directGroundContactTime", "metricsIndex": 3, "unit": {"key": "ms", "factor": 1.0}},
+            {"key": "directVerticalOscillation", "metricsIndex": 4, "unit": {"key": "centimeter", "factor": 1.0}},
+            {"key": "directVerticalRatio", "metricsIndex": 5, "unit": {"key": "dimensionless", "factor": 1.0}}],
+        "activityDetailMetrics": [row(1_741_762_800_000, Some(250.)), row(1_741_762_860_000, None)]})).unwrap();
+    let along = screens::workout(&store, "95").unwrap().along.unwrap();
+    let series: Vec<_> = along.series.iter().map(|s| (s.kind, s.unit.as_str(), s.values.clone())).collect();
+    assert_eq!(series, vec![
+        (StreamKind::StrideLength, "cm", vec![Some(104.), Some(104.)]),
+        (StreamKind::GroundContactTime, "ms", vec![Some(250.), None]),
+        (StreamKind::VerticalOscillation, "cm", vec![Some(8.1), Some(8.1)]),
+        (StreamKind::VerticalRatio, "%", vec![Some(7.4), Some(7.4)]),
+    ]);
+}
+
+#[test]
+fn rides_read_speed_and_power_and_paddles_and_swims_read_strokes() {
+    use raring_core::view::{FieldGroup, StreamKind, WorkoutView};
+    let store = Store::open(":memory:").unwrap();
+    let field = |w: &WorkoutView, key: &str| w.recorded.iter().flat_map(|g| &g.fields).find(|f| f.key == key).map(|f| (f.label.clone(), f.value, f.unit.clone()));
+    store.put("activity", "92", "now", &json!({"activityId": 92, "activityTypeDTO": {"typeKey": "road_biking"},
+        "summaryDTO": {"startTimeLocal": "2025-03-12T07:00:00", "duration": 3600.0, "elapsedDuration": 4000.0, "distance": 30000.0,
+            "averageSpeed": 8.0, "averageMovingSpeed": 8.5, "maxSpeed": 12.0, "averageBikeCadence": 85.0, "maxBikeCadence": 110.0,
+            "trainingStressScore": 70.5, "leftBalance": 49.0, "rightBalance": 51.0, "totalNumberOfStrokes": 5000}})).unwrap();
+    let ride = screens::workout(&store, "92").unwrap();
+    assert_eq!(ride.summary.icon, Icon::Bike, "road_biking is a ride");
+    assert!(ride.stats.iter().any(|s| s.key == "speed") && !ride.stats.iter().any(|s| s.key == "pace"));
+    assert_eq!(field(&ride, "maxSpeed"), Some(("Max speed".into(), 43.2, "km/h".into())));
+    assert_eq!(field(&ride, "elapsedDuration").map(|f| f.1), Some(4000.), "the timer was paused");
+    assert_eq!(field(&ride, "maxBikeCadence").map(|f| f.2), Some("rpm".into()));
+    assert_eq!(field(&ride, "trainingStressScore").map(|f| f.1), Some(70.5));
+    assert_eq!((field(&ride, "leftBalance").map(|f| f.0), field(&ride, "rightBalance").map(|f| f.1)), (Some("Left leg".into()), Some(51.)));
+    assert_eq!(field(&ride, "totalNumberOfStrokes"), None, "a ride's strokes are pedal strokes");
+
+    store.put("activity", "93", "now", &json!({"activityId": 93, "activityTypeDTO": {"typeKey": "stand_up_paddleboarding_v2"},
+        "summaryDTO": {"startTimeLocal": "2025-03-12T07:00:00", "duration": 1800.0, "distance": 2000.0,
+            "averageStrokeCadence": 26.0, "maxStrokeCadence": 60.0, "averageStrokeDistance": 2.5, "totalNumberOfStrokes": 900}})).unwrap();
+    let row = |t: i64| json!({"metrics": [t, 100.0, 27.0, 2.6]});
+    store.put("details", "93", "now", &json!({
+        "metricDescriptors": [{"key": "directTimestamp", "metricsIndex": 0}, {"key": "directHeartRate", "metricsIndex": 1},
+            {"key": "directStrokeCadence", "metricsIndex": 2, "unit": {"key": "strokesPerMinute", "factor": 1.0}},
+            {"key": "directStrokeDistance", "metricsIndex": 3, "unit": {"key": "meter", "factor": 100.0}}],
+        "activityDetailMetrics": [row(1_741_762_800_000), row(1_741_762_860_000)]})).unwrap();
+    let paddle = screens::workout(&store, "93").unwrap();
+    let strokes = paddle.recorded.iter().find(|g| g.group == FieldGroup::Strokes).unwrap();
+    let keys: Vec<_> = strokes.fields.iter().map(|f| f.key.as_str()).collect();
+    assert_eq!(keys, vec!["averageStrokeCadence", "maxStrokeCadence", "averageStrokeDistance", "totalNumberOfStrokes"]);
+    let kinds: Vec<_> = paddle.along.unwrap().series.iter().map(|s| s.kind).collect();
+    assert_eq!(kinds, vec![StreamKind::StrokeRate, StreamKind::StrokeDistance]);
+
+    // A pool swim only the history list has: Garmin's pool length is in
+    // centimetres with the factor to the pool's unit, and the list's stroke
+    // distance is in centimetres.
+    store.put("listed", "94", "now", &json!({"activityId": 94, "activityType": {"typeKey": "lap_swimming"}, "startTimeLocal": "2025-03-12 07:00:00",
+        "duration": 900.0, "distance": 400.0, "poolLength": 2500.0, "unitOfPoolLength": {"unitKey": "meter", "factor": 100.0},
+        "avgStrokes": 18.0, "strokes": 300.0, "avgStrokeDistance": 160.0, "maxSwimCadenceInStrokesPerMinute": 40.0})).unwrap();
+    let swim = screens::workout(&store, "94").unwrap();
+    let fields: Vec<_> = swim.recorded.iter().find(|g| g.group == FieldGroup::Strokes).unwrap().fields.iter().map(|f| (f.key.as_str(), f.value, f.unit.as_str())).collect();
+    assert_eq!(fields, vec![("poolLength", 25., "m"), ("averageStrokes", 18., ""), ("maxStrokeCadence", 40., "strokes/min"),
+        ("averageStrokeDistance", 1.6, "m"), ("totalNumberOfStrokes", 300., "")]);
+    // The detail names its pool's unit without a length or factor and a stroke
+    // rate the list names another way: one length from one record, one rate.
+    store.put("activity", "94", "now", &json!({"activityId": 94, "activityTypeDTO": {"typeKey": "lap_swimming"},
+        "summaryDTO": {"startTimeLocal": "2025-03-12T07:00:00", "duration": 900.0, "distance": 400.0, "unitOfPoolLength": {"unitKey": "meter"}, "averageStrokeCadence": 30.0}})).unwrap();
+    store.put("listed", "94", "now", &json!({"activityId": 94, "activityType": {"typeKey": "lap_swimming"}, "startTimeLocal": "2025-03-12 07:00:00",
+        "poolLength": 2500.0, "unitOfPoolLength": {"unitKey": "meter", "factor": 100.0}, "averageSwimCadenceInStrokesPerMinute": 29.0})).unwrap();
+    let swim = screens::workout(&store, "94").unwrap();
+    let fields: Vec<_> = swim.recorded.iter().find(|g| g.group == FieldGroup::Strokes).unwrap().fields.iter().map(|f| (f.label.as_str(), f.value)).collect();
+    assert_eq!(fields, vec![("Pool length", 25.), ("Stroke rate", 30.)]);
 }

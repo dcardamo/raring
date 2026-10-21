@@ -1343,21 +1343,38 @@ try {
   await wp.goto(`${url}/#workout/9000000000001`);
   const along=wp.getByRole('region',{name:'Along the way'});
   await along.waitFor();
-  for(const name of [/^Heart rate over/,/^Pace over .*minutes per km/,/^Elevation over/,/^Cadence over .*spm/])assert.equal(await along.getByRole('img',{name}).count(),1,String(name));
+  for(const name of [/^Heart rate over/,/^Pace over .*minutes per km/,/^Elevation over/,/^Cadence over .*spm/,/^Stride length over .*, m$/,/^Ground contact time over .*ms/])assert.equal(await along.getByRole('img',{name}).count(),1,String(name));
   assert.equal(await along.getByRole('img',{name:/^Power over/}).count(),0,'no power without a power meter');
-  // Each chart names what it plots, not only its unit.
-  assert.deepEqual((await along.locator('.yu').allTextContents()).map(t=>t.trim()),['Pace · min/km','Elevation · m','Cadence · spm']);
+  // Each chart names what it plots, not only its unit; running form follows cadence.
+  assert.deepEqual((await along.locator('.yu').allTextContents()).map(t=>t.trim()),['Pace · min/km','Elevation · m','Cadence · spm','Stride length · m','Ground contact time · ms','Vertical oscillation · cm','Vertical ratio · %']);
+  // Running form has no Garmin rating: its lines are the neutral blue.
+  for(const name of [/^Stride length over/,/^Vertical ratio over/])assert.equal(await along.getByRole('img',{name}).locator('path').first().getAttribute('stroke'),'var(--amount)',String(name));
+  // The watch's self-evaluation: Garmin's feel answer and perceived effort out of 10.
+  const felt=wp.getByRole('region',{name:'How it felt'});
+  assert.equal(await felt.getByRole('img',{name:'Feel: Strong, 4 of 5'}).count(),1);
+  assert.equal(await felt.getByRole('img',{name:'Perceived effort: 6 of 10'}).count(),1);
+  assert.equal(await felt.locator('.steps.effort i.on').count(),6,'six of ten effort steps filled');
+  assert.ok((await felt.textContent()).includes('Your own rating on the watch'));
   assert.equal((await along.locator('[data-chart=hr] text.u').textContent()).trim(),'Heart rate · bpm');
   const did=await wp.getByRole('region',{name:'What it did'}).textContent();
-  for(const want of ['3.8','Improving','builds your aerobic base','Minor benefit','62','14 moderate + 2 × 24 vigorous','-9'])assert.ok(did.includes(want),`${want} in ${did}`);
-  const rec=await wp.getByRole('region',{name:'Recorded by your watch'}).textContent();
-  for(const want of ['Moving time','Descent41 m','Stride length113.4 cm','Recovery heart rate31 bpm'])assert.ok(rec.includes(want),`${want} in ${rec}`);
+  for(const want of ['3.8','Improving','builds your aerobic base','Minor benefit','62','14 moderate + 2 × 24 vigorous','-9','100% → 68%potential · lowest available 66%'])assert.ok(did.includes(want),`${want} in ${did}`);
+  assert.ok(!did.includes('Impact load'),'impact load waits for its unit');
+  // Garmin's other fields in groups, each under its own heading, in the activity's units.
+  const recorded=wp.getByRole('region',{name:'Recorded by your watch'});
+  assert.deepEqual((await recorded.locator('h4').allTextContents()).map(t=>t.trim()),['Time','Pace','Running form','Elevation','Heart rate','Calories and fluid']);
+  const form=await recorded.getByRole('group',{name:'Running form'}).textContent();
+  for(const want of ['Steps8920','Max cadence184 spm','Stride length1.13 m','Ground contact time238 ms','Vertical oscillation8.4 cm','Vertical ratio7.4%'])assert.ok(form.includes(want),`${want} in ${form}`);
+  await recorded.getByRole('button',{name:'Help: Running form'}).click();
+  assert.ok((await wp.getByRole('dialog',{name:'Running form'}).textContent()).includes('Step speed loss'));
+  await wp.keyboard.press('Escape');
+  const rec=await recorded.textContent();
+  for(const want of ['Moving time','Best pace4:11/km','Grade-adjusted pace5:02/km','Descent41 m','Highest79 m','Recovery heart rate31 bpm','Estimated sweat loss820 ml'])assert.ok(rec.includes(want),`${want} in ${rec}`);
   assert.equal(await wp.getByText(/new VO₂ max estimate/).count(),0,'no VO₂ max link without a new estimate');
   const hic=await wp.getByRole('region',{name:'How it counted'}).textContent();
   assert.ok(hic.includes('18 min Zone 2') && hic.includes('100 of 150 this week') && hic.includes('Best in available history'),'U15: '+hic);
   assert.ok(!/Fitness Age will|younger/.test(hic));
   // M1: heart rate is drawn once, with a bpm axis and labelled zone floors, at the top of Along the way.
-  assert.equal(await wp.getByRole('heading',{name:'Heart rate',exact:true}).count(),0,'no second heart-rate chart beside Along the way');
+  assert.equal(await wp.getByRole('heading',{name:'Heart rate',exact:true,level:3}).count(),0,'no second heart-rate chart beside Along the way');
   const hrAlong=wp.getByRole('region',{name:'Along the way'}).getByRole('img',{name:/^Heart rate over/});
   for(const want of ['bpm','Z2 120','avg 152'])assert.ok((await hrAlong.textContent()).includes(want),want);
   // M10: pace reads faster-up, with no caption explaining an upside-down axis.
@@ -1371,13 +1388,14 @@ try {
   for(const want of ['1500 m','2:08/100 m','132bpm'])assert.ok(swimStats.includes(want),`${want} in ${swimStats}`);
   await wp.getByText('Pace /100 m · each 100 m · slowest 2:12, fastest 2:04',{exact:true}).waitFor();
   await wp.getByRole('img',{name:/^Pace over .*minutes per 100 m/}).waitFor();
-  const swimRec=await wp.getByRole('region',{name:'Recorded by your watch'}).textContent();
+  const swimRec=await wp.getByRole('region',{name:'Recorded by your watch'}).getByRole('group',{name:'Swim'}).textContent();
   for(const want of ['Pool length25 m','Lengths60','Avg SWOLF38','Stroke rate28 strokes/min','Distance per stroke1.6 m'])assert.ok(swimRec.includes(want),`${want} in ${swimRec}`);
+  assert.equal(await wp.getByRole('region',{name:'How it felt'}).count(),0,'no self-evaluation, no card');
   assert.equal(await wp.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'swim fits');
   await wp.screenshot({path:resolve(output,'workout-swim-390.png'),fullPage:true});
   await wp.goto(`${url}/#workout/9000000000008`);
   await wp.locator('h1').waitFor();
-  await wp.getByRole('heading',{name:'Heart rate',exact:true}).waitFor();
+  await wp.getByRole('heading',{name:'Heart rate',exact:true,level:3}).waitFor();
   await wp.getByText('Pace /km · each 1 km · slowest 11:52, fastest 11:30',{exact:true}).waitFor();
   assert.deepEqual(await wp.locator('.split-value small').allTextContents(),['0.1 km'],'only the lap that differs names its distance');
   // B9: with no weekly goals on and nothing else to say, the card is left out.
@@ -1397,10 +1415,13 @@ try {
   await wp.goto(`${url}/#workout/9000000000002`);
   await wp.locator('h1').waitFor();
   assert.equal(await wp.getByRole('region',{name:'Along the way'}).count(),0,'strength sessions show sets, not streams');
+  const liftFelt=wp.getByRole('region',{name:'How it felt'});
+  assert.equal(await liftFelt.getByRole('img',{name:'Perceived effort: 7 of 10'}).count(),1,'a strength session keeps its effort');
+  assert.equal(await liftFelt.getByRole('img',{name:/^Feel/}).count(),0,'a skipped feel is left out');
   assert.ok((await wp.getByRole('region',{name:'How it counted'}).textContent()).includes('2 of 4 strength sessions'),'U15 strength');
   await wp.close();
  }
- console.log('Workout detail: aligned streams, effects in plain words, recorded fields only: passed');
+ console.log('Workout detail: aligned streams, self-evaluation, effects in plain words, grouped recorded fields only: passed');
  // An event's line in Events shows its sport's minutes this week; its sessions are tagged in their days.
  {
   const ep=await browser.newPage({viewport:{width:390,height:844}});

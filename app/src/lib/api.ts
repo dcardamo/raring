@@ -104,7 +104,7 @@ export const workout = (id:string):Promise<WorkoutView> => {
  const history={...sampleStrengthWorkoutHistory,...sampleOtherWorkouts} as unknown as Record<string,WorkoutView>;
  const listed=sampleTraining.workouts.find(a=>a.id===id);
  // Other listed preview activities keep their own summary, never a run's charts.
- const summaryOnly=listed?{summary:listed,recoveryHours:null,stats:[],route:[],heartRate:[],zoneFloors:[],splits:[],strength:null,along:null,more:[],effects:[],vo2maxNew:null,counted:null}:null;
+ const summaryOnly=listed?{summary:listed,recoveryHours:null,stats:[],route:[],heartRate:[],zoneFloors:[],splits:[],strength:null,along:null,more:[],recorded:[],selfEvaluation:null,effects:[],vo2maxNew:null,counted:null}:null;
  const value=id===sampleStrengthWorkout.summary.id?sampleStrengthWorkout:id===sampleWorkout.summary.id?sampleWorkout:Object.hasOwn(history,id)?history[id]:summaryOnly;
  return value?Promise.resolve(copy(value as unknown as WorkoutView)):Promise.reject(new Error('No preview workout for this ID'));
 };
