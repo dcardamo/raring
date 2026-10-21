@@ -343,6 +343,7 @@ try {
  await slider.focus();await slider.press('Home');
  assert.ok((await slider.getAttribute('aria-valuetext')).startsWith('Wed 17 Sept:'));
  assert.equal(await history.locator('.history-gap').count(),2,'missing nights remain gaps');
+ assert.match(await history.locator('.history-bridge').getAttribute('d'),/^M[\d.]+,[\d.]+L/,'a faint dashed join crosses the gap');
  for(let i=0;i<9;i++)await slider.press('ArrowRight');
  assert.equal(await slider.getAttribute('aria-valuetext'),'Fri 26 Sept: Not recorded');
  assert.equal(await history.locator('.history-reading b').textContent(),'—','missing is never zero');

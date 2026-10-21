@@ -190,7 +190,7 @@ export async function planProgressChecks({browser,url,errors}){
      if(q.weeksEnd){d.weeksFrom='2023-10-16';d.weeksTo='2024-10-20';d.weeks=[];}
      else if(q.weeks===52)d.weeksFrom='2024-10-21';
      if(q.monthsEnd){d.monthsFrom='2015-11-01';d.monthsTo='2020-10-31';d.months=d.months.map(m=>({...m,minutes:null,restingHr:null,hrv:null,vo2max:null,fitnessAge:null}));}
-     else if(q.months===60)d.monthsFrom='2020-11-01';
+     else if(q.months===60){d.monthsFrom='2020-11-01';d.months[5].vo2max=null;d.months[2].restingHr=null;d.months[4].restingHr=null;}
      return d;
     }
     if(command in base)return structuredClone(base[command]);
@@ -223,6 +223,10 @@ export async function planProgressChecks({browser,url,errors}){
   await period.getByRole('button',{name:'5 years'}).click();
   await called({months:60,monthsEnd:null});
   await page.waitForFunction(()=>document.querySelector('.dom-range h2')?.textContent==='Nov 2020 – Oct 2025');
+  // Estimates either side of a gap are joined by a dashed line; a month with no neighbour keeps its dot.
+  const vo2=page.getByRole('region',{name:'VO₂ max and Fitness Age by month'});
+  assert.match(await vo2.locator('path.bridge').first().getAttribute('d'),/^M[\d.]+,[\d.]+L/,'a dashed join over the missing estimate');
+  assert.equal(await page.getByRole('region',{name:'Resting heart rate by month'}).locator('circle[r="2.5"]').count(),2,'each month with no neighbour (Dec and Feb) keeps its dot');
   // Months without readings keep a baseline and say so, never a made-up scale.
   await page.getByRole('button',{name:'Previous period'}).click();
   await called({months:60,monthsEnd:'2020-10-01'});

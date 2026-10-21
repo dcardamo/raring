@@ -107,7 +107,11 @@ synthetic data. `design/mockup/index.html` shows the app before the redesign.
   band for Garmin's target. Unknown amounts are not filled; measured zero
   stays zero. Duration rows name the clock format instead of adding percentages
   with an unclear denominator. Period plots use round ticks; count ticks are
-  integers. Gaps are drawn as gaps. Shared single-metric charts use
+  integers. Gaps are drawn as gaps: nothing is plotted for a missing reading.
+  Line and dot charts join neighbouring readings, and a faint dashed line
+  joins the readings either side of a gap, so a trend (sparse estimates such
+  as VO₂ max and Fitness Age included) reads across it; a reading with no
+  neighbour keeps its dot. Shared single-metric charts use
   2 px main traces, quiet 1 px gridlines and green-tinted usual-range bands
   with dashed edges; range bars (vitals, drivers) tint the usual range or
   Garmin's target green under the reading's dot; goal lanes

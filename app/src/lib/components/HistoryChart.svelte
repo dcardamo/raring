@@ -90,6 +90,8 @@
  const x=(i:number)=>L+(i+.5)*(R-L)/Math.max(count,1);
  const y=(v:number,s:[number,number]=scale)=>12+(s[1]-v)/(s[1]-s[0])*(H-28);
  const path=(list:TrendPoint[],s:[number,number])=>list.map((p,i)=>p.value==null?'':`${i && list[i-1].value!=null?'L':'M'}${x(i).toFixed(1)},${y(p.value,s).toFixed(1)}`).join('');
+ // Missing readings stay gaps (marked under the axis); a faint dashed line joins the readings either side, so sparse estimates still read as a trend.
+ const bridges=(list:TrendPoint[],s:[number,number])=>{let d='',prev=-1;list.forEach((p,i)=>{if(p.value==null)return;if(prev>=0&&prev<i-1)d+=`M${x(prev).toFixed(1)},${y(list[prev].value!,s).toFixed(1)}L${x(i).toFixed(1)},${y(p.value,s).toFixed(1)}`;prev=i});return d};
  let present=$derived(points.filter(p=>p.value!=null).length);
  let bucketName=$derived(bucket==='week'?'weeks':bucket==='month'?'months':period);
  let overlayDecimals=$derived(overlay?trendDecimals(overlay.metric):0);
@@ -171,6 +173,7 @@
    {#if ageLine!=null}<line class="age-line" x1={L} x2={R} y1={y(ageLine)} y2={y(ageLine)} stroke={colors.ink} stroke-opacity=".6" stroke-dasharray="5 4" stroke-width="1.2"/>{/if}
    {#if count}<line x1={x(index)} x2={x(index)} y1="8" y2={H-12} stroke="currentColor" opacity=".35" stroke-dasharray="2 3"/>{/if}
    {#if previous}<path class="history-previous" d={path(previous.points,scale)} fill="none" stroke={colors.ink} stroke-opacity=".45" stroke-width="1.6" stroke-dasharray="4 4" stroke-linecap="round"/>{/if}
+   {#if !activeReadiness}<path class="history-bridge" d={bridges(points,scale)} fill="none" stroke={colored?`url(#${id}-tone)`:color} stroke-width="1.5" stroke-dasharray="3 4" stroke-linecap="round" stroke-opacity=".6"/>{/if}
    {#if !activeReadiness}<path class="history-line" d={path(points,scale)} fill="none" stroke={colored?`url(#${id}-tone)`:color} stroke-width="var(--stroke-chart)" stroke-linecap="round" stroke-linejoin="round"/>{/if}
    {#each points as p,i}
     {#if p.value!=null}

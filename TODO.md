@@ -201,8 +201,8 @@ priority order; the bugs and most majors shipped (Done).
   "Health" run together and "Progress" clips. App-wide; belongs with the
   large-text audit.
 - **Trend chart axes** (review m1, m2): round y ticks with the unit on the top
-  label, and decide whether the missing-day dots under bar charts stay (the
-  line charts already show gaps). Chart legibility lane.
+  label, and decide whether the missing-day dots under bar charts stay (line
+  charts keep them under a dashed join across each gap). Chart legibility lane.
 - **Body Battery's latest time** (review m5): the detail gauge says "Latest
   synced" without a time; `BodyBatteryCard` has no reading time yet.
 - **Vital details repeat the hero value** in the chart readout (review m15).
@@ -563,6 +563,16 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Joined chart points** (commit "Join chart points with a line, dashed
+  across gaps"), from the maintainer: Long-term's VO₂ max and Fitness Age
+  were bare dots, hard to read as a trend. Line and dot charts (Progress's
+  domain charts, every trend chart on Health and the metric details) now
+  join neighbouring readings, with a faint dashed line across a gap; gaps
+  stay marked under the axis and nothing is plotted for them. A monthly
+  average with no neighbour was invisible on a line chart and now has a dot.
+  Fitness Age still has at most one point a month, only where estimates are
+  stored (see the Trends follow-up on its history download).
 
 - **Dates for Progress's Cardio, Strength and Long-term** (commit "Choose
   the weeks and months on Progress's Cardio, Strength and Long-term"), from
