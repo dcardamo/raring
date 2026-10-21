@@ -23,6 +23,7 @@ import type { Milestone } from './generated/Milestone';
 import type { ProfileView } from './generated/ProfileView';
 import type { LiftSeries } from './generated/LiftSeries';
 import type { ActivityPage } from './generated/ActivityPage';
+import type { ActivityMonth } from './generated/ActivityMonth';
 import type { Icon as IconName } from './generated/Icon';
 import type { MuscleRange } from './generated/MuscleRange';
 import type { AppStatus } from './generated/AppStatus';
@@ -78,12 +79,22 @@ export const muscles = (range:TrendRange):Promise<MuscleRange|null> => {
   gaps:list.filter(m=>m.sets<=gapAt).sort((a,b)=>a.sets-b.sets).map(m=>m.muscle),gapAt});
 };
 // Older stored recordings; the browser preview pages through the sample's activities and strength workouts.
+const sampleActivities = () => {
+ const all=[...(sampleTraining as unknown as TrainingView).workouts,...(sampleStrength as unknown as StrengthView).workouts.map(w=>w.activity)];
+ const seen=new Set<string>();
+ return all.filter(a=>!seen.has(a.id)&&seen.add(a.id)).sort((a,b)=>b.startLocal.localeCompare(a.startLocal)||b.id.localeCompare(a.id));
+};
 export const activity_page = (beforeStart:string,beforeId:string,icon:IconName|null):Promise<ActivityPage> => {
  if(isTauri())return invoke<ActivityPage>('activity_page',{beforeStart,beforeId,icon});
- const all=[...(sampleTraining as unknown as TrainingView).workouts,...(sampleStrength as unknown as StrengthView).workouts.map(w=>w.activity)];
- const seen=new Set<string>(),older=all.filter(a=>!seen.has(a.id)&&seen.add(a.id)).sort((a,b)=>b.startLocal.localeCompare(a.startLocal)||b.id.localeCompare(a.id))
-  .filter(a=>a.startLocal<beforeStart||a.startLocal===beforeStart&&a.id<beforeId).filter(a=>!icon||a.icon===icon);
+ const older=sampleActivities().filter(a=>a.startLocal<beforeStart||a.startLocal===beforeStart&&a.id<beforeId).filter(a=>!icon||a.icon===icon);
  return Promise.resolve({activities:older.slice(0,20),more:older.length>20});
+};
+// One month of stored recordings (this month without a date); the preview's weeks start on Monday.
+export const activity_month = (month:string|null):Promise<ActivityMonth> => {
+ if(isTauri())return invoke<ActivityMonth>('activity_month',{month});
+ const today=sampleToday.date,from=(month??today).slice(0,7)+'-01',grid=new Date(from+'T12:00:00Z'),all=sampleActivities();
+ grid.setUTCDate(grid.getUTCDate()-(grid.getUTCDay()+6)%7);
+ return Promise.resolve(copy({month:from,gridStart:grid.toISOString().slice(0,10),today,first:all.at(-1)?.startLocal.slice(0,10)??null,activities:all.filter(a=>a.startLocal.startsWith(from.slice(0,7)))}));
 };
 // The browser preview derives a series from the sample's sessions; the app asks the core.
 export const lift_series = (key:string,range:TrendRange):Promise<LiftSeries|null> => {

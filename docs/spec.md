@@ -353,10 +353,18 @@ night is never shown in its place.
     range is shared with Strength), and a link to Strength.
   - **Activities**: every stored recording with Garmin's primary benefit,
     training effect and intensity minutes as one text line, filterable by
-    sport. The last 31 days open instantly; Show older pages back through
-    stored history (filtered by sport before the page limit) without a
-    Garmin request. Today's "All today's activities" opens this section
-    narrowed to that day; the old `#activities` link opens Training.
+    sport, as a **List** or a **Calendar**. The list's last 31 days open
+    instantly; Show older pages back through stored history (filtered by
+    sport before the page limit) without a Garmin request. The calendar reads
+    one stored month at a time, also without a Garmin request: weeks start on
+    Garmin's week start, each day shows its recordings' sport icons in start
+    order (two, or one and a count) and the month's recordings are listed
+    under it, newest first. Tapping a day narrows the list to that day;
+    ‹ › step a month and the month's name opens a year of months to jump to,
+    from the oldest stored recording's month to this one. The sport filter
+    applies to both views; the view, month and day hold across a workout and
+    Back. Today's "All today's activities" opens this section narrowed to
+    that day; the old `#activities` link opens Training.
 - Latest recorded Garmin running lactate-threshold HR and pace, running threshold
   power, cycling FTP, heat acclimation and acclimated altitude in a compact
   Training card, each with its own recorded date. Missing, null or stale
