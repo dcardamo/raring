@@ -53,9 +53,12 @@ and syncing so your watch data reaches Garmin first.
 
 The Android app talks directly to Garmin and keeps its downloaded data, goals
 and plans on your phone. It only reads from Garmin. Nothing is sent to us: no
-analytics, telemetry, ads or remote crash reporting. Sign-in uses Garmin's
-page; tokens are encrypted with Android Keystore. **Settings → Sign out and
-erase this phone's data** removes local history, plans and your saved sign-in.
+analytics, telemetry, ads or remote crash reporting. Street maps under workout
+routes are downloaded once per area from OpenFreeMap, which sees your IP
+address and the area, never your route; Settings turns them off. Sign-in uses
+Garmin's page; tokens are encrypted with Android Keystore. **Settings → Sign
+out and erase this phone's data** removes local history, plans and your saved
+sign-in.
 See the [privacy details](https://raring.app/privacy.html) for storage,
 notifications, widgets and GitHub hosting caveats.
 
@@ -116,6 +119,13 @@ requests; the privacy page distinguishes that from the app's local data.
 
 Licensed under either of the [Apache License, Version 2.0](LICENSE-APACHE)
 or the [MIT license](LICENSE-MIT), at your option.
+
+Street maps, including the sample run's map in
+`app/src/lib/sample/workoutMap.json`, are drawn from OpenStreetMap data,
+© OpenStreetMap contributors, available under the
+[Open Database License](https://www.openstreetmap.org/copyright), in the
+OpenMapTiles schema (© OpenMapTiles), as served by
+[OpenFreeMap](https://openfreemap.org/).
 
 Unless you explicitly state otherwise, any contribution intentionally
 submitted for inclusion in Raring by you, as defined in the Apache-2.0

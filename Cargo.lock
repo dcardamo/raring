@@ -3107,6 +3107,8 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "csv",
+ "flate2",
+ "futures-util",
  "reqwest 0.12.28",
  "rusqlite",
  "serde",

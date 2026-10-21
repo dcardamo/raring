@@ -450,6 +450,25 @@ async fn fetch_workout_detail(app: tauri::AppHandle, id: String) -> Result<(), S
     }
 }
 
+/// The route card asks once it shows a workout whose area isn't drawn yet;
+/// no Garmin request and no sign-in token are involved (Rules: Street maps).
+#[tauri::command]
+async fn route_map(app: tauri::AppHandle, id: String) -> Result<Option<RouteMapView>, String> {
+    let core = core(&app)?;
+    #[cfg(target_os = "android")]
+    let expected = {
+        if !session_ready(&app)? { return Err("Account verification required".into()); }
+        core.session_identity().ok_or("Account verification required")?
+    };
+    let version = app.package_info().version.to_string();
+    let map = core.fetch_route_map(&id, &version).await.map_err(|e| e.to_string())?;
+    #[cfg(target_os = "android")]
+    if !session_ready(&app)? || core.session_identity().as_ref() != Some(&expected) {
+        return Err("Account changed while drawing the map".into());
+    }
+    Ok(map)
+}
+
 #[tauri::command]
 async fn refresh_strength(
     app: tauri::AppHandle,
@@ -1262,6 +1281,7 @@ pub fn run() {
                     refresh_strength,
                     fetch_day_detail,
                     fetch_workout_detail,
+                    route_map,
                     export_archive,
                     choose_import,
                     apply_import,
@@ -1308,6 +1328,7 @@ pub fn run() {
                     refresh_strength,
                     fetch_day_detail,
                     fetch_workout_detail,
+                    route_map,
                     export_archive,
                     choose_import,
                     apply_import,

@@ -2723,7 +2723,9 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
         .get("max_metrics", &day)
         .and_then(|m| vo2(&m))
         .filter(|today| historical_vo2(store, &date_sub(&day, 1)) != Some(*today));
+    let map = crate::maps::stored(store, id, &route);
     Some(WorkoutView {
+        map,
         counted: None,
         along,
         more,

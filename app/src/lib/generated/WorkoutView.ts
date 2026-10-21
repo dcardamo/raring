@@ -4,6 +4,7 @@ import type { AlongTheWay } from "./AlongTheWay";
 import type { DayDetail } from "./DayDetail";
 import type { EffectLine } from "./EffectLine";
 import type { HrSample } from "./HrSample";
+import type { RouteMapView } from "./RouteMapView";
 import type { Split } from "./Split";
 import type { Stat } from "./Stat";
 import type { StrengthSession } from "./StrengthSession";
@@ -50,4 +51,9 @@ counted: WorkoutCount | null,
 /**
  * Per-activity reads this phone has never stored for the workout.
  */
-detail: DayDetail, };
+detail: DayDetail, 
+/**
+ * The route card's street map (Rules: Street maps); none without a
+ * route or with street maps off.
+ */
+map: RouteMapView | null, };

@@ -137,7 +137,7 @@ try {
   const toggle=surface.getByRole('checkbox',{name:/Persistent status/});
   await toggle.waitFor();
   assert.equal(await toggle.isChecked(),false,'status is opt-in');
-  assert.equal(await surface.getByRole('checkbox').count(),10,'internal offer flag is not a toggle (the plan prompt is)');
+  assert.equal(await surface.getByRole('checkbox').count(),11,'internal offer flag is not a toggle (the plan prompt and street maps are)');
   await toggle.check();
   await surface.screenshot({path:resolve(output,`status-settings-${width}.png`)});
   await toggle.uncheck();
@@ -1392,6 +1392,36 @@ try {
    assert.equal(await ng.getByRole('region',{name:'How it counted'}).count(),0,'no goals, no How it counted');
    await ng.close();
   }
+  // Street maps: the run's card draws its stored map under the route with the credit in its corner; a card whose
+  // area isn't drawn yet asks once and fills in; with street maps off the route is drawn alone.
+  {
+   const credit='© OpenMapTiles © OpenStreetMap';
+   const mp=await browser.newPage({viewport:{width:390,height:844}});
+   await mp.goto(`${url}/#workout/9000000000001`);
+   const card=mp.locator('.map-card');
+   await card.getByText(credit,{exact:true}).waitFor();
+   assert.equal(await card.getByRole('img',{name:'Workout route on a street map'}).count(),1);
+   assert.deepEqual(await card.locator('path.layer').evaluateAll(paths=>paths.map(p=>p.classList[1])),['green','water','waterway','path','minor','road','major'],'every layer, bottom to top');
+   const [box,label]=[await card.boundingBox(),await card.getByText(credit,{exact:true}).boundingBox()];
+   assert.ok(label.x>=box.x && label.x+label.width<=box.x+box.width && label.y+label.height<=box.y+box.height,'credit inside the card');
+   await mp.screenshot({path:resolve(output,'workout-street-map-390.png')});
+   const waiting=JSON.parse(await readFile(resolve('src/lib/sample/workout.json'),'utf8'));
+   waiting.map={...waiting.map,state:'missing',layers:[]};
+   await mp.route(u=>u.pathname==='/src/lib/sample/workout.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(waiting)}`}));
+   await mp.reload();
+   await card.getByText(credit,{exact:true}).waitFor();
+   assert.equal(await card.locator('path.layer').count(),7,'a waiting card fills in once its map is drawn');
+   await mp.unroute(u=>u.pathname==='/src/lib/sample/workout.json');
+   await mp.goto(`${url}/#settings`);
+   const toggle=mp.getByRole('checkbox',{name:/^Streets under workout routes/});
+   assert.equal(await toggle.isChecked(),true,'street maps are on by default');
+   await toggle.uncheck();
+   await mp.goto(`${url}/#workout/9000000000001`);
+   await card.getByRole('img',{name:'Workout route',exact:true}).waitFor();
+   assert.equal(await card.locator('path.layer').count(),0,'off: no map layers');
+   assert.equal(await card.getByText(credit).count(),0,'off: no credit');
+   await mp.close();
+  }
   for(const width of [320,700]){await wp.setViewportSize({width,height:900});assert.equal(await wp.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`workout fits ${width}px`)}
   assert.deepEqual(await contrastFailures(wp),[],'Workout detail contrast');
   await wp.goto(`${url}/#workout/9000000000002`);
@@ -1964,7 +1994,7 @@ try {
  const weekly=patches.getByRole('checkbox',{name:'Weekly review'});
  const privacy=patches.getByRole('checkbox',{name:/Persistent status/});
  await morning.waitFor();
- assert.equal(await patches.getByRole('checkbox').count(),10,'journal has its own consent control');
+ assert.equal(await patches.getByRole('checkbox').count(),11,'journal and street maps have their own controls');
  assert.equal(await patches.locator('.card').filter({has:patches.getByRole('heading',{name:'Notifications',exact:true})}).getByRole('checkbox').count(),7,'journal consent is not a notification switch');
  await patches.evaluate(()=>window.testPatch.holdKeys=['notifyMorningReadiness','notifyStatus']);
  await morning.uncheck();

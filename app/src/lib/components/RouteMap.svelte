@@ -1,13 +1,21 @@
 <script lang="ts">
- let {route}:{route:[number,number][]}=$props();
- let lat=$derived(route.reduce((a,p)=>a+p[0],0)/Math.max(route.length,1));
- let cos=$derived(Math.cos(lat*Math.PI/180));
- let xValues=$derived(route.map(p=>p[1]*cos)),yValues=$derived(route.map(p=>p[0]));
- let minX=$derived(Math.min(...xValues)),maxX=$derived(Math.max(...xValues));
- let minY=$derived(Math.min(...yValues)),maxY=$derived(Math.max(...yValues));
- let scale=$derived(Math.min(310/(maxX-minX||1),128/(maxY-minY||1)));
- let width=$derived((maxX-minX)*scale),height=$derived((maxY-minY)*scale);
- let points=$derived(route.map(([latitude,longitude]):[number,number]=>[179-width/2+(longitude*cos-minX)*scale,88+height/2-(latitude-minY)*scale]));
+ import type {RouteMapView} from '../generated/RouteMapView';
+ import * as api from '../api';
+ import {fit,mercator} from '../routemap';
+ let {route,map=null,id=''}:{route:[number,number][],map?:RouteMapView|null,id?:string}=$props();
+ // A card whose area isn't drawn yet asks once while it shows; the core downloads each area at most once.
+ let drawn=$state<{id:string,map:RouteMapView|null}|null>(null);
+ $effect(()=>{
+  if(map?.state!=='missing' || !id || drawn?.id===id)return;
+  const asked=id;
+  api.route_map(asked).then(next=>{if(asked===id)drawn={id:asked,map:next}},()=>{if(asked===id)drawn={id:asked,map}});
+ });
+ // The core's answer wins only while the page still has a map; none means street maps are off.
+ let shown=$derived(map&&drawn?.id===id?drawn.map:map);
+ let layers=$derived(shown?.state==='ready'?shown.layers:[]);
+ let projected=$derived(route.map(mercator).filter((p):p is [number,number]=>p!==null));
+ let frame=$derived(shown?.frame??fit(projected));
+ let points=$derived(frame?projected.map(([x,y]):[number,number]=>[(x-frame.x0)*frame.scale,(y-frame.y0)*frame.scale]):[]);
  function pathFor(points:[number,number][]) {
   if(!points.length)return '';
   const pt=([x,y]:[number,number])=>`${x.toFixed(1)},${y.toFixed(1)}`;
@@ -21,5 +29,17 @@
  }
  let path=$derived(pathFor(points));
 </script>
-<svg class="map" viewBox="0 0 358 176" role="img" aria-label="Workout route">{#if route.length>1}<path d={path} stroke="var(--ink)" stroke-opacity=".12" stroke-width="13" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d={path} stroke="var(--ink)" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx={points[0][0]} cy={points[0][1]} r="7" fill="var(--ink)" stroke="var(--card)" stroke-width="3"/>{:else}<text x="179" y="91" fill="var(--text3)" text-anchor="middle">No route recorded</text>{/if}</svg>
-<style>.map{width:100%;display:block;background:var(--card);border-radius:16px}</style>
+<div class="route-map"><svg class="map" viewBox="0 0 358 176" role="img" aria-label={layers.length?'Workout route on a street map':'Workout route'}>{#each layers as layer}<path class="layer {layer.kind}" d={layer.path}/>{/each}{#if points.length>1}<path d={path} stroke="var(--ink)" stroke-opacity=".12" stroke-width="13" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d={path} stroke="var(--ink)" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx={points[0][0]} cy={points[0][1]} r="7" fill="var(--ink)" stroke="var(--card)" stroke-width="3"/>{:else}<text x="179" y="91" fill="var(--text3)" text-anchor="middle">No route recorded</text>{/if}</svg>{#if layers.length}<span class="credit">© OpenMapTiles © OpenStreetMap</span>{/if}</div>
+<style>
+ .route-map{position:relative}
+ .map{width:100%;display:block;background:var(--card);border-radius:16px}
+ .layer{fill:none;stroke-linecap:round;stroke-linejoin:round}
+ .green{fill:var(--good);fill-opacity:.07}
+ .water{fill:var(--amount);fill-opacity:.2}
+ .waterway{stroke:var(--amount);stroke-opacity:.3;stroke-width:1}
+ .path{stroke:var(--ink);stroke-opacity:.09;stroke-width:.6}
+ .minor{stroke:var(--ink);stroke-opacity:.1;stroke-width:.9}
+ .road{stroke:var(--ink);stroke-opacity:.13;stroke-width:1.5}
+ .major{stroke:var(--ink);stroke-opacity:.16;stroke-width:2.2}
+ .credit{position:absolute;right:8px;bottom:6px;padding:1px 6px;border-radius:6px;background:color-mix(in srgb,var(--card) 80%,transparent);font:500 11px/1.3 var(--font-body);color:var(--text3)}
+</style>

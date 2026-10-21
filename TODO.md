@@ -2,8 +2,9 @@
 
 The prioritized backlog: work top to bottom, one item at a time, each shipped
 on its own. Every item keeps the spec's principles: visual first, opens
-instantly from local data, Garmin's numbers, nothing leaves the phone. New
-data goes into an existing screen or its detail before it earns a new screen.
+instantly from local data, Garmin's numbers, nothing leaves the phone but
+Garmin reads and street maps' area downloads. New data goes into an existing
+screen or its detail before it earns a new screen.
 
 When an item ships, update `docs/spec.md` in the same change, then move the
 item to **Done** with its commit. Endpoints are on `connectapi.garmin.com`
@@ -443,6 +444,28 @@ separate export. The offline JSON/CSV export does not make network requests.
   verified shape. A full 10-event page is partial coverage; look for documented
   pagination/filtering before considering another request.
 
+### Street maps follow-ups
+
+In priority order.
+
+- **Phone timing**: measure a first open (download and draw) and a cached
+  open on a real phone in a release build. Measured so far only on the
+  software-rendered emulator in a debug build: about 1.5 s from opening the
+  page to the drawn map, 18 ms for a drawn card.
+- **A second source**: OpenFreeMap's TileJSON URL is built in. If it stops
+  serving, VersaTiles (`tiles.versatiles.org`, keyless, no CDN in front)
+  serves the Shortbread schema, which needs its own class mapping;
+  `tile.openstreetmap.org` and `vector.openstreetmap.org` forbid offline
+  and prefetch use. Protomaps' planet builds discourage hotlinking.
+- **Old areas**: a stored area keeps the week's map it was downloaded from.
+  Consider one fresh download for an area over a year old when a card there
+  is opened.
+- **Website and README pictures**: the published screens predate the street
+  map; republish them from synthetic data (`npm run screenshots`, then
+  `publish-screens.mjs`).
+- Labels and pan/zoom were left out on purpose (2026-10-20); the stored tiles
+  could feed them later.
+
 ## Later: more Garmin data
 
 Each is a tile or detail in an existing screen first.
@@ -555,6 +578,26 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Street maps under workout routes** (commit "Draw workout routes over
+  street maps from OpenFreeMap"), from exploring private, free and
+  accountless maps. On by default, off in Settings → Street maps (which also
+  erases them). The core downloads OpenStreetMap vector tiles (OpenMapTiles
+  schema) from OpenFreeMap by area, the 8×8 block of tiles at the card's
+  zoom (64 tiles, usually 20–40 km across), so the server sees an area,
+  never the route; it decodes them itself and draws each card once into SVG
+  path data (green, water, waterways, paths, minor roads, roads, major
+  roads), kept per workout. Only a route card without a drawn map asks;
+  other workouts in a stored area draw with no request. The WebView's CSP is
+  unchanged. Verified 2026-10-20: OpenFreeMap needs no key or account and
+  allows app offline downloads of at most 3,000 tiles or 50 MB with at most
+  4 parallel requests and an identifying User-Agent; its privacy policy
+  keeps no IPs in access logs, but Cloudflare sits in front and sees each
+  request. One area's z13 tiles measured 5.4 MB in central London, 3.7 MB
+  in Manhattan and 0.9 MB around Boulder. A drawn card is about 25 KB of
+  path data for central Ottawa. On the emulator (debug build), the demo
+  workout's map appeared about 1.5 s after opening, and a drawn card
+  returned in 18 ms. MapLibre GL JS (about 1.6 MB minified) wasn't needed.
 
 - **Instant page opens** (commits "Read stored nights without their
   samples" and "Open pages whole and keep cached views through a sync"),

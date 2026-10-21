@@ -1022,7 +1022,8 @@
       "planItem": null,
       "bests": []
     },
-    "strength": null
+    "strength": null,
+    "map": null
   },
   "9000000000008": {
     "detail": {
@@ -1915,6 +1916,7 @@
       "planItem": null,
       "bests": []
     },
-    "strength": null
+    "strength": null,
+    "map": null
   }
 }
