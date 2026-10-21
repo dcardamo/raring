@@ -1,7 +1,11 @@
-//! Garmin's word for each day's stress. It decides which days the stress
-//! trend leaves out of its averages (docs/spec.md, Rules: Trends).
-use crate::{store::Store, view::Tone};
-use chrono::NaiveDate;
+//! Garmin's word for each day's stress. It colours the stress calendar and
+//! decides which days the stress trend leaves out of its averages
+//! (docs/spec.md, Rules: Trends and Stress calendar).
+use crate::{
+    store::Store,
+    view::{StressDay, StressDayKind, StressMonth, Tone, TrendMetric},
+};
+use chrono::{Datelike, Duration, Months, NaiveDate};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Garmin's word for a day.
@@ -102,6 +106,65 @@ pub fn partial_days(store: &Store, from: &str, to: &str) -> BTreeSet<NaiveDate> 
         .filter(|(_, coverage)| coverage.partial())
         .map(|(date, _)| date)
         .collect()
+}
+
+/// The calendar month holding `month` (YYYY-MM or a date in it), read from
+/// local rows only; days after `today` are future.
+pub fn month(store: &Store, month: &str, today: &str) -> Result<StressMonth, String> {
+    let date = |s: &str| NaiveDate::parse_from_str(s, "%Y-%m-%d").ok();
+    let today = date(today).ok_or_else(|| format!("Invalid date: {today}"))?;
+    let first = month
+        .get(..7)
+        .and_then(|m| date(&format!("{m}-01")))
+        .ok_or_else(|| format!("Invalid month: {month}"))?;
+    if first > today {
+        return Err(format!("Choose a month no later than this one ({today})"));
+    }
+    if first < NaiveDate::from_ymd_opt(1990, 1, 1).unwrap_or_default() {
+        return Err("Choose a month from January 1990 on".into());
+    }
+    let last = (first + Months::new(1) - Duration::days(1)).min(today);
+    let (from, to) = (first.to_string(), last.to_string());
+    let coverage = coverage_between(store, &from, &to);
+    let averages = crate::trends::readings(store, TrendMetric::Stress, first, last);
+    let mut workouts: BTreeMap<String, u32> = BTreeMap::new();
+    for (id, start) in store.activities_between(&from, &to) {
+        if let (Some(day), Some(_)) = (start.get(..10), crate::screens::activity_brief(store, &id)) {
+            *workouts.entry(day.to_owned()).or_default() += 1;
+        }
+    }
+    let days = first
+        .iter_days()
+        .take_while(|d| d.month() == first.month())
+        .map(|day| {
+            let average = averages.get(&day).copied().filter(|_| day <= today);
+            let (kind, word, tone) = match (coverage.get(&day), average) {
+                _ if day > today => (StressDayKind::Future, None, Tone::Neutral),
+                (Some(Coverage::Day(word)), _) => (StressDayKind::Rated, Some(word), word.tone()),
+                (Some(Coverage::AwakeOnly(word)), _) => (StressDayKind::AwakeOnly, Some(word), Tone::Neutral),
+                (Some(Coverage::LowWear), Some(_)) => (StressDayKind::LowWear, None, Tone::Neutral),
+                (_, Some(_)) => (StressDayKind::Unrated, None, Tone::Neutral),
+                _ => (StressDayKind::None, None, Tone::Neutral),
+            };
+            let date = day.to_string();
+            StressDay {
+                workouts: workouts.get(&date).copied().unwrap_or(0),
+                date,
+                kind,
+                word: word.map(|w| w.label().into()),
+                tone,
+                average,
+            }
+        })
+        .collect();
+    Ok(StressMonth {
+        month: from,
+        today: today.to_string(),
+        days,
+        first: store
+            .first_key(&["stress", "summary", "daily_summary"])
+            .and_then(|key| key.get(..7).map(|m| format!("{m}-01"))),
+    })
 }
 
 #[cfg(test)]

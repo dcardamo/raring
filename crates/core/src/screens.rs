@@ -1456,10 +1456,11 @@ fn utc_millis(value: &Value) -> Option<i64> {
         return Some(if n.abs() < 100_000_000_000 { n * 1000 } else { n });
     }
     let text = value.as_str()?;
+    // List pages write "2026-10-15 16:13:57"; details use a T.
     chrono::DateTime::parse_from_rfc3339(text)
         .map(|d| d.timestamp_millis())
         .ok()
-        .or_else(|| NaiveDateTime::parse_from_str(text, "%Y-%m-%dT%H:%M:%S%.f")
+        .or_else(|| NaiveDateTime::parse_from_str(&text.replacen(' ', "T", 1), "%Y-%m-%dT%H:%M:%S%.f")
             .ok().map(|d| d.and_utc().timestamp_millis()))
 }
 fn local_millis(v: &Value, field: &str) -> Option<i64> {
@@ -1471,6 +1472,27 @@ fn clip_elapsed(from: i64, to: i64, start: i64, duration_min: f64) -> Option<[f6
     let left = ((from - start) as f64 / 60_000.).max(0.);
     let right = ((to - start) as f64 / 60_000.).min(duration_min);
     (right > left).then_some([left, right])
+}
+
+/// Recorded activities that started on `date` or the day before, as elapsed
+/// minutes from `start` (the day's UTC start) clipped to the day. Without a
+/// GMT start, only a known constant source offset can place a local start.
+fn activity_ranges(store: &Store, date: &str, start: i64, duration_min: f64, offset: Option<i64>) -> Vec<[f64; 2]> {
+    let mut ranges = Vec::new();
+    for (id, _) in store.activities_between(&date_sub(date, 1), date) {
+        let Some(a) = activity(store, &id) else { continue };
+        let payload = activity_payload(store, &id);
+        let from = payload.as_ref().and_then(|p| {
+            [&p.detail["summaryDTO"]["startTimeGMT"], &p.detail["startTimeGMT"],
+             &p.listed["summaryDTO"]["startTimeGMT"], &p.listed["startTimeGMT"]]
+                .iter().find_map(|v| utc_millis(v))
+        }).or_else(|| offset.and_then(|zone| NaiveDateTime::parse_from_str(&a.start_local, "%Y-%m-%dT%H:%M:%S%.f")
+            .ok().map(|t| t.and_utc().timestamp_millis()-zone)));
+        if let Some(range) = from.and_then(|from| clip_elapsed(from, from + (a.duration_s * 1000.) as i64, start, duration_min)) {
+            ranges.push(range);
+        }
+    }
+    ranges
 }
 
 pub fn heart_rate_day(store: &Store, date: &str) -> HeartRateDay {
@@ -1531,7 +1553,7 @@ pub fn heart_rate_day(store: &Store, date: &str) -> HeartRateDay {
         }
     }
     let mut sleep_intervals = Vec::new();
-    let mut activities = Vec::new();
+    let mut activities = vec![];
     if let Some(start) = start {
         for wake_day in [date.to_owned(), date_sub(date, -1)] {
             let Some(record) = sleep_row(store, &wake_day) else { continue };
@@ -1543,19 +1565,7 @@ pub fn heart_rate_day(store: &Store, date: &str) -> HeartRateDay {
                 sleep_intervals.push(range);
             }
         }
-        for (id, _) in store.activities_between(&date_sub(date, 1), date) {
-            let Some(a) = activity(store, &id) else { continue };
-            let payload = activity_payload(store, &id);
-            let from = payload.as_ref().and_then(|p| {
-                [&p.detail["summaryDTO"]["startTimeGMT"], &p.detail["startTimeGMT"],
-                 &p.listed["summaryDTO"]["startTimeGMT"], &p.listed["startTimeGMT"]]
-                    .iter().find_map(|v| utc_millis(v))
-            }).or_else(|| offset.and_then(|zone| NaiveDateTime::parse_from_str(&a.start_local, "%Y-%m-%dT%H:%M:%S%.f")
-                .ok().map(|t| t.and_utc().timestamp_millis()-zone)));
-            if let Some(range) = from.and_then(|from| clip_elapsed(from, from + (a.duration_s * 1000.) as i64, start, duration_min)) {
-                activities.push(range);
-            }
-        }
+        activities = activity_ranges(store, date, start, duration_min, offset);
     }
     HeartRateDay {
         date: date.into(),
@@ -1575,11 +1585,11 @@ pub fn stress(store: &Store, date: &str) -> StressCard {
     let level = average.map(stress_level);
     let qualifier =
         string(&summary, &[&["stressQualifier"]]).filter(|q| !q.is_empty() && q != "UNKNOWN");
-    let tone = match qualifier.as_deref() {
-        Some("CALM" | "BALANCED") => Tone::Good,
-        Some("STRESSFUL") => Tone::Fair,
-        Some("VERY_STRESSFUL") => Tone::Poor,
-        _ => match level {
+    let tone = match qualifier.as_deref().and_then(crate::stress::coverage) {
+        Some(crate::stress::Coverage::Day(word)) => word.tone(),
+        // An awake-only word doesn't rate the whole day, as on the calendar.
+        Some(_) => Tone::Neutral,
+        None => match level {
             Some(StressLevel::Rest | StressLevel::Low) => Tone::Good,
             Some(StressLevel::Medium) => Tone::Fair,
             Some(StressLevel::High) => Tone::Poor,
@@ -1587,6 +1597,18 @@ pub fn stress(store: &Store, date: &str) -> StressCard {
         },
     };
     let (timeline, active) = stress_timeline(&raw);
+    let workouts = utc_millis(&raw["startTimestampGMT"])
+        .map(|start| {
+            // Local-only activity times need the day's offset, unless a clock change moves it.
+            let offset = local_millis(&raw, "startTimestampLocal").map(|local| local - start).filter(|zone| {
+                match (utc_millis(&raw["endTimestampGMT"]), local_millis(&raw, "endTimestampLocal")) {
+                    (Some(end), Some(local)) => local - end == *zone,
+                    _ => true,
+                }
+            });
+            activity_ranges(store, date, start, 1440., offset)
+        })
+        .unwrap_or_default();
     let midnight = NaiveDate::parse_from_str(date, "%Y-%m-%d")
         .ok()
         .and_then(|d| d.and_hms_opt(0, 0, 0));
@@ -1626,6 +1648,7 @@ pub fn stress(store: &Store, date: &str) -> StressCard {
         timeline,
         active,
         sleep: asleep,
+        workouts,
         active_s: num(&summary, &[&["activityStressDuration"]]).filter(|s| *s >= 0.),
         time,
         trend: (0..30)

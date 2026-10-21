@@ -206,7 +206,8 @@ fn split(
     (days, partial)
 }
 
-fn readings(
+/// Every valid stored daily value, partly worn stress days included.
+pub(crate) fn readings(
     store: &Store,
     metric: TrendMetric,
     from: NaiveDate,

@@ -31,6 +31,10 @@ active: Array<[number, number]>,
  */
 sleep: [number, number] | null, 
 /**
+ * Recorded workouts, as minute ranges from midnight clipped to the day.
+ */
+workouts: Array<[number, number]>, 
+/**
  * Garmin's time in each category today; empty until reported.
  */
 time: Array<StressTime>, 

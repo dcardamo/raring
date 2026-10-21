@@ -487,7 +487,9 @@ says so on its chart (Rules: Reading freshness).
   three-minute readings (the same detail as Today). A day Garmin rated only
   in part is a hollow point outside the averages (Rules: Trends). The detail shows Garmin's
   duration in each stress level and Active (not rated) as aligned amount rows;
-  missing time is not extrapolated to a whole day.
+  missing time is not extrapolated to a whole day. Under the day's readings,
+  a month calendar shows Garmin's word for each day and opens any day's
+  detail (Rules: Stress calendar).
 - **All-day heart rate** (opened from the resting heart-rate chart):
   Garmin's daily resting HR (bpm), its history with Raring's usual range
   (Rules: Normal range), the day's minimum and maximum, and a day chart in two-minute elapsed slots, with recorded sleep and activities shaded
@@ -1466,7 +1468,23 @@ next pending wind-down while signed in.
   medical targets.
 - **Stress bars**: the Today card averages each 15 minutes of Garmin's
   readings; the detail shows every reading. Colors follow Garmin's categories,
-  without a colour key; the selected reading names its level.
+  without a colour key; the selected reading names its level. On the detail,
+  recorded workouts are a strip above the plot (Garmin's own "active" strip
+  stays below it), and a slot inside one without a reading reads "workout,
+  not rated".
+- **Stress calendar**: one calendar month, Monday first, read from local
+  data only; it opens on the shown day's month, Previous stops at the
+  earliest stored stress month and Next at this one. Each day is coloured by
+  Garmin's word for it (Calm and Balanced good, Stressful fair, Very Stressful
+  poor), with no colour key; the daily summary's word wins over a history
+  row's. A day Garmin rated only in part (Unknown, or an awake-only word) is
+  outlined and never coloured; a day with readings but no word, or none, is
+  plain; later days can't be chosen. An awake-only word is neutral wherever
+  it shows, the stress pill included. A dot marks a recorded workout on its
+  local start date. The shown day is ringed and named under the month with
+  its word, average and workouts. Tapping a day opens its dated stress
+  detail: from the live page one day opens over it, and a day chosen from a
+  dated day replaces it, so Back returns to the page that opened stress.
 - **Heart-rate chart**: the compact card averages only present samples in
   16-minute bars for legibility; the detail plots the two-minute readings.
   An empty bar remains a gap, not a zero or an inferred resting value.
@@ -1515,8 +1533,8 @@ next pending wind-down while signed in.
   the age line its age.
   - Garmin's levels: readiness (Low/Poor under 50, Moderate 50–74,
     High/Prime 75+), Sleep Score (Poor under 60, Fair 60–79, Good 80+),
-    stress (rest and low 0–50 good, medium 51–75 fair, high 76+ poor) and
-    Body Battery's color.
+    stress (rest and low 0–50 good, medium 51–75 fair, high 76+ poor; the
+    calendar by Garmin's word for the day) and Body Battery's color.
   - Usual ranges: HRV, resting HR, Sleep HR, respiration, SpO₂ and skin
     temperature are good inside the shown range (bounds included) and fair
     outside it either way: attention, not a rating. Acute load against

@@ -83,6 +83,9 @@ export function routeTrail(target: string, fromTrail: string[] = []): string[] {
   // A dated metric opens under the day page that asked for it.
   if (route.startsWith('metric/') && datedDetail(route)) {
     const last = fromTrail.at(-1);
+    // The stress calendar opens a day over the live stress page, then moves between days in place.
+    if (route.startsWith('metric/stress/') && last?.startsWith('metric/stress/')) return [...fromTrail.slice(0, -1), route];
+    if (route.startsWith('metric/stress/') && last === 'metric/stress') return [...fromTrail, route];
     if (last?.startsWith('health/') || last?.startsWith('sleep')) return [...fromTrail, route];
     const tab = section(fromTrail);
     return tab ? ['today', tab, route] : ['today', 'health', route];

@@ -44,9 +44,20 @@ fn stress(date: NaiveDate, days_ago: i64) -> (Value, Value) {
             .map(|(i, v)| json!([start + i as i64 * 180_000, v]))
             .collect::<Vec<_>>(),
     });
+    // Garmin's words for the stress calendar: mostly balanced, a stressful run of days,
+    // a day the watch was barely worn and one night it wasn't.
+    let qualifier = match days_ago {
+        0 => "UNKNOWN",
+        9 | 10 => "STRESSFUL",
+        11 => "VERY_STRESSFUL",
+        d if d % 13 == 5 => "UNKNOWN",
+        17 => "BALANCED_AWAKE",
+        _ if average < 26 => "CALM",
+        _ => "BALANCED",
+    };
     let summary = json!({
         "averageStressLevel": average,
-        "stressQualifier": if days_ago == 0 { "UNKNOWN" } else if average < 26 { "CALM" } else { "BALANCED" },
+        "stressQualifier": qualifier,
         "restStressDuration": seconds(0..=25),
         "lowStressDuration": seconds(26..=50),
         "mediumStressDuration": seconds(51..=75),

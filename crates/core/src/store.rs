@@ -248,6 +248,22 @@ impl Store {
         .map(|rows| rows.flatten().filter_map(|(k, v)| v.map(|v| (k, v))).collect())
         .unwrap_or_default()
     }
+    /// The earliest stored key among these endpoints, ignoring empty answers.
+    pub fn first_key(&self, endpoints: &[&str]) -> Option<String> {
+        let db = self.db.lock().unwrap();
+        endpoints
+            .iter()
+            .filter_map(|endpoint| {
+                db.query_row(
+                    "SELECT MIN(key) FROM raw WHERE endpoint=?1 AND json!='null'",
+                    params![endpoint],
+                    |r| r.get::<_, Option<String>>(0),
+                )
+                .ok()
+                .flatten()
+            })
+            .min()
+    }
     pub fn activity_ids(&self, since: Option<&str>, limit: usize) -> Vec<String> {
         let db = self.db.lock().unwrap();
         let Ok(mut stmt) = db.prepare(

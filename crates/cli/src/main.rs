@@ -250,6 +250,8 @@ async fn main() -> Result<()> {
         Some("trend")=>{let current=core.current_date(now);let arg=|k:&str|args.windows(2).find(|v|v[0]==k).map(|v|v[1].clone());
             let query=raring_core::view::TrendQuery{metric:enum_arg(args.get(1).context("trend METRIC")?.clone())?,range:enum_arg(arg("--range").unwrap_or("days30".into()))?,end:arg("--date"),overlay:arg("--overlay").map(enum_arg).transpose()?,previous:args.iter().any(|a|a=="--previous"),start:arg("--start"),comparison_start:arg("--comparison-start")};
             let started=std::time::Instant::now();let view=core.trend(&query,&current).map_err(anyhow::Error::msg)?;eprintln!("trend read in {} ms",started.elapsed().as_millis());show(&view)?},
+        Some("stress-month")=>{let current=core.current_date(now);let month=args.get(1).cloned().unwrap_or_else(||current.clone());
+            show(&core.stress_month(&month,&current).map_err(anyhow::Error::msg)?)?},
         // One raw read-only request, unscrubbed: for checking an endpoint's shape locally.
         Some("fetch")=>{let kind=args.get(1).context("fetch KIND [KEY]")?;let key=args.get(2).map(String::as_str).unwrap_or("");
             let client=garmin::Client::new(read_tokens()?)?;
@@ -300,7 +302,7 @@ async fn main() -> Result<()> {
             save_tokens(&client.tokens().await)?;
             println!("Scrubbed capture at {}. Review it manually before sharing.",out.display());
         },
-        _=>bail!("usage: raring login [--import FILE] | sync [--budget N] | status | demo [--date YYYY-MM-DD] | show SCREEN [--date YYYY-MM-DD] [--at YYYY-MM-DDTHH:MM] | set-plan JSON | notifications | trend METRIC [--range days7|days30|days90|year|all|custom] [--start DATE] [--date DATE] [--overlay METRIC] [--previous] [--comparison-start DATE] | day-detail YYYY-MM-DD | workout-detail ACTIVITY_ID | fetch KIND [KEY] | capture --out DIR")
+        _=>bail!("usage: raring login [--import FILE] | sync [--budget N] | status | demo [--date YYYY-MM-DD] | show SCREEN [--date YYYY-MM-DD] [--at YYYY-MM-DDTHH:MM] | set-plan JSON | notifications | trend METRIC [--range days7|days30|days90|year|all|custom] [--start DATE] [--date DATE] [--overlay METRIC] [--previous] [--comparison-start DATE] | stress-month [YYYY-MM] | day-detail YYYY-MM-DD | workout-detail ACTIVITY_ID | fetch KIND [KEY] | capture --out DIR")
     }
     Ok(())
 }

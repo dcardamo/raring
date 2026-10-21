@@ -81,6 +81,11 @@ describe('routes', () => {
     expect(routeTrail('metric/stress/2025-10-14', ['today', 'progress', 'health/2025-10-14'])).toEqual(['today', 'progress', 'health/2025-10-14', 'metric/stress/2025-10-14']);
     expect(routeTrail('metric/stress/2025-10-14', ['today', 'health'])).toEqual(['today', 'health', 'metric/stress/2025-10-14']);
     expect(routeTrail('metric/stress/2025-10-14')).toEqual(['today', 'health', 'metric/stress/2025-10-14']);
+    // Days picked on the stress calendar: one over the live page, then each replaces the last.
+    expect(routeTrail('metric/stress/2025-10-14', ['today', 'metric/stress'])).toEqual(['today', 'metric/stress', 'metric/stress/2025-10-14']);
+    expect(routeTrail('metric/stress/2025-10-09', ['today', 'metric/stress', 'metric/stress/2025-10-14'])).toEqual(['today', 'metric/stress', 'metric/stress/2025-10-09']);
+    expect(routeTrail('metric/stress/2025-10-09', ['today', 'health', 'metric/stress/2025-10-14'])).toEqual(['today', 'health', 'metric/stress/2025-10-09']);
+    expect(routeTrail('metric/stress/2025-10-09', ['today', 'progress', 'health/2025-10-14', 'metric/stress/2025-10-14'])).toEqual(['today', 'progress', 'health/2025-10-14', 'metric/stress/2025-10-09']);
     expect(routeTrail('metric/heartRate/2025-10-14', ['today', 'sleep/2025-10-14'])).toEqual(['today', 'sleep/2025-10-14', 'metric/heartRate/2025-10-14']);
     expect(routeTrail('onboarding', ['today', 'settings'])).toEqual(['onboarding']);
   });
@@ -172,6 +177,28 @@ describe('browser navigation', () => {
     expect(nav.back()).toBe(false);
     expect(changes.at(-1)).toEqual(['today']);
     nav.destroy();
+  });
+
+  it('moves between stress calendar days without stacking them, and reloads them whole', async () => {
+    browser = new Browser();
+    vi.stubGlobal('window', browser);
+    const changes: string[][] = [];
+    const nav = createNavigation(trail => changes.push(trail));
+    nav.start();
+    nav.navigate('metric/stress');
+    nav.navigate('metric/stress/2025-10-14');
+    nav.navigate('metric/stress/2025-10-09');
+    await tick();
+    expect(browser.hashes()).toEqual(['#today', '#metric/stress', '#metric/stress/2025-10-09']);
+    nav.destroy();
+    // A reload keeps the trail the calendar built.
+    const reloaded = createNavigation(trail => changes.push(trail));
+    reloaded.start();
+    expect(changes.at(-1)).toEqual(['today', 'metric/stress', 'metric/stress/2025-10-09']);
+    expect(reloaded.back()).toBe(true);
+    await tick();
+    expect(changes.at(-1)).toEqual(['today', 'metric/stress']);
+    reloaded.destroy();
   });
 
   it('loads direct links with ancestors, preserves state on reload, and ignores repeat clicks', async () => {

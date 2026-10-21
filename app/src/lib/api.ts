@@ -37,7 +37,8 @@ import type { CheckinView } from './generated/CheckinView';
 import type { Settings } from './generated/Settings';
 import type { TrendQuery } from './generated/TrendQuery';
 import type { TrendView } from './generated/TrendView';
-import { sampleTrend } from './sample/trend';
+import { sampleTrend, sampleStressMonth } from './sample/trend';
+import type { StressMonth } from './generated/StressMonth';
 import type { LocalAction } from './generated/LocalAction';
 import type { PlanBoard } from './generated/PlanBoard';
 import type { WeekReview } from './generated/WeekReview';
@@ -118,6 +119,7 @@ export const fetch_day_detail = (date:string,scope:'sleep'|'day'):Promise<void> 
 export const fetch_workout_detail = (id:string):Promise<void> => isTauri()?invoke<void>('fetch_workout_detail',{id}):Promise.resolve();
 export const checkin = (weekStart?:string):Promise<CheckinView> => call('checkin',{weekStart},sampleCheckin as unknown as CheckinView);
 export const trend = (query:TrendQuery):Promise<TrendView> => isTauri()?invoke<TrendView>('trend',{query}):Promise.resolve().then(()=>sampleTrend(query));
+export const stress_month = (month:string):Promise<StressMonth> => isTauri()?invoke<StressMonth>('stress_month',{month}):Promise.resolve().then(()=>sampleStressMonth(month));
 // The preview keeps local changes in memory; only the Rust core applies the plan rules.
 let previewBoard:PlanBoard = copy(sampleBoard as unknown as PlanBoard);
 export const plan_board = (date?:string):Promise<PlanBoard> => call('plan_board',{date},previewBoard);

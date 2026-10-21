@@ -311,6 +311,10 @@ impl Raring {
     pub fn trend(&self, query: &view::TrendQuery, today: &str) -> std::result::Result<view::TrendView, String> {
         trends::trend(&self.store, query, today)
     }
+    /// One month of the stress calendar (`month` is YYYY-MM or a date in it).
+    pub fn stress_month(&self, month: &str, today: &str) -> std::result::Result<view::StressMonth, String> {
+        stress::month(&self.store, month, today)
+    }
     pub fn plan(&self, date: &str) -> view::PlanView {
         plan::view(&self.store, date)
     }

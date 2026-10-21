@@ -96,11 +96,19 @@ From the chart colour pass, in priority order.
 
 ### Stress by day follow-ups
 
-From the partly worn stress days, in priority order.
+From the stress calendar and partly worn stress days, in priority order.
 
-- Live with it on the maintainer's phone: whether the hollow days on
-  Health's stress card read as "the watch was off", and whether the 30D and
-  90D averages without them match how the weeks felt.
+- Live with it on the maintainer's phone: whether the calendar's colours and
+  outlined days read without a key (the "?" explains them), whether the
+  hollow days on Health's stress card read as "the watch was off", and
+  whether the 30D and 90D averages without them match how the weeks felt.
+  Check the month at the largest Android font and with TalkBack.
+- The workout strip above the stress detail's plot is small. If it doesn't
+  tie a rise after a hard session to the workout at a glance, try a light
+  band like Asleep's.
+- Tapping an old calendar day whose per-day stress was never stored reads it
+  from Garmin once (Rules: Opened past days and workouts); check on a phone
+  that months of history-only days don't make that feel slow.
 - Confirm what Garmin's stress word follows before the app explains it: on
   one account it tracked time at rest against time under stress, not the
   average (a lower-average day could get the more stressful word), which is
@@ -567,6 +575,23 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Stress by day** (commit "Show stress by day on a month calendar"), from
+  the maintainer asking whether daily stress would help on a calendar, with
+  exercise stress set apart. The stress detail has a month of Garmin's word
+  for each day (green Calm or Balanced, amber Stressful, red Very Stressful),
+  partly worn days outlined and uncoloured, a dot on days with a recorded
+  workout, the shown day ringed and named, and earlier months from local
+  data (`stress_month`; CLI `raring stress-month [YYYY-MM]`). A tapped day
+  opens its dated detail, and days chosen there replace each other, so Back
+  returns to the opener. The detail's timeline marks recorded workouts above
+  the plot. An awake-only word is neutral on the stress pill too; it used to
+  take the average's colour, so "Very Stressful Awake" could be green. List
+  pages' space-separated GMT start times now place activities on the
+  heart-rate and stress timelines. No exercise filter: Garmin doesn't rate
+  stress while you move, and on the maintainer's 90 days the readings in the
+  two hours after workouts were a small share of the medium and high ones;
+  the stressful stretches weren't training-driven.
 
 - **Partly worn stress days** (commit "Leave partly worn stress days out of
   stress averages"), from the maintainer asking for stress by day. A stress

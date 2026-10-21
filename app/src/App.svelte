@@ -350,7 +350,7 @@
     let next=await readView(current);
     if(request!==requestId)return;
     if(fixture==='missing' && current==='today'){
-     next={...(next as TodayView),readiness:null,readinessTrend:[],sleep:null,sleepPlan:null,load:null,factors:[],readinessWhy:null,bodyBatteryWhy:null,reconcile:null,call:null,callNote:null,bodyBattery:{now:null,charged:null,drained:null,timeline:[]},stress:{average:null,max:null,level:null,qualifier:null,tone:'neutral',timeline:[],active:[],sleep:null,time:[],activeS:null,trend:[]},hrv:{lastNight:null,status:null,tone:'neutral',baseline:null,week:[]},vitals:{readings:[],offCount:0,baselineReady:false},activities:[],fitnessAge:{fitnessAge:null,chronologicalAge:null,trend:[],change12m:null,recordedOn:null},headline:'',focus:{...(next as TodayView).focus,phase:'wake',cards:['focus'],effort:false,sleepMissing:true,lastNight:null}};
+     next={...(next as TodayView),readiness:null,readinessTrend:[],sleep:null,sleepPlan:null,load:null,factors:[],readinessWhy:null,bodyBatteryWhy:null,reconcile:null,call:null,callNote:null,bodyBattery:{now:null,charged:null,drained:null,timeline:[]},stress:{average:null,max:null,level:null,qualifier:null,tone:'neutral',timeline:[],active:[],sleep:null,workouts:[],time:[],activeS:null,trend:[]},hrv:{lastNight:null,status:null,tone:'neutral',baseline:null,week:[]},vitals:{readings:[],offCount:0,baselineReady:false},activities:[],fitnessAge:{fitnessAge:null,chronologicalAge:null,trend:[],change12m:null,recordedOn:null},headline:'',focus:{...(next as TodayView).focus,phase:'wake',cards:['focus'],effort:false,sleepMissing:true,lastNight:null}};
     }
     if(fixture==='stale' && current==='today')next={...(next as TodayView),watchLastUpload:new Date(Date.now()-7*3600_000).toISOString(),missingMetricReasons:{skinTemp:"Your watch doesn't record skin temperature",readiness:"Your watch doesn't record training readiness"}};
     if(fixture==='fresh' && current==='today')next={...(next as TodayView),watchLastUpload:new Date(Date.now()-2*3600_000-120_000).toISOString()};
@@ -621,7 +621,7 @@
 {:else if route==='health/weight'}
  <Header title="Weight" eyebrow="Garmin weigh-ins · Raring trend" back={back} backLabel={parentLabel}/><WeightCard initial={data as WeightView} bind:range={weightRange}/>
 {:else if route.startsWith('metric/')}
- <Header title={route.split('/')[1]==='restingHr' && (data as HealthView).vitals?.readings.some(isSleepHr) ? 'Sleep HR' : metricNames[route.split('/')[1]]} eyebrow={openedDay?dateLabel(openedDay.date):'GARMIN METRIC'} back={back} backLabel={parentLabel}/><MetricDetail metric={route.split('/')[1]} data={data as TodayView|HealthView|TrainingView} dayDate={openedDay?.page==='heartRate'?openedDay.date:null}/>
+ <Header title={route.split('/')[1]==='restingHr' && (data as HealthView).vitals?.readings.some(isSleepHr) ? 'Sleep HR' : metricNames[route.split('/')[1]]} eyebrow={openedDay?dateLabel(openedDay.date):'GARMIN METRIC'} back={back} backLabel={parentLabel}/><MetricDetail metric={route.split('/')[1]} data={data as TodayView|HealthView|TrainingView} dayDate={openedDay?.page==='heartRate'?openedDay.date:null} {navigate}/>
 {:else if checkinData}
  <Header title="Weekly review" eyebrow={'Week of '+dateLabel(checkinData.weekStart)} back={back} backLabel={parentLabel}/><CheckinPage checkin={checkinData} review={reviewData} {act} {navigate} busy={changing}/>
 {/if}

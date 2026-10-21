@@ -202,12 +202,65 @@ pub struct StressCard {
     pub active: Vec<[f64; 2]>,
     /// Last night's sleep, as minutes from midnight (clipped at midnight).
     pub sleep: Option<[f64; 2]>,
+    /// Recorded workouts, as minute ranges from midnight clipped to the day.
+    #[serde(default)]
+    pub workouts: Vec<[f64; 2]>,
     /// Garmin's time in each category today; empty until reported.
     pub time: Vec<StressTime>,
     /// Time Garmin could not rate because you were moving, seconds.
     pub active_s: Option<f64>,
     /// Daily averages for the last 30 days, oldest first.
     pub trend: Vec<Option<f64>>,
+}
+
+/// How the stress calendar shows a day.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum StressDayKind {
+    /// Garmin's word covers the whole day.
+    Rated,
+    /// Garmin's word covers only the time awake: it measured no sleep.
+    AwakeOnly,
+    /// Garmin couldn't rate the day: the watch was off for much of it.
+    LowWear,
+    /// Readings without a word from Garmin.
+    Unrated,
+    /// Nothing stored for the day.
+    None,
+    Future,
+}
+
+/// One day on the stress calendar.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct StressDay {
+    pub date: String,
+    pub kind: StressDayKind,
+    /// Garmin's word ("Very Stressful"), also on an awake-only day.
+    pub word: Option<String>,
+    /// The word's colour on a rated day; neutral on every other.
+    pub tone: Tone,
+    /// Garmin's average for the day, 0–100.
+    pub average: Option<f64>,
+    /// Recorded workouts that started on the day.
+    pub workouts: u32,
+}
+
+/// A calendar month of Garmin's stress words, from local data.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct StressMonth {
+    /// The month's first day, YYYY-MM-DD.
+    pub month: String,
+    /// The local day it was read on; later days are future.
+    pub today: String,
+    /// Every day of the month, oldest first.
+    pub days: Vec<StressDay>,
+    /// The first day of the earliest month with stress on this phone.
+    pub first: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]

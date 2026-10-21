@@ -512,6 +512,11 @@ async fn trend(app: tauri::AppHandle, query: TrendQuery) -> Result<TrendView, St
     })
     .await
 }
+/// One month of the stress calendar, from local data only.
+#[tauri::command]
+async fn stress_month(app: tauri::AppHandle, month: String) -> Result<StressMonth, String> {
+    read_view(app, move |core| core.stress_month(&month, &core.current_date(Local::now()))).await
+}
 /// The plan week containing `date` (this week when absent), on the calendar day.
 #[tauri::command]
 async fn plan_board(app: tauri::AppHandle, date: Option<String>) -> Result<raring_core::view::PlanBoard, String> {
@@ -1244,6 +1249,7 @@ pub fn run() {
                     health,
                     checkin,
                     trend,
+                    stress_month,
                     local_action,
                     plan_board,
                     week_review,
@@ -1290,6 +1296,7 @@ pub fn run() {
                     health,
                     checkin,
                     trend,
+                    stress_month,
                     local_action,
                     plan_board,
                     week_review,
