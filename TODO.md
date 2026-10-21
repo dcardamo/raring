@@ -103,20 +103,24 @@ From the stress calendar and partly worn stress days, in priority order.
   hollow days on Health's stress card read as "the watch was off", and
   whether the 30D and 90D averages without them match how the weeks felt.
   Check the month at the largest Android font and with TalkBack.
-- Garmin rates most nights Fair against its 0–15 range, so on the
-  maintainer's account the night bars are mostly amber, with Poor nights
-  standing out. If the amber reads as noise on the phone, draw only Poor
-  nights rather than adding a day/night toggle.
+- Garmin's sleep score rates overnight stress against a 0–15 range, so Fair
+  nights can be common and the night bars mostly amber. If the amber reads as
+  noise on the phone, draw only Poor nights rather than adding a day/night
+  toggle.
 - The workout strip above the stress detail's plot is small. If it doesn't
   tie a rise after a hard session to the workout at a glance, try a light
   band like Asleep's.
 - Tapping an old calendar day whose per-day stress was never stored reads it
   from Garmin once (Rules: Opened past days and workouts); check on a phone
   that months of history-only days don't make that feel slow.
-- Confirm what Garmin's stress word follows before the app explains it: on
-  one account it tracked time at rest against time under stress, not the
-  average (a lower-average day could get the more stressful word), which is
-  undocumented.
+- Confirm what Garmin's stress word follows before the app explains it: it
+  isn't a cut of the daily average (a lower-average day can get the more
+  stressful word), and what it does follow is undocumented.
+- The stress timeline, and the workouts on it, keep a fixed 24-hour axis
+  from the day's start, so on a 25-hour clock-change day the last hour drops
+  off and later times read an hour out. Use the heart-rate chart's elapsed
+  day length (Rules: Heart-rate chart) for the stress samples, workouts and
+  labels together, with spring and fall tests.
 
 ### Time-of-day follow-ups
 
@@ -580,6 +584,13 @@ faces, screens, sensors and audio prompts stay in Connect.
 
 ## Done
 
+- **Dated stress pages name their day** (commit "Name the day on dated
+  stress pages and read the calendar again with it"). An opened past day's
+  stress detail said "average so far today"; it now says "average for Sat 26
+  Sept", as the calendar opens such days often. When an opened day's detail
+  arrives from Garmin, the calendar reads its month again, so the day's cell
+  matches the page.
+
 - **The night before on the stress calendar** (commit "Mark the night before
   on the stress calendar"). Each calendar day carries Garmin's rating of the
   night that ended that morning, from its sleep score (`sleepScores.stress.
@@ -588,10 +599,7 @@ faces, screens, sensors and audio prompts stay in Connect.
   label. Combined in one cell rather than a separate calendar or a toggle:
   Garmin's day already counts the night's hours after midnight, and reading
   both together sets a stressful day with a poor night apart from one with a
-  calm night. On
-  the maintainer's account the poor nights clustered in the two stressful
-  stretches, and most days the watch was barely worn still had a rated
-  night.
+  calm night. A day the watch was barely worn can still have a rated night.
 
 - **Stress by day** (commit "Show stress by day on a month calendar"), from
   the maintainer asking whether daily stress would help on a calendar, with
@@ -606,9 +614,8 @@ faces, screens, sensors and audio prompts stay in Connect.
   take the average's colour, so "Very Stressful Awake" could be green. List
   pages' space-separated GMT start times now place activities on the
   heart-rate and stress timelines. No exercise filter: Garmin doesn't rate
-  stress while you move, and on the maintainer's 90 days the readings in the
-  two hours after workouts were a small share of the medium and high ones;
-  the stressful stretches weren't training-driven.
+  stress while you move, and readings right after a workout are marked
+  rather than removed, which would be new Raring math.
 
 - **Partly worn stress days** (commit "Leave partly worn stress days out of
   stress averages"), from the maintainer asking for stress by day. A stress
@@ -621,8 +628,9 @@ faces, screens, sensors and audio prompts stay in Connect.
   still set, sometimes from one or two hours of readings, so those days used
   to plot as ordinary ones. `*_AWAKE` words (`BALANCED_AWAKE`) appeared only
   on days without a recorded night; history rows carry the word in lowercase
-  (`daily_summary` `stress.qualifier`, `very_stressful_awake`), and most of
-  that account's worded history days from the year before were awake-only.
+  (`daily_summary` `stress.qualifier`, `very_stressful_awake`). The All
+  range starts at the first reading, partly worn or not (commit "Start the
+  stress history at its first reading, partly worn or not").
 
 - **Instant page opens** (commits "Read stored nights without their
   samples" and "Open pages whole and keep cached views through a sync"),

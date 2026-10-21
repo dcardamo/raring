@@ -9,13 +9,16 @@
  // A month of Garmin's word for each day, coloured without a key, with Garmin's rating of the night
  // before as a bar on top. `date` is the day the page shows; tapping another day opens it. Months come
  // from local data only.
- let {date,open}:{date:string,open:(date:string)=>void}=$props();
+ // `revision` changes whenever the page's own data is read again, such as after an opened day's
+ // detail arrives from Garmin, so the month is read again with it.
+ let {date,open,revision}:{date:string,open:(date:string)=>void,revision?:unknown}=$props();
  const generation=getContext<()=>number>('trend-generation') ?? (()=>0);
  // Opening another day shows its month; the arrows move away from it.
  let month=$derived(date.slice(0,7)+'-01');
  let view=$state<StressMonth|null>(null),error=$state('');
  $effect(()=>{
   generation();
+  void revision;
   const wanted=month;
   let cancelled=false;
   error='';

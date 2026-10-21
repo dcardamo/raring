@@ -621,7 +621,7 @@
 {:else if route==='health/weight'}
  <Header title="Weight" eyebrow="Garmin weigh-ins · Raring trend" back={back} backLabel={parentLabel}/><WeightCard initial={data as WeightView} bind:range={weightRange}/>
 {:else if route.startsWith('metric/')}
- <Header title={route.split('/')[1]==='restingHr' && (data as HealthView).vitals?.readings.some(isSleepHr) ? 'Sleep HR' : metricNames[route.split('/')[1]]} eyebrow={openedDay?dateLabel(openedDay.date):'GARMIN METRIC'} back={back} backLabel={parentLabel}/><MetricDetail metric={route.split('/')[1]} data={data as TodayView|HealthView|TrainingView} dayDate={openedDay?.page==='heartRate'?openedDay.date:null} {navigate}/>
+ <Header title={route.split('/')[1]==='restingHr' && (data as HealthView).vitals?.readings.some(isSleepHr) ? 'Sleep HR' : metricNames[route.split('/')[1]]} eyebrow={openedDay?dateLabel(openedDay.date):'GARMIN METRIC'} back={back} backLabel={parentLabel}/><MetricDetail metric={route.split('/')[1]} data={data as TodayView|HealthView|TrainingView} dayDate={openedDay?.page==='heartRate'||openedDay?.page==='stress'?openedDay.date:null} {navigate}/>
 {:else if checkinData}
  <Header title="Weekly review" eyebrow={'Week of '+dateLabel(checkinData.weekStart)} back={back} backLabel={parentLabel}/><CheckinPage checkin={checkinData} review={reviewData} {act} {navigate} busy={changing}/>
 {/if}

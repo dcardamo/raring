@@ -219,6 +219,7 @@ try {
  await page.getByRole('button',{name:/^Stress/}).click();await waitRoute('metric/stress');
  const timeline=page.getByRole('slider',{name:/^Stress through the day/});
  assert.equal(await timeline.getAttribute('aria-valuetext'),'13:27: '+await page.locator('.readout b').textContent()+', '+await page.locator('.readout em').textContent());
+ assert.match(await page.locator('.metric-hero .small').first().textContent(),/average so far today/);
  await timeline.focus();await timeline.press('Home');
  assert.match(await timeline.getAttribute('aria-valuetext'),/^00:00: \d+, Rest$/);
  for(let i=0;i<6;i++)await timeline.press('Shift+ArrowRight');
@@ -244,6 +245,7 @@ try {
  await october.getByRole('button',{name:/^Tue 14 Oct:/}).click();await waitRoute('metric/stress/2025-10-14');
  await page.getByRole('group',{name:'Stress by day, October 2025'}).getByRole('button',{name:/^Thu 9 Oct:/}).click();await waitRoute('metric/stress/2025-10-09');
  assert.equal(await page.getByRole('group',{name:'Stress by day, October 2025'}).getByRole('button',{name:/^Thu 9 Oct:/}).getAttribute('aria-current'),'date');
+ assert.match(await page.locator('.metric-hero .small').first().textContent(),/average for Thu 9 Oct/,'a past day is not "so far today"');
  await page.getByRole('button',{name:'Previous month'}).click();
  await page.getByRole('group',{name:'Stress by day, September 2025'}).waitFor();
  assert.equal(await page.locator('.stress-calendar .day-readout').textContent(),'Tap a day to open it.');
@@ -2849,11 +2851,21 @@ function trendFixture(q){
   await detail.addInitScript(samples=>{
    localStorage.setItem('notifications-step-done','1');
    window.isTauri=true;
-   window.detailCalls=[];
+   window.detailCalls=[];window.reads=[];
    window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
     if(command.startsWith('plugin:event|'))return 1;
     if(command==='app_status')return {...samples.status,signedIn:true,lastSync:new Date().toISOString()};
-    if(command==='fetch_day_detail'){window.detailCalls.push(args.date);return null}
+    if(command==='fetch_day_detail'){
+     window.detailCalls.push(args.date);
+     // The stress day's detail arrives after its calendar has read the month once.
+     if(args.date==='2025-10-02'){await new Promise(r=>setTimeout(r,400));window.reads.push('fetched '+args.date)}
+     return null;
+    }
+    if(command==='stress_month'){
+     window.reads.push('month '+args.month);
+     const days=Array.from({length:31},(_,i)=>({date:`2025-10-${String(i+1).padStart(2,'0')}`,kind:i<16?'none':'future',word:null,tone:'neutral',average:null,workouts:0,night:null}));
+     return {month:'2025-10-01',today:'2025-10-16',days,first:'2025-01-01'};
+    }
     if(command==='fetch_workout_detail'){window.detailCalls.push(args.id);return null}
     if(command==='sleep' && args.date){
      const view=structuredClone(samples.sleep);view.date=args.date;
@@ -2887,6 +2899,11 @@ function trendFixture(q){
   await detail.getByText('Garmin has no stress readings for this day.',{exact:false}).waitFor();
   await detail.getByText('Garmin has no vitals for this day.',{exact:false}).waitFor();
   assert.ok((await detail.evaluate(()=>window.detailCalls)).includes('2025-10-01'),'the Health day was fetched once');
+  // The stress calendar reads its month again once an opened day's detail arrives.
+  await detail.evaluate(()=>{location.hash='#metric/stress/2025-10-02'});
+  await detail.waitForURL('**/#metric/stress/2025-10-02');
+  await detail.getByRole('group',{name:'Stress by day, October 2025'}).waitFor();
+  await detail.waitForFunction(()=>{const r=window.reads,f=r.indexOf('fetched 2025-10-02');return f>0&&r.slice(0,f).includes('month 2025-10-01')&&r.slice(f).includes('month 2025-10-01')});
   const workoutId=samples.workout.summary.id;
   await detail.evaluate(id=>{location.hash=`#workout/${id}`},workoutId);
   await detail.waitForURL(`**/#workout/${workoutId}`);
