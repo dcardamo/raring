@@ -298,6 +298,11 @@ TalkBack or Doze.
 
 Read-only unless noted, serialized, within the budget, notes in `.data/`.
 
+- **A weigh-in's calendar date across time zones** (one approved write and
+  delete): with the phone's time zone different from the Garmin profile's,
+  add a weigh-in near midnight and see which `calendarDate` Garmin files it
+  under. Raring reads the day before to the day after, so either is found,
+  but Health shows it on Garmin's date.
 - **Weigh-in writes beyond the spike** (writes; ask first): a weigh-in in
   pounds converts to grams that aren't whole tenths of a kilogram; whether
   Garmin keeps those grams exactly is unverified (the read-back compares to

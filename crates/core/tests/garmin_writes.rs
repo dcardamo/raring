@@ -412,7 +412,8 @@ async fn the_log_is_exported_and_erased_on_sign_out_and_account_switch() {
 
 // Weigh-ins (Rules: Garmin writes): created and deleted, never edited.
 const ADD: &str = "/weight-service/user-weight";
-const DAY: &str = "/weight-service/weight/dateRange?startDate=2026-10-21&endDate=2026-10-21";
+// One request covers the day before to the day after.
+const DAY: &str = "/weight-service/weight/dateRange?startDate=2026-10-20&endDate=2026-10-22";
 const MORNING: &str = "2026-10-21T07:58:00-04:00";
 
 fn weigh_fixture(name: &str, system: &str) -> (std::path::PathBuf, Store, Raring) {
@@ -631,4 +632,57 @@ async fn a_confirmed_delete_addresses_the_seen_weigh_in_and_the_local_copy_follo
     assert_eq!(change.outcome, WriteOutcome::Unconfirmed);
     assert_eq!(store.get("weight", "2026-10-21").unwrap()["samplePk"], 9_001);
     assert_eq!(mock.calls().len(), 2);
+}
+
+/// The same entry filed under another calendar date, as when the profile's time zone differs.
+fn filed(mut entry: Value, date: &str) -> Value {
+    entry["calendarDate"] = date.into();
+    entry
+}
+
+#[tokio::test]
+async fn an_attempt_filed_under_a_neighbouring_date_is_still_found() {
+    let (_dir, store, core) = weigh_fixture("weigh-around", "metric");
+    let created = filed(weigh_in(9_001, morning_ms(), 81_300., "MANUAL"), "2026-10-22");
+    let mock = Mock::new(vec![(200, "", day(vec![])), (204, "", String::new()), (200, "", day(vec![created.clone()]))]);
+    let change = core.write_garmin(&client(&mock.url), &add(81.3, WeightUnit::Kg), noon()).await.unwrap();
+    assert_eq!(change.outcome, WriteOutcome::Applied, "{:?}", change.message);
+    assert_eq!(store.get("weight", "2026-10-22").unwrap()["samplePk"], 9_001, "stored under Garmin's date");
+    assert!(store.get("weight", "2026-10-21").is_none());
+    drop(mock);
+
+    // A retry finds that earlier attempt on the other date and sends nothing.
+    let mock = Mock::new(vec![(200, "", day(vec![created]))]);
+    let change = core.write_garmin(&client(&mock.url), &add(81.3, WeightUnit::Kg), noon()).await.unwrap();
+    assert_eq!(change.outcome, WriteOutcome::Applied);
+    assert_eq!(mock.calls(), [format!("GET {DAY}")]);
+}
+
+#[tokio::test]
+async fn the_same_value_on_a_neighbouring_day_is_not_a_duplicate_and_an_empty_answer_is_an_empty_day() {
+    let (_dir, _store, core) = weigh_fixture("weigh-neighbour", "metric");
+    let yesterday = filed(weigh_in(5, morning_ms() - 86_400_000, 81_300., "MANUAL"), "2026-10-20");
+    let mock = Mock::new(vec![(200, "", day(vec![yesterday.clone()])), (204, "", String::new()), (200, "", day(vec![yesterday, weigh_in(6, morning_ms(), 81_300., "MANUAL")]))]);
+    let change = core.write_garmin(&client(&mock.url), &add(81.3, WeightUnit::Kg), noon()).await.unwrap();
+    assert_eq!(change.outcome, WriteOutcome::Applied);
+    assert_eq!(mock.calls().len(), 3);
+    drop(mock);
+
+    for empty in [404, 204] {
+        let (_dir, _store, core) = weigh_fixture(&format!("weigh-empty-{empty}"), "metric");
+        let mock = Mock::new(vec![(empty, "", String::new()), (204, "", String::new()), (200, "", day(vec![weigh_in(6, morning_ms(), 81_300., "MANUAL")]))]);
+        let change = core.write_garmin(&client(&mock.url), &add(81.3, WeightUnit::Kg), noon()).await.unwrap();
+        assert_eq!(change.outcome, WriteOutcome::Applied, "{empty}: {:?}", change.message);
+        assert_eq!(mock.calls()[1], format!("POST {ADD}"));
+    }
+}
+
+#[tokio::test]
+async fn a_delete_is_logged_with_its_delete_path() {
+    let (_dir, store, core) = weigh_fixture("weigh-delete-path", "metric");
+    let mock = Mock::new(vec![(200, "", day(vec![]))]);
+    let delete = GarminWrite::DeleteWeighIn { date: "2026-10-21".into(), timestamp_gmt: morning_ms(), sample_pk: Some("9001".into()), confirm: true };
+    assert_eq!(core.write_garmin(&client(&mock.url), &delete, noon()).await.unwrap().outcome, WriteOutcome::Conflict);
+    let log: Value = serde_json::from_str(&store.setting("garmin:changes").unwrap()).unwrap();
+    assert_eq!(log["entries"][0]["path"], "/weight-service/weight/2026-10-21/byversion/9001");
 }

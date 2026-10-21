@@ -471,9 +471,10 @@ pub(crate) fn old_weigh_in(date: &str, timestamp_gmt: i64, sample_pk: Option<&st
     Ok(OldWeighIn { date, timestamp_gmt, sample_pk })
 }
 
-/// A day's weigh-ins as Garmin last answered, for the local copy.
+/// Weigh-ins Garmin last answered for the day before, the day and the day
+/// after, for the local copy.
 pub(crate) struct Weighed {
-    date: String,
+    day: NaiveDate,
     list: Vec<Value>,
     /// The deleted weigh-in's timestamp, so the stored latest can follow.
     deleted: Option<i64>,
@@ -516,12 +517,24 @@ fn timestamp(t: NaiveDateTime) -> String {
     t.format("%Y-%m-%dT%H:%M:%S%.3f").to_string()
 }
 
-/// One day's weigh-ins; `None` if the answer isn't Garmin's usual shape.
-async fn day_weigh_ins(client: &Client, date: &str) -> garmin::Result<Option<Vec<Value>>> {
-    let v = client.get(DAY_WEIGH_INS, &[("startDate", date), ("endDate", date)]).await?;
+/// The weigh-ins from the day before to the day after, in one request: Garmin
+/// may file a weigh-in under another calendar date than the phone's when the
+/// profile's time zone differs. A 404 or 204 is an empty range; `None` if the
+/// answer isn't Garmin's usual shape.
+async fn weigh_ins_around(client: &Client, day: NaiveDate) -> garmin::Result<Option<Vec<Value>>> {
+    let (from, to) = ((day - Duration::days(1)).to_string(), (day + Duration::days(1)).to_string());
+    let v = match client.get(DAY_WEIGH_INS, &[("startDate", &from), ("endDate", &to)]).await {
+        Ok(v) => v,
+        Err(garmin::Error::NotFound) => return Ok(Some(vec![])),
+        Err(e) => return Err(e),
+    };
     let Some(list) = v["dateWeightList"].as_array() else { return Ok(None) };
     let valid = list.iter().all(|e| e["calendarDate"].as_str().is_some() && grams(e).is_some() && e["timestampGMT"].as_i64().is_some());
-    Ok(valid.then(|| list.iter().filter(|e| e["calendarDate"].as_str() == Some(date)).cloned().collect()))
+    let within = |e: &&Value| e["calendarDate"].as_str().is_some_and(|d| (from.as_str()..=to.as_str()).contains(&d));
+    Ok(valid.then(|| list.iter().filter(within).cloned().collect()))
+}
+fn on_day(e: &Value, date: &str) -> bool {
+    e["calendarDate"].as_str() == Some(date)
 }
 
 fn backing_off(store: &Store, now: DateTime<Utc>) -> bool {
@@ -561,7 +574,8 @@ fn read_back_failed(store: &Store, error: Option<garmin::Error>, now: DateTime<U
 /// and its fresh read finds an earlier attempt at the same time first.
 pub(crate) async fn create_weigh_in(store: &Store, client: &Client, w: NewWeighIn, now: DateTime<Utc>) -> (Entry, Option<Weighed>) {
     let _one = WRITES.lock().await;
-    let date = w.at.date_naive().to_string();
+    let day = w.at.date_naive();
+    let date = day.to_string();
     let sent_at = w.at.timestamp_millis();
     let body = serde_json::json!({
         "date": date,
@@ -578,7 +592,7 @@ pub(crate) async fn create_weigh_in(store: &Store, client: &Client, w: NewWeighI
         entry.message = Some("Garmin is limiting requests; try again later".into());
         return (entry, None);
     }
-    let fresh = match day_weigh_ins(client, &date).await {
+    let fresh = match weigh_ins_around(client, day).await {
         Ok(Some(list)) => list,
         Ok(None) => {
             entry.message = Some("Garmin sent an unexpected response".into());
@@ -590,8 +604,9 @@ pub(crate) async fn create_weigh_in(store: &Store, client: &Client, w: NewWeighI
         }
     };
     let same_time = fresh.iter().find(|e| e["timestampGMT"].as_i64() == Some(sent_at));
-    let same_value = fresh.iter().find(|e| grams(e).is_some_and(|g| same_reading(g, w.grams, w.unit)));
-    let weighed = |list: Vec<Value>| Some(Weighed { date: date.clone(), list, deleted: None });
+    // An earlier attempt is found on any of the three days; a duplicate only on the local day.
+    let same_value = fresh.iter().find(|e| on_day(e, &date) && grams(e).is_some_and(|g| same_reading(g, w.grams, w.unit)));
+    let weighed = |list: Vec<Value>| Some(Weighed { day, list, deleted: None });
     match (same_time, same_value) {
         (Some(e), _) if e["sourceType"] == MANUAL && grams(e).is_some_and(|g| same_reading(g, w.grams, w.unit)) => {
             entry.outcome = WriteOutcome::Applied;
@@ -624,7 +639,7 @@ pub(crate) async fn create_weigh_in(store: &Store, client: &Client, w: NewWeighI
             return (entry, kept);
         }
     }
-    let back = match day_weigh_ins(client, &date).await {
+    let back = match weigh_ins_around(client, day).await {
         Ok(Some(list)) => list,
         other => {
             entry.outcome = WriteOutcome::Unconfirmed;
@@ -660,7 +675,8 @@ pub(crate) async fn create_weigh_in(store: &Store, client: &Client, w: NewWeighI
 pub(crate) async fn delete_weigh_in(store: &Store, client: &Client, old: OldWeighIn, now: DateTime<Utc>) -> (Entry, Option<Weighed>) {
     let _one = WRITES.lock().await;
     let unit = weight::unit(store).unwrap_or(WeightUnit::Kg);
-    let date = old.date.to_string();
+    let day = old.date;
+    let date = day.to_string();
     let stored = store.get("weight", &date).filter(|v| v["timestampGMT"].as_i64() == Some(old.timestamp_gmt));
     let field = ChangedField {
         field: format!("weighIn:{}", old.timestamp_gmt),
@@ -668,13 +684,14 @@ pub(crate) async fn delete_weigh_in(store: &Store, client: &Client, old: OldWeig
         before: stored.as_ref().map(|v| weigh_in_text(v, unit)),
         after: None,
     };
-    let mut entry = weight_entry(now, DAY_WEIGH_INS, field, None);
+    let path = |day: &str, pk: u64| format!("/weight-service/weight/{day}/byversion/{pk}");
+    let mut entry = weight_entry(now, &old.sample_pk.map_or_else(|| DAY_WEIGH_INS.into(), |pk| path(&date, pk)), field, None);
     entry.fields[0].before_value = stored.as_ref().and_then(|v| v["weight"].as_f64()).map(Value::from);
     if backing_off(store, now) {
         entry.message = Some("Garmin is limiting requests; try again later".into());
         return (entry, None);
     }
-    let fresh = match day_weigh_ins(client, &date).await {
+    let fresh = match weigh_ins_around(client, day).await {
         Ok(Some(list)) => list,
         Ok(None) => {
             entry.message = Some("Garmin sent an unexpected response".into());
@@ -686,7 +703,7 @@ pub(crate) async fn delete_weigh_in(store: &Store, client: &Client, old: OldWeig
         }
     };
     let deleted = Some(old.timestamp_gmt);
-    let weighed = |list: Vec<Value>| Some(Weighed { date: date.clone(), list, deleted });
+    let weighed = |list: Vec<Value>| Some(Weighed { day, list, deleted });
     let Some(target) = fresh
         .iter()
         .find(|e| e["timestampGMT"].as_i64() == Some(old.timestamp_gmt) && old.sample_pk.is_none_or(|pk| e["samplePk"].as_u64() == Some(pk)))
@@ -697,11 +714,11 @@ pub(crate) async fn delete_weigh_in(store: &Store, client: &Client, old: OldWeig
         return (entry, weighed(fresh));
     };
     entry.fields[0].shown.before = Some(weigh_in_text(&target, unit));
-    let (Some(pk), Some(day)) = (target["samplePk"].as_u64(), target["calendarDate"].as_str()) else {
+    let (Some(pk), Some(filed)) = (target["samplePk"].as_u64(), target["calendarDate"].as_str()) else {
         entry.message = Some("Garmin sent an unexpected response".into());
         return (entry, None);
     };
-    entry.path = format!("/weight-service/weight/{day}/byversion/{pk}");
+    entry.path = path(filed, pk);
     match client.send(&Explicit(()), reqwest::Method::DELETE, &entry.path, None).await {
         Ok(Reply::Accepted) => {}
         Ok(Reply::Rejected { message, .. }) => {
@@ -714,7 +731,7 @@ pub(crate) async fn delete_weigh_in(store: &Store, client: &Client, old: OldWeig
             return (entry, None);
         }
     }
-    let back = match day_weigh_ins(client, &date).await {
+    let back = match weigh_ins_around(client, day).await {
         Ok(Some(list)) => list,
         other => {
             entry.outcome = WriteOutcome::Unconfirmed;
@@ -725,18 +742,21 @@ pub(crate) async fn delete_weigh_in(store: &Store, client: &Client, old: OldWeig
     if let Some(left) = back.iter().find(|e| e["samplePk"].as_u64() == Some(pk)) {
         entry.outcome = WriteOutcome::Differs;
         entry.mismatches.push(ChangedField { field: entry.fields[0].shown.field.clone(), label: "Weigh-in".into(), before: None, after: Some(weigh_in_text(left, unit)) });
-        return (entry, Some(Weighed { date, list: back, deleted: None }));
+        return (entry, Some(Weighed { day, list: back, deleted: None }));
     }
     entry.outcome = WriteOutcome::Applied;
     (entry, weighed(back))
 }
 
-/// Keeps the local copy of a day Garmin just answered for, as sync stores it:
-/// the day's last weigh-in by Garmin's timestamp, or nothing.
+/// Keeps the local copy of the days Garmin just answered for, as sync stores
+/// them: each day's last weigh-in by Garmin's timestamp, or nothing.
 pub(crate) fn keep_day(store: &Store, w: &Weighed, at: &str) -> rusqlite::Result<()> {
-    match w.list.iter().max_by_key(|e| e["timestampGMT"].as_i64().unwrap_or(0)) {
-        Some(row) => store.put("weight", &w.date, at, row)?,
-        None => store.remove("weight", &w.date)?,
+    for day in [w.day - Duration::days(1), w.day, w.day + Duration::days(1)] {
+        let date = day.to_string();
+        match w.list.iter().filter(|e| on_day(e, &date)).max_by_key(|e| e["timestampGMT"].as_i64().unwrap_or(0)) {
+            Some(row) => store.put("weight", &date, at, row)?,
+            None => store.remove("weight", &date)?,
+        }
     }
     let latest_gone = w.deleted.is_some_and(|ts| store.get("weight_latest", "me").is_some_and(|v| v["timestampGMT"].as_i64() == Some(ts)));
     if latest_gone {
