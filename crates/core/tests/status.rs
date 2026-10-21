@@ -43,6 +43,7 @@ fn seed(store: &Store) {
         }})).unwrap();
     }
     store.put("readiness", "2025-03-12", "fetch", &json!({"score": 0, "level": "LOW", "sleepScoreFactorPercent": 21, "sleepScoreFactorFeedback": "POOR"})).unwrap();
+    store.put("hrv", "2025-03-12", "fetch", &json!({"hrvSummary": {"lastNightAvg": 58, "status": "BALANCED"}})).unwrap();
     store
         .put(
             "summary",
@@ -78,15 +79,15 @@ fn schema_uses_verified_zero_watch_upload_and_phase_focus() {
     core.refresh_status_snapshot(now(12)).unwrap();
     let path = path.with_extension("status.json");
     let v: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
-    assert_eq!(v["version"], 1);
+    assert_eq!(v["version"], 2);
     assert_eq!(v["date"], "2025-03-12");
     assert_eq!(v["phase"], "day");
     assert_eq!(v["focusLine"], "Easy");
     assert_eq!(v["focusTarget"], "readiness");
     assert_eq!(v["readiness"], json!({"value": 0.0, "tone": "poor"}));
     assert_eq!(v["sleep"]["value"], 0.0);
-    assert_eq!(v["bodyBattery"], json!({"value": 0.0, "tone": "poor"}));
-    assert_eq!(v["stress"], json!({"value": 0.0, "tone": "neutral"}));
+    assert_eq!(v["hrv"], json!({"value": 58.0, "status": "Balanced", "tone": "good"}));
+    assert!(v.get("bodyBattery").is_none() && v.get("stress").is_none(), "daytime readings lag a sync");
     assert_eq!(
         v["asOf"],
         chrono::DateTime::<Utc>::from_timestamp_millis(1741755600000)
@@ -108,23 +109,8 @@ fn schema_uses_verified_zero_watch_upload_and_phase_focus() {
     let next: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
     assert_eq!(next["date"], "2025-03-12");
     assert_eq!(next["readiness"]["value"], 0.0);
-    assert!(next["bodyBattery"]["value"].is_null());
-    assert!(next["stress"]["value"].is_null());
-    // A daily stress average is not a last measured sample, and yesterday's
-    // battery reading is never carried into a missing day.
-    store.put("stress", "2025-03-12", "fetch", &json!({"startTimestampGMT": "2025-03-12T00:00:00", "stressValuesArray": [[1741770000000_i64, -2]]})).unwrap();
-    store
-        .put(
-            "summary",
-            "2025-03-12",
-            "fetch",
-            &json!({"averageStressLevel": 95}),
-        )
-        .unwrap();
-    core.refresh_status_snapshot(now(12)).unwrap();
-    let v: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
-    assert_eq!(v["stress"], json!({"value": null, "tone": "neutral"}));
-    assert_eq!(v["bodyBattery"], json!({"value": null, "tone": "neutral"}));
+    // HRV belongs to the same night as the readiness Today still shows.
+    assert_eq!(next["hrv"]["value"], 58.0);
     let tomorrow = Local
         .with_ymd_and_hms(2025, 3, 13, 8, 0, 0)
         .single()
@@ -138,8 +124,7 @@ fn schema_uses_verified_zero_watch_upload_and_phase_focus() {
         .unwrap();
     let v: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
     assert_eq!(v["date"], "2025-03-13");
-    assert!(v["bodyBattery"]["value"].is_null());
-    assert!(v["stress"]["value"].is_null());
+    assert_eq!(v["hrv"], json!({"value": null, "status": null, "tone": "neutral"}));
 }
 #[test]
 fn missing_data_migration_atomic_replace_and_forget() {
@@ -160,9 +145,10 @@ fn missing_data_migration_atomic_replace_and_forget() {
     }
     let v: Value = serde_json::from_slice(&first).unwrap();
     assert!(v["asOf"].is_null());
-    for metric in ["readiness", "sleep", "bodyBattery", "stress"] {
+    for metric in ["readiness", "sleep"] {
         assert_eq!(v[metric], json!({"value": null, "tone": "neutral"}));
     }
+    assert_eq!(v["hrv"], json!({"value": null, "status": null, "tone": "neutral"}));
     // Nothing synced: Today's lead waits for the night, and so does the surface.
     assert_eq!(v["focusLine"], "Waiting for last night's sleep");
     assert_eq!(v["focusTarget"], "today");
@@ -205,7 +191,7 @@ fn replacement_is_always_complete_and_signout_wins_concurrent_refresh() {
     for _ in 0..30 {
         let bytes = fs::read(&snapshot).unwrap();
         let value: Value = serde_json::from_slice(&bytes).unwrap();
-        assert_eq!(value["version"], 1);
+        assert_eq!(value["version"], 2);
     }
     core.forget_account().unwrap();
     writer.join().unwrap();

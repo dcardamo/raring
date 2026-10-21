@@ -12,8 +12,8 @@
    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Readiness"
      android:layout_gravity="bottom|center_horizontal" android:includeFontPadding="false" android:textColor="@color/widget_text2" android:textSize="10sp"/>
   </FrameLayout>
-  <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
-   android:minHeight="96dp" android:orientation="vertical">
+  <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent"
+   android:orientation="vertical">
   <LinearLayout android:id="@+id/status_tile_sleep" android:layout_width="match_parent" android:layout_height="0dp"
    android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
    <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Sleep"
@@ -22,20 +22,23 @@
     android:layout_marginStart="8dp" android:fontFamily="sans-serif-medium" android:textColor="@color/widget_ink" android:textSize="18sp"/>
   </LinearLayout>
   <FrameLayout android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/widget_line"/>
-  <LinearLayout android:id="@+id/status_tile_battery" android:layout_width="match_parent" android:layout_height="0dp"
+  <LinearLayout android:id="@+id/status_tile_hrv" android:layout_width="match_parent" android:layout_height="0dp"
    android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
-   <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Body Battery"
+   <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="HRV"
     android:textColor="@color/widget_text2" android:textSize="12sp"/>
-   <TextView android:id="@+id/status_battery" android:layout_width="wrap_content" android:layout_height="wrap_content"
-    android:layout_marginStart="8dp" android:fontFamily="sans-serif-medium" android:textColor="@color/widget_ink" android:textSize="18sp"/>
-  </LinearLayout>
-  <FrameLayout android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/widget_line"/>
-  <LinearLayout android:id="@+id/status_tile_stress" android:layout_width="match_parent" android:layout_height="0dp"
-   android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
-   <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Stress"
-    android:textColor="@color/widget_text2" android:textSize="12sp"/>
-   <TextView android:id="@+id/status_stress" android:layout_width="wrap_content" android:layout_height="wrap_content"
-    android:layout_marginStart="8dp" android:fontFamily="sans-serif-medium" android:textColor="@color/widget_ink" android:textSize="18sp"/>
+   <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp"
+    android:orientation="vertical" android:gravity="end">
+    <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal"
+     android:baselineAligned="true">
+     <TextView android:id="@+id/status_hrv" android:layout_width="wrap_content" android:layout_height="wrap_content"
+      android:fontFamily="sans-serif-medium" android:textColor="@color/widget_ink" android:textSize="18sp"/>
+     <TextView android:id="@+id/status_hrv_unit" android:layout_width="wrap_content" android:layout_height="wrap_content"
+      android:layout_marginStart="3dp" android:text="ms" android:textColor="@color/widget_text3" android:textSize="11sp"
+      android:visibility="gone"/>
+    </LinearLayout>
+    <TextView android:id="@+id/status_hrv_status" android:layout_width="wrap_content" android:layout_height="wrap_content"
+     android:textSize="11sp" android:visibility="gone"/>
+   </LinearLayout>
   </LinearLayout>
   </LinearLayout>
  </LinearLayout>

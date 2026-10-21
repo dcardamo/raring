@@ -4,6 +4,16 @@ Shipped backlog items, newest first, each with its commit and the endpoint
 facts verified while building it. The open backlog is [TODO.md](../TODO.md).
 "Verified" means a read against a real account returned the data.
 
+- **Medium widget shows HRV** (commit "Show last night's HRV on the medium
+  widget"). Body Battery and stress change through the day but reach Raring
+  only with a Connect sync, so the widget showed them late. The medium widget
+  now shows sleep score and last night's HRV (Garmin's average in ms and its
+  status word in the rating colour), both fixed once the night syncs, like
+  readiness. The status snapshot is version 2 (`hrv` replaces `bodyBattery`
+  and `stress`); a version-1 file is ignored until the next refresh rewrites
+  it. The HRV row opens `metric/hrv`; the minimum height grew to 170 dp so
+  the status word fits at 1.5× text.
+
 - **Cleaner widgets** (commit "Redesign the home-screen widgets"). Both use
   the app's card surface, ink and status colours (they kept the old navy and
   an outline), the launcher's corner radius, and the app's gauge with its

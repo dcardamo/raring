@@ -20,6 +20,19 @@ pub struct Reading {
     pub tone: Tone,
 }
 
+/// Last night's HRV: Garmin's average and its status word, fixed once the night syncs.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Hrv {
+    pub value: Option<f64>,
+    pub status: Option<String>,
+    pub tone: Tone,
+}
+
+/// Version 2 replaced Body Battery and stress, which lag a Connect sync
+/// through the day, with last night's HRV.
+pub const VERSION: u8 = 2;
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StatusSnapshot {
@@ -34,8 +47,7 @@ pub struct StatusSnapshot {
     pub focus_target: &'static str,
     pub readiness: Reading,
     pub sleep: Reading,
-    pub body_battery: Reading,
-    pub stress: Reading,
+    pub hrv: Hrv,
 }
 
 pub fn snapshot(store: &Store, now: DateTime<Local>) -> StatusSnapshot {
@@ -81,17 +93,8 @@ pub fn snapshot(store: &Store, now: DateTime<Local>) -> StatusSnapshot {
             (None, None) => ("Waiting for readiness".into(), "today"),
         },
     };
-    // Overnight handover may keep yesterday's readiness on Today, but it must
-    // not present yesterday's daytime readings as today's latest values.
-    let calendar_date = now.date_naive().to_string();
-    let current = (calendar_date != date)
-        .then(|| screens::today_at(store, &calendar_date, now.fixed_offset()));
-    let live = current.as_ref().unwrap_or(&today);
-    let battery = live.body_battery.now.filter(|v| (0. ..=100.).contains(v));
-    // The stress card's average is a different measurement; never substitute it.
-    let stress = live.stress.timeline.iter().rev().flatten().next().copied();
     StatusSnapshot {
-        version: 1,
+        version: VERSION,
         account_id: crate::account::identity(store),
         generated_at: now.with_timezone(&Utc),
         as_of: today.watch_last_upload,
@@ -119,18 +122,11 @@ pub fn snapshot(store: &Store, now: DateTime<Local>) -> StatusSnapshot {
                 tone: g.tone,
             },
         ),
-        body_battery: Reading {
-            value: battery,
-            tone: match battery {
-                Some(v) if v >= 70. => Tone::Good,
-                Some(v) if v >= 30. => Tone::Fair,
-                Some(_) => Tone::Poor,
-                None => Tone::Neutral,
-            },
-        },
-        stress: Reading {
-            value: stress,
-            tone: Tone::Neutral,
+        // The same night as readiness and sleep: Today's displayed day.
+        hrv: Hrv {
+            value: today.hrv.last_night.filter(|v| v.is_finite() && *v > 0.),
+            status: today.hrv.status.clone(),
+            tone: today.hrv.tone,
         },
     }
 }

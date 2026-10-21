@@ -89,7 +89,7 @@ try {
  console.log('Android hardware Back: tab siblings, workouts, settings and metrics passed');
  // Notification and widget targets (VaultPlugin loads them as fragments), including the
  // earlier check-in route, open their current pages in the WebView.
- for(const [target,route] of [['checkin','review/latest'],['sleep','sleep'],['sleep/tonight','sleep/tonight'],['readiness','readiness'],['metric/stress','metric/stress'],['metric/bodyBattery','metric/bodyBattery'],['health','health'],['training','training'],['today','today']]){
+ for(const [target,route] of [['checkin','review/latest'],['sleep','sleep'],['sleep/tonight','sleep/tonight'],['readiness','readiness'],['metric/hrv','metric/hrv'],['metric/stress','metric/stress'],['metric/bodyBattery','metric/bodyBattery'],['health','health'],['training','training'],['today','today']]){
   await page.goto(`http://tauri.localhost/?fixture=demo#${target}`);
   await waitRoute(route);
  }

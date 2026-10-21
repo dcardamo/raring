@@ -823,8 +823,11 @@ Weekly focus), a line each.
 ## Android status surfaces
 
 A small (2×2) home-screen widget shows the readiness gauge and Today's focus;
-a medium (4×2) one shows the readiness gauge beside a list of sleep score,
-Body Battery and the latest measured stress. Both use the app's card surface
+a medium (4×2) one shows the readiness gauge beside sleep score and last
+night's HRV (Garmin's average in ms, with its status word in the rating
+colour). Every reading on a widget is set once a night; Body Battery and
+stress, which change through the day but arrive only with a Connect sync,
+are left to the app. Both use the app's card surface
 and type colours, the launcher's corner radius on Android 12 and later, and
 the app's gauge (a 270° arc open at the bottom, coloured by Garmin's rating,
 with a marker at the reading); there is no brand header. Tapping the gauge
@@ -837,7 +840,7 @@ small widget's focus says so and carries no training call, from the same
 local records as Today, republished offline on each local change. Widgets
 never show limits, injury notes, routines, journal entries or weight.
 Their declared minimum and minimum resize sizes are 150×190 dp (small) and
-280×150 dp (medium); focus and upload time can wrap. Android RemoteViews are
+280×170 dp (medium); focus and upload time can wrap. Android RemoteViews are
 tested at those actual bounds with 1.0, 1.3 and 1.5 font scales, including
 missing readings.
 
@@ -1600,10 +1603,11 @@ next pending wind-down while signed in.
   schedule), no plan, or a plan that doesn't fit the wake time. The phase
   is re-evaluated from local data on open, resume, every view refresh, sync
   and at each phase boundary, offline included.
-- **Status snapshot**: readiness and sleep follow Today's displayed day;
-  Body Battery and the latest measurable stress sample come from the current
-  calendar day, never yesterday during the night handover. The daily stress
-  average is not a latest sample. An absent value remains null. "As of" is only the selected
+- **Status snapshot** (version 2): readiness, sleep score and HRV all
+  follow Today's displayed day, so they describe the same night, including
+  during the overnight handover. HRV is Garmin's last-night average with its
+  status word; an absent value remains null. A version-1 file (Body Battery
+  and stress) is never shown. "As of" is only the selected
   watch's upload time, never the snapshot write or API fetch time; include its
   date so an old reading cannot look like today's. No separate stale-score
   verdict or expiry threshold is added.

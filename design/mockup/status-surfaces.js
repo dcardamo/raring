@@ -1,8 +1,8 @@
 /* Synthetic snapshots for the Android home-screen widgets; the preview shares one renderer. */
 const SURFACE = {
-  day: {asOf: '14:05', readiness: 82, sleep: 84, bb: 54, stress: 31, focus: 'Push'},
-  evening: {asOf: '20:25', readiness: 82, sleep: 84, bb: 37, stress: 28, focus: 'Wind down at 22:00'},
-  missing: {asOf: 'yesterday 23:10', readiness: null, sleep: null, bb: null, stress: null, focus: 'Waiting for watch upload'},
+  day: {asOf: '14:05', readiness: 82, sleep: 84, hrv: 58, hrvStatus: 'Balanced', focus: 'Push'},
+  evening: {asOf: '20:25', readiness: 82, sleep: 84, hrv: 58, hrvStatus: 'Balanced', focus: 'Wind down at 22:00'},
+  missing: {asOf: 'yesterday 23:10', readiness: null, sleep: null, hrv: null, hrvStatus: null, focus: 'Waiting for watch upload'},
 };
 const hasMetric = v => v !== null && v !== undefined;
 const freshness = s => `<span class="sf-time">As of ${s.asOf}</span>`;
@@ -18,9 +18,11 @@ function statusSmall(s) {
     <div class="sf-small-focus">${s.focus}</div></div>${freshness(s)}</div>`;
 }
 function statusMedium(s) {
-  const row = (label, val, route) => `<div class="sf-row tap" data-go="${route}"><span>${label}</span>${reading(val)}</div>`;
+  const row = (label, value, route) => `<div class="sf-row tap" data-go="${route}"><span>${label}</span>${value}</div>`;
+  // HRV is milliseconds with Garmin's status word in its rating colour; no unit or word beside a dash.
+  const hrv = hasMetric(s.hrv) ? `<div class="sf-hrv"><b class="n">${s.hrv}<small>ms</small></b><em>${s.hrvStatus}</em></div>` : reading(null);
   return `<div class="sf-widget sf-medium"><div class="sf-medium-body">${surfaceGauge(s, 80)}
-    <div class="sf-rows">${row('Sleep', s.sleep, 'sleep')}${row('Body Battery', s.bb, 'today')}${row('Stress', s.stress, 'today')}</div></div>
+    <div class="sf-rows">${row('Sleep', reading(s.sleep), 'sleep')}${row('HRV', hrv, 'health')}</div></div>
     ${freshness(s)}</div>`;
 }
 

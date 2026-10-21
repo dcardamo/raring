@@ -600,7 +600,7 @@ impl Raring {
             Err(e) => return Err(e.into()),
         };
         let Ok(snapshot) = serde_json::from_slice::<serde_json::Value>(&bytes) else { return Ok(None) };
-        if snapshot["version"] != 1 || snapshot["accountId"].as_str() != Some(&identity) {
+        if snapshot["version"] != status::VERSION || snapshot["accountId"].as_str() != Some(&identity) {
             return Ok(None);
         }
         Ok(Some(snapshot))

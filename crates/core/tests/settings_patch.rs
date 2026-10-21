@@ -121,7 +121,7 @@ fn journal_data_and_consent_never_enter_native_snapshot_or_notifications() {
     let after = core.surface_snapshot().unwrap().unwrap();
     assert_eq!(before, after, "journal consent and contents must not affect the native snapshot");
     let keys = after.as_object().unwrap().keys().map(String::as_str).collect::<std::collections::BTreeSet<_>>();
-    assert_eq!(keys, ["version","accountId","generatedAt","asOf","date","phase","focusLine","focusTarget","readiness","sleep","bodyBattery","stress"].into_iter().collect());
+    assert_eq!(keys, ["version","accountId","generatedAt","asOf","date","phase","focusLine","focusTarget","readiness","sleep","hrv"].into_iter().collect());
     assert!(!serde_json::to_string(&core.notifications(now)).unwrap().contains("PRIVATE_SYNTHETIC_JOURNAL"));
     drop(store); drop(core); fs::remove_dir_all(dir).unwrap();
 }

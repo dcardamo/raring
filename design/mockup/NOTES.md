@@ -24,7 +24,10 @@ supporting-text colours, no border and no brand header: the gauge is the mark.
 The gauge matches the app's (270° arc open at the bottom, Garmin's rating
 colour, a white marker at the reading) with the number inside and "Readiness"
 in the opening. The small widget adds the focus line below; the medium widget
-lists sleep, Body Battery and stress beside the gauge, one tappable row each.
+lists sleep score and last night's HRV (ms, with Garmin's status word in
+its rating colour) beside the gauge, one tappable row each. Every widget
+reading is set once a night; Body Battery and stress, which arrive only with
+a Connect sync, stay in the app.
 All widgets show **As of**, even when some values are unavailable. A missing
 reading is a muted dash with an empty track, never a blank or zero. Daytime
 focus can update after an activity sync. In the evening it becomes wind-down
@@ -34,7 +37,7 @@ its detail, and the rest of the small widget follows the focus.
 
 The minimum-size renders are `shots/widget-min-{small,medium}-{1.0,1.3,1.5}.png`
 and `widget-min-{small,medium}-missing.png`: actual RemoteViews inflated at the
-declared 150×190 dp / 280×150 dp bounds on emulator-5560, with text-size
+declared 150×190 dp / 280×170 dp bounds on emulator-5560, with text-size
 assertions confirming each font scale. Focus and upload time wrap rather than
 disappear; tests check every nonempty line, child bounds and tap regions, plus
 missing-data cases. These are not launcher captures and do not claim coverage
