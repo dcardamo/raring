@@ -973,7 +973,9 @@ next pending wind-down while signed in.
   (and the resource's id) are sent, so a stale whole object is never
   written. The write uses the same session, pacing, one token refresh on 401,
   and 429 backoff (`backoff_until`) as sync; during a backoff nothing is
-  sent. After Garmin accepts it, the resource is read back and every sent
+  sent. The one resend is after a 401: Garmin saved nothing, so the same
+  request goes once more with a refreshed token. A token refresh that fails
+  first, or a connection that never opens, means nothing was sent. After Garmin accepts it, the resource is read back and every sent
   value compared, with string lists as sets and numbers by value. The
   outcome is one of: saved; saved but read back differently (with what
   differs); sent but unconfirmed (the read-back failed, or the server or
@@ -1002,8 +1004,9 @@ next pending wind-down while signed in.
     another weigh-in at that timestamp is a conflict; the same value (to 0.1
     in the person's unit) at another time on the local day is "already in
     Garmin" and nothing is sent. A
-    create is never resent automatically: after a server or connection
-    failure it is sent but unconfirmed, and trying again with the same time
+    create is never resent automatically (only after a 401, which saved
+    nothing): after a server failure or a connection lost once sent it is
+    sent but unconfirmed, and trying again with the same time
     finds it first. The read-back, the same three days, finds the new
     weigh-in by `MANUAL` and a `timestampGMT` equal to the sent
     `gmtTimestamp` (Garmin keeps it to the

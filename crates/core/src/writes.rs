@@ -362,6 +362,10 @@ pub(crate) async fn write(store: &Store, client: &Client, res: Resource, edits: 
             entry.message = message;
             return entry;
         }
+        Ok(Reply::NotSent(e)) => {
+            (entry.outcome, entry.message) = not_saved(store, e, now);
+            return entry;
+        }
         // Garmin may have saved it before the connection or server failed.
         Err(e @ (garmin::Error::Network | garmin::Error::Http(500..))) => {
             entry.outcome = WriteOutcome::Unconfirmed;
@@ -633,6 +637,10 @@ pub(crate) async fn create_weigh_in(store: &Store, client: &Client, w: NewWeighI
             entry.message = message;
             return (entry, weighed(fresh));
         }
+        Ok(Reply::NotSent(e)) => {
+            (entry.outcome, entry.message) = not_saved(store, e, now);
+            return (entry, weighed(fresh));
+        }
         Err(e) => {
             (entry.outcome, entry.message) = sent_unconfirmed(store, e, now);
             let kept = (entry.outcome != WriteOutcome::Unconfirmed).then_some(fresh).and_then(weighed);
@@ -725,6 +733,10 @@ pub(crate) async fn delete_weigh_in(store: &Store, client: &Client, old: OldWeig
             entry.outcome = WriteOutcome::Rejected;
             entry.message = message;
             return (entry, None);
+        }
+        Ok(Reply::NotSent(e)) => {
+            (entry.outcome, entry.message) = not_saved(store, e, now);
+            return (entry, weighed(fresh));
         }
         Err(e) => {
             (entry.outcome, entry.message) = sent_unconfirmed(store, e, now);
@@ -886,6 +898,15 @@ mod tests {
             assert!(alarms(device, &edits, confirm).is_err(), "{device} {edits:?}");
         }
         assert!(alarms("3001", &[AlarmEdit::Remove { alarm_id: 7 }], true).is_ok());
+    }
+
+    #[tokio::test]
+    async fn a_connection_that_never_opens_sent_nothing() {
+        let closed = std::net::TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap();
+        let tokens = garmin::Tokens { access_token: "a".into(), refresh_token: "r".into(), client_id: "c".into(), expires_at: Utc::now() + Duration::days(1) };
+        let client = Client::with_urls(tokens, &format!("http://{closed}"), &format!("http://{closed}"), std::time::Duration::ZERO).unwrap();
+        let reply = client.send(&Explicit(()), reqwest::Method::POST, ADD_WEIGH_IN, Some(&serde_json::json!({}))).await;
+        assert_eq!(reply, Ok(Reply::NotSent(garmin::Error::Network)));
     }
 
     #[test]

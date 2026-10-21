@@ -82,6 +82,10 @@ impl Mock {
                     body: (!body.is_empty()).then(|| serde_json::from_slice(body).unwrap_or(Value::String(String::from_utf8_lossy(body).into()))),
                 });
                 let (status, extra, body) = replies.next().unwrap_or((500, "", "unscripted".into()));
+                // Status 0 drops the connection after the request arrived, with no answer.
+                if status == 0 {
+                    continue;
+                }
                 let response = format!(
                     "HTTP/1.1 {status} X\r\nContent-Type: application/json\r\n{extra}Content-Length: {}\r\nConnection: close\r\n\r\n{body}",
                     body.len()
@@ -685,4 +689,20 @@ async fn a_delete_is_logged_with_its_delete_path() {
     assert_eq!(core.write_garmin(&client(&mock.url), &delete, noon()).await.unwrap().outcome, WriteOutcome::Conflict);
     let log: Value = serde_json::from_str(&store.setting("garmin:changes").unwrap()).unwrap();
     assert_eq!(log["entries"][0]["path"], "/weight-service/weight/2026-10-21/byversion/9001");
+}
+
+#[tokio::test]
+async fn a_connection_lost_after_the_post_is_unconfirmed_but_a_failed_refresh_sent_nothing() {
+    let (_dir, _store, core) = weigh_fixture("weigh-network", "metric");
+    let mock = Mock::new(vec![(200, "", day(vec![])), (0, "", String::new())]);
+    let change = core.write_garmin(&client(&mock.url), &add(81.3, WeightUnit::Kg), noon()).await.unwrap();
+    assert_eq!((change.outcome, change.message.as_deref()), (WriteOutcome::Unconfirmed, Some("Couldn't reach Garmin; Garmin may or may not have saved it")));
+    assert_eq!(mock.calls(), [format!("GET {DAY}"), format!("POST {ADD}")], "no resend and no read-back");
+    drop(mock);
+
+    // A 401 saved nothing; when the refresh after it can't reach Garmin, nothing was sent.
+    let mock = Mock::new(vec![(200, "", day(vec![])), (401, "", String::new()), (0, "", String::new())]);
+    let change = core.write_garmin(&client(&mock.url), &add(81.3, WeightUnit::Kg), noon()).await.unwrap();
+    assert_eq!((change.outcome, change.message.as_deref()), (WriteOutcome::Failed, Some("Couldn't reach Garmin")));
+    assert_eq!(mock.seen().iter().map(|s| s.method.as_str()).collect::<Vec<_>>(), ["GET", "POST", "POST"]);
 }
