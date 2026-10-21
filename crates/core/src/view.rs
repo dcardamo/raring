@@ -246,6 +246,21 @@ pub struct StressDay {
     pub average: Option<f64>,
     /// Recorded workouts that started on the day.
     pub workouts: u32,
+    /// The night before: the sleep that ended that morning.
+    #[serde(default)]
+    pub night: Option<NightStress>,
+}
+
+/// Garmin's rating of a night's stress, from its sleep score.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct NightStress {
+    /// Garmin's word: Excellent, Good, Fair or Poor.
+    pub rating: Option<String>,
+    pub tone: Tone,
+    /// Garmin's average stress while asleep, 0–100.
+    pub average: Option<f64>,
 }
 
 /// A calendar month of Garmin's stress words, from local data.

@@ -106,9 +106,15 @@ export function sampleStressMonth(month: string): StressMonth {
   if (first < firstDay) throw Error('Choose a month from January 1990 on');
   const days: StressDay[] = [];
   for (let date = first; date.slice(0, 7) === first.slice(0, 7); date = nextDay(date)) {
-    const day: StressDay = {date, kind: 'future', word: null, tone: 'neutral', average: null, workouts: 0};
+    const day: StressDay = {date, kind: 'future', word: null, tone: 'neutral', average: null, workouts: 0, night: null};
     days.push(day);
     if (date > SAMPLE_TODAY) continue;
+    // Garmin rates most nights Fair against its 0–15 range; a few are Poor, Good or Excellent.
+    const n = hash('night' + date);
+    if (n > .06) {
+      const [rating, tone, average]: [string, Tone, number] = n < .16 ? ['Poor', 'poor', 34] : n < .62 ? ['Fair', 'fair', 21] : n < .9 ? ['Good', 'good', 14] : ['Excellent', 'good', 10];
+      day.night = {rating, tone, average};
+    }
     day.workouts = SAMPLE_WORKOUTS[date] ?? (date < '2025-10-01' && hash('workout' + date) < .3 ? 1 : 0);
     day.average = value('stress', date);
     if (day.average == null) day.kind = 'none';

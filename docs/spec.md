@@ -1480,9 +1480,12 @@ next pending wind-down while signed in.
   row's. A day Garmin rated only in part (Unknown, or an awake-only word) is
   outlined and never coloured; a day with readings but no word, or none, is
   plain; later days can't be chosen. An awake-only word is neutral wherever
-  it shows, the stress pill included. A dot marks a recorded workout on its
-  local start date. The shown day is ringed and named under the month with
-  its word, average and workouts. Tapping a day opens its dated stress
+  it shows, the stress pill included. A bar across the top of a day is
+  Garmin's rating of the night before (the sleep that ended that morning)
+  from its sleep score: Excellent and Good good, Fair fair, Poor poor, grey
+  without a rating; no recorded night, no bar. A dot marks a recorded workout
+  on its local start date. The shown day is ringed and named under the month
+  with its word, average, night and workouts. Tapping a day opens its dated stress
   detail: from the live page one day opens over it, and a day chosen from a
   dated day replaces it, so Back returns to the page that opened stress.
 - **Heart-rate chart**: the compact card averages only present samples in

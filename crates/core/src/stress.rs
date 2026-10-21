@@ -3,7 +3,7 @@
 //! (docs/spec.md, Rules: Trends and Stress calendar).
 use crate::{
     store::Store,
-    view::{StressDay, StressDayKind, StressMonth, Tone, TrendMetric},
+    view::{NightStress, StressDay, StressDayKind, StressMonth, Tone, TrendMetric},
 };
 use chrono::{Datelike, Duration, Months, NaiveDate};
 use std::collections::{BTreeMap, BTreeSet};
@@ -127,6 +127,7 @@ pub fn month(store: &Store, month: &str, today: &str) -> Result<StressMonth, Str
     let (from, to) = (first.to_string(), last.to_string());
     let coverage = coverage_between(store, &from, &to);
     let averages = crate::trends::readings(store, TrendMetric::Stress, first, last);
+    let nights = nights(store, &from, &to);
     let mut workouts: BTreeMap<String, u32> = BTreeMap::new();
     for (id, start) in store.activities_between(&from, &to) {
         if let (Some(day), Some(_)) = (start.get(..10), crate::screens::activity_brief(store, &id)) {
@@ -149,6 +150,7 @@ pub fn month(store: &Store, month: &str, today: &str) -> Result<StressMonth, Str
             let date = day.to_string();
             StressDay {
                 workouts: workouts.get(&date).copied().unwrap_or(0),
+                night: nights.get(&date).cloned(),
                 date,
                 kind,
                 word: word.map(|w| w.label().into()),
@@ -165,6 +167,44 @@ pub fn month(store: &Store, month: &str, today: &str) -> Result<StressMonth, Str
             .first_key(&["stress", "summary", "daily_summary"])
             .and_then(|key| key.get(..7).map(|m| format!("{m}-01"))),
     })
+}
+
+/// Garmin's rating of each night's stress from its sleep score, keyed by the
+/// morning the night ended; the night's own record wins over history.
+fn nights(store: &Store, from: &str, to: &str) -> BTreeMap<String, NightStress> {
+    let mut nights: BTreeMap<String, NightStress> = BTreeMap::new();
+    for (endpoint, prefix) in [("sleep_summary", "$"), ("sleep", "$.dailySleepDTO")] {
+        let ratings: BTreeMap<String, String> = store
+            .day_strings(endpoint, &format!("{prefix}.sleepScores.stress.qualifierKey"), from, to)
+            .into_iter()
+            .collect();
+        let averages: BTreeMap<String, f64> = store
+            .day_numbers(endpoint, &[&format!("{prefix}.avgSleepStress")], from, to)
+            .into_iter()
+            .filter(|(_, v)| (0. ..=100.).contains(v))
+            .collect();
+        for key in ratings.keys().chain(averages.keys()) {
+            let Some(date) = key.get(..10) else { continue };
+            let rating = ratings.get(key).map(|r| r.trim().to_ascii_uppercase()).filter(|r| !r.is_empty());
+            nights.insert(
+                date.to_owned(),
+                NightStress {
+                    tone: match rating.as_deref() {
+                        Some("EXCELLENT" | "GOOD") => Tone::Good,
+                        Some("FAIR") => Tone::Fair,
+                        Some("POOR") => Tone::Poor,
+                        _ => Tone::Neutral,
+                    },
+                    rating: rating.map(|r| {
+                        let mut chars = r.chars();
+                        chars.next().map(String::from).unwrap_or_default() + &chars.as_str().to_ascii_lowercase()
+                    }),
+                    average: averages.get(key).copied(),
+                },
+            );
+        }
+    }
+    nights
 }
 
 #[cfg(test)]

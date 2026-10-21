@@ -86,3 +86,26 @@ fn the_stress_detail_marks_workouts_and_leaves_awake_only_words_uncoloured() {
     put(&store, "summary", "2026-03-02", json!({"averageStressLevel": 46, "stressQualifier": "VERY_STRESSFUL"}));
     assert_eq!(screens::stress(&store, "2026-03-02").tone, Tone::Poor);
 }
+
+#[test]
+fn each_day_carries_garmins_rating_of_the_night_before() {
+    let store = Store::open(":memory:").unwrap();
+    // The night that ended on the morning of the 2nd, from its own record.
+    put(&store, "sleep", "2026-03-02", json!({"dailySleepDTO": {"avgSleepStress": 39.0,
+        "sleepScores": {"stress": {"qualifierKey": "POOR", "optimalStart": 0.0, "optimalEnd": 15.0}}}}));
+    put(&store, "sleep", "2026-03-03", json!({"dailySleepDTO": {"avgSleepStress": 12.0, "sleepScores": {"stress": {"qualifierKey": "EXCELLENT"}}}}));
+    // History rows keep the same fields at the top level; the night's own record wins.
+    put(&store, "sleep_summary", "2026-03-04", json!({"avgSleepStress": 22.0, "sleepScores": {"stress": {"qualifierKey": "FAIR"}}}));
+    put(&store, "sleep_summary", "2026-03-02", json!({"avgSleepStress": 20.0, "sleepScores": {"stress": {"qualifierKey": "FAIR"}}}));
+    // A night without a rating keeps its average; Garmin's negative placeholder is no average.
+    put(&store, "sleep", "2026-03-05", json!({"dailySleepDTO": {"avgSleepStress": 18.0}}));
+    put(&store, "sleep", "2026-03-06", json!({"dailySleepDTO": {"avgSleepStress": -1.0}}));
+    let month = stress::month(&store, "2026-03", TODAY).unwrap();
+    let night = |date: &str| day(&month, date).night.map(|n| (n.rating, n.tone, n.average));
+    assert_eq!(night("2026-03-02"), Some((Some("Poor".into()), Tone::Poor, Some(39.))));
+    assert_eq!(night("2026-03-03"), Some((Some("Excellent".into()), Tone::Good, Some(12.))));
+    assert_eq!(night("2026-03-04"), Some((Some("Fair".into()), Tone::Fair, Some(22.))));
+    assert_eq!(night("2026-03-05"), Some((None, Tone::Neutral, Some(18.))));
+    assert_eq!(night("2026-03-06"), None);
+    assert_eq!(night("2026-03-07"), None);
+}

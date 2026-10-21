@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {bucketFor, localPoints, monday, period, pointLabel, spans, trendValue, changeValue} from './trends';
-import {sampleTrend} from './sample/trend';
+import {sampleTrend, sampleStressMonth} from './sample/trend';
 
 describe('trend periods', () => {
   it('matches the core: days to 90, weeks to two years, months beyond', () => {
@@ -56,6 +56,17 @@ describe('trend periods', () => {
     expect(week.series.days).toBe(week.series.points.filter(p => p.value != null).length);
     const year = sampleTrend({metric: 'stress', range: 'year', end: null, overlay: null, previous: false, start: null, comparisonStart: null});
     expect(year.series.points.every(p => p.partial == null)).toBe(true);
+  });
+  it('builds the preview stress calendar from the same days as the trend', () => {
+    const october = sampleStressMonth('2025-10');
+    expect([october.month, october.today, october.days.length]).toEqual(['2025-10-01', '2025-10-16', 31]);
+    expect(october.days.filter(d => d.kind === 'future').map(d => d.date)).toHaveLength(15);
+    const today = october.days[15];
+    expect([today.kind, today.word, today.average, today.workouts]).toEqual(['rated', 'Balanced', 31, 1]);
+    expect(['lowWear', 'awakeOnly']).toContain(october.days[11].kind);
+    expect(october.days.some(d => d.night?.rating === 'Poor')).toBe(true);
+    expect(october.days.filter(d => d.kind === 'future').every(d => d.night == null && d.average == null)).toBe(true);
+    expect(() => sampleStressMonth('2025-11')).toThrow('no later than');
   });
   it('offers no period before All in the preview data', () => {
     expect(sampleTrend({metric: 'stress', range: 'all', end: null, overlay: null, previous: true, start:null, comparisonStart:null}).previous).toBeNull();

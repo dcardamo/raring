@@ -232,7 +232,9 @@ try {
  const october=page.getByRole('group',{name:'Stress by day, October 2025'});
  await october.waitFor();
  assert.equal(await october.getByRole('button').count(),31);
- assert.equal(await october.getByRole('button',{name:/^Thu 16 Oct: Balanced · average 31 · 1 workout$/}).getAttribute('aria-current'),'date');
+ assert.equal(await october.getByRole('button',{name:/^Thu 16 Oct: Balanced · average 31 · (night before \w+, average \d+ asleep · )?1 workout$/}).getAttribute('aria-current'),'date');
+ assert.ok(await october.getByRole('button',{name:/night before Poor, average \d+ asleep/}).count()>0,'Garmin\'s rating of the night before');
+ assert.equal(await october.locator('.night.on').count(),await october.getByRole('button',{name:/night before/}).count(),'every rated night has its bar');
  assert.match(await october.getByRole('button',{name:/^Sun 12 Oct:/}).getAttribute('aria-label'),/partly worn|awake only/);
  assert.match(await october.getByRole('button',{name:/^Wed 15 Oct:/}).getAttribute('aria-label'),/· 2 workouts$/);
  assert.ok(await october.getByRole('button',{name:/^Fri 17 Oct:/}).isDisabled(),'days to come are disabled');

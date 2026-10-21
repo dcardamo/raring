@@ -103,6 +103,10 @@ From the stress calendar and partly worn stress days, in priority order.
   hollow days on Health's stress card read as "the watch was off", and
   whether the 30D and 90D averages without them match how the weeks felt.
   Check the month at the largest Android font and with TalkBack.
+- Garmin rates most nights Fair against its 0–15 range, so on the
+  maintainer's account the night bars are mostly amber, with Poor nights
+  standing out. If the amber reads as noise on the phone, draw only Poor
+  nights rather than adding a day/night toggle.
 - The workout strip above the stress detail's plot is small. If it doesn't
   tie a rise after a hard session to the workout at a glance, try a light
   band like Asleep's.
@@ -575,6 +579,19 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **The night before on the stress calendar** (commit "Mark the night before
+  on the stress calendar"). Each calendar day carries Garmin's rating of the
+  night that ended that morning, from its sleep score (`sleepScores.stress.
+  qualifierKey` and `avgSleepStress`; history `sleep_summary` rows carry both
+  at the top level), as a bar on top in Garmin's colours and in the day's
+  label. Combined in one cell rather than a separate calendar or a toggle:
+  Garmin's day already counts the night's hours after midnight, and reading
+  both together sets a stressful day with a poor night apart from one with a
+  calm night. On
+  the maintainer's account the poor nights clustered in the two stressful
+  stretches, and most days the watch was barely worn still had a rated
+  night.
 
 - **Stress by day** (commit "Show stress by day on a month calendar"), from
   the maintainer asking whether daily stress would help on a calendar, with

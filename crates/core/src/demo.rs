@@ -113,6 +113,17 @@ fn seed_day(store: &Store, fixture: &Value, day: NaiveDate, days_ago: i64) -> ru
     } else {
         67 + (days_ago * 11) % 24
     });
+    // Garmin rates overnight stress against 0–15; restless nights during the stressful run.
+    let night_stress = match days_ago {
+        10 | 11 => 36,
+        d => 11 + (d * 7) % 13,
+    };
+    sleep["dailySleepDTO"]["avgSleepStress"] = json!(night_stress);
+    sleep["dailySleepDTO"]["sleepScores"]["stress"] = json!({
+        "qualifierKey": match night_stress { 0..=12 => "EXCELLENT", 13..=15 => "GOOD", 16..=26 => "FAIR", _ => "POOR" },
+        "optimalStart": 0.0,
+        "optimalEnd": 15.0,
+    });
     for (key, current, usual, spread) in [
         ("deepSleepSeconds", 5760, 5040, 700),
         ("lightSleepSeconds", 15120, 15360, 900),
