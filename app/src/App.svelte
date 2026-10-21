@@ -80,9 +80,12 @@
  type ProgressView=import('./lib/generated/ProgressView').ProgressView;
  type ProgressPage={progress:ProgressView};
  let progressQuery:{period:import('./lib/generated/Period').Period,date?:string}={period:'month'};
+ // Progress's Cardio, Strength and Long-term windows, kept like its period for the session.
+ type DomainQuery=import('./lib/generated/DomainQuery').DomainQuery;
+ const FIRST_DOMAINS:DomainQuery={weeks:12,weeksEnd:null,months:12,monthsEnd:null};
  let progressRevision=0;
  type PageData=TodayView|SleepView|TrainingView|WorkoutView|HealthView|CheckinView|PlanBoard|StrengthPage|ProgressPage|WeightView|ProfileView;
- let sheet=$state(false),search=$state(false),addDraft=$state<Draft|null>(null),itemSheet=$state<PlanItem|null>(null),eventSheet=$state(false),reviewData=$state<WeekReview|null>(null),reviewRows=$state<ReviewRow[]|null>(null),milestoneRows=$state<Milestone[]|null>(null),garminChanges=$state<GarminChange[]|null>(null),garminChangesFailed=$state(false),lastPhase=$state<string|null>(null),adaptOpen=$state(false),invalidLink=$state<string|null>(null),trainingSection=$state<'fitness'|'strength'|'activities'>('fitness'),liftPicked=$state<string|null>(null),liftMetric=$state<'max'|'volume'>('max'),liftRange=$state<TrendRange>('days90'),muscleRange=$state<TrendRange>('days30'),activityDay=$state<string|null>(null),progressSection=$state<'overall'|'cardio'|'strength'|'long'>('overall'),adaptLimits=$state(false),chooseOpen=$state(false),garminSheet=$state<GarminSession|null>(null),adaptState=$state<AdaptState|null>(null),weekBoard=$state<PlanBoard|null>(null),statusOffer=$state(false),savingStatus=$state(false);
+ let sheet=$state(false),search=$state(false),addDraft=$state<Draft|null>(null),itemSheet=$state<PlanItem|null>(null),eventSheet=$state(false),reviewData=$state<WeekReview|null>(null),reviewRows=$state<ReviewRow[]|null>(null),milestoneRows=$state<Milestone[]|null>(null),garminChanges=$state<GarminChange[]|null>(null),garminChangesFailed=$state(false),lastPhase=$state<string|null>(null),adaptOpen=$state(false),invalidLink=$state<string|null>(null),trainingSection=$state<'fitness'|'strength'|'activities'>('fitness'),liftPicked=$state<string|null>(null),liftMetric=$state<'max'|'volume'>('max'),liftRange=$state<TrendRange>('days90'),muscleRange=$state<TrendRange>('days30'),activityDay=$state<string|null>(null),progressSection=$state<'overall'|'cardio'|'strength'|'long'>('overall'),progressDomains=$state<DomainQuery>({...FIRST_DOMAINS}),adaptLimits=$state(false),chooseOpen=$state(false),garminSheet=$state<GarminSession|null>(null),adaptState=$state<AdaptState|null>(null),weekBoard=$state<PlanBoard|null>(null),statusOffer=$state(false),savingStatus=$state(false);
  let checkingStatusOffer=false,settingsRevision=0;
  let settingsBusy=$state<Partial<Record<keyof api.Settings,boolean>>>({});
  function canApplySettingsRead(revision:number){return revision===settingsRevision && !Object.values(settingsBusy).some(Boolean) && !savingStatus}
@@ -263,7 +266,7 @@
   const next:ProgressPage={progress};
   views.set('progress',next);data=next;pendingSwap=null;loading=false;
  }
- function clearSessionViews(){progressQuery={period:'month'};progressRevision++;weightRange='days30';clearViews()}
+ function clearSessionViews(){progressQuery={period:'month'};progressRevision++;progressDomains={...FIRST_DOMAINS};weightRange='days30';clearViews()}
  function navigate(to:string){navigation.navigate(to)}
  function back(){return closeSheet() || navigation.back()}
  function openedDetail(current:string){return datedDetail(current) ?? (/^workout\/\d+$/.test(current)?{page:'workout',date:current.slice(8)}:null)}
@@ -613,7 +616,7 @@
 {:else if boardData && route==='plan/commitments'}
  <Header title="Weekly goals" eyebrow="Plan" back={back} backLabel={parentLabel}/><GoalEditor initial={boardData.goals?.targets??null} garminGoal={boardData.garminIntensityGoal} busy={changing} save={targets=>act({action:'setGoals',targets},back)}/>
 {:else if progressData}
- {#snippet progressHeader()}<Header title="Progress" eyebrow="Trends and reviews" {...rootControls}/>{/snippet}<ProgressTab initial={progressData.progress} {navigate} header={progressHeader} onChange={saveProgress} bind:section={progressSection}/>
+ {#snippet progressHeader()}<Header title="Progress" eyebrow="Trends and reviews" {...rootControls}/>{/snippet}<ProgressTab initial={progressData.progress} {navigate} header={progressHeader} onChange={saveProgress} bind:section={progressSection} bind:domainQuery={progressDomains}/>
 {:else if profilePage && route==='profile'}
  {#snippet profileHeader()}<Header title="Profile" eyebrow="RARING" back={back} backLabel={parentLabel}/>{/snippet}<ProfileScreen {status} profile={profilePage} {navigate} limits={()=>{adaptLimits=true;adaptOpen=true}} header={profileHeader}/>
 {:else if profileData && route==='gear'}

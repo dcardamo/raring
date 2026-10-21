@@ -3368,6 +3368,29 @@ pub struct DomainMonth {
     pub fitness_age: Option<f64>,
 }
 
+/// The plan weeks (Cardio, Strength) and calendar months (Long-term) that
+/// Progress's domain sections show.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct DomainQuery {
+    /// How many plan weeks, ending with the week holding `weeks_end`.
+    pub weeks: u32,
+    /// A day in the last week shown; this week when absent.
+    pub weeks_end: Option<String>,
+    /// How many calendar months, ending with the month holding `months_end`.
+    pub months: u32,
+    /// A day in the last month shown; this month when absent.
+    pub months_end: Option<String>,
+}
+
+impl Default for DomainQuery {
+    /// What Progress first shows: twelve weeks and twelve months ending now.
+    fn default() -> Self {
+        Self { weeks: 12, weeks_end: None, months: 12, months_end: None }
+    }
+}
+
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -3375,9 +3398,15 @@ pub struct ProgressDomains {
     pub today: String,
     /// Targets in effect today.
     pub goals: Option<GoalTargets>,
-    /// Twelve plan weeks ending this week, oldest first, from history.
+    /// The chosen plan weeks' first and last day.
+    pub weeks_from: String,
+    pub weeks_to: String,
+    /// The chosen plan weeks, oldest first, from downloaded history.
     pub weeks: Vec<DomainWeek>,
-    /// Twelve calendar months ending this month, oldest first.
+    /// The chosen months' first and last day.
+    pub months_from: String,
+    pub months_to: String,
+    /// The chosen calendar months, oldest first.
     pub months: Vec<DomainMonth>,
 }
 

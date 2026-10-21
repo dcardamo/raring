@@ -322,7 +322,7 @@ fn domains_report_weeks_and_months_without_inventing_zeroes() {
     act(&f.store, 3, "2025-11-11", "running", 30., Some(5000.));
     f.store.put("zones", "3", "now", &json!([{"zoneNumber": 2, "secsInZone": 1200}, {"zoneNumber": 4, "secsInZone": 300}])).unwrap();
     f.store.put("max_metrics", "2025-11-12", "now", &json!([{"generic": {"vo2MaxValue": 48}}])).unwrap();
-    let d = f.core.progress_domains(at(11, 18));
+    let d = f.core.progress_domains(&DomainQuery::default(), at(11, 18)).unwrap();
     let starts: Vec<&str> = d.weeks.iter().map(|w| w.start.as_str()).collect();
     assert_eq!(starts.first(), Some(&"2025-09-01"), "weeks start with covered history");
     assert_eq!(starts.last(), Some(&"2025-11-17"));
@@ -339,6 +339,29 @@ fn domains_report_weeks_and_months_without_inventing_zeroes() {
 }
 
 #[test]
+fn domains_show_the_chosen_weeks_and_months() {
+    let f = fx("domain-ranges");
+    f.store.put("max_metrics", "2025-06-12", "now", &json!([{"generic": {"vo2MaxValue": 46}}])).unwrap();
+    // Six months of weeks ending with an earlier week, two years of months ending in June.
+    let q = DomainQuery { weeks: 26, weeks_end: Some("2025-11-05".into()), months: 24, months_end: Some("2025-06-20".into()) };
+    let d = f.core.progress_domains(&q, at(11, 18)).unwrap();
+    assert_eq!((d.weeks_from.as_str(), d.weeks_to.as_str()), ("2025-05-12", "2025-11-09"));
+    assert_eq!(d.weeks.last().map(|w| (w.start.as_str(), w.current)), Some(("2025-11-03", false)));
+    assert_eq!(d.weeks.first().map(|w| w.start.as_str()), Some("2025-09-01"), "weeks before downloaded history are left out");
+    assert_eq!((d.months_from.as_str(), d.months_to.as_str()), ("2023-07-01", "2025-06-30"));
+    assert_eq!(d.months.len(), 24);
+    assert_eq!(d.months.last().map(|m| (m.start.as_str(), m.vo2max)), Some(("2025-06-01", Some(46.))));
+    assert!(d.months.iter().all(|m| m.minutes.is_none()), "no minutes before activity history");
+    // The default is twelve of each, ending now.
+    let now = f.core.progress_domains(&DomainQuery::default(), at(11, 18)).unwrap();
+    assert_eq!((now.weeks_to.as_str(), now.months.len(), now.months_to.as_str()), ("2025-11-23", 12, "2025-11-30"));
+    for end in ["2025-11-19", "1989-12-31", "2025-13-01"] {
+        let q = DomainQuery { weeks_end: Some(end.into()), ..Default::default() };
+        assert!(f.core.progress_domains(&q, at(11, 18)).is_err(), "{end}");
+    }
+}
+
+#[test]
 fn each_domain_week_carries_its_own_targets() {
     let f = fx("domain-goals");
     let targets = |strength| GoalTargets { strength_sessions: strength, intensity_garmin_goal: true, ..Default::default() };
@@ -347,7 +370,7 @@ fn each_domain_week_carries_its_own_targets() {
     for d in 10..=18 {
         f.store.put("summary", &format!("2025-11-{d}"), "now", &json!({"moderateIntensityMinutes": 10, "vigorousIntensityMinutes": 5, "intensityMinutesGoal": 150})).unwrap();
     }
-    let d = f.core.progress_domains(at(11, 18));
+    let d = f.core.progress_domains(&DomainQuery::default(), at(11, 18)).unwrap();
     let goals = |start: &str| d.weeks.iter().find(|w| w.start == start).map(|w| (w.strength_goal, w.intensity_goal)).unwrap();
     assert_eq!(goals("2025-10-27"), (None, None), "no goal before goals began");
     assert_eq!(goals("2025-11-03").0, Some(1.));

@@ -650,7 +650,7 @@ Four sections, the choice kept across a detail and Back:
   milestones (dated with the year when it isn't this one) with a link to all
   of them (`#progress/milestones`, by month).
 - **Cardio**: Zone 2, Zone 4–5 (while it has a goal) and intensity minutes per
-  week for 12 weeks, each week against its own target as a stepped dashed line
+  week, each week against its own target as a stepped dashed line
   (intensity following Garmin's goal says "Garmin goal"), and Garmin's VO2max
   estimates on the same weeks (Rules: Progress domains). The current week's
   bar is outlined (its tick stays a date; spoken labels say this week).
@@ -660,6 +660,12 @@ Four sections, the choice kept across a detail and Back:
 - **Long-term**: training hours, resting heart rate, overnight HRV, VO2max and
   Fitness Age by month, each opening its detail; the current month's bar is
   outlined and spoken labels say "so far".
+- **Their dates**: chosen like Overall's period. Cardio and Strength share
+  plan weeks (12 weeks, 6 months or a year), Long-term has months (a year, 2
+  or 5 years), each with previous and next that move a whole window, the next
+  stopping at the current week or month; the window's dates head the charts.
+  Dates without downloaded weeks say so, and a chart without readings keeps
+  its baseline and says so instead of drawing a scale.
 
 Follow-through and measured change stay apart; nothing is a grade. Domain
 charts key the outlined current period, dashed weekly goal and hatched/dotted
@@ -1111,7 +1117,9 @@ next pending wind-down while signed in.
   Progress shows the latest 12 and links to it.
 - **Progress domains**: from local data only. Week and month periods carry
   ring cells for the whole plan weeks covering them (the Rings rule). Cardio
-  and Strength show the 12 plan weeks ending this week from covered history:
+  and Strength show the chosen number of plan weeks (12, 26 or 52) ending
+  with the week holding the chosen date (this week until one is chosen),
+  from covered history:
   recorded Zone 2 and Zone 4–5 minutes (unknown when any activity lacks zones
   or the activity list is incomplete), Garmin's weekly intensity minutes
   (Plan progress), strength activities, and Garmin's latest VO₂ max estimate
@@ -1119,7 +1127,9 @@ next pending wind-down while signed in.
   incomplete list, carries that mark. Each week carries its own targets (Goal
   ledger: in effect at its end, Garmin's weekly goal for intensity following
   it), none before goals began or while a goal was off. Long-term
-  shows 12 calendar months: recorded minutes (none before history or with an
+  shows the chosen number of calendar months (12, 24 or 60) ending with the
+  month holding its chosen date (this month until one is chosen); a chosen
+  date lies between 1990 and today: recorded minutes (none before history or with an
   uncovered day), the month's average of Garmin's daily resting heart rate
   and overnight HRV, and the latest VO₂ max and Fitness Age estimates dated in
   it. Nothing is interpolated.
@@ -1843,8 +1853,10 @@ next pending wind-down while signed in.
   read when opened, and its one explicit detail fetch follows that open.
   A local change (goals, sessions, Adapt, routines) clears the cache and
   rereads the visible page and the header's Adapt state. Training's and
-  Progress's chosen sections are kept for the session; Progress's domain
-  views and the milestone archive are read when first shown. A completed
+  Progress's chosen sections, and the dates of Progress's domain sections,
+  are kept for the session (sign-out resets them); Progress's domain views
+  are read when first shown and when their dates change, and the milestone
+  archive when first shown. A completed
   sync or a changed sync timestamp invalidates in-flight reads and prefetches
   the tabs again, but keeps cached views: until a page is read again it opens
   with what it had, so a sync never empties one. A local day rollover

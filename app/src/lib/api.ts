@@ -19,6 +19,7 @@ import sampleReviews from './sample/reviews.json';
 import sampleProfile from './sample/profile.json';
 import sampleDomains from './sample/progressDomains.json';
 import type { ProgressDomains } from './generated/ProgressDomains';
+import type { DomainQuery } from './generated/DomainQuery';
 import type { Milestone } from './generated/Milestone';
 import type { ProfileView } from './generated/ProfileView';
 import type { LiftSeries } from './generated/LiftSeries';
@@ -96,7 +97,7 @@ export const lift_series = (key:string,range:TrendRange):Promise<LiftSeries|null
  return Promise.resolve({key,name:e.name,unit:(sampleStrength as unknown as StrengthView).unit,range,from:from||(points[0]?.date??sampleToday.date),to:sampleToday.date,points});
 };
 export const milestone_archive = ():Promise<Milestone[]> => call('milestone_archive',undefined,(sampleProgress as unknown as {milestones:Milestone[]}).milestones);
-export const progress_domains = ():Promise<ProgressDomains> => call('progress_domains',undefined,sampleDomains as unknown as ProgressDomains);
+export const progress_domains = (query:DomainQuery):Promise<ProgressDomains> => call('progress_domains',{query},sampleDomains as unknown as ProgressDomains);
 export const profile = ():Promise<ProfileView> => call('profile',undefined,sampleProfile as unknown as ProfileView);
 export const training = (date?:string):Promise<TrainingView> => call('training',{date},sampleTraining as unknown as TrainingView);
 export const workout = (id:string):Promise<WorkoutView> => {

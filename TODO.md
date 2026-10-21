@@ -564,6 +564,18 @@ faces, screens, sensors and audio prompts stay in Connect.
 
 ## Done
 
+- **Dates for Progress's Cardio, Strength and Long-term** (commit "Choose
+  the weeks and months on Progress's Cardio, Strength and Long-term"), from
+  the maintainer: only Overall had a period picker. Cardio and Strength now
+  choose 12 weeks, 6 months or a year of plan weeks and Long-term a year, 2
+  or 5 years of months, each with previous and next like Overall and kept
+  across a detail and Back. An empty window says so and a chart without
+  readings keeps its baseline instead of a 0–1 scale (Overall's activity
+  chart drew one when the list was incomplete). On a copy of the
+  full-history database (desktop release build) the default read took 21
+  ms, a year of weeks 20 ms and five years of months 146 ms; phone timings
+  are unverified.
+
 - **A past Health day's own Fitness Age, weight and week** (commit "Show a
   past Health day's own Fitness Age, weight and week"), from the maintainer
   opening a day from Progress's calendar: Fitness Age was blank and "What

@@ -553,8 +553,8 @@ async fn lift_series(app: tauri::AppHandle, key: String, range: TrendRange) -> R
     read_view(app, move |core| Ok(core.lift_series(&key, range, Local::now()))).await
 }
 #[tauri::command]
-async fn progress_domains(app: tauri::AppHandle) -> Result<raring_core::view::ProgressDomains, String> {
-    read_view(app, move |core| Ok(core.progress_domains(Local::now()))).await
+async fn progress_domains(app: tauri::AppHandle, query: DomainQuery) -> Result<raring_core::view::ProgressDomains, String> {
+    read_view(app, move |core| core.progress_domains(&query, Local::now()).map_err(|e| e.to_string())).await
 }
 #[tauri::command]
 async fn milestone_archive(app: tauri::AppHandle) -> Result<Vec<raring_core::view::Milestone>, String> {

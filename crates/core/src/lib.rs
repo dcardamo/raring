@@ -363,9 +363,10 @@ impl Raring {
     pub fn milestone_archive(&self, now: DateTime<Local>) -> Result<Vec<view::Milestone>> {
         progress::milestone_archive(&self.store, now.date_naive(), now.with_timezone(&chrono::Utc))
     }
-    /// Progress's Cardio, Strength and Long-term views, from local data only.
-    pub fn progress_domains(&self, now: DateTime<Local>) -> view::ProgressDomains {
-        progress::domains(&self.store, now.date_naive(), now.with_timezone(&chrono::Utc))
+    /// Progress's Cardio, Strength and Long-term views for the chosen weeks and
+    /// months, from local data only.
+    pub fn progress_domains(&self, query: &view::DomainQuery, now: DateTime<Local>) -> Result<view::ProgressDomains> {
+        progress::domains(&self.store, now.date_naive(), now.with_timezone(&chrono::Utc), query)
     }
     pub fn progress(&self, period: view::Period, date: &str, now: DateTime<Local>) -> Result<view::ProgressView> {
         let anchor = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d").map_err(|_| Error::InvalidLocal("date"))?;

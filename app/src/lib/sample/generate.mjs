@@ -231,7 +231,7 @@ training.lanes={start:'2025-10-13',today:'2025-10-16',lanes:[
  const weekStart=n=>{const d=new Date(Date.UTC(2025,6,28+7*n));return d.toISOString().slice(0,10)};
  const zones=[90,120,140,0,155,130,160,150,40,135,165,100],ims=[140,160,150,null,175,150,180,165,60,155,170,124],str=[3,4,3,2,4,4,3,4,1,4,4,3];
  const months=['2024-11','2024-12','2025-01','2025-02','2025-03','2025-04','2025-05','2025-06','2025-07','2025-08','2025-09','2025-10'];
- var progressDomains={today:'2025-10-16',goals:goalTargets,
+ var progressDomains={today:'2025-10-16',goals:goalTargets,weeksFrom:weekStart(0),weeksTo:'2025-10-19',monthsFrom:'2024-11-01',monthsTo:'2025-10-31',
   weeks:zones.map((z,i)=>({start:weekStart(i),current:i===11,mark:i===8?'ill':i===3?'unknown':null,zone2Min:i===3?null:z,highIntensityMin:null,intensityMin:ims[i],strength:i===3?null:str[i],vo2max:i%3===2?50+Math.floor(i/4):null,
    // No goals for the first four weeks, then 120 min and three sessions, then today's targets.
    zone2Goal:i<4?null:i<8?120:150,highIntensityGoal:null,intensityGoal:i<4?null:150,strengthGoal:i<4?null:i<8?3:4})),
