@@ -3,6 +3,7 @@ use jni::{
     objects::{JClass, JString},
     JNIEnv,
 };
+use crate::notification_targets::notification_target;
 use raring_core::{Raring, Tokens};
 use serde::Serialize;
 
@@ -24,17 +25,6 @@ struct Notification {
     target: &'static str,
     kind: String,
     tag: String,
-}
-
-fn notification_target(kind: &str) -> &'static str {
-    match kind {
-        "morning" => "today",
-        "weekly" => "checkin",
-        "vitals" | "fitness-age" | "vo2max" => "health",
-        "training-status" => "training",
-        "bedtime" => "sleep",
-        _ => "today",
-    }
 }
 
 fn run_background_sync(db_path: &str, tokens_json: &str, now_iso: &str) -> SyncResult {

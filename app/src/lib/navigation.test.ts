@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { createNavigation, knownRoute, normalizeRoute, routeTrail, tabs } from './navigation';
 
 describe('routes', () => {
+  it('opens every notification target Android and desktop share', () => {
+    const shell = readFileSync(new URL('../../src-tauri/src/notification_targets.rs', import.meta.url), 'utf8');
+    const targets = [.../TARGETS: \[&str; \d+\] = \[([^\]]*)\]/.exec(shell)![1].matchAll(/"([^"]+)"/g)].map(m => m[1]);
+    expect(targets).toEqual(['today', 'checkin', 'health', 'training', 'sleep']);
+    expect(targets.map(knownRoute)).toEqual(['today', 'review/latest', 'health', 'training', 'sleep']);
+  });
   it('accepts known routes and rejects invalid or malformed fragments', () => {
     expect(tabs).toEqual(['today', 'plan', 'training', 'health', 'progress']);
     for (const route of [...tabs, 'sleep', 'readiness', 'settings', 'onboarding', 'strength', 'help', 'help/strength-sets',

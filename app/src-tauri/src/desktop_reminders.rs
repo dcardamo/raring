@@ -8,6 +8,7 @@ use std::sync::Mutex;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_notification::{NotificationExt, PermissionState};
 
+use crate::notification_targets::{clicked, notification_target};
 use crate::ReminderStatus;
 
 /// Routine recheck: a new day, a changed clock or a plan that moved must not
@@ -76,8 +77,42 @@ fn show(app: &AppHandle, item: &raring_core::Notification) -> Result<(), String>
         .builder()
         .title(&item.title)
         .body(&item.body)
+        .extra("target", notification_target(&item.kind))
         .show()
         .map_err(|e| e.to_string())
+}
+
+/// A click on a reminder opens its screen in the running app and brings the
+/// window to the front, as Android's tap does. Clicks arrive only as far as
+/// the platform reports them: on Linux from a notification server that
+/// supports actions, while Raring still runs; on Windows only while the toast
+/// is on screen, not from the Action Center; on macOS while Raring runs (a
+/// development build posts as Terminal). After Raring exits, a click opens
+/// nothing.
+pub fn open_on_click(app: &AppHandle) {
+    let handle = app.clone();
+    let registered = app.notification().on_action(move |action| {
+        let target = action.notification().and_then(|n| n.extra().get("target"));
+        if let Some(target) = clicked(action.action_id(), target) {
+            open(&handle, target);
+        }
+    });
+    if let Err(error) = registered {
+        log::warn!("notification clicks will open nothing: {error}");
+    }
+}
+
+fn open(app: &AppHandle, target: &str) {
+    let Some(window) = app.get_webview_window("main") else {
+        return;
+    };
+    let _ = window.unminimize();
+    let _ = window.show();
+    let _ = window.set_focus();
+    // The UI routes by fragment; `target` is one of the fixed known names.
+    if let Err(error) = window.eval(format!("location.hash = '#{target}'")) {
+        log::warn!("could not open {target} from a notification: {error}");
+    }
 }
 
 /// Deliver every notification the core reports due at `now`. Only the ones the

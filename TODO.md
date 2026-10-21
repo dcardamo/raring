@@ -23,8 +23,7 @@ availability on every account or watch.
 
 In progress on branch `feat-five-followups` (worktree
 `~/.paseo/worktrees/1c8zm467/feat-five-followups`): core-generated fixtures
-with a swim and a walk (8) and desktop notification clicks (in 11). Move each
-to `docs/done.md` when it merges.
+with a swim and a walk (8). Move it to `docs/done.md` when it merges.
 
 ### 1. Garmin writes, starting with weight
 
@@ -153,9 +152,6 @@ each day's Training Status `minTrainingLoadChronic`/`maxTrainingLoadChronic`.
 - **Sign-in error wording**: map the native sign-in failures (no network,
   cancelled, Garmin refused) to one plain line each once their messages are
   known; Raring now only drops the "Error:" prefix.
-- **Desktop notification click**: a desktop notification opens no screen;
-  Android's tap targets (Today, the review, Sleep · Tonight) have no desktop
-  twin.
 - **Widget labels at 11 sp** (review m13): 11 sp fails
   `StatusWidgetLayoutTest` at the provider minimum size with large fonts
   ("Readiness" 108 > 100 px on emulator-5560); the 10 sp layouts pass at font
@@ -266,6 +262,13 @@ TalkBack or Doze.
 - Reminders in a real session: Linux with a notification daemon and with Do
   Not Disturb (which accepts and records a reminder nobody sees), macOS and
   Windows.
+- Clicking a reminder there: it should open its screen and bring Raring to
+  the front. Verified only under Xvfb with a fake notification server and no
+  window manager, so unminimizing and raising are unchecked. Windows reports
+  a click only while the toast is on screen (not from the Action Center), a
+  macOS development build posts as Terminal, and after Raring exits a click
+  opens nothing; decide whether any of those needs more than the note in
+  `desktop_reminders.rs`.
 - The import chooser and preview on Linux, macOS or Windows.
 - Export to Downloads, and sharing an export from a physical phone.
 

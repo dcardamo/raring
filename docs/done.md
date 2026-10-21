@@ -4,6 +4,20 @@ Shipped backlog items, newest first, each with its commit and the endpoint
 facts verified while building it. The open backlog is [TODO.md](../TODO.md).
 "Verified" means a read against a real account returned the data.
 
+- **Desktop notification clicks open the right screen** (commit "Open a
+  desktop notification's screen when it is clicked"). Each desktop reminder
+  carries its Android twin's target (`notification_targets.rs`, shared with
+  the Android shell; `checkin` opens the latest review and `sleep` leads with
+  Tonight in the evening). A click (the plugin's `tap`, the D-Bus `default`
+  action on Linux) unminimizes, shows and focuses the main window and sets
+  the route's fragment; anything but a known target opens nothing. Verified
+  under Xvfb in a network-less namespace with synthetic demo data and a fake
+  `org.freedesktop.Notifications` service: the reminder offered the
+  `default` action, and its `ActionInvoked` moved the app from Training to
+  Today (a run without the click stayed on Training). Windows reports a
+  click only while the toast is on screen; macOS, a real Linux desktop and
+  window raising with a window manager are unverified.
+
 - **Naps when an old day is opened** (commit "Read an opened night's naps
   on demand"). Opening a past night (`sleep/YYYY-MM-DD`) now reads that
   day's `sleep-service/sleep/naps/{date}` after its sleep and HRV, through

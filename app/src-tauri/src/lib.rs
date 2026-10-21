@@ -3,6 +3,7 @@ use chrono::{Datelike, Local};
 mod desktop_credentials;
 #[cfg(desktop)]
 mod desktop_reminders;
+mod notification_targets;
 #[cfg(not(target_os = "android"))]
 use desktop_credentials::DesktopCredentials;
 #[cfg(not(target_os = "android"))]
@@ -1379,7 +1380,12 @@ pub fn run() {
                 });
             }
             #[cfg(desktop)]
-            desktop_reminders::start(app.handle().clone());
+            {
+                // Before the first reminder: only notifications posted while a
+                // handler exists offer a click.
+                desktop_reminders::open_on_click(app.handle());
+                desktop_reminders::start(app.handle().clone());
+            }
             Ok(())
         })
         .run(tauri::generate_context!())

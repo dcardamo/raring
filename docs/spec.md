@@ -949,7 +949,13 @@ identity. A desktop build records a notification only after the Tauri
 notification plugin accepted it, and on Linux only when the session has a
 notification server (the plugin discards that server's error); a refusal or
 failure leaves it unmarked and Settings says why. Settings also states the
-next pending wind-down while signed in.
+next pending wind-down while signed in. Clicking a desktop notification opens
+the same screen as its Android twin (the shared target names: Today, the
+latest review, Health, Training or Sleep, which leads with Tonight from the
+evening on) in the running app and brings its window to the front. Clicks
+arrive only as far as the platform reports them: on Linux from a server that
+supports actions, on Windows while the toast is on screen, and nowhere once
+Raring has exited.
 
 ## Rules
 
