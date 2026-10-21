@@ -31,6 +31,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -171,6 +172,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -277,6 +279,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -663,6 +666,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -1049,6 +1053,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -1435,6 +1440,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -1821,6 +1827,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -2207,6 +2214,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -2593,6 +2601,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -2979,6 +2988,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -3359,6 +3369,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -3754,6 +3765,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -4134,6 +4146,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -4514,6 +4527,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,

@@ -282,7 +282,8 @@ fn seed_day(store: &Store, fixture: &Value, day: NaiveDate, days_ago: i64) -> ru
         "vo2max":{"value":52,"target":48},
         "restingHr":{"value":46,"target":55},
         "bmi":{"value":23.8,"target":25},
-        "vigorousMinutes":{"value":112,"target":150,"ageIfMet":38}
+        // The seeded days' vigorous minutes average 62 a week (Garmin's 42-day rule).
+        "vigorousMinutes":{"value":62,"target":75,"ageIfMet":38}
     });
     let (stress, summary) = stress(date, days_ago);
     store.put("stress", &key, "synthetic", &stress)?;

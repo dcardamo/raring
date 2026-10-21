@@ -1898,6 +1898,7 @@
         "benefit": null,
         "avgHr": 118,
         "intensityMin": 24,
+        "vigorousMin": 4,
         "distanceUnit": "km"
       },
       "setsRecorded": true
@@ -1925,6 +1926,7 @@
         "benefit": null,
         "avgHr": null,
         "intensityMin": null,
+        "vigorousMin": null,
         "distanceUnit": "km"
       },
       "setsRecorded": true
@@ -1952,6 +1954,7 @@
         "benefit": null,
         "avgHr": null,
         "intensityMin": null,
+        "vigorousMin": null,
         "distanceUnit": "km"
       },
       "setsRecorded": false
@@ -1979,6 +1982,7 @@
         "benefit": null,
         "avgHr": null,
         "intensityMin": null,
+        "vigorousMin": null,
         "distanceUnit": "km"
       },
       "setsRecorded": true
@@ -2006,6 +2010,7 @@
         "benefit": null,
         "avgHr": null,
         "intensityMin": null,
+        "vigorousMin": null,
         "distanceUnit": "km"
       },
       "setsRecorded": true
@@ -2033,6 +2038,7 @@
         "benefit": null,
         "avgHr": null,
         "intensityMin": null,
+        "vigorousMin": null,
         "distanceUnit": "km"
       },
       "setsRecorded": true
@@ -2060,6 +2066,7 @@
         "benefit": null,
         "avgHr": null,
         "intensityMin": null,
+        "vigorousMin": null,
         "distanceUnit": "km"
       },
       "setsRecorded": true
@@ -2087,6 +2094,7 @@
         "benefit": null,
         "avgHr": null,
         "intensityMin": null,
+        "vigorousMin": null,
         "distanceUnit": "km"
       },
       "setsRecorded": true
@@ -2114,6 +2122,7 @@
         "benefit": null,
         "avgHr": null,
         "intensityMin": null,
+        "vigorousMin": null,
         "distanceUnit": "km"
       },
       "setsRecorded": true
@@ -2141,6 +2150,7 @@
         "benefit": null,
         "avgHr": null,
         "intensityMin": null,
+        "vigorousMin": null,
         "distanceUnit": "km"
       },
       "setsRecorded": true
@@ -2168,6 +2178,7 @@
         "benefit": null,
         "avgHr": null,
         "intensityMin": null,
+        "vigorousMin": null,
         "distanceUnit": "km"
       },
       "setsRecorded": true

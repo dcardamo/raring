@@ -4,6 +4,7 @@ pub mod day;
 pub mod lanes;
 pub mod demo;
 mod export;
+pub mod fitness;
 pub mod garmin;
 mod gear;
 pub mod import;
@@ -146,6 +147,7 @@ impl Raring {
         let mut view = screens::today_at_calendar(&self.store, display_date, now.fixed_offset(), now.date_naive());
         lead::apply(&self.store, &mut view, now.date_naive(), now.fixed_offset());
         view.day = Some(day::timeline(&self.store, &view, now.date_naive(), now.fixed_offset(), day::day_minutes(now.date_naive())));
+        view.fitness = fitness::today(&self.store, &view, now.date_naive());
         view
     }
     pub fn sleep(&self, date: &str) -> view::SleepView {
@@ -218,6 +220,7 @@ impl Raring {
             lines,
             plan_item: board.items.iter().find(|p| p.recording.as_deref() == Some(id)).map(|p| p.intention.name.clone().unwrap_or_else(|| lead::sport_name(p.intention.sport).to_owned())),
             bests: local.milestones.items.iter().filter(|m| m.activity.as_deref() == Some(id) && !m.withdrawn).map(|m| m.title.clone()).collect(),
+            fitness: fitness::count(&self.store, view.summary.vigorous_min, date, now.date_naive()),
         });
         Some(view)
     }

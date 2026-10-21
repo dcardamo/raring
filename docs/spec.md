@@ -175,7 +175,10 @@ A briefing with an ending, in this order:
   gates in Rules: Today's lead; a suggestion can be dismissed with "Not
   today". When Garmin's readiness allows, the **effort** strip (Rest, Easy,
   Steady, Push) marks the suggested level, with one reason line from
-  Garmin's inputs under it. It is a display, not buttons. When a session
+  Garmin's inputs under it. On Garmin's push call, while vigorous activity
+  is Fitness Age's biggest lever and today has no vigorous minutes yet, one
+  more line names it ("Your Fitness Age lever: vigorous minutes, 17 of
+  Garmin's 75 a week"; Rules: Fitness Age window). It is a display, not buttons. When a session
   leads, the headline is about the day ("A steady day fits"), never the
   session's name.
 - **Today's session**: a separate card below the day's context, with the
@@ -204,7 +207,9 @@ A briefing with an ending, in this order:
 - **Recorded today**: one list of everything the calendar day (Your day's)
   recorded, workouts and naps together in the order they started, directly
   under the day's headline while the day leads. Workouts carry Garmin's benefit
-  and training effect (one decimal); naps their Body Battery change. Up to four
+  and training effect (one decimal), and their Garmin vigorous minutes as a
+  green chip ("+24 vigorous min") while Garmin's Fitness Age has a vigorous
+  target; naps their Body Battery change. Up to four
   rows, then a link to all of today's activities. The headline never repeats a
   workout from this list. Under a "Done today" headline the list goes untitled. Compact after tonight's plan: without the effect
   labels.
@@ -213,6 +218,16 @@ A briefing with an ending, in this order:
   not a command to catch up tonight), over the day cells; hidden during
   wind-down and late night, with the weekly check-in link and the
   plan-your-week prompt. Without weekly goals it says so.
+- **Fitness Age**: on a day that moved it, one compact card after This week:
+  Garmin's vigorous minutes as the six-week average its Fitness Age driver
+  uses, before and with today's minutes ("17 → 21 min/wk"), small bars for
+  the six seven-day blocks (today's minutes the green top of the last,
+  Garmin's weekly target dashed) and Garmin's age at that target ("At 75 a
+  week, Garmin puts you at 37.8 · now 39"). It opens Health. The day Garmin's
+  estimate falls a whole year the card moves under Recorded today and leads
+  with it ("New Garmin estimate: 39, down from 40"); a rise stays on Health
+  and in the notification. A day with neither has no card, and wind-down and
+  late night hide it (Rules: Fitness Age window).
 - While older history is still downloading, the upload line adds "History
   since" its first month.
 - Watch-upload and missing-reading notices sit above last night and
@@ -392,7 +407,8 @@ night is never shown in its place.
   and offers Refresh from Garmin (Rules: Explicit strength refresh). Raring
   never changes the sets; fixing them is a later Garmin write.
 - **How it counted**: the workout's share of this week's goals, the plan
-  session it completed and any milestone (Rules: How it counted).
+  session it completed, any milestone and its vigorous minutes toward
+  Fitness Age (Rules: How it counted).
 - **Along the way**: the stored streams this activity has (pace or speed,
   elevation, cadence, power, breathing rate, stamina, performance condition,
   watch temperature) on heart rate's time axis; **What it did**: Garmin's
@@ -523,12 +539,16 @@ says so on its chart (Rules: Reading freshness).
   history chart (opening on the latest estimate) with your age now as a dashed
   line and each estimate coloured against it (Rules: Chart colours).
 - **Drivers**: VO2max, resting heart rate, BMI or body fat, and vigorous
-  minutes as tiles with range bars, Garmin's target in words ("Target ≥ 150
+  minutes as tiles with range bars, Garmin's target in words ("Target ≥ 75
   min/wk") and Met or how far off it is; no trend arrows. The driver that would
   help most (the biggest lever) adds the age you'd reach at its target. Garmin's Fitness Age component owns its
   target and age estimate; a recorded weigh-in can supply a missing BMI or
   body-fat value measured in the last 30 days but never creates a target or
-  Fitness Age prediction.
+  Fitness Age prediction. Under the tiles, the six seven-day blocks of
+  Garmin's vigorous minutes the vigorous driver averages, from the window's
+  first day to "Last 7 days", each with its minutes, Garmin's weekly target
+  dashed, today's minutes green ("+24 today") and the average before and with
+  today (Rules: Fitness Age window).
 - **Intensity minutes**: this plan week's total as a ring against Garmin's
   weekly goal, with moderate and vigorous minutes; it opens the weekly plan.
 - When two or more vitals are outside their personal ranges, an amber
@@ -595,7 +615,11 @@ Backlog, Garmin Coach).
   it may be, opens its sheet; sessions not recorded are one row (how many and
   which days) that opens them with Reschedule and Let it go. This week of a
   Garmin Coach plan is one read-only line with how many are done; its
-  sessions are in the days.
+  sessions are in the days. While Garmin's Fitness Age has a vigorous
+  target, one read-only line under the goals gives this plan week's Garmin
+  vigorous minutes against it with a bar ("Fitness Age · vigorous 30 of 75 min
+  this week", "Garmin's target · read-only") and opens Health. It is a Garmin
+  reading, not a goal: no ring, backlog or review.
 - **Goals** (`#plan/commitments`): steppers for strength sessions, Zone 2,
   Zone 4–5 and intensity minutes (Garmin's weekly goal until changed), sleep
   timing (asleep by or wind down at a chosen time) and an average Sleep Score.
@@ -1037,7 +1061,11 @@ next pending wind-down while signed in.
   on, its share (a strength recording is that week's Nth strength session of
   the target; Zone 2 and Zone 4–5 add its own zone minutes), the week's
   recorded total, the plan item it completed, and any milestone awarded for
-  it. With no weekly goal on and nothing else to say, the card is left out
+  it; while Garmin's six-week window holds its vigorous minutes, it names
+  them toward Fitness Age with its plan week's Garmin vigorous total against
+  the driver's weekly target and the last day they count ("Counts in
+  Garmin's six-week average through Wed 26 Nov"; Rules: Fitness Age window).
+  With no weekly goal on and nothing else to say, the card is left out
   rather than implying a goal rejected the workout. Garmin's estimates (VO₂ max, Fitness Age) are never credited to one
   workout.
 - **Muscle gaps**: sets per muscle group over a range ending today (7D–1Y,
@@ -1519,7 +1547,8 @@ next pending wind-down while signed in.
     above poor.
   - Neutral: weight, VO₂ max, time asleep, Progress's monthly averages, sleep's
     overnight curves and lift history, and range metrics without a shown
-    band, in the neutral blue.
+    band, in the neutral blue. Fitness Age's six-week vigorous bars are this
+    blue, with today's minutes green and Garmin's target a dashed ink line.
 - **Plan week**: Garmin's intensity-minutes week, taken from the dates of its
   weekly intensity rows (Monday until they sync). Garmin's intensity week
   can differ from the account's start-of-week setting; following
@@ -1547,6 +1576,26 @@ next pending wind-down while signed in.
   by" and "helping", never "because" or a cause Garmin didn't give. Numbers
   are Garmin's; the only arithmetic is hours from Garmin's recovery minutes
   and the existing 30-day VO2max change. No new scores, no medical claims.
+- **Fitness Age window**: Garmin's vigorous-minutes driver
+  (`vigorousMinutesAvg`, `numOfWeeksForIm` 6) is the daily summaries'
+  `vigorousIntensityMinutes` over the 42 days ending on the estimate's day,
+  that day included, divided by 6 (verified against six estimates, 3–16 Oct
+  2026). Raring applies the same sum to Garmin's daily figures ending on the
+  calendar day (a past Health day: that day): six seven-day blocks, their
+  average, and the average without that day's minutes. A day without
+  Garmin's figure makes its block and the average unknown, never zero;
+  explicit zeros count. Garmin's target (`targetValue`) and the age it gives
+  there (`potentialAge`) come from the latest estimate on or before the day;
+  without a vigorous target there is no window. Garmin's vigorous days
+  (`vigorousDaysAvg`) follow no daily threshold Raring could verify and
+  aren't counted. Raring never projects the estimate. Today's card shows on
+  a day with vigorous minutes (after This week) or on the day the estimate
+  is lower in whole years than the previous stored one, compared as the
+  notification does (under Recorded today); never in wind-down or late
+  night. The lever line needs Garmin's push call with the effort shown,
+  vigorous minutes or days as Health's biggest lever, a known average and no
+  vigorous minutes today. A recording's vigorous minutes count from its day
+  through the 41 after it.
 - **Plan progress**: intensity minutes are Garmin's weekly total for the
   plan week: the daily summaries' moderate minutes plus twice the vigorous
   ones (Garmin's own weighting), against the target or Garmin's weekly goal.

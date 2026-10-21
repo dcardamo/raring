@@ -330,7 +330,10 @@ try {
  await ageCard.getByRole('button',{name:'Fitness Age history',exact:true}).click();await waitRoute('metric/fitnessAge');await back('health');
  assert.equal(await page.getByText('Biggest lever',{exact:true}).count(),0,'the lever is folded into its driver');
  const drivers=await page.locator('.drivers').textContent();
- assert.ok(drivers.includes('Target ≥ 150 min/wk') && drivers.includes('38 min/wk to go') && drivers.includes('Biggest lever · reach 150 for age 38'),drivers);
+ assert.ok(drivers.includes('Target ≥ 75 min/wk') && drivers.includes('58 min/wk to go') && drivers.includes('Biggest lever · reach 75 for age 37.8'),drivers);
+ // The six weeks Garmin's vigorous driver averages, today's minutes in them (Rules: Fitness Age window).
+ const vigorous=await page.locator('#vigorous-window').textContent();
+ for(const want of ['the six weeks Garmin averages','+24 today','5 Sept','Last 7 days','Average 17 → 21 min/wk with today','Garmin’s target 75 (dashed)'])assert.ok(vigorous.includes(want),`${want} in ${vigorous}`);
  assert.ok((await page.locator('.vitals-monitor h3').textContent()).includes('Night ending Thu 16 Oct'));
  assert.equal(await page.locator('.signal-tile').count(),5);
  await page.getByRole('button',{name:'View HRV',exact:true}).click();await waitRoute('metric/hrv');
@@ -1356,6 +1359,7 @@ try {
   const hic=await wp.getByRole('region',{name:'How it counted'}).textContent();
   assert.ok(hic.includes('18 min Zone 2') && hic.includes('100 of 150 this week') && hic.includes('Best in available history'),'U15: '+hic);
   assert.ok(!/Fitness Age will|younger/.test(hic));
+  assert.ok(hic.includes('24 vigorous min toward Fitness Age · 30 of Garmin’s 75 this week') && hic.includes('Counts in Garmin’s six-week average through Wed 26 Nov'),'Fitness Age line: '+hic);
   // M1: heart rate is drawn once, with a bpm axis and labelled zone floors, at the top of Along the way.
   assert.equal(await wp.getByRole('heading',{name:'Heart rate',exact:true}).count(),0,'no second heart-rate chart beside Along the way');
   const hrAlong=wp.getByRole('region',{name:'Along the way'}).getByRole('img',{name:/^Heart rate over/});
@@ -1428,6 +1432,47 @@ try {
   await plain.close();
  }
  console.log('Event week: the sport\'s minutes on the event, its sessions tagged, countdown only otherwise: passed');
+ // Fitness Age on Today: a vigorous day credits the run and puts the card after This week; the day Garmin's
+ // estimate drops it sits under Recorded today; a push morning before any names the lever. Plan has the
+ // week's vigorous minutes as one read-only line (Rules: Fitness Age window).
+ {
+  const sample=JSON.parse(await readFile(resolve('src/lib/sample/today.json'),'utf8'));
+  const open=async(hash,today)=>{const p=await browser.newPage({viewport:{width:390,height:844}});p.on('pageerror',e=>errors.push(e.message));
+   if(today)await p.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(today)}`}));
+   await p.goto(`${url}/#${hash}`);await p.locator('h1').first().waitFor();return p};
+  const fa=await open('today');
+  await fa.getByText('That’s today.',{exact:true}).waitFor();
+  assert.ok((await fa.locator('.card.recorded').textContent()).includes('+24 vigorous min'),'the run is credited with its vigorous minutes');
+  const card=fa.locator('.fa-today');
+  assert.equal(await card.count(),1);
+  assert.equal(await card.evaluate(el=>el.previousElementSibling?.classList.contains('week-card')),true,'after This week on a vigorous day');
+  const text=await card.textContent();
+  for(const want of ['17','21','min/wk','with today','At 75 a week, Garmin puts you at 37.8 · now 39'])assert.ok(text.includes(want),`${want} in ${text}`);
+  assert.ok(!/younger|older|will/.test(text),'the estimate is never credited to the workout');
+  assert.match(await card.locator('[data-chart=vigorous]').getAttribute('aria-label'),/14, 31, 6, 27, 20, 30; the last 7 days 30, 24 of them today/);
+  assert.ok((await card.boundingBox()).height<200,'the card stays compact');
+  await card.click();await fa.waitForURL('**/#health');
+  await fa.close();
+  const hero=await open('today',{...sample,fitness:{...sample.fitness,age:39,droppedFrom:40,card:'hero'}});
+  const heroCard=hero.locator('.fa-today');
+  await heroCard.waitFor();
+  assert.equal(await heroCard.evaluate(el=>el.previousElementSibling?.classList.contains('recorded')),true,'under Recorded today the day Garmin’s estimate drops');
+  assert.ok((await heroCard.textContent()).includes('New Garmin estimate: 39, down from 40'));
+  await hero.close();
+  const quiet={...sample.fitness.window,weeks:[14,31,6,27,20,6],today:0,average:104/6,beforeToday:104/6};
+  const push=await open('today',{...sample,activities:[],fitness:{...sample.fitness,window:quiet,card:null,leverLine:true}});
+  await push.getByText('That’s today.',{exact:true}).waitFor();
+  assert.equal(await push.locator('.fa-today').count(),0,'a day that moved neither has no card');
+  assert.ok((await push.locator('.hero').textContent()).includes('Your Fitness Age lever: vigorous minutes, 17 of Garmin’s 75 a week'));
+  await push.close();
+  const plan=await open('plan');
+  const line=plan.locator('.fa-plan');
+  const words=await line.textContent();
+  assert.ok(words.includes('Fitness Age · vigorous 30 of 75 min this week') && words.includes('Garmin’s target · read-only'),words);
+  await line.click();await plan.waitForURL('**/#health');
+  await plan.close();
+ }
+ console.log('Fitness Age: the vigorous window on Today, Plan and Health: passed');
  // Garmin Coach: one read-only line in the week card, sessions and rest days in their days, Garmin's status never completion.
  {
   const cp=await browser.newPage({viewport:{width:390,height:844}});

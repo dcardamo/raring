@@ -1066,6 +1066,7 @@ pub(crate) fn activity(store: &Store, id: &str) -> Option<ActivityCard> {
             .zip(v.number(&["vigorousIntensityMinutes"]))
             .filter(|(m, g)| *m >= 0. && *g >= 0.)
             .map(|(m, g)| m + 2. * g),
+        vigorous_min: v.number(&["vigorousIntensityMinutes"]).filter(|g| *g >= 0.),
     })
 }
 /// Stored recordings older than one already shown, newest first. The sport
@@ -2078,6 +2079,7 @@ pub fn today_at_calendar(store: &Store, date: &str, now: DateTime<FixedOffset>, 
         adapt: None,
         day: None,
         night_vitals: None,
+        fitness: None,
     };
     let night_phase = matches!(view.focus.phase, DayPhase::Evening | DayPhase::WindDown | DayPhase::LateNight);
     if !night_phase && !view.focus.sleep_missing {
@@ -2833,7 +2835,7 @@ pub fn strength(store: &Store, date: &str) -> Option<StrengthView> {
         .collect();
     crate::strength::history(store, date, workouts)
 }
-fn body_weight(store: &Store, date: &str) -> Option<BodyWeightCard> {
+pub(crate) fn body_weight(store: &Store, date: &str) -> Option<BodyWeightCard> {
     let end = NaiveDate::parse_from_str(date, "%Y-%m-%d").ok()?;
     let start = end - Duration::days(83);
     let rows = store.history("weight", date, 1000);
@@ -2892,11 +2894,9 @@ fn body_weight(store: &Store, date: &str) -> Option<BodyWeightCard> {
 pub fn health(store: &Store, date: &str) -> HealthView {
     health_at_calendar(store, date, date)
 }
-/// Live Health retains its sleep-day vitals while the private journal follows
-/// the actual local calendar day, as planned Training does.
-pub fn health_at_calendar(store: &Store, date: &str, calendar: &str) -> HealthView {
-    let vitals = vitals(store, date);
-    let body_weight = body_weight(store, date);
+/// Garmin's Fitness Age drivers on `date` and the one that would help most
+/// (the biggest lever).
+pub(crate) fn drivers(store: &Store, date: &str, body_weight: Option<&BodyWeightCard>) -> (Vec<Driver>, Option<Lever>) {
     let v = store.get("fitness_age", date).unwrap_or(Value::Null);
     let drivers: Vec<Driver> = [
         ("vo2max", "VO2max", "ml/kg/min"),
@@ -2924,7 +2924,7 @@ pub fn health_at_calendar(store: &Store, date: &str, calendar: &str) -> HealthVi
             .or_else(|| {
                 // A weigh-in can supply the displayed driver, not Garmin's target or age estimate.
                 // An old reading stays on the dated tile, not a current driver.
-                let recent = body_weight.as_ref().filter(|w| {
+                let recent = body_weight.filter(|w| {
                     NaiveDate::parse_from_str(date, "%Y-%m-%d").ok()
                         .zip(NaiveDate::parse_from_str(&w.measured_on, "%Y-%m-%d").ok())
                         .is_some_and(|(today, measured)| (0..=30).contains(&(today - measured).num_days()))
@@ -3001,6 +3001,15 @@ pub fn health_at_calendar(store: &Store, date: &str, calendar: &str) -> HealthVi
         })
         .max_by(|a, b| a.0.total_cmp(&b.0))
         .map(|(_, lever)| lever);
+    (drivers, lever)
+}
+/// Live Health retains its sleep-day vitals while the private journal follows
+/// the actual local calendar day, as planned Training does; Fitness Age's
+/// vigorous window ends on the calendar day too.
+pub fn health_at_calendar(store: &Store, date: &str, calendar: &str) -> HealthView {
+    let vitals = vitals(store, date);
+    let body_weight = body_weight(store, date);
+    let (drivers, lever) = drivers(store, date, body_weight.as_ref());
     let journal_enabled = store.settings().journal_enabled;
     HealthView {
         date: date.into(),
@@ -3009,6 +3018,7 @@ pub fn health_at_calendar(store: &Store, date: &str, calendar: &str) -> HealthVi
         fitness_age: age(store, date),
         lever,
         drivers,
+        vigorous: NaiveDate::parse_from_str(calendar, "%Y-%m-%d").ok().and_then(|d| crate::fitness::window(store, d)),
         night_vitals: Some(night_vitals(store, date, &vitals)),
         vitals,
         stress: stress(store, date),

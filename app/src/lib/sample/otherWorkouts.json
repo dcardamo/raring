@@ -26,6 +26,7 @@
       "benefit": "Base",
       "avgHr": 132,
       "intensityMin": 30,
+      "vigorousMin": 5,
       "distanceUnit": "m"
     },
     "recoveryHours": 8,
@@ -1020,7 +1021,8 @@
       "goals": true,
       "lines": [],
       "planItem": null,
-      "bests": []
+      "bests": [],
+      "fitness": null
     },
     "strength": null
   },
@@ -1051,6 +1053,7 @@
       "benefit": "Recovery",
       "avgHr": 104,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -1913,7 +1916,8 @@
       "goals": true,
       "lines": [],
       "planItem": null,
-      "bests": []
+      "bests": [],
+      "fitness": null
     },
     "strength": null
   }

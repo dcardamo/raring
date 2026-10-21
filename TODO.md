@@ -167,7 +167,8 @@ From item 11, in priority order.
 - Weekly trend buckets run Monday to Sunday. Consider aligning them with
   Garmin's reported intensity-week boundary, which the weekly plan already
   uses; a display preference need not match that data window.
-- Fitness Age history is limited to downloaded per-day estimates; endurance,
+- Fitness Age history is limited to downloaded per-day estimates, though a
+  past date's estimate is readable (Fitness Age window follow-ups); endurance,
   hill score and race predictions have no long-history rows. The web GraphQL lists
   `enduranceScoreScalar` and `hillScoreScalar` (start, end, weekly
   aggregation); unverified.
@@ -221,6 +222,25 @@ From the chart legibility pass, in priority order.
   the check's card test (Today, Sleep and Readiness only) to every page.
 - The check compares text with other text and with `data-mark` markers, not
   with bars, points or bands; mark more shapes as charts change.
+
+### Fitness Age window follow-ups
+
+From the Fitness Age window on Today, Plan and Health, in priority order.
+
+- Live with it on the maintainer's phone for a week: the card after This
+  week on a vigorous day, under Recorded today the day Garmin's estimate
+  drops, the push-morning lever line, and Plan's line; TalkBack on the bars
+  and the large-text layout of the card.
+- Garmin's estimate is read once a day at the first sync, so a Garmin update
+  later that day reaches Today's drop card the next morning. Decide whether a
+  vigorous day should read `fitness_age` again (one request, in budget).
+- Vigorous days: `vigorousDaysAvg` is not "days with 10 or more vigorous
+  minutes": the 15 Oct 2026 estimate said 0.1 with two such days in its
+  window, while 16 Oct said 0.3 over the same days. Find Garmin's rule before
+  counting days anywhere.
+- Fitness Age history: a past date's `fitnessage/{date}` returns that day's
+  estimate (see the Done entry), so a budgeted backfill could fill the
+  history chart and Progress's Long-term months beyond the downloaded days.
 
 ### Today session and morning stats follow-ups
 
@@ -555,6 +575,36 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Fitness Age on Today and Plan** (commit "Show Fitness Age's vigorous
+  window on Today, Plan and Health"), from the maintainer wanting Today and
+  Plan to show progress toward Health's Fitness Age levers, positively.
+  The workout-driven lever is vigorous minutes, so Raring shows Garmin's
+  vigorous driver live from the daily summaries, never the age moving per
+  workout. Today: a "+24 vigorous min" chip on recorded workouts; a compact
+  card after This week on a day with vigorous minutes (six-week average
+  before and with today, six seven-day bars with today's minutes green,
+  Garmin's age at its target), moving under Recorded today the day Garmin's
+  estimate drops a whole year; on Garmin's push call before any vigorous
+  minutes, one line names the lever. Plan: one read-only line with this
+  week's vigorous minutes against Garmin's target (the maintainer chose a
+  line over a goal). Health: the same bars under the drivers. How it
+  counted: the workout's vigorous minutes, its week's total and the last day
+  they count. Before/after mockups (synthetic) are in
+  `.data/mockups/fitness-age/`. The demo seed's vigorous target is now 75.
+  - Verified read-only on a real account (2026-10-20, five requests beside the
+    stored daily rows): `/fitnessage-service/fitnessage/{date}` returns the estimate
+    as of a past date, with `lastUpdated` its day or an earlier one (asking
+    for 6 Oct 2026 returned 5 Oct's: Garmin doesn't estimate every day).
+    `components.vigorousMinutesAvg.value` equalled the daily summaries'
+    `vigorousIntensityMinutes` over the 42 days ending on the estimate's day,
+    that day included, ÷ 6, for 3, 5, 8, 12, 15 and 16 Oct 2026; six Monday
+    weeks (12 Oct: 4.0 against Garmin's 12.8) and the 42 days before the
+    estimate's day (3 Oct: 24.7 against 18.3) did not. `targetValue` was 75
+    and `numOfWeeksForIm` 6; a met driver (`rhr`) carries no target, and
+    `bmi`'s `potentialAge` was older than the estimate itself, so only the
+    lever's age is shown. Per-activity vigorous minutes can sum below the
+    day's (all-day minutes count), so the window reads the daily summaries.
 
 - **Instant page opens** (commits "Read stored nights without their
   samples" and "Open pages whole and keep cached views through a sync"),

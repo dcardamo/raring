@@ -16,7 +16,14 @@
       }
     ],
     "planItem": "Strength",
-    "bests": []
+    "bests": [],
+    "fitness": {
+      "minutes": 4,
+      "week": 30,
+      "thisWeek": true,
+      "target": 75,
+      "until": "2025-11-25"
+    }
   },
   "along": null,
   "more": [],
@@ -44,6 +51,7 @@
     "benefit": null,
     "avgHr": 118,
     "intensityMin": 24,
+    "vigorousMin": 4,
     "distanceUnit": "km"
   },
   "recoveryHours": 14,
