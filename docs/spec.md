@@ -160,8 +160,8 @@ A briefing, in this order:
 
 - **Last night and readiness**: four compact stats in one row (two by two
   at large text), each opening its detail: **Sleep** (Garmin's Sleep Score
-  in a ring in its level's colour, its level word and the time asleep under
-  it, "Good · 7:33"; opens Last night), **Readiness** (Garmin's score in a
+  in a ring in its level's colour, Garmin's word for it and the time asleep
+  under it, "Good · 7:33"; opens Last night), **Readiness** (Garmin's score in a
   ring in its tone, the level word under it), **Sleep HR** and **HRV** (last
   night's value with ▲ or ▼ and "6 above usual", "Within usual", "Usual not
   set yet" or "Garmin calibrating"; they open their metric detail at 30
@@ -250,7 +250,9 @@ Two tabs, **Last night** and **Tonight** (Rules: Sleep tabs).
 
 Last night:
 
-- Score gauge, and a time-asleep bar with a marker at Garmin's sleep need
+- Score gauge with Garmin's word for the score (Excellent, Good, Fair or
+  Poor; without one, the band's word from Rules: Chart colours), and a
+  time-asleep bar with a marker at Garmin's sleep need
   for that night (when the watch reports it), labeled as last night's need.
   The scale fits both amounts; the difference is neutral, not a more-is-better
   verdict. A missing duration has no fill.

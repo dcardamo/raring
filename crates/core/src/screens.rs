@@ -717,6 +717,26 @@ pub(crate) fn sscore(v: &Value) -> Option<f64> {
         ],
     )
 }
+/// Garmin's Sleep Score with Garmin's word for it (Excellent, Good, Fair,
+/// Poor) when sent, otherwise the word for its band. The tone follows the
+/// bands (Rules: Chart colours).
+fn sleep_gauge(raw: &Value) -> Option<Gauge> {
+    let score = sscore(raw)?;
+    let word = string(sleep(raw), &[&["sleepScores", "overall", "qualifierKey"]])
+        .map(|q| label(Some(q)))
+        .filter(|w| !w.is_empty())
+        .unwrap_or_else(|| {
+            if score >= 80. {
+                "Good"
+            } else if score >= 60. {
+                "Fair"
+            } else {
+                "Poor"
+            }
+            .into()
+        });
+    Some(gauge(score, 100., &word, rules::score(score), None))
+}
 fn current_rscore(v: &Value) -> Option<f64> {
     num(readiness(v), &[&["score"], &["trainingReadinessScore"]])
 }
@@ -1991,21 +2011,7 @@ pub fn today_at_calendar(store: &Store, date: &str, now: DateTime<FixedOffset>, 
                 None,
             )
         }),
-        sleep: sscore(&s).map(|v| {
-            gauge(
-                v,
-                100.,
-                if v >= 80. {
-                    "Good"
-                } else if v >= 60. {
-                    "Fair"
-                } else {
-                    "Poor"
-                },
-                rules::score(v),
-                None,
-            )
-        }),
+        sleep: sleep_gauge(&s),
         load: load.map(|v| {
             gauge(
                 v,
@@ -2144,7 +2150,6 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
     // Only the shown night is read whole: its overnight charts draw its samples.
     let raw = store.get("sleep", date).unwrap_or(Value::Null);
     let v = sleep(&raw);
-    let score = sscore(&raw);
     let asleep = asleep_min(&raw);
     let need = sleep_need(&raw);
     let (naps, naps_state) = crate::naps_journal::naps(store, date);
@@ -2181,21 +2186,7 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
         naps_state,
         start_local: local_time(v, &["sleepStartTimestampLocal"]),
         end_local: local_time(v, &["sleepEndTimestampLocal"]),
-        score: score.map(|v| {
-            gauge(
-                v,
-                100.,
-                if v >= 80. {
-                    "Good"
-                } else if v >= 60. {
-                    "Fair"
-                } else {
-                    "Poor"
-                },
-                rules::score(v),
-                None,
-            )
-        }),
+        score: sleep_gauge(&raw),
         asleep_min: asleep,
         need_min: need,
         headline,
