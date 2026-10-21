@@ -583,8 +583,9 @@ faces, screens, sensors and audio prompts stay in Connect.
 
 ## Done
 
-- **Street maps under workout routes** (commit "Draw workout routes over
-  street maps from OpenFreeMap"), from exploring private, free and
+- **Street maps under workout routes** (commits "Draw workout routes over
+  street maps from OpenFreeMap" and "Keep street-map downloads to one area at
+  a time on the source's host"), from exploring private, free and
   accountless maps. On by default, off in Settings → Street maps (which also
   erases them). The core downloads OpenStreetMap vector tiles (OpenMapTiles
   schema) from OpenFreeMap by area, the 8×8 block of tiles at the card's
