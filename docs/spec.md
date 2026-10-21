@@ -784,7 +784,7 @@ page, never the overnight Sleep HR detail.
   Lighter week, Limits and My routines; Resume shows the goals first (Rules:
   Adapt, My routines).
 - **Settings**: notifications, the wind-down lead, the time to fall asleep
-  (also on Sleep · Tonight beside the plan), persistent status, Follow
+  (also on Sleep · Tonight beside the plan), Follow
   my day (and that Raring doesn't learn from how you use the app), the
   plan-your-week prompt, journal consent, street maps (Rules: Street maps),
   recent Garmin changes once there are any (Rules: Recent Garmin changes),
@@ -826,33 +826,21 @@ A small home-screen widget shows readiness and Today's focus; a medium one
 shows readiness, sleep score, Body Battery and the latest measured stress.
 Tapping a reading opens its detail; the small widget's focus opens readiness,
 sleep or Today as appropriate. Missing readings are blank, never zero.
-Both widgets and the optional ongoing notification always show "As of" with
-the selected watch's upload date and time, or "As of unavailable".
+Both widgets always show "As of" with the selected watch's upload date and
+time, or "As of unavailable". While resting, ill, paused or limited, the
+small widget's focus says so and carries no training call, from the same
+local records as Today, republished offline on each local change. Widgets
+never show limits, injury notes, routines, journal entries or weight.
+Their declared minimum and minimum resize sizes are 140×300 dp (small) and
+300×180 dp (medium); focus and upload time can wrap. Android RemoteViews are
+tested at those actual bounds with 1.0, 1.3 and 1.5 font scales, including
+missing readings.
 
-The notification has a separate low-importance, silent channel, no sound or
-vibration, and private lock-screen content. It sits on Android's own
-notification surface: no card of its own, Android's notification text styles,
-so it follows the system's light or dark theme. Collapsed: battery, stress and
-heart-rate icons and values, then "As of". Expanded: the header carries "As
-of" in place of the post time; the phase-aware focus is the title, then its
-reason, then a labelled row each for Body Battery and stress (with bars) and
-heart rate (no bar). A missing reading hides its bar. Latest heart rate uses the current calendar day's last measured
-sample from the shared all-day HR parser. It remains blank without samples;
-resting/overnight heart rate is not a substitute.
-It starts off, is offered once on Today after the first successful sync, and
-can be changed in Settings. Permission denial leaves it off. Explicit opt-out
-persists even if snapshot publication fails; native rendering reads authoritative
-SQLite enablement, never the old file's enabled bit. Cancellation does not wait
-for a network sync. Failed opt-in publication still rolls the opt-in back. Android may let
-the user dismiss an ongoing notification; the next update restores it.
-While resting, ill, paused or limited, the focus says so and carries no
-training call, from the same local records as Today, republished offline on
-each local change. Widgets, the notification and the lock screen never show
-limits, injury notes, routines, journal entries or weight.
-Widgets do not require enabling the notification. Their declared minimum and
-minimum resize sizes are 140×300 dp (small) and 300×180 dp (medium); focus and
-upload time can wrap. Android RemoteViews are tested at those actual bounds
-with 1.0, 1.3 and 1.5 font scales, including missing readings.
+There is no persistent status notification. Readings reach Raring only when
+the watch uploads to Garmin Connect, so an always-visible readout of
+fast-changing values such as heart rate and stress is often wrong. An app
+update removes a status notification left by an earlier version, and its
+channel, when the app is replaced and on every widget refresh.
 
 ## Planned training (read-only)
 
@@ -918,7 +906,6 @@ Sent by the phone itself.
 | Vitals outside your ranges    | Two or more vitals outside normal range      | On      |
 | Training status changed       | On sync                                      | Off     |
 | Wind-down reminder            | Wind-down time of tonight's plan (lead 30 min before bedtime, configurable) | Off     |
-| Persistent status (Android)   | Existing sync; silent, no extra Garmin requests | Off     |
 
 Each kind posts to its own Android channel (Morning readiness, Weekly
 check-in, Health changes for VO2max, Fitness Age, training status and vitals,
@@ -1611,23 +1598,21 @@ next pending wind-down while signed in.
 - **Status snapshot**: readiness and sleep follow Today's displayed day;
   Body Battery and the latest measurable stress sample come from the current
   calendar day, never yesterday during the night handover. The daily stress
-  average is not a latest sample. An absent value remains null, including
-  latest heart rate when the shared all-day HR timeline has no measured sample. "As of" is only the selected
+  average is not a latest sample. An absent value remains null. "As of" is only the selected
   watch's upload time, never the snapshot write or API fetch time; include its
   date so an old reading cannot look like today's. No separate stale-score
   verdict or expiry threshold is added.
 - **Compact focus**: the live Today's lead (Rules: Today's lead) decides,
-  in its gate order. Tonight's sleep uses the lead's headline and the shared
-  sleep plan's reason, opening Sleep. A night that hasn't synced (including
-  the phase's neutral wait, which keeps the previous day's readiness on
-  screen) says "Waiting for last night's sleep" with no effort or reason.
+  in its gate order. Tonight's sleep uses the lead's headline, opening Sleep.
+  A night that hasn't synced (including the phase's neutral wait, which
+  keeps the previous day's readiness on screen) says "Waiting for last
+  night's sleep" with no effort.
   Illness, a pause, rest, limits, a review and Not today use a short private
   line instead of the lead's text: "Ill · goals paused", "Training paused",
   "Rest day", "Training suggestions limited", or "No training suggestion
   today", opening Today. A recorded workout says "Activity recorded today",
   opening Today. Wherever else Today shows Garmin's effort call, the
-  suggested Rest/Easy/Steady/Push effort and Today's reason line from
-  Garmin's inputs; without readiness, "Waiting for readiness". Session, workout and
+  suggested Rest/Easy/Steady/Push effort; without readiness, "Waiting for readiness". Session, workout and
   activity names and the limits text never reach a surface. A local change republishes the
   snapshot offline. Native surfaces
   describe the last snapshot, not a live watch reading. Offline widget
@@ -2126,7 +2111,7 @@ next pending wind-down while signed in.
   core. Background scheduling is inherently native (WorkManager on Android,
   background refresh on iOS, syncing while the app runs on desktop); secure
   token storage and other logic belong in Rust where a cross-platform crate
-  exists. Status notifications and widgets ship on Android only; their
+  exists. Widgets ship on Android only; their
   versioned snapshot is platform-neutral JSON produced entirely in Rust,
   so later iOS widgets can consume the same contract with a native renderer.
 - **Public website**: `site/` is a static introduction, installation guide and

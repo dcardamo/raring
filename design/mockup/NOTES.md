@@ -12,14 +12,12 @@ are in `shots/`; regenerate them and `screens.png` with
 
 ## Status surfaces (items 9 and 10)
 
-`status-surfaces` shows the same synthetic snapshot across a silent, ongoing
-notification and small/medium home-screen widgets. The notification's collapsed
-row keeps Body Battery (BB), stress and **latest** heart rate together, followed
-by **As of**; expanded adds small neutral-ink bars and the phase focus with its
-reason. This is a quiet status readout, not a real-time monitor: the time is the
-watch upload, not the time the notification was drawn. No sound or foreground
-service is implied by this design. The separate `widget` screen puts the new
-small and medium widgets on a home screen for scale.
+`status-surfaces` shows the same synthetic snapshot on small/medium home-screen
+widgets. The time is the watch upload, not the time the widget was drawn. The
+separate `widget` screen puts the widgets on a home screen for scale. An
+earlier silent, ongoing status notification (Body Battery, stress and latest
+heart rate) was removed: readings arrive only when the watch uploads to
+Connect, so an always-visible readout of fast-changing values was often wrong.
 
 The small widget gives readiness the only status-colored gauge and makes the
 focus the next line; the medium widget holds readiness, sleep, Body Battery and
@@ -28,33 +26,25 @@ are unavailable. A blank gauge/number/bar means missing, never zero; the
 missing example names the wait without inventing a readiness verdict. Daytime
 focus can update after an activity sync. In the evening it becomes wind-down
 and Garmin's window rather than an effort instruction; the readiness number
-still belongs to today's snapshot. The notification and small widget open
+still belongs to today's snapshot. The small widget opens
 Today, Sleep opens Sleep, and the other medium tiles open Today in the mock.
 The native implementation opens each matching detail; the focus opens
-Readiness or Sleep, and neutral waiting opens Today. Latest HR now uses item
-14's shared all-day timeline after integration; without measured samples it is
-blank, never resting-HR substitution.
+Readiness or Sleep, and neutral waiting opens Today.
 
 Implementation screenshots (synthetic data) are
-`shots/android-notification-{collapsed,expanded}.png`, `shots/android-widget-small.png`,
-`android-widget-medium.png` and `android-widget-missing.png`. Settings and the
-once-only offer are `shots/status-settings-{390,700,1100}.png` and
-`status-offer-{390,700,1100}.png`; `npm run test:ui` writes fresh copies to
-`.data/screens/`. Native screenshots are from emulator-5584. The review's minimum-size renders
+`shots/android-widget-small.png`, `android-widget-medium.png` and
+`android-widget-missing.png`. Native screenshots are from emulator-5584. The review's minimum-size renders
 are `shots/widget-min-{small,medium}-{1.0,1.3,1.5}.png`: actual RemoteViews
 inflated at the declared 140×300 dp / 300×180 dp bounds, with text-size assertions
 confirming each font scale. Focus and upload time wrap rather than disappear;
 tests check every nonempty line, child bounds and metric tap regions, plus
-missing-data cases. `shots/review-*-font150.png` also shows the launcher and
-notification shade on emulator-5584 with the system font scale set to 1.5,
-including the integrated latest-HR reading. These do not claim coverage of
-other launchers or physical phones. Android controls
-the notification shell; the inner readout keeps the mock's ink, quiet bars and
-blank missing values.
+missing-data cases. `shots/review-widget-*-font150.png` shows the launcher on
+emulator-5584 with the system font scale set to 1.5. These do not claim
+coverage of other launchers or physical phones.
 
 The existing hourly network schedule stays unchanged. `scripts/measure-status.mjs`
-measures accelerated offline refreshes only (seed a synthetic demo, enable
-status, select an isolated emulator): one cold refresh took 401 ms; warm
+measures accelerated offline refreshes only (seed a synthetic demo, select
+an isolated emulator): one cold refresh took 401 ms; warm
 refreshes 62–174 ms including adb/file checks, with no WebView. The emulator
 reported 0 mAh for batches of one, four and twenty: not a meaningful estimate
 of physical phone battery or radio cost, and no justification for more polling.

@@ -1722,10 +1722,6 @@ pub struct Settings {
     pub notify_vitals: bool,
     pub notify_training_status: bool,
     pub notify_bedtime: bool,
-    #[serde(default)]
-    pub notify_status: bool,
-    #[serde(default)]
-    pub status_offer_seen: bool,
     /// Minutes between the wind-down reminder and the bedtime window.
     #[serde(default = "default_bedtime_lead")]
     pub bedtime_lead_min: u32,
@@ -1830,8 +1826,6 @@ impl Default for Settings {
             notify_vitals: true,
             notify_training_status: false,
             notify_bedtime: false,
-            notify_status: false,
-            status_offer_seen: false,
             bedtime_lead_min: default_bedtime_lead(),
             fall_asleep_min: default_fall_asleep(),
             adaptive_today: default_adaptive_today(),

@@ -29,16 +29,13 @@ pub struct StatusSnapshot {
     pub generated_at: DateTime<Utc>,
     pub as_of: Option<String>,
     pub date: String,
-    pub enabled: bool,
     pub phase: DayPhase,
     pub focus_line: String,
-    pub focus_reason: Option<String>,
     pub focus_target: &'static str,
     pub readiness: Reading,
     pub sleep: Reading,
     pub body_battery: Reading,
     pub stress: Reading,
-    pub heart_rate: Reading,
 }
 
 pub fn snapshot(store: &Store, now: DateTime<Local>) -> StatusSnapshot {
@@ -60,41 +57,30 @@ pub fn snapshot(store: &Store, now: DateTime<Local>) -> StatusSnapshot {
         .call
         .filter(|_| today.focus.effort && today.readiness.is_some());
     let lead = today.lead.as_ref();
-    let (focus_line, focus_reason, focus_target): (String, Option<String>, &'static str) =
-        match lead.map(|l| l.kind) {
-            Some(LeadKind::Sleep) => (
-                lead.map(|l| l.headline.clone()).unwrap_or_default(),
-                today.sleep_plan.as_ref().and_then(|plan| plan.reason.clone()),
-                "sleep",
+    let (focus_line, focus_target): (String, &'static str) = match lead.map(|l| l.kind) {
+        Some(LeadKind::Sleep) => (lead.map(|l| l.headline.clone()).unwrap_or_default(), "sleep"),
+        Some(LeadKind::Waiting) | None => ("Waiting for last night's sleep".into(), "today"),
+        // The day can finish: no effort call, and never the activity's name.
+        Some(LeadKind::Done) => ("Activity recorded today".into(), "today"),
+        Some(
+            LeadKind::Ill | LeadKind::Paused | LeadKind::Rest | LeadKind::Limits | LeadKind::Review | LeadKind::Quiet,
+        ) => (held().unwrap_or("Training suggestions limited").into(), "today"),
+        // Wherever Today shows Garmin's effort call.
+        Some(_) => match (held(), effort) {
+            (Some(line), _) => (line.into(), "today"),
+            (None, Some(effort)) => (
+                match effort {
+                    Effort::Rest => "Rest",
+                    Effort::Easy => "Easy",
+                    Effort::Steady => "Steady",
+                    Effort::Push => "Push",
+                }
+                .into(),
+                "readiness",
             ),
-            Some(LeadKind::Waiting) | None => ("Waiting for last night's sleep".into(), None, "today"),
-            // The day can finish: no effort call, and never the activity's name.
-            Some(LeadKind::Done) => ("Activity recorded today".into(), None, "today"),
-            Some(
-                LeadKind::Ill | LeadKind::Paused | LeadKind::Rest | LeadKind::Limits | LeadKind::Review | LeadKind::Quiet,
-            ) => (
-                held().unwrap_or("Training suggestions limited").into(),
-                None,
-                "today",
-            ),
-            // Wherever Today shows Garmin's effort call: the word and Today's
-            // reason line from Garmin's inputs.
-            Some(_) => match (held(), effort) {
-                (Some(line), _) => (line.into(), None, "today"),
-                (None, Some(effort)) => (
-                    match effort {
-                        Effort::Rest => "Rest",
-                        Effort::Easy => "Easy",
-                        Effort::Steady => "Steady",
-                        Effort::Push => "Push",
-                    }
-                    .into(),
-                    today.readiness_why.as_ref().map(|why| why.summary.clone()),
-                    "readiness",
-                ),
-                (None, None) => ("Waiting for readiness".into(), None, "today"),
-            },
-        };
+            (None, None) => ("Waiting for readiness".into(), "today"),
+        },
+    };
     // Overnight handover may keep yesterday's readiness on Today, but it must
     // not present yesterday's daytime readings as today's latest values.
     let calendar_date = now.date_naive().to_string();
@@ -104,17 +90,14 @@ pub fn snapshot(store: &Store, now: DateTime<Local>) -> StatusSnapshot {
     let battery = live.body_battery.now.filter(|v| (0. ..=100.).contains(v));
     // The stress card's average is a different measurement; never substitute it.
     let stress = live.stress.timeline.iter().rev().flatten().next().copied();
-    let heart_rate = live.heart_rate_day.timeline.iter().rev().flatten().next().copied();
     StatusSnapshot {
         version: 1,
         account_id: crate::account::identity(store),
         generated_at: now.with_timezone(&Utc),
         as_of: today.watch_last_upload,
         date,
-        enabled: store.settings().notify_status,
         phase,
         focus_line,
-        focus_reason,
         focus_target,
         readiness: today.readiness.map_or(
             Reading {
@@ -147,11 +130,6 @@ pub fn snapshot(store: &Store, now: DateTime<Local>) -> StatusSnapshot {
         },
         stress: Reading {
             value: stress,
-            tone: Tone::Neutral,
-        },
-        // Reuse the all-day parser; resting/overnight HR cannot substitute for a sample.
-        heart_rate: Reading {
-            value: heart_rate,
             tone: Tone::Neutral,
         },
     }

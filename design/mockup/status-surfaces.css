@@ -6,26 +6,10 @@
 .sf-section{padding:18px 12px 24px;margin-bottom:18px;border:1px solid var(--line);border-radius:26px;background:linear-gradient(160deg,#192238,#101522 66%)}
 .sf-section>h2{font:600 21px/1.2 Outfit,Inter;margin-bottom:16px}
 .sf-label{font:600 10px Inter;letter-spacing:.13em;text-transform:uppercase;color:var(--text2);margin:18px 2px 8px}
-.sf-notice{border-radius:20px;background:#202837;border:1px solid rgba(255,255,255,.09);padding:14px 16px;box-shadow:0 12px 25px rgba(0,0,0,.18)}
-.sf-notice-head,.sf-widget-top{display:flex;align-items:center;justify-content:space-between;gap:6px}
-.sf-notice-head>span:last-child{font-size:11px;color:var(--text2)}
+.sf-widget-top{display:flex;align-items:center;justify-content:space-between;gap:6px}
 .sf-brand{display:inline-flex;align-items:center;gap:7px;font:600 12px Inter;color:var(--text)}
 .sf-brand img{width:20px;height:20px;border-radius:6px}
-.sf-compact{display:flex;justify-content:space-between;gap:6px;margin:14px 0 7px}
-.sf-compact-metric{display:inline-flex;align-items:center;gap:4px;min-width:0;white-space:nowrap;color:var(--text2);font-size:11px}
-.sf-compact-metric svg{width:14px;height:14px;flex:none;color:var(--text2)}
-.sf-compact-metric b{color:var(--text);font-size:14px;font-weight:600}
 .sf-time{font:500 11px Inter;color:var(--text2);white-space:nowrap}
-.sf-notice>.sf-time{display:block;text-align:right}
-.sf-bars{display:grid;gap:10px;padding:14px 0;border-top:1px solid rgba(255,255,255,.1)}
-.sf-bar-row{display:grid;grid-template-columns:98px 1fr 24px;align-items:center;gap:8px;color:var(--text2);font-size:11px}
-.sf-bar-row b{color:var(--text);text-align:right;font-size:13px;min-height:16px}
-.sf-track{height:5px;border-radius:5px;background:rgba(255,255,255,.1);overflow:hidden}
-.sf-track i{display:block;height:100%;border-radius:5px}
-.sf-focus{border-top:1px solid rgba(255,255,255,.1);padding:12px 0 10px}
-.sf-focus span{display:block;font-size:11px;color:var(--text2);margin-bottom:3px}
-.sf-focus strong{font:600 18px Outfit,Inter;color:var(--text)}
-.sf-focus p{color:var(--text2);font-size:12px;line-height:1.4;margin-top:4px}
 .sf-widget-pair{display:grid;gap:12px}
 .sf-widget{border-radius:24px;border:1px solid rgba(255,255,255,.1);background:#121a29;box-shadow:0 10px 24px rgba(0,0,0,.22);padding:12px;overflow:hidden}
 .sf-small{width:164px;height:164px;display:flex;flex-direction:column;align-items:center;padding:10px 12px}

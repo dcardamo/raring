@@ -1,7 +1,5 @@
 package app.raring
 
-import android.Manifest
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -10,28 +8,22 @@ import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.os.Build
 import android.util.Log
-import android.view.View
 import android.widget.RemoteViews
-import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
 import org.json.JSONObject
 import java.io.File
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
 internal fun safeStatusTarget(route: String) = route.takeIf { it in setOf("today", "readiness", "sleep", "sleep/last", "metric/bodyBattery", "metric/stress") } ?: "today"
-internal fun shouldPostStatus(enabled: Boolean, granted: Boolean) = enabled && granted
 
 internal object StatusSurfaces {
-    private const val CHANNEL = "raring-status"
-    private const val ID = 7002
+    private const val RETIRED_CHANNEL = "raring-status"
+    private const val RETIRED_ID = 7002
     private val track = Color.rgb(58, 68, 81)
     private fun tone(tone: String) = when (tone) {
         "good" -> Color.rgb(105, 215, 157)
@@ -83,58 +75,12 @@ internal object StatusSurfaces {
         }
         return view
     }
-    private fun notification(context: Context, status: StatusSnapshot) {
+    // Android keeps an app's notifications across updates, so installed copies may
+    // still show the retired ongoing status notification until it is removed.
+    private fun retireNotification(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
-        val granted = manager.areNotificationsEnabled() && (Build.VERSION.SDK_INT < 33 ||
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)
-        if (!shouldPostStatus(status.enabled, granted)) {
-            manager.cancel(ID)
-            return
-        }
-        manager.createNotificationChannel(NotificationChannel(CHANNEL, "Status at a glance", NotificationManager.IMPORTANCE_LOW).apply {
-            description = "Silent readings and today's focus from the last watch upload."
-            setSound(null, null)
-            enableVibration(false)
-            setShowBadge(false)
-            lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
-        })
-        val compact = statusViews(context, R.layout.status_notification_compact, status)
-        val expanded = statusViews(context, R.layout.status_notification_expanded, status)
-        val notice = NotificationCompat.Builder(context, CHANNEL)
-            .setSmallIcon(R.drawable.ic_notification).setColor(ContextCompat.getColor(context, R.color.status_accent))
-            .setContentTitle(status.focus.ifEmpty { "Raring" }).setContentText(status.asOf)
-            // The post time is not the reading's time: the header names the upload instead.
-            .setShowWhen(false).setSubText(status.asOf)
-            .setCustomContentView(compact).setCustomBigContentView(expanded)
-            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
-            .setContentIntent(pending(context, status.target))
-            .setCategory(NotificationCompat.CATEGORY_STATUS)
-            .setOngoing(true).setSilent(true).setOnlyAlertOnce(true)
-            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-            .setPriority(NotificationCompat.PRIORITY_LOW).build()
-        manager.notify(ID, notice)
-    }
-    internal fun statusViews(context: Context, layout: Int, status: StatusSnapshot): RemoteViews {
-        val view = RemoteViews(context.packageName, layout)
-        view.setTextViewText(R.id.status_battery, status.battery.display)
-        view.setTextViewText(R.id.status_stress, status.stress.display)
-        view.setTextViewText(R.id.status_hr, status.heartRate.display)
-        if (layout == R.layout.status_notification_compact) {
-            view.setTextViewText(R.id.status_asof, status.asOf)
-            // Before Android 12 the collapsed view keeps the header, which already says it.
-            if (Build.VERSION.SDK_INT < 31) view.setViewVisibility(R.id.status_asof, View.GONE)
-            return view
-        }
-        view.setTextViewText(R.id.status_focus, status.focus)
-        view.setTextViewText(R.id.status_reason, status.reason)
-        view.setViewVisibility(R.id.status_reason, if (status.reason.isEmpty()) View.GONE else View.VISIBLE)
-        // Heart rate is a reading, not a 0–100 gauge: no invented scale. A missing reading hides
-        // its bar, since an empty track would read as zero.
-        for ((bar, metric) in listOf(R.id.status_battery_bar to status.battery, R.id.status_stress_bar to status.stress)) {
-            view.setProgressBar(bar, 100, metric.value?.toInt() ?: 0, false)
-            view.setViewVisibility(bar, if (metric.value == null) View.INVISIBLE else View.VISIBLE)
-        }
-        return view
+        manager.cancel(RETIRED_ID)
+        manager.deleteNotificationChannel(RETIRED_CHANNEL)
     }
     private val renderLock = Any()
     fun suspendSession(context: Context) = synchronized(renderLock) {
@@ -145,24 +91,21 @@ internal object StatusSurfaces {
         render(context)
     }
     fun clear(context: Context) = synchronized(renderLock) {
-        context.getSystemService(NotificationManager::class.java).cancel(ID)
+        retireNotification(context)
         drawWidgets(context, null)
     }
-    // Settings already wrote the new snapshot. In particular, opt-out must not
-    // wait behind minutes of network work. Re-read inside the rendering lock so
-    // an older renderer cannot repost the notification after cancellation.
+    // Settings already wrote the new snapshot; redrawing must not wait behind
+    // minutes of network work.
     fun applySettings(context: Context) = render(context)
     private fun render(context: Context) = synchronized(renderLock) {
         if (!AccountSession.active(context)) {
             clear(context)
         } else {
-            // Rust checks the verified account binding and authoritative opt-out.
-            // An old file's enabled bit can never authorize a notification.
+            retireNotification(context)
+            // Rust checks the verified account binding.
             val response = JSONObject(NativeBridge.accountSession(AccountSession.db(context), "snapshot", "", ""))
             val status = response.optJSONObject("snapshot")?.toString()?.let { StatusSnapshot.parse(it) }
             drawWidgets(context, status)
-            if (status == null) context.getSystemService(NotificationManager::class.java).cancel(ID)
-            else notification(context, status)
         }
     }
     private fun drawWidgets(context: Context, status: StatusSnapshot?) {

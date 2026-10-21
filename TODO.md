@@ -474,12 +474,15 @@ From the read-only UX review of Training and workouts, in priority order.
 
 ### 9–10a. Status surface follow-ups
 
-Items 9 and 10 are shipped, and item 26 kept both surfaces with its shared
-rest, illness, limits and privacy rules.
+Items 9 and 10 are shipped; the status notification has since been removed
+(Done: "Persistent status notification removed"), leaving the widgets, which
+item 26 kept with its shared rest, illness, limits and privacy rules.
 
-- On a real phone, add both widgets, enable the silent notification and
-  compare readings/upload time after a Connect sync. Check metric taps,
-  permission denial, Settings off/on, reboot and overnight Doze.
+- On a real phone that showed the old status notification, install the
+  update and confirm the notification and its "Status at a glance" channel
+  are gone without opening the app. Verified only by an emulator test.
+- On a real phone, add both widgets and compare readings/upload time after a
+  Connect sync. Check metric taps, reboot and overnight Doze.
 - Check upgrading an existing installation and reconnecting the same Garmin
   account: cached history and local targets should survive identity
   verification. Different-account isolation has been tested with synthetic
@@ -487,15 +490,10 @@ rest, illness, limits and privacy rules.
 - Measure phone battery/radio cost before considering faster polling. Keep
   the existing hourly/morning sync; emulator rendering measurements and
   reported 0 mAh do not establish phone battery cost.
-- Compare the notification's latest HR sample with Today's available data;
-  absent readings stay blank. Rendering itself makes no Garmin requests.
-- Check other launchers and lock-screen privacy choices. Android can defer
-  updates and allows users to dismiss ongoing notifications. Minimum-size
+- The medium widget's Body Battery and stress have the same lag as the
+  removed notification: decide whether they belong on a home-screen widget.
+- Check other launchers. Android can defer updates. Minimum-size
   RemoteViews passed emulator tests at font scales 1.0, 1.3 and 1.5.
-- Check the restyled notification on a phone (Android 16, wallpaper
-  colours): it was checked on an Android 15 emulator in light, dark and
-  1.5× text only. Android before 12 keeps the header in the collapsed view,
-  so "As of" moves there; that path is untested.
 - The per-kind alert channels replace the old "Raring" channel: a phone that
   had changed that channel's sound or importance starts from the defaults.
 
@@ -694,6 +692,16 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Persistent status notification removed** (commit "Remove the persistent
+  status notification"). Body Battery, stress and heart rate reach Raring
+  only when the watch uploads to Connect, so the always-on readout was
+  usually behind and, for heart rate, often far off. Gone: the notification,
+  its Today offer and Settings switch, the `notifyStatus` and
+  `statusOfferSeen` settings, and the snapshot's `enabled`, `focusReason` and
+  `heartRate` fields. Widgets are unchanged. Each status refresh (sync, app
+  open, settings, package replaced) cancels a leftover notification and
+  deletes its `raring-status` channel.
 
 - **Status and gesture bars match the app** (commit "Paint the system bar
   strips the app's graphite"). The Android window background and the WebView
