@@ -338,7 +338,9 @@ From the read-only UX review of Training and workouts, in priority order.
 - **Units elsewhere**: running tolerance, Progress distance totals and gear
   still read km; follow Garmin's measurement setting there too.
 - **Acute-load band per day**: the 30-day chart and metric detail use today's
-  optimal range; draw Garmin's stored range for each day where it exists.
+  optimal range; draw Garmin's stored range for each day where it exists
+  (each day's Training Status carries `minTrainingLoadChronic` and
+  `maxTrainingLoadChronic`).
 - **Large text**: at 2x on 360 px, the strength session rows, the acute
   bar's tick labels and the Splits "Fastest" pill still pass their card;
   some card text still runs long at 2x (the chart lane covers charts only).
@@ -561,6 +563,35 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Phone feedback on Today and Training** (commits "Today: score ring for
+  Sleep, green in-range vitals and no closing line", "Join Garmin's VO₂ max
+  and Fitness Age estimates in one line", "Training: lead with VO₂ max
+  beside the training status", "Name the Sleep Score with Garmin's word"
+  and "Read Garmin's optimal acute-load range and show it on Today after a
+  workout"), from the maintainer's phone. Today's Sleep stat is Garmin's
+  Sleep Score in a ring in its level's colour, like Readiness, with Garmin's
+  word and the time asleep under it ("Good · 7:33"), instead of time asleep
+  in a full ring against the need; every rating word in the row takes its
+  tone colour. Sleep HR and HRV are green within the usual range and amber
+  outside it in either direction (core `NightReading.tone`), as on Health's
+  vitals and the charts. "That's today." is gone. VO₂ max and Fitness Age
+  histories join Garmin's estimates in one line, dotted where it crosses
+  days without one, with no gap marks; before, a line appeared only where
+  two estimates fell on consecutive days. Training leads with VO₂ max and
+  its 30-day change beside the status; "Is my fitness improving?" keeps
+  endurance, hill and run tolerance. Garmin sets no daily load target, so
+  under Done today acute load is a dot on Garmin's optimal range, as on
+  Training. Verified on the maintainer's account: Training Status sends that
+  range as `acuteTrainingLoadDTO.minTrainingLoadChronic` and
+  `maxTrainingLoadChronic` (its `acwrStatus` agreed on every day checked),
+  which Raring hadn't read, so Training had shown no range; the older weekly
+  load tunnel (`loadTunnelMin`, `loadTunnelMax`, `weeklyTrainingLoad`) is
+  null. Health Status's `HR` equals the sleep record's `avgHeartRate` and
+  sits above Garmin's daily resting HR, so the stat stays "Sleep HR".
+  Garmin's `maxmet` daily rows exist only on days it updates VO₂ max. The
+  Sleep Score's word is `sleepScores.overall.qualifierKey`; Garmin's
+  EXCELLENT (from 90) is unverified on this account.
 
 - **Notifications restyled** (commit "Restyle notifications for Android's
   shade and say what changed"). The status notification draws no card of
