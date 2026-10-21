@@ -1,0 +1,7 @@
+{
+  "default": "raring.svg",
+  "bg_color": "#111317",
+  "android_fg": "raring-foreground.svg",
+  "android_fg_scale": 100,
+  "android_monochrome": "raring-monochrome.svg"
+}

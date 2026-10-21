@@ -18,7 +18,7 @@ class MainActivity : TauriActivity() {
       navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
     )
     super.onCreate(savedInstanceState)
-    window.decorView.setBackgroundColor(Color.parseColor("#0B0F1A"))
+    window.decorView.setBackgroundColor(Color.parseColor("#111317"))
     // Edge-to-edge (forced from targetSdk 35) gives the WebView no safe-area
     // insets, so pad the content view by the system bars and the keyboard.
     val content = findViewById<View>(android.R.id.content)
