@@ -53,12 +53,12 @@
 </div>
 <style>
  .scrim{position:fixed;inset:0;border:0;background:rgba(5,8,14,.62);z-index:20;padding:0}
- .sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;max-width:560px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-bottom:0;border-radius:26px 26px 0 0;padding:12px 20px 28px;max-height:90vh;overflow:auto}
+ .sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;max-width:560px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-bottom:0;border-radius:26px 26px 0 0;padding:12px 20px calc(28px + env(safe-area-inset-bottom));max-height:90dvh;overflow:auto}
  .grab{display:block;width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.18);margin:0 auto 16px}
- .sheet-h{display:flex;justify-content:space-between;align-items:center;gap:12px}
- .close{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:none;display:grid;place-items:center;color:var(--text2)}
+ .sheet-h{display:flex;justify-content:space-between;align-items:center;gap:12px}.sheet-h h2{min-width:0;overflow-wrap:anywhere}
+ .close{flex:none;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:none;display:grid;place-items:center;color:var(--text2)}
  .chips2{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}.chips2 button{min-height:40px;padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:none;color:var(--text2);font:600 13px Inter}.chips2 button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
- .row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:12px}.name{margin-top:12px}
- .field{display:grid;gap:6px;font-size:13px;color:var(--text2)}.field small{color:var(--text3);font-size:12px}.field input{width:100%;box-sizing:border-box}.field input,.alloc input{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:9px 10px;font:500 14px Inter;min-width:0}
- .alloc{display:flex;align-items:center;gap:8px;margin:8px 0 0;font-size:14px}.alloc input{width:80px}.alloc i{width:9px;height:9px;border-radius:50%;background:var(--c)}
+ .row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr));gap:10px;margin-top:12px}.name{margin-top:12px}
+ .field{display:grid;min-width:0;gap:6px;font-size:13px;color:var(--text2)}.field small{color:var(--text3);font-size:12px}.field input{width:100%;box-sizing:border-box}.field input,.alloc input{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:9px 10px;font:500 14px Inter;min-width:0}
+ .alloc{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0 0;font-size:14px}.alloc input{width:80px;max-width:100%}.alloc i{flex:none;width:9px;height:9px;border-radius:50%;background:var(--c)}
 </style>

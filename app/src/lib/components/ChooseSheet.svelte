@@ -38,13 +38,13 @@
 </div>
 <style>
  .scrim{position:fixed;inset:0;border:0;background:rgba(5,8,14,.62);z-index:20;padding:0}
- .sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;max-width:560px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-bottom:0;border-radius:26px 26px 0 0;padding:12px 20px 28px;max-height:88vh;overflow:auto}
+ .sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;max-width:560px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-bottom:0;border-radius:26px 26px 0 0;padding:12px 20px calc(28px + env(safe-area-inset-bottom));max-height:88dvh;overflow:auto}
  .grab{display:block;width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.18);margin:0 auto 16px}
- .sheet-h{display:flex;justify-content:space-between;align-items:center;gap:12px}
- .close{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:none;display:grid;place-items:center;color:var(--text2)}
+ .sheet-h{display:flex;justify-content:space-between;align-items:center;gap:12px}.sheet-h h2{min-width:0;overflow-wrap:anywhere}
+ .close{flex:none;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:none;display:grid;place-items:center;color:var(--text2)}
  h3{font:600 11px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin:16px 0 0}
- .opts{display:grid;gap:8px;margin-top:8px}.opts button{display:grid;grid-template-columns:24px 1fr;gap:12px;align-items:center;text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.04);color:var(--text);min-height:56px}
+ .opts{display:grid;gap:8px;margin-top:8px}.opts button{display:grid;grid-template-columns:24px minmax(0,1fr);gap:12px;align-items:center;text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.04);color:var(--text);min-height:56px}
  .gm{display:grid;place-items:center;width:24px;font-size:18px;color:var(--text2)}
  .opts button[aria-pressed=true]{border-color:var(--ink)}
- .opts button:disabled{color:var(--text3);cursor:default}.opts b{display:block;font:600 15px Inter}.opts small{display:block;font-size:12px;color:var(--text2);margin-top:2px}
+ .opts button span:not(.gm){min-width:0;overflow-wrap:anywhere}.opts button:disabled{color:var(--text3);cursor:default}.opts b{display:block;font:600 15px Inter}.opts small{display:block;font-size:12px;color:var(--text2);margin-top:2px}
 </style>

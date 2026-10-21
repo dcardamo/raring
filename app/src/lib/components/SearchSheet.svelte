@@ -22,12 +22,12 @@
 </div>
 <style>
  .scrim{position:fixed;inset:0;border:0;background:rgba(5,8,14,.62);z-index:20;padding:0}
- .sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;max-width:560px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-bottom:0;border-radius:26px 26px 0 0;padding:12px 20px 28px}
+ .sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;max-width:560px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-bottom:0;border-radius:26px 26px 0 0;padding:12px 20px calc(28px + env(safe-area-inset-bottom));max-height:90dvh;overflow:auto}
  .grab{display:block;width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.18);margin:0 auto 16px}
- .sheet-h{display:flex;justify-content:space-between;align-items:center;gap:12px}
- .close{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:none;display:grid;place-items:center;color:var(--text2)}
- .q{width:100%;margin:6px 0 10px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text);font:500 15px Inter}
- ul{list-style:none;margin:0;padding:0;max-height:52vh;overflow:auto}
+ .sheet-h{display:flex;justify-content:space-between;align-items:center;gap:12px}.sheet-h h2{min-width:0;overflow-wrap:anywhere}
+ .close{flex:none;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:none;display:grid;place-items:center;color:var(--text2)}
+ .q{width:100%;min-width:0;margin:6px 0 10px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text);font:500 15px Inter}
+ ul{list-style:none;margin:0;padding:0}
  li button{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:44px;padding:8px 4px;border:0;border-bottom:1px solid var(--line);background:none;color:var(--text);text-align:left;font:500 15px Inter}
- .none{color:var(--text3);padding:12px 4px}
+ li button span{min-width:0;overflow-wrap:anywhere}li button :global(svg){flex:none}.none{color:var(--text3);padding:12px 4px}
 </style>
