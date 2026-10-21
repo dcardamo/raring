@@ -223,9 +223,8 @@ TalkBack or Doze.
 - **Add and delete a weigh-in on a signed-in phone** (approved writes only):
   `garminWrite` under `SyncGate`, refreshed tokens saved to the vault, the
   weigh-in on Health and Profile at once, and Connect showing the same entry.
-  So far only desktop and the core's mocks run it; the Android JNI path is
-  compiled but unrun, and the demo's refusal wasn't checked on the emulator
-  (it was busy, and this worktree had no project debug key).
+  The emulator checked only the demo's refusal; the credentialed JNI write
+  is unrun on a device.
 
 ### Notifications, widgets and background sync
 

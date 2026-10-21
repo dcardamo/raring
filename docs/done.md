@@ -18,9 +18,12 @@ facts verified while building it. The open backlog is [TODO.md](../TODO.md).
   the website's privacy page and Profile's help no longer say Raring only
   reads from Garmin. UI tests: the preview's refusal, an unconfirmed save
   kept with its time then confirmed on retry, cancel and confirm of a
-  delete, widths and contrast. The debug APK builds (Android JNI and Kotlin
-  compile); it wasn't installed or run (see Check on a phone: Garmin writes
-  on a phone).
+  delete, widths and contrast. On the emulator (debug build, project
+  signer) with the synthetic demo, which has no Garmin tokens: Add a weight
+  and the confirmed delete each showed "Not connected to Garmin; nothing was
+  sent", with no request, no log entry, no crash and the session still
+  signed in. The credentialed write on a phone is still to check (Check on
+  a phone: Garmin writes on a phone).
 
 - **Weigh-ins in the write rules** (commit "Add weigh-in create and delete
   to the Garmin write rules"; TODO 1, steps 1–2). Spike on the maintainer's
