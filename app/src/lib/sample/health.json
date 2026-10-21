@@ -14,7 +14,7 @@
       "rangeSource": "garmin",
       "state": "within",
       "delta": null,
-      "tone": "neutral"
+      "tone": "good"
     },
     "hrv": {
       "value": 58,
@@ -26,7 +26,7 @@
       "rangeSource": "garmin",
       "state": "within",
       "delta": null,
-      "tone": "neutral"
+      "tone": "good"
     }
   },
   "date": "2025-10-16",

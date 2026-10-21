@@ -1,12 +1,27 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical"
- android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="4dp" android:background="@drawable/status_card">
- <TextView android:id="@+id/status_asof" android:layout_width="match_parent" android:layout_height="wrap_content" android:maxLines="1" android:textSize="10sp" android:textColor="#B2C2D3"/>
- <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
-  <ImageView android:layout_width="20dp" android:layout_height="18dp" android:src="@drawable/status_battery" android:contentDescription="Body Battery"/>
-  <TextView android:id="@+id/status_battery" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:textSize="14sp" android:textColor="#FFFFFF"/>
-  <ImageView android:layout_width="20dp" android:layout_height="18dp" android:src="@drawable/status_stress" android:contentDescription="Stress"/>
-  <TextView android:id="@+id/status_stress" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:textSize="14sp" android:textColor="#FFFFFF"/>
-  <ImageView android:layout_width="20dp" android:layout_height="18dp" android:src="@drawable/status_heart" android:contentDescription="Heart rate"/>
-  <TextView android:id="@+id/status_hr" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:textSize="14sp" android:textColor="#FFFFFF"/>
- </LinearLayout>
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android draws the card around custom notification content; this layout adds none of its own. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:gravity="center_vertical">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:layout_width="18dp" android:layout_height="18dp"
+            android:src="@drawable/status_battery" android:contentDescription="Body Battery"/>
+        <TextView android:id="@+id/status_battery" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginStart="6dp" android:minEms="2" android:maxLines="1"
+            android:textAppearance="@style/TextAppearance.Compat.Notification.Title"/>
+        <ImageView android:layout_width="18dp" android:layout_height="18dp" android:layout_marginStart="12dp"
+            android:src="@drawable/status_stress" android:contentDescription="Stress"/>
+        <TextView android:id="@+id/status_stress" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginStart="6dp" android:minEms="2" android:maxLines="1"
+            android:textAppearance="@style/TextAppearance.Compat.Notification.Title"/>
+        <ImageView android:layout_width="18dp" android:layout_height="18dp" android:layout_marginStart="12dp"
+            android:src="@drawable/status_heart" android:contentDescription="Heart rate"/>
+        <TextView android:id="@+id/status_hr" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginStart="6dp" android:minEms="2" android:maxLines="1"
+            android:textAppearance="@style/TextAppearance.Compat.Notification.Title"/>
+    </LinearLayout>
+    <TextView android:id="@+id/status_asof" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:maxLines="1" android:ellipsize="end"
+        android:textAppearance="@style/TextAppearance.Compat.Notification.Info"/>
 </LinearLayout>

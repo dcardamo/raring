@@ -4,6 +4,7 @@
  import Reconcile from './Reconcile.svelte';
  import EffortBar from './EffortBar.svelte';
  import TodaySessionCard from './TodaySessionCard.svelte';
+ import LoadBar from './LoadBar.svelte';
  import type {TodayView} from '../generated/TodayView';
  import type {LocalAction} from '../generated/LocalAction';
  import {num} from '../format';
@@ -37,6 +38,8 @@
  {#if today.focus.note && lead?.kind !== 'fixed'}<p class="reason"><Icon name="clock" size={13}/> {today.focus.note}</p>{/if}
  {#if today.focus.schedule}<p class="reason"><Icon name="clock" size={13}/> Timed by your {today.focus.schedule} until a few more nights are recorded.</p>{/if}
  {#if effort}<EffortBar {effort}/>{/if}
+ <!-- After a workout, where the effort scale was: acute load against Garmin's optimal range; Garmin sets no daily target. -->
+ {#if done && today.load?.band}<div class="done-load"><LoadBar load={today.load} open={() => navigate('metric/acuteLoad')}/></div>{/if}
  {#if showReason && today.readinessWhy}<p class="reason">{today.readinessWhy.summary}</p>{/if}
  {#if effort && today.fitness?.leverLine && today.fitness.window.average!=null}<p class="reason lever"><Icon name="heart" size={13}/><span>Your Fitness Age lever: <b>vigorous minutes</b>, {num(today.fitness.window.average)} of Garmin’s {num(today.fitness.window.target)} a week</span></p>{/if}
  {#if lead?.kind === 'sleep'}{#each stillPlanned as s}<button class="still" onclick={() => navigate('plan')}>{s.name}{s.time ? ` ${s.time}` : ''} · still in your plan<Icon name="chevron" size={14}/></button>{/each}{/if}
@@ -57,7 +60,7 @@
 {/if}
 <style>
  .hero{margin:6px 0 4px;max-width:620px}.hero h2{font:600 26px/1.2 var(--font-body);letter-spacing:-.035em;margin:16px 4px 6px}
- .line{margin:2px 4px;font-size:14px;color:var(--text)}.reason{margin:2px 4px 6px;font-size:13px;color:var(--text2)}
+ .line{margin:2px 4px;font-size:14px;color:var(--text)}.done-load{margin:8px 4px 4px}.reason{margin:2px 4px 6px;font-size:13px;color:var(--text2)}
  .still{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;min-height:44px;margin:6px 0 0;padding:6px 4px;border:0;border-top:1px solid var(--line);background:none;color:var(--text2);font:500 13px Inter;text-align:left}
  .lever{display:flex;gap:6px;align-items:baseline}.lever b{color:var(--text);font-weight:600}.lever :global(svg){flex:none;color:var(--good);transform:translateY(2px)}
  .acts{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0}.acts button{width:auto;flex:1 1 140px;margin-top:0}

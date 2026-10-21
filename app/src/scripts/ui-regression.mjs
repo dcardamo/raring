@@ -137,7 +137,7 @@ try {
   const toggle=surface.getByRole('checkbox',{name:/Persistent status/});
   await toggle.waitFor();
   assert.equal(await toggle.isChecked(),false,'status is opt-in');
-  assert.equal(await surface.getByRole('checkbox').count(),10,'internal offer flag is not a toggle (the plan prompt is)');
+  assert.equal(await surface.getByRole('checkbox').count(),11,'internal offer flag is not a toggle (the plan prompt and street maps are)');
   await toggle.check();
   await surface.screenshot({path:resolve(output,`status-settings-${width}.png`)});
   await toggle.uncheck();
@@ -821,7 +821,6 @@ try {
   const left=week.getByRole('group',{name:'Left this week'});
   assert.equal(await left.getByRole('button',{name:'Do it today'}).count(),1,'This week and what is left share one card');
   assert.equal(await left.getByText('Excluded by your limits').count(),1,'an excluded backlog item says why, as in Choose');
-  await dayPage.getByText('That’s today.',{exact:true}).waitFor();
   const length=await dayPage.evaluate(()=>{const el=document.querySelector('main.scroll');return el.scrollHeight/el.clientHeight});
   console.log(`Today at 390×844 is ${length.toFixed(2)} viewports`);
   await left.getByRole('button',{name:'Do it today'}).first().click();
@@ -883,7 +882,7 @@ try {
   const empty={...sample,activities:[],day:{...sample.day,sleep:[],asleepMin:null,bodyBattery:[],bodyBatteryNow:null,stress:[],stressAverage:null,heartRate:[],restingHr:null,events:[],uploadMin:null}};
   await blank.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(empty)}`}));
   await blank.goto(`${url}/#today`);
-  await blank.getByText('That’s today.',{exact:true}).waitFor();
+  await blank.locator('#lead-h').waitFor();
   assert.equal(await blank.locator('.your-day').count(),0,'an empty Your day is hidden');
   assert.equal(await blank.locator('.card.recorded').count(),0);
   // Without intraday levels the row still shows the day's latest Body Battery, so cutting Right now loses nothing.
@@ -943,8 +942,13 @@ try {
   const tops=await stats.evaluateAll(els=>els.map(e=>Math.round(e.getBoundingClientRect().top)));
   assert.equal(new Set(tops).size,1,'one row at 360 px');
   const text=await sp.locator('.morning').textContent();
-  for(const t of ['7:48','Score 84','82','High','57','6 above usual','44','11 below usual'])assert.ok(text.includes(t),`${t} in ${text}`);
+  for(const t of ['84','Good · 7:48','82','High','57','6 above usual','44','11 below usual'])assert.ok(text.includes(t),`${t} in ${text}`);
   assert.equal(await sp.getByRole('button',{name:'Sleep HR 57 bpm, 6 above usual, usual 48–54 bpm'}).count(),1);
+  // Sleep is Garmin's score in a ring like Readiness; each rating word takes its tone colour.
+  assert.equal(await sp.locator('.sleep-fact .gauge').count(),1,'the sleep ring is the score');
+  assert.equal(await sp.getByRole('button',{name:'Last night’s sleep, score 84, Good, 7:48 asleep'}).count(),1);
+  const good='rgb(96, 211, 160)',fair='rgb(242, 184, 94)';
+  assert.deepEqual(await sp.locator('.morning small').evaluateAll(els=>els.map(e=>getComputedStyle(e).color)),[good,good,fair,fair]);
   assert.deepEqual(await contrastFailures(sp),[],'stats contrast');
   await sp.screenshot({path:resolve(output,'today-stats-360.png')});
   for(const [name,route] of [['Sleep HR','metric/sleepHr'],['HRV','metric/hrv'],['Readiness','readiness'],['Last night','sleep/last']]){
@@ -955,8 +959,17 @@ try {
   // The neutral wait shows no stale values; missing readings say so.
   const waitPage=await open({...sample,nightVitals:null,focus:{...sample.focus,sleepMissing:true,effort:false,lastNight:null},lead:{id:'wait:2025-10-16',kind:'waiting',headline:'Last night hasn’t synced yet',line:null,action:null,dismissable:false,kept:false,garmin:null,activity:null,intention:null,reasons:[]}});
   const waitText=await waitPage.locator('.morning').textContent();
-  assert.ok(!/7:48|Score 84|\b82\b|\b58\b/.test(waitText) && waitText.includes('Not synced yet') && waitText.includes('Waiting'),waitText);
+  assert.ok(!/7:48|\b84\b|\b82\b|\b58\b/.test(waitText) && waitText.includes('Not synced yet') && waitText.includes('Waiting'),waitText);
   await waitPage.close();
+  // Within the usual range is green, as on Health's vitals and the charts.
+  const within=await open(sample);
+  assert.deepEqual(await within.locator('.hr-fact small, .hrv-fact small').evaluateAll(els=>els.map(e=>[e.textContent,getComputedStyle(e).color])),[['Within usual',good],['Within usual',good]]);
+  await within.close();
+  // A night without a score shows its time asleep, without a ring.
+  const unscored=await open({...sample,sleep:null});
+  assert.equal(await unscored.locator('.sleep-fact .gauge').count(),0);
+  assert.ok((await unscored.locator('.sleep-fact').textContent()).includes('7:48') && (await unscored.locator('.sleep-fact').textContent()).includes('No score'));
+  await unscored.close();
   const missing=await open({...sample,nightVitals:{sleepHr:{...nightVitals.sleepHr,value:null,state:'unset',delta:null,usual:null,tone:'neutral'},hrv:{...nightVitals.hrv,state:'unset',usual:null,delta:null,tone:'neutral'}}});
   const missingText=await missing.locator('.morning').textContent();
   assert.ok(missingText.includes('Not recorded') && missingText.includes('Usual not set yet'),missingText);
@@ -1152,11 +1165,61 @@ try {
   await acts.locator('.activity').first().click();await ts.waitForURL(/#workout\//);
   await ts.goBack();await ts.waitForURL(/#training$/);
   assert.equal(await ts.getByRole('tab',{name:'Activities'}).getAttribute('aria-selected'),'true');
+  // The calendar: a stored month at a time with each day's sports, a day's list, and a jump to another month.
+  await acts.getByRole('group',{name:'Show activities as'}).getByRole('button',{name:'Calendar'}).click();
+  const october=acts.getByRole('group',{name:'October 2025'});
+  await october.waitFor();
+  assert.equal(await october.getByRole('button').count(),8,'one button per day with recordings');
+  assert.equal(await acts.getByRole('button',{name:'Next month'}).isDisabled(),true,'no month after this one');
+  assert.equal(await acts.locator('.activity').count(),9,'the month’s recordings under it');
+  await october.getByRole('button',{name:'Wed 15 Oct: Lower A, Evening Ride'}).click();
+  assert.equal(await acts.locator('.activity').count(),2,'a day narrows the list to that day');
+  await acts.getByRole('button',{name:'Only Wed 15 Oct; show the whole month'}).click();
+  assert.equal(await acts.locator('.activity').count(),9);
+  await acts.getByRole('button',{name:'Previous month'}).click();
+  await acts.getByRole('group',{name:'September 2025'}).waitFor();
+  assert.equal(await acts.locator('.activity').count(),4);
+  await acts.getByRole('button',{name:/^September 2025, choose a month/}).click();
+  const year=acts.getByRole('group',{name:'Months of 2025'});
+  assert.equal(await year.getByRole('button',{name:'Jul'}).isDisabled(),true,'nothing before the oldest stored recording');
+  assert.equal(await year.getByRole('button',{name:'Nov'}).isDisabled(),true,'nothing after this month');
+  await year.getByRole('button',{name:'Aug'}).click();
+  await acts.getByRole('group',{name:'August 2025'}).waitFor();
+  assert.equal(await acts.getByRole('button',{name:'Previous month'}).isDisabled(),true);
+  await acts.getByRole('button',{name:/^August 2025, choose a month/}).click();
+  await acts.getByRole('group',{name:'Months of 2025'}).getByRole('button',{name:'Oct'}).click();
+  await acts.getByRole('group',{name:'Filter by sport'}).getByRole('button',{name:'Run'}).click();
+  assert.equal(await acts.getByRole('group',{name:'October 2025'}).getByRole('button').count(),1,'the sport filter applies to the calendar');
+  await acts.locator('.activity').first().click();await ts.waitForURL(/#workout\/9000000000001$/);
+  await ts.goBack();await ts.waitForURL(/#training$/);
+  await acts.getByRole('group',{name:'October 2025'}).waitFor();
+  assert.equal(await acts.getByRole('group',{name:'Show activities as'}).getByRole('button',{name:'Calendar'}).getAttribute('aria-pressed'),'true','the calendar and its month hold across a workout and Back');
+  await ts.screenshot({path:resolve(output,'training-calendar-390.png'),fullPage:true});
   for(const width of [320,700,1100]){await ts.setViewportSize({width,height:900});assert.equal(await ts.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`Training fits ${width}px`)}
   assert.deepEqual(await contrastFailures(ts),[],'Training sections contrast');
   await ts.close();
  }
  console.log('Training sections: three questions, muscles with gaps, activity contributions, section kept: passed');
+ // A busy calendar day keeps its first sport and a count; its name lists every recording in start order.
+ {
+  const busy=await browser.newPage({viewport:{width:390,height:844}});
+  busy.on('pageerror',e=>errors.push(e.message));
+  const training=JSON.parse(await readFile(resolve('src/lib/sample/training.json'),'utf8')),run=training.workouts[0];
+  const extra=[{...run,id:'9000000000201',name:'Walk 1',icon:'walk',startLocal:'2025-10-15T12:00:00'},{...run,id:'9000000000202',name:'Swim 2',icon:'swim',startLocal:'2025-10-15T20:00:00'}];
+  await busy.route(u=>u.pathname==='/src/lib/sample/training.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify({...training,workouts:[...extra,...training.workouts]})}`}));
+  await busy.goto(`${url}/#training`);
+  await busy.getByRole('tab',{name:'Activities'}).click();
+  const acts=busy.locator('.q-activities');
+  await acts.getByRole('group',{name:'Show activities as'}).getByRole('button',{name:'Calendar'}).click();
+  const day=acts.getByRole('button',{name:'Wed 15 Oct: Walk 1, Lower A, Evening Ride, Swim 2'});
+  await day.waitFor();
+  assert.equal(await day.locator('svg').count(),1,'one sport icon, then a count');
+  assert.equal((await day.locator('small').textContent()).trim(),'+3');
+  await day.click();
+  assert.equal(await acts.locator('.activity').count(),4);
+  await busy.close();
+ }
+ console.log('Activities calendar: a busy day keeps its first sport and a count: passed');
  // "?" help: short sheets on root pages and cards; Back and Escape close them before navigating.
  {
   const hp=await browser.newPage({viewport:{width:390,height:844}});
@@ -1198,10 +1261,16 @@ try {
   assert.ok((await sp.locator('.card.recorded').textContent()).includes('avg HR 152'),'U05');
   assert.equal(await sp.locator('.card.recorded h3',{hasText:'Recorded today'}).count(),1,'titled when the headline isn’t Done today');
   const dp=await browser.newPage({viewport:{width:390,height:844}});
-  await dp.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify({...sample,lead:{id:'done:1',kind:'done',headline:'Done today',line:null,action:null,dismissable:false,kept:false,garmin:null,activity:null,intention:null,reasons:[],session:null}})}`}));
+  await dp.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify({...sample,load:{value:250,max:500,label:'Optimal',tone:'good',band:[180.8,339]},lead:{id:'done:1',kind:'done',headline:'Done today',line:null,action:null,dismissable:false,kept:false,garmin:null,activity:null,intention:null,reasons:[],session:null}})}`}));
   await dp.goto(`${url}/#today`);
   await dp.getByText('Done today',{exact:true}).waitFor();
   assert.equal(await dp.locator('.card.recorded h3').count(),0,'Done today already heads the list');
+  // After a workout, acute load against Garmin's optimal range sits where the effort scale was, and opens its history.
+  assert.equal(await sp.locator('.done-load').count(),0,'no load bar before anything is done');
+  const doneLoad=dp.locator('.hero .done-load');
+  assert.ok((await doneLoad.textContent()).includes('Optimal 181–339'),'Garmin’s range prints whole');
+  await doneLoad.getByRole('button',{name:"Acute load 250, Optimal; Garmin's optimal range 181–339. Open its history"}).click();
+  await dp.waitForURL(/#metric\/acuteLoad$/);
   await dp.close();
   const rp=await browser.newPage({viewport:{width:390,height:844}});
   await rp.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify({...sample,readiness:null,missingMetricReasons:{readiness:'This watch can’t record Training Readiness.'}})}`}));
@@ -1396,6 +1465,36 @@ try {
    assert.equal(await ng.getByRole('region',{name:'How it counted'}).count(),0,'no goals, no How it counted');
    await ng.close();
   }
+  // Street maps: the run's card draws its stored map under the route with the credit in its corner; a card whose
+  // area isn't drawn yet asks once and fills in; with street maps off the route is drawn alone.
+  {
+   const credit='© OpenMapTiles © OpenStreetMap';
+   const mp=await browser.newPage({viewport:{width:390,height:844}});
+   await mp.goto(`${url}/#workout/9000000000001`);
+   const card=mp.locator('.map-card');
+   await card.getByText(credit,{exact:true}).waitFor();
+   assert.equal(await card.getByRole('img',{name:'Workout route on a street map'}).count(),1);
+   assert.deepEqual(await card.locator('path.layer').evaluateAll(paths=>paths.map(p=>p.classList[1])),['green','water','waterway','path','minor','road','major'],'every layer, bottom to top');
+   const [box,label]=[await card.boundingBox(),await card.getByText(credit,{exact:true}).boundingBox()];
+   assert.ok(label.x>=box.x && label.x+label.width<=box.x+box.width && label.y+label.height<=box.y+box.height,'credit inside the card');
+   await mp.screenshot({path:resolve(output,'workout-street-map-390.png')});
+   const waiting=JSON.parse(await readFile(resolve('src/lib/sample/workout.json'),'utf8'));
+   waiting.map={...waiting.map,state:'missing',layers:[]};
+   await mp.route(u=>u.pathname==='/src/lib/sample/workout.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(waiting)}`}));
+   await mp.reload();
+   await card.getByText(credit,{exact:true}).waitFor();
+   assert.equal(await card.locator('path.layer').count(),7,'a waiting card fills in once its map is drawn');
+   await mp.unroute(u=>u.pathname==='/src/lib/sample/workout.json');
+   await mp.goto(`${url}/#settings`);
+   const toggle=mp.getByRole('checkbox',{name:/^Streets under workout routes/});
+   assert.equal(await toggle.isChecked(),true,'street maps are on by default');
+   await toggle.uncheck();
+   await mp.goto(`${url}/#workout/9000000000001`);
+   await card.getByRole('img',{name:'Workout route',exact:true}).waitFor();
+   assert.equal(await card.locator('path.layer').count(),0,'off: no map layers');
+   assert.equal(await card.getByText(credit).count(),0,'off: no credit');
+   await mp.close();
+  }
   for(const width of [320,700]){await wp.setViewportSize({width,height:900});assert.equal(await wp.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`workout fits ${width}px`)}
   assert.deepEqual(await contrastFailures(wp),[],'Workout detail contrast');
   await wp.goto(`${url}/#workout/9000000000002`);
@@ -1441,7 +1540,7 @@ try {
    if(today)await p.route(todaySample,route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(today)}`}));
    await p.goto(`${url}/#${hash}`);await p.locator('h1').first().waitFor();return p};
   const fa=await open('today');
-  await fa.getByText('That’s today.',{exact:true}).waitFor();
+  await fa.locator('.week-card').waitFor();
   assert.ok((await fa.locator('.card.recorded').textContent()).includes('+24 vigorous min'),'the run is credited with its vigorous minutes');
   const card=fa.locator('.fa-today');
   assert.equal(await card.count(),1);
@@ -1468,7 +1567,7 @@ try {
   await evening.close();
   const quiet={...sample.fitness.window,weeks:[14,31,6,27,20,6],today:0,average:104/6,beforeToday:104/6};
   const push=await open('today',{...sample,activities:[],fitness:{...sample.fitness,window:quiet,card:null,leverLine:true}});
-  await push.getByText('That’s today.',{exact:true}).waitFor();
+  await push.locator('.week-card').waitFor();
   assert.equal(await push.locator('.fa-today').count(),0,'a day that moved neither has no card');
   assert.ok((await push.locator('.hero').textContent()).includes('Your Fitness Age lever: vigorous minutes, 17 of Garmin’s 75 a week'));
   await push.close();
@@ -2018,7 +2117,7 @@ try {
  const weekly=patches.getByRole('checkbox',{name:'Weekly review'});
  const privacy=patches.getByRole('checkbox',{name:/Persistent status/});
  await morning.waitFor();
- assert.equal(await patches.getByRole('checkbox').count(),10,'journal has its own consent control');
+ assert.equal(await patches.getByRole('checkbox').count(),11,'journal and street maps have their own controls');
  assert.equal(await patches.locator('.card').filter({has:patches.getByRole('heading',{name:'Notifications',exact:true})}).getByRole('checkbox').count(),7,'journal consent is not a notification switch');
  await patches.evaluate(()=>window.testPatch.holdKeys=['notifyMorningReadiness','notifyStatus']);
  await morning.uncheck();
@@ -2706,6 +2805,21 @@ function trendFixture(q){
   await nightly.getByRole('button',{name:'All history',exact:true}).click();
   assert.equal(await nightly.getByText(/^Current Garmin baseline/).count(),0,'past baselines differed, so averages show none');
   await shot('trends-all');
+  // VO₂ max is Garmin's occasional estimate: one line joins the estimates, dotted where it crosses days without one.
+  await trends.goto(`${url}/#metric/vo2max`);
+  const vo2=trends.locator('.history').first();
+  await vo2.getByRole('button',{name:'90 days',exact:true}).click();
+  await vo2.getByText('Reading your history…').waitFor({state:'detached'});
+  const vo2Line=await vo2.locator('.history-line').getAttribute('d');
+  const vertices=[...vo2Line.matchAll(/[ML]([\d.]+),([\d.]+)/g)].map(m=>[+m[1],+m[2]]);
+  const dots=await vo2.locator('.chart-surface circle').evaluateAll(cs=>cs.map(c=>[+c.getAttribute('cx'),+c.getAttribute('cy')]));
+  assert.ok(vertices.length>2,'the 90 days hold several estimates');
+  assert.equal(vertices.length,Number((await vo2.locator('.record-count').textContent()).split(' / ')[0]),'every estimate is on the line');
+  assert.equal((vo2Line.match(/M/g)??[]).length,1,'one joined line: '+vo2Line);
+  for(const end of [vertices[0],vertices.at(-1)])assert.ok(dots.some(([cx,cy])=>Math.abs(cx-end[0])<.2 && Math.abs(cy-end[1])<.2),'the line ends on dotted estimates');
+  assert.equal(await vo2.locator('.history-gap').count(),0,'days without a new estimate are not gaps');
+  await vo2.getByRole('button',{name:'Previous reading'}).click();
+  assert.match(await vo2.getByRole('slider').getAttribute('aria-valuetext'),/: (No new estimate|\d+ )/,'a day between estimates is not a missing reading');
   await trends.close();
  }
  console.log('Trend ranges, weekly and monthly averages, overlays and the period before at 390/700/1100: passed');

@@ -1,6 +1,6 @@
 <script lang="ts">
  import type {Icon as GarminIcon} from '../generated/Icon';
- export type IconName = GarminIcon | 'pulse' | 'check' | 'lift' | 'gauge' | 'vo2' | 'back' | 'arrow-right' | 'arrow-left' | 'trend-up' | 'trend-down' | 'sparkle' | 'scale' | 'info' | 'close' | 'chevron-down' | 'pause' | 'pencil' | 'help' | 'star' | 'alert' | 'chevron';
+ export type IconName = GarminIcon | 'pulse' | 'check' | 'lift' | 'gauge' | 'vo2' | 'back' | 'arrow-right' | 'arrow-left' | 'trend-up' | 'trend-down' | 'sparkle' | 'scale' | 'info' | 'close' | 'chevron-down' | 'pause' | 'pencil' | 'help' | 'star' | 'alert' | 'chevron' | 'calendar' | 'list';
  let {name,size=20}:{name:IconName,size?:number}=$props();
 </script>
 <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="var(--stroke-icon)" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -38,6 +38,8 @@
  {:else if name==='star'}<path d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.6L12 16.5l-5.1 2.7 1-5.6-4.1-4 5.7-.8z" fill="currentColor" stroke="none"/>
  {:else if name==='alert'}<path d="M12 4.5l8.5 15h-17z"/><path d="M12 10.5v3.5M12 16.8h.01"/>
  {:else if name==='chevron'}<path d="M9 5l7 7-7 7"/>
+ {:else if name==='calendar'}<rect x="4" y="5.5" width="16" height="14.5" rx="3"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/>
+ {:else if name==='list'}<path d="M9 7h11M9 12h11M9 17h11M4.5 7h.01M4.5 12h.01M4.5 17h.01"/>
  {:else if name==='other'}<circle cx="12" cy="13.5" r="7"/><path d="M12 13.5V10M10 3.5h4M18.5 6.5l-1.3 1.3"/>
  {/if}
 </svg>

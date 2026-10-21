@@ -1024,7 +1024,8 @@
       "bests": [],
       "fitness": null
     },
-    "strength": null
+    "strength": null,
+    "map": null
   },
   "9000000000008": {
     "detail": {
@@ -1919,6 +1920,7 @@
       "bests": [],
       "fitness": null
     },
-    "strength": null
+    "strength": null,
+    "map": null
   }
 }

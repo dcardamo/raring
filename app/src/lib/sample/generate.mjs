@@ -1,5 +1,5 @@
 // Synthetic values transcribed from design/mockup/index.html; regenerate with node generate.mjs.
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 // Views whose per-day and per-activity detail is already stored.
 const noDetail={missing:[],unavailable:[]};
 const activity=(id,name,icon,start,duration,distance,load,zones,te,benefit,avgHr=null,intensityMin=null,vigorousMin=null)=>({id,icon,name,startLocal:`2025-10-${start}`,durationS:duration,distanceKm:distance,load,zoneSeconds:zones,aerobicTe:te,aerobicLabel:te?'Improving':null,anaerobicTe:te?1.2:null,anaerobicLabel:te?'Minor':null,benefit,avgHr,intensityMin,vigorousMin,distanceUnit:'km'});
@@ -49,7 +49,7 @@ const statusWhy={title:'Why Productive',summary:'Your load is building fitness. 
  why('acuteLoad','Acute load','612 · 1.1× your 4-week load','Optimal','good','Your last 7 days of load against your 4-week load.'),
  why('hrvStatus','HRV status','53 ms','Balanced','good','Your 7-day HRV average against your baseline.'),
  why('vo2max','VO₂ max','52',null,'neutral',"Garmin's fitness estimate. +1 in 30 days.")]};
-const nightVitals={sleepHr:{value:58,unit:'bpm',usual:[52,62],rangeSource:'garmin',state:'within',delta:null,tone:'neutral'},hrv:{value:58,unit:'ms',usual:[48,62],rangeSource:'garmin',state:'within',delta:null,tone:'neutral'}};
+const nightVitals={sleepHr:{value:58,unit:'bpm',usual:[52,62],rangeSource:'garmin',state:'within',delta:null,tone:'good'},hrv:{value:58,unit:'ms',usual:[48,62],rangeSource:'garmin',state:'within',delta:null,tone:'good'}};
 const today={date:'2025-10-16',watchLastUpload:null,watchSleepUploadStale:false,missingMetricReasons:{},sleepPlan,readiness:{value:82,max:100,label:'High',tone:'good',band:null},readinessTrend:[67,72,74,69,64,71,76,79,82,78,73,68,70,76,80,84,77,74,79,83,85,81,78,75,80,86,83,79,84,82],sleep:{value:84,max:100,label:'Good',tone:'good',band:null},load:{value:612,max:1000,label:'Optimal',tone:'good',band:[420,760]},headline:'Ready to push',factors:[['sleep','Sleep',86,'good'],['recovery','Recovery time',92,'good'],['hrv','HRV',78,'good'],['acuteLoad','Acute load',58,'fair'],['sleepHistory','Sleep history',81,'good'],['stressHistory','Stress history',73,'good']].map(([key,name,percent,tone])=>({key,name,percent,tone,detail:`${name} is ${tone==='fair'?'the main limit on':'supporting'} your readiness today.`})),readinessWhy,bodyBatteryWhy,reconcile:null,call:'push',callNote:'Morning run done · 186 load',bodyBattery:{now:78,charged:62,drained:18,timeline:batteryTimeline},stress,hrv:{lastNight:58,status:'Balanced',tone:'good',baseline:[48,62],week:[51,49,53,55,52,56,58]},vitals,activities:[run],fitnessAge:age,checkinReady:true,plan:thisWeek,planned:{state:'available',session:{name:'Easy Run',date:'2025-10-17'},coach:'Garmin Coach 10K',coverageStart:'2025-10-16',coverageEnd:'2025-10-30'},lead:null,adapt:null,nightVitals,
  // The run's vigorous minutes moved the six-week average: the card follows This week.
  fitness:{window:vigorousWindow,age:39,droppedFrom:null,card:'afterWeek',leverLine:false},
@@ -76,6 +76,9 @@ workout.more=[{key:'movingDuration',label:'Moving time',value:3101,unit:'s'},{ke
  {key:'differenceBodyBattery',label:'Body Battery',value:-9,unit:'points'},{key:'elevationLoss',label:'Descent',value:41,unit:'m'},{key:'strideLength',label:'Stride length',value:113.4,unit:'cm'},{key:'recoveryHeartRate',label:'Recovery heart rate',value:31,unit:'bpm'}];
 workout.effects=[{kind:'aerobic',value:3.8,band:'Improving',line:'builds your aerobic base',garminLabel:'Improving'},{kind:'anaerobic',value:1.2,band:'Minor benefit',line:'little sprint or hard work',garminLabel:'Minor'}];
 workout.vo2maxNew=null;
+// The run's street map, drawn by the core from OpenFreeMap tiles: `raring route-map --route` with this route.
+// Map data © OpenStreetMap contributors (ODbL) and © OpenMapTiles; the card shows the credit.
+workout.map=JSON.parse(readFileSync(new URL('workoutMap.json',import.meta.url),'utf8'));
 // A pool swim (25 m lengths, 100 m splits, swim fields as Garmin's summary names them) and a walk without streams.
 const swimHr=Array.from({length:128},(_,i)=>({tS:i*15,bpm:Math.round(118+Math.min(i,40)*.5+Math.sin(i/3)*4)}));
 const otherWorkouts={
@@ -90,6 +93,7 @@ const otherWorkouts={
  [walk.id]:{detail:noDetail,summary:walk,recoveryHours:null,stats:[['distance','Distance',4.1,'km'],['duration','Time',2880,'s'],['pace','Pace',702,'s/km'],['averageHR','Avg HR',104,'bpm']].map(([key,label,value,unit])=>({key,label,value,unit})),
   route:[],heartRate:Array.from({length:192},(_,i)=>({tS:i*15,bpm:Math.round(98+Math.sin(i/11)*6)})),zoneFloors:[120,138,154,167],splits:[[1,690],[1,701],[1,708],[1,712],[.1,69]].map(([distanceKm,seconds],i)=>({index:i+1,distanceKm,seconds,avgHr:102+i})),
   along:null,more:[{key:'movingDuration',label:'Moving time',value:2830,unit:'s'}],effects:[{kind:'aerobic',value:1.1,band:'Minor benefit',line:'easy movement',garminLabel:'Improving'}],vo2maxNew:null,counted:{week:'2025-10-06',goals:true,lines:[],planItem:null,bests:[],fitness:null},strength:null}};
+for(const w of Object.values(otherWorkouts))w.map=null;
 writeFileSync(new URL('otherWorkouts.json',import.meta.url),JSON.stringify(otherWorkouts,null,2)+'\n');
 workout.counted={week:'2025-10-13',goals:true,lines:[{kind:'zone2',amount:18,position:null,recorded:100,target:150}],planItem:null,bests:['Longest run'],fitness:{minutes:24,week:30,thisWeek:true,target:75,until:'2025-11-26'}};
 const health={detail:noDetail,nightVitals,date:today.date,bodyWeight:{value:72.4,unit:'kg',measuredOn:'2025-10-14',bmi:23.8,bodyFat:null,trend:[71.8,null,72.1,null,72.6,72.3,null,72.5,72.4,null,72.2,72.4]},fitnessAge:age,lever:{key:'vigorousMinutes',name:'Vigorous minutes',current:17.3,target:75,unit:'min/wk',ageIfMet:37.8},vigorous:vigorousWindow,stress,intensity:{start:'2025-10-13',end:'2025-10-19',total:124,moderate:64,vigorous:30,goal:150},drivers:[['vo2max','VO₂ max',52,'',55,true,'good'],['restingHr','Resting HR',46,'bpm',54,true,'good'],['bmi','BMI',23.8,'',25,true,'good'],['vigorousMinutes','Vigorous',17.3,'min/wk',75,false,'fair']].map(([key,name,value,unit,target,met,tone])=>({key,name,value,unit,target,met,tone})),vitals};
@@ -114,6 +118,7 @@ const exercises=[
 ];
 const strengthSummary=lowerA;
 const strengthWorkout={detail:noDetail,counted:{week:'2025-10-13',goals:true,lines:[{kind:'strength',amount:1,position:2,recorded:3,target:4}],planItem:'Strength',bests:[],fitness:{minutes:4,week:30,thisWeek:true,target:75,until:'2025-11-25'}},along:null,more:[],effects:[],vo2maxNew:null,summary:strengthSummary,recoveryHours:14,stats:[['duration','Time',2882,'s'],['avgHr','Avg HR',118,'bpm'],['maxHr','Max HR',151,'bpm'],['calories','Calories',312,'kcal']].map(([key,label,value,unit])=>({key,label,value,unit})),route:[],heartRate:Array.from({length:192},(_,i)=>({tS:i*15,bpm:Math.round(104+Math.abs(Math.sin(i/9))*34+Math.sin(i*1.7)*3)})),zoneFloors:[120,138,154,167],splits:[],strength:{unit:'kg',figure:'female',checkedAt:'2025-10-15T19:30:00Z',sets:16,reps:161,unknownRepSets:0,restS:1520,records:1,setsRecorded:true,zeroRepSets:1,missingRepSets:0,doubledSets:1,unnamedSets:3,muscles:muscleSets({quads:6,glutes:9,hamstrings:3,calves:3}),exercises}};
+strengthWorkout.map=null;
 const mondays=Array.from({length:12},(_,i)=>{const d=new Date(Date.UTC(2025,6,28+i*7));return d.toISOString().slice(0,10)});
 const weekly=mondays.map((weekStart,i)=>({weekStart,muscles:i===11?muscleSets(musclesThisWeek):muscleSets(Object.fromEntries(MUSCLES.map((m,j)=>[m,i===5?Math.round(avg4[m]*.3):Math.max(0,Math.round(avg4[m]+Math.sin(i*1.3+j)*2.5))])))}));
 const last4=Object.fromEntries(MUSCLES.map((m,j)=>[m,weekly.slice(8).reduce((a,w)=>a+w.muscles[j].sets,0)]));
@@ -165,6 +170,7 @@ for(const id of historyIds){
   zeroRepSets:0,missingRepSets:0,doubledSets:0,unnamedSets:0,muscles:muscleSets(counts),exercises:exs,
  }};
 }
+for(const w of Object.values(strengthWorkoutHistory))w.map=null;
 writeFileSync(new URL('strengthWorkoutHistory.json',import.meta.url),JSON.stringify(strengthWorkoutHistory,null,2)+'\n');
 
 // Synthetic daily HR with sleep, an activity and two missing intervals.

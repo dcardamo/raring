@@ -9,7 +9,7 @@ export type NightReading = { value: number | null, unit: string, usual: [number,
  */
 delta: number | null, 
 /**
- * Fair only outside the range in the unwelcome direction (higher Sleep
- * HR, lower HRV); otherwise neutral.
+ * Good inside the range, fair outside it either way (attention, not a
+ * rating); neutral without a range.
  */
 tone: Tone, };

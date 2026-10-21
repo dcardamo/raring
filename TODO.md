@@ -2,8 +2,9 @@
 
 The prioritized backlog: work top to bottom, one item at a time, each shipped
 on its own. Every item keeps the spec's principles: visual first, opens
-instantly from local data, Garmin's numbers, nothing leaves the phone. New
-data goes into an existing screen or its detail before it earns a new screen.
+instantly from local data, Garmin's numbers, nothing leaves the phone but
+Garmin reads and street maps' area downloads. New data goes into an existing
+screen or its detail before it earns a new screen.
 
 When an item ships, update `docs/spec.md` in the same change, then move the
 item to **Done** with its commit. Endpoints are on `connectapi.garmin.com`
@@ -271,8 +272,8 @@ From the Today and Sleep review's remainder, in priority order.
 - The bottom tab labels run together at 2× text ("PlanTrainingHealthProgress"
   at 390 px); stack icon and label tighter or drop to icons with names for
   assistive tech.
-- Widget and notification labels are 10 sp, under the 11 minimum (review
-  m13). 11 sp fails `StatusWidgetLayoutTest` at the provider minimum size
+- Widget labels are 10 sp, under the 11 minimum (review m13; the
+  notification now uses Android's notification text sizes). 11 sp fails `StatusWidgetLayoutTest` at the provider minimum size
   with large fonts ("Readiness" 108 > 100 px on emulator-5560); the 10 sp
   layouts pass at font scales 1.0/1.3/1.5. Reaching 11 sp needs a different
   minimum-size layout (fewer labels or a larger minimum), proven by that test.
@@ -289,6 +290,18 @@ From the instant page opens, in priority order.
   once within one view (Today reads its 14 recent nights several times) and
   30-day vitals and stress histories parsed whole. A per-read row memo, or
   SQLite `json_extract` as the trend charts use, would remove them.
+
+### Activities calendar follow-ups
+
+From the activities calendar, in priority order.
+
+- Check on the maintainer's phone with the full history (back to 2011): jump
+  years from the month's name, tap busy days (a count after one icon), and
+  check TalkBack reads each day's recordings and the largest system text at
+  360 px. Browser checks covered 320–1100 px at normal text only.
+- If finding an event by its date isn't enough, consider a name search over
+  stored recordings ("parkrun", "marathon") in the same section, from local
+  data. Not started; a maintainer decision.
 
 ## Next
 
@@ -358,7 +371,9 @@ From the read-only UX review of Training and workouts, in priority order.
 - **Units elsewhere**: running tolerance, Progress distance totals and gear
   still read km; follow Garmin's measurement setting there too.
 - **Acute-load band per day**: the 30-day chart and metric detail use today's
-  optimal range; draw Garmin's stored range for each day where it exists.
+  optimal range; draw Garmin's stored range for each day where it exists
+  (each day's Training Status carries `minTrainingLoadChronic` and
+  `maxTrainingLoadChronic`).
 - **Large text**: at 2x on 360 px, the strength session rows, the acute
   bar's tick labels and the Splits "Fastest" pill still pass their card;
   some card text still runs long at 2x (the chart lane covers charts only).
@@ -405,6 +420,12 @@ rest, illness, limits and privacy rules.
 - Check other launchers and lock-screen privacy choices. Android can defer
   updates and allows users to dismiss ongoing notifications. Minimum-size
   RemoteViews passed emulator tests at font scales 1.0, 1.3 and 1.5.
+- Check the restyled notification on a phone (Android 16, wallpaper
+  colours): it was checked on an Android 15 emulator in light, dark and
+  1.5× text only. Android before 12 keeps the header in the collapsed view,
+  so "As of" moves there; that path is untested.
+- The per-kind alert channels replace the old "Raring" channel: a phone that
+  had changed that channel's sound or importance starts from the defaults.
 
 ### Import follow-ups
 
@@ -462,6 +483,32 @@ separate export. The offline JSON/CSV export does not make network requests.
 - If a populated calendar uses a different race discriminator, add only that
   verified shape. A full 10-event page is partial coverage; look for documented
   pagination/filtering before considering another request.
+
+### Street maps follow-ups
+
+In priority order.
+
+- **Phone timing**: measure a first open (download and draw) and a cached
+  open on a real phone in a release build. Measured so far only on the
+  software-rendered emulator in a debug build: about 1.5 s from opening the
+  page to the drawn map, 18 ms for a drawn card.
+- **A second source**: OpenFreeMap's TileJSON URL is built in. If it stops
+  serving, VersaTiles (`tiles.versatiles.org`, keyless, no CDN in front)
+  serves the Shortbread schema, which needs its own class mapping;
+  `tile.openstreetmap.org` and `vector.openstreetmap.org` forbid offline
+  and prefetch use. Protomaps' planet builds discourage hotlinking.
+- **Old areas**: a stored area keeps the week's map it was downloaded from.
+  Consider one fresh download for an area over a year old when a card there
+  is opened.
+- **Website and README pictures**: the published screens predate the street
+  map; republish them from synthetic data (`npm run screenshots`, then
+  `publish-screens.mjs`).
+- **Routes across ±180°**: like the plain route before them, both fits take
+  longitudes as they are, so a route crossing the antimeridian (Fiji,
+  Chukotka) fits nearly the whole world. Unwrap its longitudes in the core and
+  `routemap.ts`, and wrap tile x when downloading and drawing.
+- Labels and pan/zoom were left out on purpose (2026-10-20); the stored tiles
+  could feed them later.
 
 ## Later: more Garmin data
 
@@ -607,6 +654,88 @@ faces, screens, sensors and audio prompts stay in Connect.
     `bmi`'s `potentialAge` was older than the estimate itself, so only the
     lever's age is shown. Per-activity vigorous minutes can sum below the
     day's (all-day minutes count), so the window reads the daily summaries.
+
+- **Phone feedback on Today and Training** (commits "Today: score ring for
+  Sleep, green in-range vitals and no closing line", "Join Garmin's VO₂ max
+  and Fitness Age estimates in one line", "Name the Sleep Score with
+  Garmin's word" and "Read Garmin's optimal acute-load range and show it on
+  Today after a workout"), from the maintainer's phone. Today's Sleep stat
+  is Garmin's Sleep Score in a ring in its level's colour, like Readiness,
+  with Garmin's word and the time asleep under it ("Good · 7:33"), instead
+  of time asleep in a full ring against the need; every rating word in the
+  row takes its tone colour. Sleep HR and HRV are green within the usual
+  range and amber outside it in either direction (core `NightReading.tone`),
+  as on Health's vitals and the charts. "That's today." is gone. VO₂ max and
+  Fitness Age histories join Garmin's estimates in one line, dotted where it
+  crosses days without one, with no gap marks; before, a line appeared only
+  where two estimates fell on consecutive days. VO₂ max beside the status at
+  the top of Training was tried and reverted: it looked wrong to the
+  maintainer, pushed the status's Why below it and took VO₂ max out of "Is
+  my fitness improving?". Garmin sets no daily load target, so under Done
+  today acute load is a dot on Garmin's optimal range, as on Training.
+  Verified on the maintainer's account: Training Status sends that range as
+  `acuteTrainingLoadDTO.minTrainingLoadChronic` and `maxTrainingLoadChronic`
+  (its `acwrStatus` agreed on every day checked), which Raring hadn't read,
+  so Training had shown no range; the older weekly load tunnel
+  (`loadTunnelMin`, `loadTunnelMax`, `weeklyTrainingLoad`) is null. Health
+  Status's `HR` equals the sleep record's `avgHeartRate` and sits above
+  Garmin's daily resting HR, so the stat stays "Sleep HR". Garmin's `maxmet`
+  daily rows exist only on days it updates VO₂ max. The Sleep Score's word
+  is `sleepScores.overall.qualifierKey`; Garmin's EXCELLENT (from 90) is
+  unverified on this account.
+
+- **Street maps under workout routes** (commits "Draw workout routes over
+  street maps from OpenFreeMap" and "Keep street-map downloads to one area at
+  a time on the source's host"), from exploring private, free and
+  accountless maps. On by default, off in Settings → Street maps (which also
+  erases them). The core downloads OpenStreetMap vector tiles (OpenMapTiles
+  schema) from OpenFreeMap by area, the 8×8 block of tiles at the card's
+  zoom (64 tiles, usually 20–40 km across), so the server sees an area,
+  never the route; it decodes them itself and draws each card once into SVG
+  path data (green, water, waterways, paths, minor roads, roads, major
+  roads), kept per workout. Only a route card without a drawn map asks;
+  other workouts in a stored area draw with no request. The WebView's CSP is
+  unchanged. Verified 2026-10-20: OpenFreeMap needs no key or account and
+  allows app offline downloads of at most 3,000 tiles or 50 MB with at most
+  4 parallel requests and an identifying User-Agent; its privacy policy
+  keeps no IPs in access logs, but Cloudflare sits in front and sees each
+  request. One area's z13 tiles measured 5.4 MB in central London, 3.7 MB
+  in Manhattan and 0.9 MB around Boulder. A drawn card is about 25 KB of
+  path data for central Ottawa. On the emulator (debug build), the demo
+  workout's map appeared about 1.5 s after opening, and a drawn card
+  returned in 18 ms. MapLibre GL JS (about 1.6 MB minified) wasn't needed.
+
+- **Activities calendar** (commit "Find activities on a month calendar"),
+  from the maintainer wanting to find specific events. Training → Activities
+  has a List / Calendar switch. The calendar reads one stored month from the
+  core (`activity_month`; `raring show activities --date D`), never Garmin:
+  weeks start on Garmin's week start, each day shows its recordings' sport
+  icons in start order (two, or one and a count) and opens that day's list,
+  and the month's recordings are listed under it. ‹ › step a month; the
+  month's name opens a year of months, bounded by the oldest stored recording
+  and this month. The sport filter applies to both views, and the view, month
+  and day hold across a workout and Back. On a copy of the full-history
+  database (1,170 recordings since 2011), the busiest month (66 recordings)
+  took a median 19 ms per desktop release CLI run (no LTO), opening the
+  database and printing included; Training took 62 ms the same way.
+
+- **Notifications restyled** (commit "Restyle notifications for Android's
+  shade and say what changed"). The status notification draws no card of
+  its own: it uses Android's notification text styles, so it follows light
+  and dark, and the header says "As of …" instead of the post time.
+  Collapsed: Body Battery, stress and heart rate with icons, then "As of".
+  Expanded: the focus as the title, its reason (hidden when empty), then a
+  labelled row each with rounded bars (none for heart rate or a missing
+  reading). The small icon is the app's gauge mark, tinted mint. Alerts
+  use one channel per kind (Morning readiness, Weekly check-in, Health
+  changes, Wind-down reminder, Garmin account) with a category. Copy:
+  training status said Garmin's raw code ("Now PRODUCTIVE_6.") and fired
+  when only its numeric suffix changed; it now reads "Training status:
+  Productive" / "Was Maintaining." and compares the named status. VO₂ max
+  and Fitness Age say the new whole value and the direction ("Down from
+  45."). Vitals name the readings and their usual ranges ("SpO₂ 93% (usual
+  95–99) · Skin temp +0.8°C (usual −0.4 to +0.4)") under "2 vitals outside
+  your ranges".
 
 - **Instant page opens** (commits "Read stored nights without their
   samples" and "Open pages whole and keep cached views through a sync"),
