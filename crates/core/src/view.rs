@@ -359,6 +359,24 @@ pub struct ActivityPage {
     pub more: bool,
 }
 
+/// One month of stored recordings for Training → Activities' calendar.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ActivityMonth {
+    /// The month's first day.
+    pub month: String,
+    /// The calendar's first cell: the start of the week holding the 1st, on
+    /// the weekday Garmin's weeks start.
+    pub grid_start: String,
+    /// The local date; later days have nothing recorded yet.
+    pub today: String,
+    /// The oldest stored recording's local date; no earlier month opens.
+    pub first: Option<String>,
+    /// The month's recordings, newest first.
+    pub activities: Vec<ActivityCard>,
+}
+
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -1092,6 +1110,71 @@ pub struct WorkoutView {
     /// Per-activity reads this phone has never stored for the workout.
     #[serde(default)]
     pub detail: DayDetail,
+    /// The route card's street map (Rules: Street maps); none without a
+    /// route or with street maps off.
+    #[serde(default)]
+    pub map: Option<RouteMapView>,
+}
+
+/// Streets, water and parks under a workout's route, drawn by the core from
+/// OpenStreetMap tiles stored on the phone.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct RouteMapView {
+    pub frame: MapFrame,
+    pub state: RouteMapState,
+    /// Drawn bottom to top; empty until `ready`.
+    pub layers: Vec<MapLayer>,
+}
+
+/// Places Web Mercator coordinates (0–1 across the world, y down) on the
+/// 358×176 route card: `x = (mercatorX − x0) × scale`, likewise for y.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct MapFrame {
+    pub x0: f64,
+    pub y0: f64,
+    pub scale: f64,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum RouteMapState {
+    /// Drawn from map data on the phone.
+    Ready,
+    /// This area's map data isn't on the phone yet; the route card asks for it.
+    Missing,
+}
+
+/// One kind of map feature as SVG path data in card coordinates.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct MapLayer {
+    pub kind: MapLayerKind,
+    pub path: String,
+}
+
+/// Areas are filled; the rest are lines.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum MapLayerKind {
+    /// Parks, grass and woods.
+    Green,
+    Water,
+    Waterway,
+    /// Footways, cycleways, trails and piers.
+    Path,
+    /// Residential and service streets and tracks.
+    Minor,
+    /// Secondary and tertiary roads.
+    Road,
+    /// Motorways, trunk and primary roads.
+    Major,
 }
 
 /// Weights follow Garmin's measurement setting.
@@ -1514,6 +1597,9 @@ pub struct Settings {
     /// Strength's body-map figure; Profile follows Garmin's profile gender.
     #[serde(default)]
     pub body_figure: FigureChoice,
+    /// Draw streets under workout routes, downloading each area's map once.
+    #[serde(default = "default_street_maps")]
+    pub street_maps: bool,
 }
 
 /// How a Garmin write ended (Rules: Garmin writes).
@@ -1583,6 +1669,9 @@ fn default_adaptive_today() -> bool {
 fn default_plan_prompt() -> bool {
     true
 }
+fn default_street_maps() -> bool {
+    true
+}
 
 impl Default for Settings {
     fn default() -> Self {
@@ -1601,6 +1690,7 @@ impl Default for Settings {
             journal_enabled: false,
             plan_prompt: default_plan_prompt(),
             body_figure: FigureChoice::Profile,
+            street_maps: default_street_maps(),
         }
     }
 }
