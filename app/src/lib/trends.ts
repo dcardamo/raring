@@ -31,7 +31,7 @@ export const trendValue = (value: number | null | undefined, unit: string, decim
 
 /** The per-day values a screen already holds, as one-day points ending on `endDate`. */
 export function localPoints(values: (number | null)[], endDate: string, days: number): TrendPoint[] {
-  return historyPoints(values, endDate, days).map(p => ({start: p.date, end: p.date, value: p.value, days: p.value == null ? 0 : 1}));
+  return historyPoints(values, endDate, days).map(p => ({start: p.date, end: p.date, value: p.value, days: p.value == null ? 0 : 1, partial: null}));
 }
 
 const parse = (date: string) => new Date(date + 'T12:00:00Z');

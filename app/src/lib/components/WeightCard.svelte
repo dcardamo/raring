@@ -15,7 +15,8 @@
  // Garmin scale weight and Raring's labelled trend, laid out like every other history card in the neutral blue.
  // All metric math and freshness come from Rust. On Health (`navigate` given) it is the compact card that opens
  // the detail; the detail adds every range, each change and body composition.
- let {range=$bindable('days30'),initial,navigate}:{range?:TrendRange,initial?:WeightView,navigate?:(route:string)=>void}=$props();
+ // `endDate` anchors the card to an opened past day; otherwise it ends today.
+ let {range=$bindable('days30'),initial,navigate,endDate}:{range?:TrendRange,initial?:WeightView,navigate?:(route:string)=>void,endDate?:string}=$props();
  let compact=$derived(!!navigate);
  // Health offers four of the detail's ranges; one chosen only on the detail (14D, Max) shows here as 30D.
  const COMPACT:TrendRange[]=['days7','days30','days90','year'];
@@ -25,7 +26,7 @@
  const color=colors.neutral;
  $effect(()=>{
   generation();const read=wanted;let active=true;busy=true;error='';
-  api.weight_trend(read).then(v=>{if(active){view=v;busy=false}}).catch(e=>{if(active){error=String(e);busy=false}});
+  api.weight_trend(read,endDate).then(v=>{if(active){view=v;busy=false}}).catch(e=>{if(active){error=String(e);busy=false}});
   return()=>{active=false};
  });
  // Rounded before signing: a change that rounds to nothing reads 0.0, never −0.0.
@@ -35,7 +36,7 @@
  // The period's direction word, where the core has one for a change that long.
  let direction=$derived.by(()=>{const v=view;return v?v.changes.find(c=>c.days===DAYS[v.range]) ?? null:null});
  let ready=$derived(!!view?.unit && view.trend!=null);
- const ago=(days:number|null)=>days==null?'':days===0?'today':days===1?'1 day ago':`${days} days ago`;
+ const ago=(days:number|null)=>days==null?'':endDate?(days===0?'that day':days===1?'1 day before':`${days} days before`):days===0?'today':days===1?'1 day ago':`${days} days ago`;
 </script>
 {#snippet history()}
  {#if error}<p class="warning" role="status">{error}</p>{/if}

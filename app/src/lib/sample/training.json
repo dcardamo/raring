@@ -228,6 +228,7 @@
       "benefit": "Tempo",
       "avgHr": 152,
       "intensityMin": 62,
+      "vigorousMin": 24,
       "distanceUnit": "km"
     },
     {
@@ -252,6 +253,7 @@
       "benefit": "Base",
       "avgHr": 138,
       "intensityMin": 96,
+      "vigorousMin": 28,
       "distanceUnit": "km"
     },
     {
@@ -276,6 +278,7 @@
       "benefit": null,
       "avgHr": 118,
       "intensityMin": 24,
+      "vigorousMin": 4,
       "distanceUnit": "km"
     },
     {
@@ -300,6 +303,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     {
@@ -324,6 +328,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     {
@@ -348,6 +353,7 @@
       "benefit": "Base",
       "avgHr": 132,
       "intensityMin": 30,
+      "vigorousMin": 5,
       "distanceUnit": "m"
     },
     {
@@ -372,6 +378,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     {
@@ -396,6 +403,7 @@
       "benefit": "Recovery",
       "avgHr": 104,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     {
@@ -420,6 +428,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     {
@@ -444,6 +453,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     {
@@ -468,6 +478,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     }
   ],

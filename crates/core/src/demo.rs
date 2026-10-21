@@ -44,9 +44,20 @@ fn stress(date: NaiveDate, days_ago: i64) -> (Value, Value) {
             .map(|(i, v)| json!([start + i as i64 * 180_000, v]))
             .collect::<Vec<_>>(),
     });
+    // Garmin's words for the stress calendar: mostly balanced, a stressful run of days,
+    // a day the watch was barely worn and one night it wasn't.
+    let qualifier = match days_ago {
+        0 => "UNKNOWN",
+        9 | 10 => "STRESSFUL",
+        11 => "VERY_STRESSFUL",
+        d if d % 13 == 5 => "UNKNOWN",
+        17 => "BALANCED_AWAKE",
+        _ if average < 26 => "CALM",
+        _ => "BALANCED",
+    };
     let summary = json!({
         "averageStressLevel": average,
-        "stressQualifier": if days_ago == 0 { "UNKNOWN" } else if average < 26 { "CALM" } else { "BALANCED" },
+        "stressQualifier": qualifier,
         "restStressDuration": seconds(0..=25),
         "lowStressDuration": seconds(26..=50),
         "mediumStressDuration": seconds(51..=75),
@@ -101,6 +112,17 @@ fn seed_day(store: &Store, fixture: &Value, day: NaiveDate, days_ago: i64) -> ru
         84
     } else {
         67 + (days_ago * 11) % 24
+    });
+    // Garmin rates overnight stress against 0–15; restless nights during the stressful run.
+    let night_stress = match days_ago {
+        10 | 11 => 36,
+        d => 11 + (d * 7) % 13,
+    };
+    sleep["dailySleepDTO"]["avgSleepStress"] = json!(night_stress);
+    sleep["dailySleepDTO"]["sleepScores"]["stress"] = json!({
+        "qualifierKey": match night_stress { 0..=12 => "EXCELLENT", 13..=15 => "GOOD", 16..=26 => "FAIR", _ => "POOR" },
+        "optimalStart": 0.0,
+        "optimalEnd": 15.0,
     });
     for (key, current, usual, spread) in [
         ("deepSleepSeconds", 5760, 5040, 700),
@@ -282,7 +304,8 @@ fn seed_day(store: &Store, fixture: &Value, day: NaiveDate, days_ago: i64) -> ru
         "vo2max":{"value":52,"target":48},
         "restingHr":{"value":46,"target":55},
         "bmi":{"value":23.8,"target":25},
-        "vigorousMinutes":{"value":112,"target":150,"ageIfMet":38}
+        // The seeded days' vigorous minutes average 62 a week (Garmin's 42-day rule).
+        "vigorousMinutes":{"value":62,"target":75,"ageIfMet":38}
     });
     let (stress, summary) = stress(date, days_ago);
     store.put("stress", &key, "synthetic", &stress)?;

@@ -46,7 +46,7 @@ object BedtimeScheduler {
                 return
             }
             val due = result.optJSONObject("due")
-            if (due != null && SyncWorker.notify(context, due.getString("id"), due.getString("title"), due.getString("body"), due.optString("target", "sleep/tonight"))) {
+            if (due != null && SyncWorker.notify(context, "bedtime", due.getString("id"), due.getString("title"), due.getString("body"), due.optString("target", "sleep/tonight"))) {
                 val tags = JSONArray().put(JSONObject().put("kind", due.getString("kind"))
                     .put("tag", due.getString("tag")).put("title", "").put("body", ""))
                 val sentAt = OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)

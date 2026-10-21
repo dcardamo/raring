@@ -128,23 +128,16 @@ fn intensity_needs_all_days_or_authoritative_weekly_row_not_future_days() {
         "me",
         json!([{"calendarDate":"2025-03-31","moderateValue":21,"vigorousValue":13,"weeklyGoal":170}]),
     );
-    assert_eq!(
-        plan::intensity(&s, day("2025-03-31"), day(TODAY))
-            .unwrap()
-            .total,
-        47.
-    );
+    let week = plan::intensity(&s, day("2025-03-31"), day(TODAY)).unwrap();
+    assert_eq!(week.total, 47.);
+    assert_eq!(week.through, "2025-04-06", "Garmin's weekly row covers the whole week");
     for date in ["2025-04-07", "2025-04-08", "2025-04-09"] {
         summary(&s, date);
     }
     assert!(plan::intensity(&s, day("2025-04-07"), day(TODAY)).is_none());
     summary(&s, TODAY);
-    assert_eq!(
-        plan::intensity(&s, day("2025-04-07"), day(TODAY))
-            .unwrap()
-            .total,
-        0.
-    );
+    let days = plan::intensity(&s, day("2025-04-07"), day(TODAY)).unwrap();
+    assert_eq!((days.total, days.through.as_str()), (0., TODAY), "daily totals cover the days up to today");
     // No Fri/Sat/Sun summaries required on Thursday.
     assert!(s.get("summary", "2025-04-11").is_none());
 }

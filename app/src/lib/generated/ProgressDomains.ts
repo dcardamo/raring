@@ -9,10 +9,18 @@ export type ProgressDomains = { today: string,
  */
 goals: GoalTargets | null, 
 /**
- * Twelve plan weeks ending this week, oldest first, from history.
+ * The chosen plan weeks' first and last day.
+ */
+weeksFrom: string, weeksTo: string, 
+/**
+ * The chosen plan weeks, oldest first, from downloaded history.
  */
 weeks: Array<DomainWeek>, 
 /**
- * Twelve calendar months ending this month, oldest first.
+ * The chosen months' first and last day.
+ */
+monthsFrom: string, monthsTo: string, 
+/**
+ * The chosen calendar months, oldest first.
  */
 months: Array<DomainMonth>, };

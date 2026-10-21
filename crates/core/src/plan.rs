@@ -194,6 +194,7 @@ pub fn intensity(store: &Store, start: NaiveDate, today: NaiveDate) -> Option<In
     Some(IntensityCard {
         start: start.to_string(),
         end: (start + Duration::days(6)).to_string(),
+        through: if complete && reported { through } else { start + Duration::days(6) }.to_string(),
         total: moderate + 2. * vigorous,
         moderate,
         vigorous,

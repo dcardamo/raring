@@ -5,6 +5,11 @@
  */
 export type IntensityCard = { start: string, end: string, 
 /**
+ * The last day the total covers: the day asked for, or the week's end
+ * when it is Garmin's weekly row.
+ */
+through: string, 
+/**
  * Garmin's weekly total: moderate minutes plus twice the vigorous ones.
  */
 total: number, moderate: number, vigorous: number, 

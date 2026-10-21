@@ -358,11 +358,9 @@ async fn heart_rate_day(app: tauri::AppHandle, date: String) -> Result<HeartRate
 }
 
 fn day_detail_parts(scope: &str) -> Result<Vec<DayDetailPart>, String> {
-    match scope {
-        "sleep" => Ok(vec![DayDetailPart::Sleep]),
-        "day" => Ok(vec![DayDetailPart::Stress, DayDetailPart::Vitals]),
-        _ => Err("unknown day detail scope".into()),
-    }
+    raring_core::screens::day_detail_parts(scope)
+        .map(<[DayDetailPart]>::to_vec)
+        .ok_or_else(|| "unknown day detail scope".into())
 }
 
 #[tauri::command]
@@ -450,6 +448,25 @@ async fn fetch_workout_detail(app: tauri::AppHandle, id: String) -> Result<(), S
     }
 }
 
+/// The route card asks once it shows a workout whose area isn't drawn yet;
+/// no Garmin request and no sign-in token are involved (Rules: Street maps).
+#[tauri::command]
+async fn route_map(app: tauri::AppHandle, id: String) -> Result<Option<RouteMapView>, String> {
+    let core = core(&app)?;
+    #[cfg(target_os = "android")]
+    let expected = {
+        if !session_ready(&app)? { return Err("Account verification required".into()); }
+        core.session_identity().ok_or("Account verification required")?
+    };
+    let version = app.package_info().version.to_string();
+    let map = core.fetch_route_map(&id, &version).await.map_err(|e| e.to_string())?;
+    #[cfg(target_os = "android")]
+    if !session_ready(&app)? || core.session_identity().as_ref() != Some(&expected) {
+        return Err("Account changed while drawing the map".into());
+    }
+    Ok(map)
+}
+
 #[tauri::command]
 async fn refresh_strength(
     app: tauri::AppHandle,
@@ -512,6 +529,11 @@ async fn trend(app: tauri::AppHandle, query: TrendQuery) -> Result<TrendView, St
     })
     .await
 }
+/// One month of the stress calendar, from local data only.
+#[tauri::command]
+async fn stress_month(app: tauri::AppHandle, month: String) -> Result<StressMonth, String> {
+    read_view(app, move |core| core.stress_month(&month, &core.current_date(Local::now()))).await
+}
 /// The plan week containing `date` (this week when absent), on the calendar day.
 #[tauri::command]
 async fn plan_board(app: tauri::AppHandle, date: Option<String>) -> Result<raring_core::view::PlanBoard, String> {
@@ -551,12 +573,16 @@ async fn activity_page(app: tauri::AppHandle, before_start: String, before_id: S
     read_view(app, move |core| Ok(core.activity_page(&before_start, &before_id, icon))).await
 }
 #[tauri::command]
+async fn activity_month(app: tauri::AppHandle, month: Option<String>) -> Result<raring_core::view::ActivityMonth, String> {
+    read_view(app, move |core| core.activity_month(month.as_deref(), Local::now()).map_err(|e| e.to_string())).await
+}
+#[tauri::command]
 async fn lift_series(app: tauri::AppHandle, key: String, range: TrendRange) -> Result<Option<raring_core::view::LiftSeries>, String> {
     read_view(app, move |core| Ok(core.lift_series(&key, range, Local::now()))).await
 }
 #[tauri::command]
-async fn progress_domains(app: tauri::AppHandle) -> Result<raring_core::view::ProgressDomains, String> {
-    read_view(app, move |core| Ok(core.progress_domains(Local::now()))).await
+async fn progress_domains(app: tauri::AppHandle, query: DomainQuery) -> Result<raring_core::view::ProgressDomains, String> {
+    read_view(app, move |core| core.progress_domains(&query, Local::now()).map_err(|e| e.to_string())).await
 }
 #[tauri::command]
 async fn milestone_archive(app: tauri::AppHandle) -> Result<Vec<raring_core::view::Milestone>, String> {
@@ -1244,6 +1270,7 @@ pub fn run() {
                     health,
                     checkin,
                     trend,
+                    stress_month,
                     local_action,
                     plan_board,
                     week_review,
@@ -1262,6 +1289,7 @@ pub fn run() {
                     refresh_strength,
                     fetch_day_detail,
                     fetch_workout_detail,
+                    route_map,
                     export_archive,
                     choose_import,
                     apply_import,
@@ -1271,6 +1299,7 @@ pub fn run() {
                     milestone_archive,
                     lift_series,
                     activity_page,
+                    activity_month,
                     muscles,
                     check_reminders,
                     reminders_status,
@@ -1290,6 +1319,7 @@ pub fn run() {
                     health,
                     checkin,
                     trend,
+                    stress_month,
                     local_action,
                     plan_board,
                     week_review,
@@ -1308,6 +1338,7 @@ pub fn run() {
                     refresh_strength,
                     fetch_day_detail,
                     fetch_workout_detail,
+                    route_map,
                     export_archive,
                     choose_import,
                     apply_import,
@@ -1317,6 +1348,7 @@ pub fn run() {
                     milestone_archive,
                     lift_series,
                     activity_page,
+                    activity_month,
                     muscles,
                     check_reminders,
                     reminders_status

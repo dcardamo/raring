@@ -4,29 +4,33 @@
  import type {NightReading} from '../generated/NightReading';
  import {toneColor} from '../charts';
  import {duration} from '../format';
- // Four compact stats at the top of Today: last night's sleep, readiness,
- // Sleep HR and HRV. Each opens its detail. A tone colour only when Garmin
- // rates a reading low or it is outside its usual range, always with words.
+ // Four compact stats at the top of Today: last night's sleep score,
+ // readiness, Sleep HR and HRV. Each opens its detail. Each rating is a word
+ // in its tone colour: Garmin's level, or in or outside the usual range.
  let {today, waiting, navigate}: {today: TodayView, waiting: boolean, navigate: (route: string) => void} = $props();
  let night = $derived(today.focus.lastNight);
- let asleep = $derived(waiting ? null : night?.asleepMin ?? null);
- let need = $derived(night?.needMin ?? null);
- let score = $derived(waiting ? null : today.sleep);
+ // A night that hasn't synced shows nothing of an earlier one.
+ let unsynced = $derived(waiting || (night?.asleepMin == null && today.focus.sleepMissing));
+ let asleep = $derived(unsynced ? null : night?.asleepMin ?? null);
+ let score = $derived(unsynced ? null : today.sleep);
  let readiness = $derived(waiting ? null : today.readiness);
  // From the evening on tonight leads; last night's vitals stay off Today.
  let nightPhase = $derived(['evening', 'windDown', 'lateNight'].includes(today.focus.phase));
  let vitals = $derived(nightPhase ? null : today.nightVitals);
  let showVitals = $derived(!nightPhase);
- let sleepLine = $derived(waiting || (asleep == null && today.focus.sleepMissing) ? 'Not synced yet' : asleep == null ? (score ? `Score ${score.value}` : 'Not recorded') : score ? `Score ${score.value}` : need ? `Need ${duration(need)}` : 'No score');
+ // The score's level and the time asleep; a duration without a score says so.
+ let sleepLine = $derived(unsynced ? 'Not synced yet' : score ? [score.label, asleep != null ? duration(asleep) : null].filter(Boolean).join(' · ') : asleep != null ? 'No score' : 'Not recorded');
+ let sleepLabel = $derived(unsynced ? 'not synced yet' : [score ? `score ${score.value}, ${score.label}` : 'no score', asleep != null ? `${duration(asleep)} asleep` : null].filter(Boolean).join(', '));
+ const tint = (tone: string | null | undefined) => tone && tone !== 'neutral' ? toneColor(tone) : null;
  const fmt = (v: number) => String(Math.round(v));
  function usual(r: NightReading | null | undefined): {text: string, mark: string, tone: string | null} {
   if (waiting) return {text: 'Waiting', mark: '', tone: null};
   if (!r || r.value == null) return {text: 'Not recorded', mark: '', tone: null};
-  const tone = r.tone === 'neutral' ? null : toneColor(r.tone);
+  const tone = tint(r.tone);
   switch (r.state) {
    case 'above': return {text: `${fmt(Math.abs(r.delta ?? 0))} above usual`, mark: '▲', tone};
    case 'below': return {text: `${fmt(Math.abs(r.delta ?? 0))} below usual`, mark: '▼', tone};
-   case 'within': return {text: 'Within usual', mark: '', tone: null};
+   case 'within': return {text: 'Within usual', mark: '', tone};
    case 'calibrating': return {text: 'Garmin calibrating', mark: '', tone: null};
    default: return {text: 'Usual not set yet', mark: '', tone: null};
   }
@@ -37,13 +41,13 @@
 </script>
 <section class="morning" aria-label="Last night and readiness" data-chart="morning stats">
  <div class="stats" class:two={!showVitals}>
-  <button class="stat sleep-fact" onclick={() => navigate('sleep/last')} aria-label={`Last night’s sleep ${asleep != null ? duration(asleep) : 'not recorded'}, ${sleepLine}`}>
-   <span class="dial">{#if asleep != null && need}<Gauge value={asleep} max={need} display={duration(asleep)} size={64} stroke={6} sweep={360} color="var(--goal-sleep)"/>{:else}<b class="n big-n">{asleep != null ? duration(asleep) : '—'}</b>{/if}</span>
-   <b class="label">Sleep</b><small style:color={score && ['poor', 'fair'].includes(score.tone) ? toneColor(score.tone) : null}>{sleepLine}</small>
+  <button class="stat sleep-fact" onclick={() => navigate('sleep/last')} aria-label={`Last night’s sleep, ${sleepLabel}`}>
+   <span class="dial">{#if score}<Gauge value={score.value} max={score.max} size={64} stroke={6} color={toneColor(score.tone)}/>{:else}<b class="n big-n">{asleep != null ? duration(asleep) : '—'}</b>{/if}</span>
+   <b class="label">Sleep</b><small style:color={tint(score?.tone)}>{sleepLine}</small>
   </button>
-  <button class="stat ready-fact" onclick={() => navigate('readiness')} aria-label={`Readiness ${readiness?.value ?? (waiting ? 'waiting for last night' : 'unavailable')}`}>
+  <button class="stat ready-fact" onclick={() => navigate('readiness')} aria-label={`Readiness ${readiness ? `${readiness.value}, ${readiness.label}` : waiting ? 'waiting for last night' : 'unavailable'}`}>
    <span class="dial">{#if readiness}<Gauge value={readiness.value} max={readiness.max} size={64} stroke={6} color={toneColor(readiness.tone)}/>{:else}<b class="n big-n">—</b>{/if}</span>
-   <b class="label">Readiness</b><small style:color={readiness && ['poor', 'fair'].includes(readiness.tone) ? toneColor(readiness.tone) : null}>{readiness?.label ?? (today.missingMetricReasons.readiness && !waiting ? 'Not on this watch' : 'Waiting')}</small>
+   <b class="label">Readiness</b><small style:color={tint(readiness?.tone)}>{readiness?.label ?? (today.missingMetricReasons.readiness && !waiting ? 'Not on this watch' : 'Waiting')}</small>
   </button>
   {#if showVitals}
    <button class="stat hr-fact" onclick={() => navigate('metric/sleepHr')} aria-label={`Sleep HR ${vitals?.sleepHr.value != null ? fmt(vitals.sleepHr.value) + ' bpm' : 'not recorded'}, ${hr.text}${range(vitals?.sleepHr)}`}>

@@ -34,4 +34,8 @@ planPrompt: boolean,
 /**
  * Strength's body-map figure; Profile follows Garmin's profile gender.
  */
-bodyFigure: FigureChoice, };
+bodyFigure: FigureChoice, 
+/**
+ * Draw streets under workout routes, downloading each area's map once.
+ */
+streetMaps: boolean, };

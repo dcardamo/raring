@@ -31,4 +31,8 @@ avgHr: number | null,
 /**
  * Garmin's moderate plus twice vigorous minutes for this activity.
  */
-intensityMin: number | null, distanceUnit: DistanceUnit, };
+intensityMin: number | null, 
+/**
+ * Garmin's vigorous intensity minutes for this activity.
+ */
+vigorousMin: number | null, distanceUnit: DistanceUnit, };

@@ -5,8 +5,9 @@
  // A readable chart: y-axis with units, x labels, labelled values, and an
  // optional goal line (one value, labelled, or each point's own as a stepped
  // line the caller names),
- // usual range band and hatched spans (ill, paused, awaiting data). Gaps stay
- // gaps; nothing is drawn between missing points. A current (unfinished)
+ // usual range band and hatched spans (ill, paused, awaiting data). A missing
+ // point stays a gap: line and dot charts join neighbouring points solidly and
+ // bridge a gap with a faint dashed line, so the trend reads across it. A current (unfinished)
  // point is outlined; a measured zero is labelled at the baseline. The band's
  // label sits at the left, away from the last value's label at the right.
 
@@ -29,9 +30,24 @@
  const y = (v: number) => T + (1 - (v - lo) / Math.max(1e-6, top - lo)) * (height - T - B);
  const x = (i: number) => L + step * i + step / 2;
  let top = $derived(axis.scale[1]);
- let ticks = $derived(axis.ticks);
+ // With nothing to plot the scale means nothing: the chart keeps its baseline and says so.
+ let empty = $derived(!vals.length && !stepped.length && goal == null && !band);
+ let ticks = $derived(empty ? [lo] : axis.ticks);
  let n = $derived(every || (points.length <= 8 ? 1 : Math.ceil(points.length / 5)));
- let path = $derived.by(() => { let d = '', pen = false; points.forEach((p, i) => { if (p.v == null) { pen = false; return; } d += `${pen ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`; pen = true; }); return d; });
+ // Solid between neighbouring points, a separate dashed bridge over each gap; a point with no neighbour gets a dot.
+ let joined = $derived.by(() => {
+  let solid = '', bridge = '', prev = -1;
+  const lone: number[] = [];
+  points.forEach((p, i) => {
+   if (p.v == null) return;
+   const at = `${x(i).toFixed(1)},${y(p.v).toFixed(1)}`;
+   if (prev === i - 1 && prev >= 0) solid += `L${at}`;
+   else { if (prev >= 0) bridge += `M${x(prev).toFixed(1)},${y(points[prev].v!).toFixed(1)}L${at}`; solid += `M${at}`; }
+   if (points[i - 1]?.v == null && points[i + 1]?.v == null) lone.push(i);
+   prev = i;
+  });
+  return {solid, bridge, lone};
+ });
  let last = $derived(points.findLastIndex(p => p.v != null));
  // An overlaid series (for example trend weight over scale weigh-ins).
  // Each point's own goal across its slot, stepping where it changes.
@@ -43,8 +59,10 @@
  {#if unit}<span class="yu">{unit}</span>{/if}
  <svg width={w} {height} role="img" aria-label={label}>
   <defs><pattern id={patternId} width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="1.5" height="5" fill="var(--goal-sleep)" opacity=".35"/></pattern></defs>
-  {#each ticks as t}<line x1={L} x2={w - R} y1={y(t)} y2={y(t)} stroke="var(--chart-grid)" stroke-width="var(--stroke-grid)"/><text class="yt" data-thin="2" x={L - 5} y={y(t) + 3.5} text-anchor="end">{fmt(t)}</text>{/each}
+  {#each ticks as t}<line x1={L} x2={w - R} y1={y(t)} y2={y(t)} stroke="var(--chart-grid)" stroke-width="var(--stroke-grid)"/>{#if !empty}<text class="yt" data-thin="2" x={L - 5} y={y(t) + 3.5} text-anchor="end">{fmt(t)}</text>{/if}{/each}
+  {#if !vals.length}<text class="em" x={(L + w - R) / 2} y={(T + height - B) / 2} text-anchor="middle">No readings</text>{/if}
   {#if band}<rect x={L} width={w - L - R} y={y(band[1])} height={Math.max(1, y(band[0]) - y(band[1]))} fill="var(--chart-band)"/><text class="bl" x={L + 4} y={y(band[1]) + 10}>{bandLabel} {fmt(band[0])}–{fmt(band[1])}</text>{/if}
+  {#if kind !== 'bars' && !line}<path class="bridge" d={joined.bridge} fill="none" stroke={color} stroke-width="1.5" stroke-dasharray="3 4" stroke-linecap="round" opacity=".6"/><path d={joined.solid} fill="none" stroke={color} stroke-width="var(--stroke-chart)" stroke-linejoin="round"/>{/if}
   {#each points as p, i}
    {#if p.mark === 'ill' || p.mark === 'paused'}<rect x={x(i) - step / 2 + 1} y={T} width={step - 2} height={height - T - B} fill={`url(#${patternId})`}/>{/if}
    {#if p.mark === 'unknown'}<rect x={x(i) - step / 2 + 1} y={T} width={step - 2} height={height - T - B} fill="none" stroke="#6B7689" stroke-dasharray="2 3"/>{/if}
@@ -56,7 +74,7 @@
    {#if kind === 'dots' && p.v != null}<circle cx={x(i)} cy={y(p.v)} r={line ? 2.6 : 3.5} fill={color} opacity={line ? .55 : 1}/>{/if}
    {#if (points.length - 1 - i) % n === 0}<text class="xt" data-thin="1" x={i === points.length - 1 && x(i) > w - R - 22 ? w - 1 : x(i)} y={height - 5} text-anchor={i === points.length - 1 && x(i) > w - R - 22 ? 'end' : 'middle'}>{p.x}</text>{/if}
   {/each}
-  {#if kind === 'line'}<path d={path} fill="none" stroke={color} stroke-width="var(--stroke-chart)"/>{#if last >= 0}<circle cx={x(last)} cy={y(points[last].v!)} r="3.5" fill={color}/>{/if}{/if}
+  {#if kind === 'line'}{#each joined.lone as i}<circle cx={x(i)} cy={y(points[i].v!)} r="2.5" fill={color}/>{/each}{#if last >= 0}<circle cx={x(last)} cy={y(points[last].v!)} r="3.5" fill={color}/>{/if}{/if}
   {#if (kind !== 'bars') && last >= 0 && !line}<text class="vl" x={Math.min(w - R - 2, x(last))} y={y(points[last].v!) - 7} text-anchor={x(last) > w - 40 ? 'end' : 'middle'}>{fmt(points[last].v!)}</text>{/if}
   {#if line2}<path d={line2} fill="none" stroke={lineColor} stroke-width="var(--stroke-chart)" stroke-linejoin="round"/>{/if}
   {#if goalPath}<path d={goalPath} fill="none" stroke="var(--ink)" stroke-dasharray="4 3" stroke-width="1.2"/>{/if}
@@ -69,5 +87,5 @@
  .ax{width:100%;min-width:0}.ax svg{display:block}
  text{font-family:Inter,sans-serif}
  .yt,.xt{font-size:11px;fill:var(--text2)}.yu{display:block;margin-bottom:2px;font-size:12px;color:var(--text2)}
- .vl{font:500 12px Outfit,Inter;fill:var(--text)}.gl{font:600 12px Inter;fill:var(--text2)}.bl{font:500 12px Inter;fill:var(--text2)}
+ .vl{font:500 12px Outfit,Inter;fill:var(--text)}.em{font:500 12px Inter;fill:var(--text2)}.gl{font:600 12px Inter;fill:var(--text2)}.bl{font:500 12px Inter;fill:var(--text2)}
 </style>

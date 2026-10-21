@@ -71,7 +71,7 @@ try{
    assert.ok(g.overflow<=1,`${label}: horizontal overflow`);
    assert.deepEqual(g.spills,[],`${label}: text stays inside its section`);
    if(name!=='evening'&&width===390&&scale===2)assert.equal(new Set(g.statTops).size,2,`${label}: stats wrap 2×2`);
-   assert.equal(await page.locator('.recorded .tags,.recorded .zbar,.recorded .incomplete').count(),0,`${label}: details stay off summaries`);
+   assert.equal(await page.locator('.recorded .tags:not(.vigorous-tags),.recorded .zbar,.recorded .incomplete').count(),0,`${label}: details stay off summaries`);
    if(name==='evening'){
     const plan=await page.locator('.sleep-plan').boundingBox(),day=await page.locator('.your-day').boundingBox();
     assert.ok(plan.y+plan.height<=day.y+1,`${label}: tonight before day timeline`);

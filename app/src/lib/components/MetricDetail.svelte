@@ -16,8 +16,9 @@
  import RangeBar from './RangeBar.svelte';
  import AmountRows from './AmountRows.svelte';
  import StressTimeline from './StressTimeline.svelte';
+ import StressCalendar from './StressCalendar.svelte';
  import WhySheet from './WhySheet.svelte';
- let {metric,data,dayDate=null}:{metric:string,data:TodayView|HealthView|TrainingView,dayDate?:string|null}=$props();
+ let {metric,data,dayDate=null,navigate}:{metric:string,data:TodayView|HealthView|TrainingView,dayDate?:string|null,navigate?:(route:string)=>void}=$props();
  let source=$derived(metricSource(metric));
  let battery=$derived(metric==='bodyBattery'?(data as TodayView).bodyBattery:null);
  let stress=$derived(metric==='stress'?(data as TodayView|HealthView).stress:null);
@@ -85,6 +86,7 @@
   <Card title="Daily resting HR"><HistoryChart values={[]} endDate={(data as HealthView).date} label="Resting heart rate" unit="bpm" metric="restingHr" initialRange="days30" band={trendBand('restingHr',data as HealthView)} bandLabel="Raring usual range"/></Card>
  {:else if stress}
   {#if stress.timeline.length}<Card title="Through the day"><StressTimeline {stress}/></Card>{:else}<Card title="Through the day"><p class="small">Garmin has no stress readings for this day.</p></Card>{/if}
+  {#if navigate}<Card title="By day" help="stress-calendar"><StressCalendar date={(data as TodayView|HealthView).date} revision={data} open={day=>navigate?.('metric/stress/'+day)}/></Card>{/if}
   {#if stress.time.length}<Card title="Time in each level"><AmountRows label="Garmin stress durations" unit="h:mm" format={duration} rows={[...stress.time.map(t=>({label:stressNames[t.level],value:t.seconds/60,text:duration(t.seconds/60),color:stressColors[t.level]})),...(stress.activeS!=null?[{label:'Active · not rated',value:stress.activeS/60,text:duration(stress.activeS/60),color:colors.secondary}]:[])]}/></Card>{/if}
   <Card title="Daily average">
    <HistoryChart values={stress.trend} endDate={(data as TodayView|HealthView).date} label="Average stress" metric="stress"/>

@@ -3,6 +3,9 @@ import type {TrendMetric} from '../generated/TrendMetric';
 import type {TrendQuery} from '../generated/TrendQuery';
 import type {TrendSeries} from '../generated/TrendSeries';
 import type {TrendView} from '../generated/TrendView';
+import type {StressDay} from '../generated/StressDay';
+import type {StressMonth} from '../generated/StressMonth';
+import type {Tone} from '../generated/Tone';
 import {period, spans, trendNames, bucketFor, firstDay} from '../trends';
 import today from './today.json';
 import health from './health.json';
@@ -43,16 +46,21 @@ function value(metric: TrendMetric, date: string): number | null {
   return metric === 'respiration' || metric === 'skinTemp' ? Math.round(v * 10) / 10 : Math.round(v);
 }
 
-function series(metric: TrendMetric, list: [string, string][]): TrendSeries {
+// Stress days Garmin rated only in part (too little wear, or awake only): four days ago and a few older ones.
+const partlyWorn = (metric: TrendMetric, date: string) => metric === 'stress' &&
+  (date === new Date(Date.parse(SAMPLE_TODAY + 'T12:00:00Z') - 4 * 86_400_000).toISOString().slice(0, 10) || (date < '2025-09-16' && hash('worn' + date) < .06));
+
+function series(metric: TrendMetric, list: [string, string][], marks = false): TrendSeries {
   let total = 0, count = 0;
   const points = list.map(([start, end]) => {
-    let sum = 0, days = 0;
+    let sum = 0, days = 0, partial: number | null = null;
     for (let d = start; d <= end; d = new Date(Date.parse(d + 'T12:00:00Z') + 86_400_000).toISOString().slice(0, 10)) {
       const v = value(metric, d);
-      if (v != null) {sum += v; days++}
+      if (v != null && partlyWorn(metric, d)) partial = v;
+      else if (v != null) {sum += v; days++}
     }
     total += sum; count += days;
-    return {start, end, value: days ? sum / days : null, days};
+    return {start, end, value: days ? sum / days : null, days, partial: marks && start === end ? partial : null};
   });
   return {metric, name: trendNames[metric], unit: shape[metric][3], points, average: count ? total / count : null, days: count};
 }
@@ -72,7 +80,7 @@ export function sampleTrend(query: TrendQuery): TrendView {
   const {from, bucket, shift} = query.range==='custom'?{from:query.start??end,bucket:bucketFor(length),shift:length}:period(query.range, end, shape[query.metric][4]);
   if(query.previous && query.comparisonStart && shift && Date.parse(query.comparisonStart)+(shift-1)*86400000>Date.parse(SAMPLE_TODAY))throw Error(`The comparison block runs past today (${SAMPLE_TODAY}); choose an earlier start`);
   const list = spans(from, end, bucket);
-  const now = series(query.metric, list);
+  const now = series(query.metric, list, bucket === 'day');
   const offset=query.comparisonStart?Math.round((Date.parse(from)-Date.parse(query.comparisonStart))/86400000):(shift??0);
   const back = (date: string) => new Date(Date.parse(date + 'T12:00:00Z') - offset * 86_400_000).toISOString().slice(0, 10);
   const previous = query.previous && shift ? series(query.metric, list.map(([s, e]) => [back(s), back(e)])) : null;
@@ -84,4 +92,39 @@ export function sampleTrend(query: TrendQuery): TrendView {
     // The preview's newest point on today's chart, as the core reports it.
     freshness: end!==SAMPLE_TODAY||query.metric==='vo2max'||query.metric==='fitnessAge'?null:(()=>{const last=[...now.points].reverse().find(p=>p.value!=null);const recordedOn=last?last.end:null;const ageDays=recordedOn?Math.round((Date.parse(SAMPLE_TODAY)-Date.parse(recordedOn))/864e5):null;return {recordedOn,ageDays,stale:ageDays!=null&&ageDays>2,thresholdDays:2}})(),
   };
+}
+
+// The preview's recorded workouts by day: the sample activities this month, about two a week before.
+const SAMPLE_WORKOUTS: Record<string, number> = {'2025-10-16': 1, '2025-10-15': 2, '2025-10-09': 1, '2025-10-07': 1};
+const nextDay = (date: string) => new Date(Date.parse(date + 'T12:00:00Z') + 86_400_000).toISOString().slice(0, 10);
+
+/** A month of the stress calendar for the preview, from the same synthetic averages as the stress trend. */
+export function sampleStressMonth(month: string): StressMonth {
+  const first = month.slice(0, 7) + '-01';
+  if (!/^\d{4}-\d{2}-01$/.test(first) || Number.isNaN(Date.parse(first + 'T12:00:00Z'))) throw Error('Invalid month: ' + month);
+  if (first > SAMPLE_TODAY) throw Error(`Choose a month no later than this one (${SAMPLE_TODAY})`);
+  if (first < firstDay) throw Error('Choose a month from January 1990 on');
+  const days: StressDay[] = [];
+  for (let date = first; date.slice(0, 7) === first.slice(0, 7); date = nextDay(date)) {
+    const day: StressDay = {date, kind: 'future', word: null, tone: 'neutral', average: null, workouts: 0, night: null};
+    days.push(day);
+    if (date > SAMPLE_TODAY) continue;
+    // Garmin rates most nights Fair against its 0–15 range; a few are Poor, Good or Excellent.
+    const n = hash('night' + date);
+    if (n > .06) {
+      const [rating, tone, average]: [string, Tone, number] = n < .16 ? ['Poor', 'poor', 34] : n < .62 ? ['Fair', 'fair', 21] : n < .9 ? ['Good', 'good', 14] : ['Excellent', 'good', 10];
+      day.night = {rating, tone, average};
+    }
+    day.workouts = SAMPLE_WORKOUTS[date] ?? (date < '2025-10-01' && hash('workout' + date) < .3 ? 1 : 0);
+    day.average = value('stress', date);
+    if (day.average == null) day.kind = 'none';
+    else if (partlyWorn('stress', date)) Object.assign(day, hash('awake' + date) < .3 ? {kind: 'awakeOnly', word: 'Balanced'} : {kind: 'lowWear'});
+    else {
+      // Synthetic words: mostly Balanced, some stressful days; today matches the stress card.
+      const r = date === SAMPLE_TODAY ? 1 : hash('word' + date);
+      const [word, tone]: [string, Tone] = r < .05 ? ['Very Stressful', 'poor'] : r < .2 ? ['Stressful', 'fair'] : day.average < 25 ? ['Calm', 'good'] : ['Balanced', 'good'];
+      Object.assign(day, {kind: 'rated', word, tone});
+    }
+  }
+  return {month: first, today: SAMPLE_TODAY, days, first: shape.stress[4].slice(0, 7) + '-01'};
 }

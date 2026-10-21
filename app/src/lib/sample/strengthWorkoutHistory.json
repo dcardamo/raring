@@ -31,6 +31,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -137,7 +138,8 @@
           "record": null
         }
       ]
-    }
+    },
+    "map": null
   },
   "9000000000005": {
     "detail": {
@@ -171,6 +173,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -243,7 +246,8 @@
         }
       ],
       "exercises": []
-    }
+    },
+    "map": null
   },
   "9000000000110": {
     "detail": {
@@ -277,6 +281,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -629,7 +634,8 @@
           "record": null
         }
       ]
-    }
+    },
+    "map": null
   },
   "9000000000109": {
     "detail": {
@@ -663,6 +669,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -1015,7 +1022,8 @@
           "record": null
         }
       ]
-    }
+    },
+    "map": null
   },
   "9000000000108": {
     "detail": {
@@ -1049,6 +1057,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -1401,7 +1410,8 @@
           "record": null
         }
       ]
-    }
+    },
+    "map": null
   },
   "9000000000107": {
     "detail": {
@@ -1435,6 +1445,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -1787,7 +1798,8 @@
           "record": null
         }
       ]
-    }
+    },
+    "map": null
   },
   "9000000000106": {
     "detail": {
@@ -1821,6 +1833,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -2173,7 +2186,8 @@
           "record": null
         }
       ]
-    }
+    },
+    "map": null
   },
   "9000000000105": {
     "detail": {
@@ -2207,6 +2221,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -2559,7 +2574,8 @@
           "record": null
         }
       ]
-    }
+    },
+    "map": null
   },
   "9000000000104": {
     "detail": {
@@ -2593,6 +2609,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -2945,7 +2962,8 @@
           "record": null
         }
       ]
-    }
+    },
+    "map": null
   },
   "9000000000103": {
     "detail": {
@@ -2979,6 +2997,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -3331,7 +3350,8 @@
           "record": null
         }
       ]
-    }
+    },
+    "map": null
   },
   "9000000000111": {
     "detail": {
@@ -3359,6 +3379,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -3726,7 +3747,8 @@
           "record": null
         }
       ]
-    }
+    },
+    "map": null
   },
   "9000000000102": {
     "detail": {
@@ -3754,6 +3776,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -4106,7 +4129,8 @@
           "record": null
         }
       ]
-    }
+    },
+    "map": null
   },
   "9000000000101": {
     "detail": {
@@ -4134,6 +4158,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -4486,7 +4511,8 @@
           "record": null
         }
       ]
-    }
+    },
+    "map": null
   },
   "9000000000100": {
     "detail": {
@@ -4514,6 +4540,7 @@
       "benefit": null,
       "avgHr": null,
       "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     "recoveryHours": null,
@@ -4788,6 +4815,7 @@
           "record": null
         }
       ]
-    }
+    },
+    "map": null
   }
 }

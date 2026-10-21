@@ -202,12 +202,80 @@ pub struct StressCard {
     pub active: Vec<[f64; 2]>,
     /// Last night's sleep, as minutes from midnight (clipped at midnight).
     pub sleep: Option<[f64; 2]>,
+    /// Recorded workouts, as minute ranges from midnight clipped to the day.
+    #[serde(default)]
+    pub workouts: Vec<[f64; 2]>,
     /// Garmin's time in each category today; empty until reported.
     pub time: Vec<StressTime>,
     /// Time Garmin could not rate because you were moving, seconds.
     pub active_s: Option<f64>,
     /// Daily averages for the last 30 days, oldest first.
     pub trend: Vec<Option<f64>>,
+}
+
+/// How the stress calendar shows a day.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum StressDayKind {
+    /// Garmin's word covers the whole day.
+    Rated,
+    /// Garmin's word covers only the time awake: it measured no sleep.
+    AwakeOnly,
+    /// Garmin couldn't rate the day: the watch was off for much of it.
+    LowWear,
+    /// Readings without a word from Garmin.
+    Unrated,
+    /// Nothing stored for the day.
+    None,
+    Future,
+}
+
+/// One day on the stress calendar.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct StressDay {
+    pub date: String,
+    pub kind: StressDayKind,
+    /// Garmin's word ("Very Stressful"), also on an awake-only day.
+    pub word: Option<String>,
+    /// The word's colour on a rated day; neutral on every other.
+    pub tone: Tone,
+    /// Garmin's average for the day, 0–100.
+    pub average: Option<f64>,
+    /// Recorded workouts that started on the day.
+    pub workouts: u32,
+    /// The night before: the sleep that ended that morning.
+    #[serde(default)]
+    pub night: Option<NightStress>,
+}
+
+/// Garmin's rating of a night's stress, from its sleep score.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct NightStress {
+    /// Garmin's word: Excellent, Good, Fair or Poor.
+    pub rating: Option<String>,
+    pub tone: Tone,
+    /// Garmin's average stress while asleep, 0–100.
+    pub average: Option<f64>,
+}
+
+/// A calendar month of Garmin's stress words, from local data.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct StressMonth {
+    /// The month's first day, YYYY-MM-DD.
+    pub month: String,
+    /// The local day it was read on; later days are future.
+    pub today: String,
+    /// Every day of the month, oldest first.
+    pub days: Vec<StressDay>,
+    /// The first day of the earliest month with stress on this phone.
+    pub first: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
@@ -309,8 +377,8 @@ pub struct NightReading {
     pub state: UsualState,
     /// Outside the range: the value minus the range's middle, whole units.
     pub delta: Option<f64>,
-    /// Fair only outside the range in the unwelcome direction (higher Sleep
-    /// HR, lower HRV); otherwise neutral.
+    /// Good inside the range, fair outside it either way (attention, not a
+    /// rating); neutral without a range.
     pub tone: Tone,
 }
 
@@ -359,6 +427,24 @@ pub struct ActivityPage {
     pub more: bool,
 }
 
+/// One month of stored recordings for Training → Activities' calendar.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ActivityMonth {
+    /// The month's first day.
+    pub month: String,
+    /// The calendar's first cell: the start of the week holding the 1st, on
+    /// the weekday Garmin's weeks start.
+    pub grid_start: String,
+    /// The local date; later days have nothing recorded yet.
+    pub today: String,
+    /// The oldest stored recording's local date; no earlier month opens.
+    pub first: Option<String>,
+    /// The month's recordings, newest first.
+    pub activities: Vec<ActivityCard>,
+}
+
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -388,6 +474,9 @@ pub struct ActivityCard {
     /// Garmin's moderate plus twice vigorous minutes for this activity.
     #[serde(default)]
     pub intensity_min: Option<f64>,
+    /// Garmin's vigorous intensity minutes for this activity.
+    #[serde(default)]
+    pub vigorous_min: Option<f64>,
     #[serde(default)]
     pub distance_unit: DistanceUnit,
 }
@@ -405,6 +494,59 @@ pub struct FitnessAgeCard {
     /// The day of Garmin's estimate shown.
     #[serde(default)]
     pub recorded_on: Option<String>,
+}
+
+/// Fitness Age's vigorous-minutes driver, live from Garmin's daily summaries:
+/// the 42 days ending on `end` that Garmin averages per week (Rules: Fitness
+/// Age window).
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct VigorousWindow {
+    /// The window's last day, YYYY-MM-DD.
+    pub end: String,
+    /// Six seven-day blocks ending on `end`, oldest first: Garmin's daily
+    /// vigorous minutes summed. A block with a day missing is unknown.
+    pub weeks: Vec<Option<f64>>,
+    /// Garmin's vigorous minutes on `end` itself.
+    pub today: Option<f64>,
+    /// The 42 days' minutes ÷ 6, Garmin's weekly average; unknown unless every
+    /// day has Garmin's figure.
+    pub average: Option<f64>,
+    /// The same average without `end`'s minutes.
+    pub before_today: Option<f64>,
+    /// Garmin's weekly target for the driver, minutes.
+    pub target: f64,
+    /// The Fitness Age Garmin gives for reaching the target, when it says.
+    pub age_at_target: Option<f64>,
+}
+
+/// Where Today shows its Fitness Age card.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum FitnessPlace {
+    /// Under what was recorded today: Garmin's estimate dropped today.
+    Hero,
+    /// After This week: vigorous minutes recorded today.
+    AfterWeek,
+}
+
+/// Today's link to Fitness Age: the vigorous window, a new lower estimate, and
+/// on Garmin's push call before any vigorous minutes, a line naming the lever.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct TodayFitness {
+    pub window: VigorousWindow,
+    /// Garmin's latest Fitness Age estimate.
+    pub age: Option<f64>,
+    /// The previous estimate, when today's is lower in whole years.
+    pub dropped_from: Option<f64>,
+    /// Where the card goes; None on a day that moved neither.
+    pub card: Option<FitnessPlace>,
+    /// Name vigorous minutes as the lever under Garmin's push call.
+    pub lever_line: bool,
 }
 
 /// Where the person is in their own day, anchored to their wake time and
@@ -535,6 +677,10 @@ pub struct TodayView {
     /// morning and the day; none from the evening on or before the night syncs.
     #[serde(default)]
     pub night_vitals: Option<NightVitals>,
+    /// Fitness Age's vigorous driver on the calendar day; only for the live
+    /// day, while Garmin's estimate has a vigorous-minutes target.
+    #[serde(default)]
+    pub fitness: Option<TodayFitness>,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
@@ -805,6 +951,8 @@ pub enum DayDetailPart {
     Sleep,
     Stress,
     Vitals,
+    /// Garmin's Fitness Age estimate as of that day.
+    FitnessAge,
     Workout,
 }
 
@@ -1092,6 +1240,71 @@ pub struct WorkoutView {
     /// Per-activity reads this phone has never stored for the workout.
     #[serde(default)]
     pub detail: DayDetail,
+    /// The route card's street map (Rules: Street maps); none without a
+    /// route or with street maps off.
+    #[serde(default)]
+    pub map: Option<RouteMapView>,
+}
+
+/// Streets, water and parks under a workout's route, drawn by the core from
+/// OpenStreetMap tiles stored on the phone.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct RouteMapView {
+    pub frame: MapFrame,
+    pub state: RouteMapState,
+    /// Drawn bottom to top; empty until `ready`.
+    pub layers: Vec<MapLayer>,
+}
+
+/// Places Web Mercator coordinates (0–1 across the world, y down) on the
+/// 358×176 route card: `x = (mercatorX − x0) × scale`, likewise for y.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct MapFrame {
+    pub x0: f64,
+    pub y0: f64,
+    pub scale: f64,
+}
+
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum RouteMapState {
+    /// Drawn from map data on the phone.
+    Ready,
+    /// This area's map data isn't on the phone yet; the route card asks for it.
+    Missing,
+}
+
+/// One kind of map feature as SVG path data in card coordinates.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct MapLayer {
+    pub kind: MapLayerKind,
+    pub path: String,
+}
+
+/// Areas are filled; the rest are lines.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum MapLayerKind {
+    /// Parks, grass and woods.
+    Green,
+    Water,
+    Waterway,
+    /// Footways, cycleways, trails and piers.
+    Path,
+    /// Residential and service streets and tracks.
+    Minor,
+    /// Secondary and tertiary roads.
+    Road,
+    /// Motorways, trunk and primary roads.
+    Major,
 }
 
 /// Weights follow Garmin's measurement setting.
@@ -1396,6 +1609,10 @@ pub struct HealthView {
     pub fitness_age: FitnessAgeCard,
     pub lever: Option<Lever>,
     pub drivers: Vec<Driver>,
+    /// The six weeks of vigorous minutes Garmin averages, ending on the
+    /// calendar day (the requested day for a past one).
+    #[serde(default)]
+    pub vigorous: Option<VigorousWindow>,
     pub vitals: VitalsCard,
     pub stress: StressCard,
     pub heart_rate_day: HeartRateDay,
@@ -1514,6 +1731,9 @@ pub struct Settings {
     /// Strength's body-map figure; Profile follows Garmin's profile gender.
     #[serde(default)]
     pub body_figure: FigureChoice,
+    /// Draw streets under workout routes, downloading each area's map once.
+    #[serde(default = "default_street_maps")]
+    pub street_maps: bool,
 }
 
 /// How a Garmin write ended (Rules: Garmin writes).
@@ -1583,6 +1803,9 @@ fn default_adaptive_today() -> bool {
 fn default_plan_prompt() -> bool {
     true
 }
+fn default_street_maps() -> bool {
+    true
+}
 
 impl Default for Settings {
     fn default() -> Self {
@@ -1601,6 +1824,7 @@ impl Default for Settings {
             journal_enabled: false,
             plan_prompt: default_plan_prompt(),
             body_figure: FigureChoice::Profile,
+            street_maps: default_street_maps(),
         }
     }
 }
@@ -1708,6 +1932,11 @@ pub struct TrendPoint {
     pub value: Option<f64>,
     /// Recorded days behind the value.
     pub days: u32,
+    /// Garmin's average on a stress day it rated only in part (too little
+    /// wear, or awake only), on daily points. Never in `value`, `days` or an
+    /// average.
+    #[serde(default)]
+    pub partial: Option<f64>,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
@@ -1925,6 +2154,9 @@ pub struct PlanCheckin {
 pub struct IntensityCard {
     pub start: String,
     pub end: String,
+    /// The last day the total covers: the day asked for, or the week's end
+    /// when it is Garmin's weekly row.
+    pub through: String,
     /// Garmin's weekly total: moderate minutes plus twice the vigorous ones.
     pub total: f64,
     pub moderate: f64,
@@ -2503,6 +2735,20 @@ pub struct PlanBoard {
     /// This week of an adaptive Garmin Coach plan, when one is active.
     #[serde(default)]
     pub coach: Option<CoachWeek>,
+    /// This week's vigorous minutes against Fitness Age's weekly target, read-only.
+    #[serde(default)]
+    pub fitness: Option<PlanFitness>,
+}
+
+/// Garmin's vigorous minutes this plan week against the weekly target of
+/// Garmin's Fitness Age driver. A Garmin reading, not one of your goals.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PlanFitness {
+    /// Unknown while a day this week lacks Garmin's daily figure.
+    pub vigorous: Option<f64>,
+    pub target: f64,
 }
 
 /// This week's work toward an event: your sessions of its sport and what
@@ -3366,6 +3612,29 @@ pub struct DomainMonth {
     pub fitness_age: Option<f64>,
 }
 
+/// The plan weeks (Cardio, Strength) and calendar months (Long-term) that
+/// Progress's domain sections show.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct DomainQuery {
+    /// How many plan weeks, ending with the week holding `weeks_end`.
+    pub weeks: u32,
+    /// A day in the last week shown; this week when absent.
+    pub weeks_end: Option<String>,
+    /// How many calendar months, ending with the month holding `months_end`.
+    pub months: u32,
+    /// A day in the last month shown; this month when absent.
+    pub months_end: Option<String>,
+}
+
+impl Default for DomainQuery {
+    /// What Progress first shows: twelve weeks and twelve months ending now.
+    fn default() -> Self {
+        Self { weeks: 12, weeks_end: None, months: 12, months_end: None }
+    }
+}
+
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -3373,9 +3642,15 @@ pub struct ProgressDomains {
     pub today: String,
     /// Targets in effect today.
     pub goals: Option<GoalTargets>,
-    /// Twelve plan weeks ending this week, oldest first, from history.
+    /// The chosen plan weeks' first and last day.
+    pub weeks_from: String,
+    pub weeks_to: String,
+    /// The chosen plan weeks, oldest first, from downloaded history.
     pub weeks: Vec<DomainWeek>,
-    /// Twelve calendar months ending this month, oldest first.
+    /// The chosen months' first and last day.
+    pub months_from: String,
+    pub months_to: String,
+    /// The chosen calendar months, oldest first.
     pub months: Vec<DomainMonth>,
 }
 
@@ -3464,6 +3739,26 @@ pub struct WorkoutCount {
     pub plan_item: Option<String>,
     /// Milestones awarded for this recording, in available history.
     pub bests: Vec<String>,
+    /// Its vigorous minutes toward Fitness Age, while they're in Garmin's window.
+    #[serde(default)]
+    pub fitness: Option<FitnessCount>,
+}
+
+/// A recording's vigorous minutes in Fitness Age's six-week window.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct FitnessCount {
+    /// Garmin's vigorous minutes for this recording.
+    pub minutes: f64,
+    /// Garmin's vigorous minutes in its plan week so far, when every day is known.
+    pub week: Option<f64>,
+    /// The plan week is the current one.
+    pub this_week: bool,
+    /// Garmin's weekly target for the driver.
+    pub target: f64,
+    /// The last day these minutes are inside Garmin's six-week average.
+    pub until: String,
 }
 
 /// What importing a chosen export would change, by record kind. Counts are

@@ -85,6 +85,19 @@ fn hrv_body() -> serde_json::Value {
     json!({"hrvSummary": {"calendarDate": "2025-06-03", "lastNightAvg": 57, "status": "BALANCED"}})
 }
 
+fn fitness_age_body() -> serde_json::Value {
+    json!({
+        "chronologicalAge": 44,
+        "fitnessAge": 38.5,
+        "lastUpdated": "2025-06-01T00:00:00.0",
+        "components": {
+            "rhr": {"value": 52},
+            "vigorousMinutesAvg": {"value": 40, "targetValue": 75, "potentialAge": 37.2},
+            "bmi": {"value": 23.4, "targetValue": 22.0}
+        }
+    })
+}
+
 fn health_status_body() -> serde_json::Value {
     json!({"data": {"healthStatusSummary": {
         "calendarDate": "2025-06-03",
@@ -154,10 +167,17 @@ async fn opened_past_day_fetches_only_the_page_it_opens_once_and_keeps_it() {
             .requests,
         0
     );
-    // A past Health day reads its stress and Health Status, never the night.
-    let (url, seen, thread) = server(3, |line| {
+    // A past Health day reads its Fitness Age, stress and Health Status, never the night.
+    let day = screens::day_detail_parts("day").unwrap();
+    assert_eq!(day, [DayDetailPart::FitnessAge, DayDetailPart::Stress, DayDetailPart::Vitals]);
+    // A day's stress detail shows no Fitness Age, so it never reads one.
+    assert_eq!(screens::day_detail_parts("stress").unwrap(), [DayDetailPart::Stress, DayDetailPart::Vitals]);
+    assert_eq!(screens::health(&store, "2025-06-03").detail.missing, day);
+    let (url, seen, thread) = server(4, |line| {
         if line.contains("/graphql-gateway/graphql") {
             health_status_body().to_string()
+        } else if line.contains("/fitnessage-service/") {
+            fitness_age_body().to_string()
         } else if line.contains("dailyStress") {
             stress_body().to_string()
         } else {
@@ -165,38 +185,48 @@ async fn opened_past_day_fetches_only_the_page_it_opens_once_and_keeps_it() {
         }
     });
     let day_client = test_client(&url);
-    let report = sync::day_detail_on_demand(
-        &store,
-        &day_client,
-        "2025-06-03",
-        &[DayDetailPart::Stress, DayDetailPart::Vitals],
-    )
-    .await;
+    let report = sync::day_detail_on_demand(&store, &day_client, "2025-06-03", day).await;
     thread.join().unwrap();
-    assert_eq!(report.requests, 3);
-    assert_eq!(report.stored, 3);
+    assert_eq!(report.requests, 4);
+    assert_eq!(report.stored, 4);
     {
         let lines = seen.lock().unwrap();
-        assert!(lines[0].starts_with("GET /wellness-service/wellness/dailyStress/2025-06-03"));
-        assert!(lines[1].starts_with("GET /usersummary-service/usersummary/daily/Synthetic?"));
-        assert!(lines[1].contains("calendarDate=2025-06-03"));
-        assert!(lines[2].starts_with("POST /graphql-gateway/graphql"));
+        assert!(lines[0].starts_with("GET /fitnessage-service/fitnessage/2025-06-03 "));
+        assert!(lines[1].starts_with("GET /wellness-service/wellness/dailyStress/2025-06-03"));
+        assert!(lines[2].starts_with("GET /usersummary-service/usersummary/daily/Synthetic?"));
+        assert!(lines[2].contains("calendarDate=2025-06-03"));
+        assert!(lines[3].starts_with("POST /graphql-gateway/graphql"));
     }
     let health = screens::health(&store, "2025-06-03");
     assert!(!health.stress.timeline.is_empty());
     assert_eq!(health.stress.average, Some(34.));
+    // That day's own estimate and its drivers, never a later one.
+    assert_eq!(health.fitness_age.fitness_age, Some(38.5));
+    assert_eq!(health.fitness_age.chronological_age, Some(44.));
+    assert_eq!(health.fitness_age.recorded_on.as_deref(), Some("2025-06-03"));
+    assert_eq!(health.lever.as_ref().map(|l| l.key.as_str()), Some("vigorousMinutes"));
+    assert!(health.drivers.iter().any(|d| d.key == "restingHr" && d.value == Some(52.)));
     assert!(health.detail.missing.is_empty());
     assert_eq!(
-        sync::day_detail_on_demand(
-            &store,
-            &day_client,
-            "2025-06-03",
-            &[DayDetailPart::Stress, DayDetailPart::Vitals]
-        )
-        .await
-        .requests,
+        sync::day_detail_on_demand(&store, &day_client, "2025-06-03", day)
+            .await
+            .requests,
         0
     );
+}
+
+#[test]
+fn a_later_estimate_never_stands_in_for_an_older_day() {
+    let store = Store::open(":memory:").unwrap();
+    store.put("fitness_age", "2025-06-10", "synthetic", &fitness_age_body()).unwrap();
+    let before = screens::health(&store, "2025-06-03");
+    assert_eq!(before.fitness_age.fitness_age, None);
+    assert!(before.drivers.is_empty() && before.lever.is_none());
+    // A day after it shows that estimate with its date, and the same estimate's drivers.
+    let after = screens::health(&store, "2025-06-12");
+    assert_eq!(after.fitness_age.fitness_age, Some(38.5));
+    assert_eq!(after.fitness_age.recorded_on.as_deref(), Some("2025-06-10"));
+    assert!(after.drivers.iter().any(|d| d.key == "vigorousMinutes" && d.target == Some(75.)));
 }
 
 #[tokio::test]
@@ -206,7 +236,7 @@ async fn opened_past_day_keeps_garmin_empty_answers() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
     let thread = std::thread::spawn(move || {
-        for _ in 0..5 {
+        for _ in 0..6 {
             let (mut stream, _) = listener.accept().unwrap();
             let mut buf = [0; 4096];
             let _ = stream.read(&mut buf).unwrap();
@@ -218,25 +248,18 @@ async fn opened_past_day_keeps_garmin_empty_answers() {
     let client = test_client(&url);
     let report = sync::day_detail_on_demand(&store, &client, "2025-06-03", &[DayDetailPart::Sleep]).await;
     assert_eq!(report.requests, 2);
-    let report = sync::day_detail_on_demand(
-        &store,
-        &client,
-        "2025-06-03",
-        &[DayDetailPart::Stress, DayDetailPart::Vitals],
-    )
-    .await;
+    let day = screens::day_detail_parts("day").unwrap();
+    let report = sync::day_detail_on_demand(&store, &client, "2025-06-03", day).await;
     thread.join().unwrap();
-    assert_eq!(report.requests, 3);
-    for kind in ["sleep", "hrv", "stress", "summary", "health_status"] {
+    assert_eq!(report.requests, 4);
+    for kind in ["sleep", "hrv", "fitness_age", "stress", "summary", "health_status"] {
         assert_eq!(store.get(kind, "2025-06-03"), Some(serde_json::Value::Null));
     }
     let sleep = screens::sleep_view(&store, "2025-06-03");
     assert_eq!(sleep.detail.unavailable, vec![DayDetailPart::Sleep]);
     let health = screens::health(&store, "2025-06-03");
-    assert_eq!(
-        health.detail.unavailable,
-        vec![DayDetailPart::Stress, DayDetailPart::Vitals]
-    );
+    assert_eq!(health.detail.unavailable, day);
+    assert_eq!(health.fitness_age.fitness_age, None);
     // Empty answers are kept, as for an opened all-day heart-rate read.
     assert_eq!(
         sync::day_detail_on_demand(&store, &client, "2025-06-03", &[DayDetailPart::Sleep])
@@ -245,14 +268,9 @@ async fn opened_past_day_keeps_garmin_empty_answers() {
         0
     );
     assert_eq!(
-        sync::day_detail_on_demand(
-            &store,
-            &client,
-            "2025-06-03",
-            &[DayDetailPart::Stress, DayDetailPart::Vitals]
-        )
-        .await
-        .requests,
+        sync::day_detail_on_demand(&store, &client, "2025-06-03", day)
+            .await
+            .requests,
         0
     );
 }
