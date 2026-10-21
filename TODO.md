@@ -274,6 +274,18 @@ From the instant page opens, in priority order.
   30-day vitals and stress histories parsed whole. A per-read row memo, or
   SQLite `json_extract` as the trend charts use, would remove them.
 
+### Activities calendar follow-ups
+
+From the activities calendar, in priority order.
+
+- Check on the maintainer's phone with the full history (back to 2011): jump
+  years from the month's name, tap busy days (a count after one icon), and
+  check TalkBack reads each day's recordings and the largest system text at
+  360 px. Browser checks covered 320–1100 px at normal text only.
+- If finding an event by its date isn't enough, consider a name search over
+  stored recordings ("parkrun", "marathon") in the same section, from local
+  data. Not started; a maintainer decision.
+
 ### Workout fields follow-ups
 
 From the self-evaluation and workout fields pass, in priority order. Field
@@ -624,6 +636,20 @@ faces, screens, sensors and audio prompts stay in Connect.
   list's names for the same fields. Two bugs found on real data: rides
   recorded as `road_biking` or `virtual_ride` read as other sports (pace, not
   speed), and a pool's length read 100 times too long.
+
+- **Activities calendar** (commit "Find activities on a month calendar"),
+  from the maintainer wanting to find specific events. Training → Activities
+  has a List / Calendar switch. The calendar reads one stored month from the
+  core (`activity_month`; `raring show activities --date D`), never Garmin:
+  weeks start on Garmin's week start, each day shows its recordings' sport
+  icons in start order (two, or one and a count) and opens that day's list,
+  and the month's recordings are listed under it. ‹ › step a month; the
+  month's name opens a year of months, bounded by the oldest stored recording
+  and this month. The sport filter applies to both views, and the view, month
+  and day hold across a workout and Back. On a copy of the full-history
+  database (1,170 recordings since 2011), the busiest month (66 recordings)
+  took a median 19 ms per desktop release CLI run (no LTO), opening the
+  database and printing included; Training took 62 ms the same way.
 
 - **Notifications restyled** (commit "Restyle notifications for Android's
   shade and say what changed"). The status notification draws no card of

@@ -1351,6 +1351,30 @@ fn activities_page_back_through_stored_history_by_sport() {
     assert_eq!(all.last().map(String::as_str), Some("2000"));
 }
 #[test]
+fn activity_calendar_reads_one_month_of_stored_history() {
+    use raring_core::screens::activity_month;
+    let store = Store::open(":memory:").unwrap();
+    let day = |y, m, d| chrono::NaiveDate::from_ymd_opt(y, m, d).unwrap();
+    let empty = activity_month(&store, day(2025, 10, 17), day(2025, 10, 20));
+    assert_eq!((empty.month.as_str(), empty.first, empty.activities.len()), ("2025-10-01", None, 0));
+    for (id, kind, start) in [(1, "hiking", "2025-03-02 09:00:00"), (2, "running", "2025-09-30 23:30:00"), (3, "running", "2025-10-01 06:00:00"),
+        (4, "cycling", "2025-10-01 18:00:00"), (5, "lap_swimming", "2025-10-15 07:00:00"), (6, "walking", "2025-10-31 21:00:00"), (7, "running", "2025-11-01 00:10:00")] {
+        store.put("activity", &id.to_string(), "now", &json!({"activityId": id, "activityName": kind, "activityTypeDTO": {"typeKey": kind},
+            "summaryDTO": {"startTimeLocal": start, "duration": 1800.}})).unwrap();
+    }
+    let october = activity_month(&store, day(2025, 10, 17), day(2025, 10, 20));
+    assert_eq!(october.month, "2025-10-01");
+    assert_eq!(october.today, "2025-10-20");
+    let ids: Vec<&str> = october.activities.iter().map(|a| a.id.as_str()).collect();
+    assert_eq!(ids, ["6", "5", "4", "3"], "the month's first and last days, newest first, nothing either side");
+    assert_eq!(october.first.as_deref(), Some("2025-03-02"), "the oldest stored recording bounds the calendar");
+    assert_eq!(october.grid_start, "2025-09-29", "weeks start on Monday without Garmin's week");
+    store.put("intensity_weeks", "me", "now", &json!([{"calendarDate": "2025-10-19"}])).unwrap();
+    assert_eq!(activity_month(&store, day(2025, 10, 1), day(2025, 10, 20)).grid_start, "2025-09-28", "Garmin's Sunday weeks");
+    let december = activity_month(&store, day(2025, 12, 31), day(2025, 10, 20));
+    assert_eq!((december.month.as_str(), december.activities.len()), ("2025-12-01", 0));
+}
+#[test]
 fn activities_read_in_garmin_units_and_swims_in_the_pool_unit() {
     use raring_core::view::DistanceUnit;
     let store = Store::open(":memory:").unwrap();

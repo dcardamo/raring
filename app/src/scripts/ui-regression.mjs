@@ -1149,11 +1149,61 @@ try {
   await acts.locator('.activity').first().click();await ts.waitForURL(/#workout\//);
   await ts.goBack();await ts.waitForURL(/#training$/);
   assert.equal(await ts.getByRole('tab',{name:'Activities'}).getAttribute('aria-selected'),'true');
+  // The calendar: a stored month at a time with each day's sports, a day's list, and a jump to another month.
+  await acts.getByRole('group',{name:'Show activities as'}).getByRole('button',{name:'Calendar'}).click();
+  const october=acts.getByRole('group',{name:'October 2025'});
+  await october.waitFor();
+  assert.equal(await october.getByRole('button').count(),8,'one button per day with recordings');
+  assert.equal(await acts.getByRole('button',{name:'Next month'}).isDisabled(),true,'no month after this one');
+  assert.equal(await acts.locator('.activity').count(),9,'the month’s recordings under it');
+  await october.getByRole('button',{name:'Wed 15 Oct: Lower A, Evening Ride'}).click();
+  assert.equal(await acts.locator('.activity').count(),2,'a day narrows the list to that day');
+  await acts.getByRole('button',{name:'Only Wed 15 Oct; show the whole month'}).click();
+  assert.equal(await acts.locator('.activity').count(),9);
+  await acts.getByRole('button',{name:'Previous month'}).click();
+  await acts.getByRole('group',{name:'September 2025'}).waitFor();
+  assert.equal(await acts.locator('.activity').count(),4);
+  await acts.getByRole('button',{name:/^September 2025, choose a month/}).click();
+  const year=acts.getByRole('group',{name:'Months of 2025'});
+  assert.equal(await year.getByRole('button',{name:'Jul'}).isDisabled(),true,'nothing before the oldest stored recording');
+  assert.equal(await year.getByRole('button',{name:'Nov'}).isDisabled(),true,'nothing after this month');
+  await year.getByRole('button',{name:'Aug'}).click();
+  await acts.getByRole('group',{name:'August 2025'}).waitFor();
+  assert.equal(await acts.getByRole('button',{name:'Previous month'}).isDisabled(),true);
+  await acts.getByRole('button',{name:/^August 2025, choose a month/}).click();
+  await acts.getByRole('group',{name:'Months of 2025'}).getByRole('button',{name:'Oct'}).click();
+  await acts.getByRole('group',{name:'Filter by sport'}).getByRole('button',{name:'Run'}).click();
+  assert.equal(await acts.getByRole('group',{name:'October 2025'}).getByRole('button').count(),1,'the sport filter applies to the calendar');
+  await acts.locator('.activity').first().click();await ts.waitForURL(/#workout\/9000000000001$/);
+  await ts.goBack();await ts.waitForURL(/#training$/);
+  await acts.getByRole('group',{name:'October 2025'}).waitFor();
+  assert.equal(await acts.getByRole('group',{name:'Show activities as'}).getByRole('button',{name:'Calendar'}).getAttribute('aria-pressed'),'true','the calendar and its month hold across a workout and Back');
+  await ts.screenshot({path:resolve(output,'training-calendar-390.png'),fullPage:true});
   for(const width of [320,700,1100]){await ts.setViewportSize({width,height:900});assert.equal(await ts.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`Training fits ${width}px`)}
   assert.deepEqual(await contrastFailures(ts),[],'Training sections contrast');
   await ts.close();
  }
  console.log('Training sections: three questions, muscles with gaps, activity contributions, section kept: passed');
+ // A busy calendar day keeps its first sport and a count; its name lists every recording in start order.
+ {
+  const busy=await browser.newPage({viewport:{width:390,height:844}});
+  busy.on('pageerror',e=>errors.push(e.message));
+  const training=JSON.parse(await readFile(resolve('src/lib/sample/training.json'),'utf8')),run=training.workouts[0];
+  const extra=[{...run,id:'9000000000201',name:'Walk 1',icon:'walk',startLocal:'2025-10-15T12:00:00'},{...run,id:'9000000000202',name:'Swim 2',icon:'swim',startLocal:'2025-10-15T20:00:00'}];
+  await busy.route(u=>u.pathname==='/src/lib/sample/training.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify({...training,workouts:[...extra,...training.workouts]})}`}));
+  await busy.goto(`${url}/#training`);
+  await busy.getByRole('tab',{name:'Activities'}).click();
+  const acts=busy.locator('.q-activities');
+  await acts.getByRole('group',{name:'Show activities as'}).getByRole('button',{name:'Calendar'}).click();
+  const day=acts.getByRole('button',{name:'Wed 15 Oct: Walk 1, Lower A, Evening Ride, Swim 2'});
+  await day.waitFor();
+  assert.equal(await day.locator('svg').count(),1,'one sport icon, then a count');
+  assert.equal((await day.locator('small').textContent()).trim(),'+3');
+  await day.click();
+  assert.equal(await acts.locator('.activity').count(),4);
+  await busy.close();
+ }
+ console.log('Activities calendar: a busy day keeps its first sport and a count: passed');
  // "?" help: short sheets on root pages and cards; Back and Escape close them before navigating.
  {
   const hp=await browser.newPage({viewport:{width:390,height:844}});

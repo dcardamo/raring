@@ -359,6 +359,24 @@ pub struct ActivityPage {
     pub more: bool,
 }
 
+/// One month of stored recordings for Training → Activities' calendar.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ActivityMonth {
+    /// The month's first day.
+    pub month: String,
+    /// The calendar's first cell: the start of the week holding the 1st, on
+    /// the weekday Garmin's weeks start.
+    pub grid_start: String,
+    /// The local date; later days have nothing recorded yet.
+    pub today: String,
+    /// The oldest stored recording's local date; no earlier month opens.
+    pub first: Option<String>,
+    /// The month's recordings, newest first.
+    pub activities: Vec<ActivityCard>,
+}
+
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]

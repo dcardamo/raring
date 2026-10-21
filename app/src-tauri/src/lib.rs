@@ -551,6 +551,10 @@ async fn activity_page(app: tauri::AppHandle, before_start: String, before_id: S
     read_view(app, move |core| Ok(core.activity_page(&before_start, &before_id, icon))).await
 }
 #[tauri::command]
+async fn activity_month(app: tauri::AppHandle, month: Option<String>) -> Result<raring_core::view::ActivityMonth, String> {
+    read_view(app, move |core| core.activity_month(month.as_deref(), Local::now()).map_err(|e| e.to_string())).await
+}
+#[tauri::command]
 async fn lift_series(app: tauri::AppHandle, key: String, range: TrendRange) -> Result<Option<raring_core::view::LiftSeries>, String> {
     read_view(app, move |core| Ok(core.lift_series(&key, range, Local::now()))).await
 }
@@ -1271,6 +1275,7 @@ pub fn run() {
                     milestone_archive,
                     lift_series,
                     activity_page,
+                    activity_month,
                     muscles,
                     check_reminders,
                     reminders_status,
@@ -1317,6 +1322,7 @@ pub fn run() {
                     milestone_archive,
                     lift_series,
                     activity_page,
+                    activity_month,
                     muscles,
                     check_reminders,
                     reminders_status

@@ -25,6 +25,7 @@
  import type {AdaptState} from './lib/generated/AdaptState';
  import type {ProfileView} from './lib/generated/ProfileView';
  import type {Milestone} from './lib/generated/Milestone';
+ import type {ActivityMonth} from './lib/generated/ActivityMonth';
  import AboutRaring from './lib/components/AboutRaring.svelte';
  import SleepPlanCard from './lib/components/SleepPlanCard.svelte';
  import {phaseEnded} from './lib/tonight';
@@ -82,7 +83,7 @@
  let progressQuery:{period:import('./lib/generated/Period').Period,date?:string}={period:'month'};
  let progressRevision=0;
  type PageData=TodayView|SleepView|TrainingView|WorkoutView|HealthView|CheckinView|PlanBoard|StrengthPage|ProgressPage|WeightView|ProfileView;
- let sheet=$state(false),search=$state(false),addDraft=$state<Draft|null>(null),itemSheet=$state<PlanItem|null>(null),eventSheet=$state(false),reviewData=$state<WeekReview|null>(null),reviewRows=$state<ReviewRow[]|null>(null),milestoneRows=$state<Milestone[]|null>(null),garminChanges=$state<GarminChange[]|null>(null),garminChangesFailed=$state(false),lastPhase=$state<string|null>(null),adaptOpen=$state(false),invalidLink=$state<string|null>(null),trainingSection=$state<'fitness'|'strength'|'activities'>('fitness'),liftPicked=$state<string|null>(null),liftMetric=$state<'max'|'volume'>('max'),liftRange=$state<TrendRange>('days90'),muscleRange=$state<TrendRange>('days30'),activityDay=$state<string|null>(null),progressSection=$state<'overall'|'cardio'|'strength'|'long'>('overall'),adaptLimits=$state(false),chooseOpen=$state(false),garminSheet=$state<GarminSession|null>(null),adaptState=$state<AdaptState|null>(null),weekBoard=$state<PlanBoard|null>(null),statusOffer=$state(false),savingStatus=$state(false);
+ let sheet=$state(false),search=$state(false),addDraft=$state<Draft|null>(null),itemSheet=$state<PlanItem|null>(null),eventSheet=$state(false),reviewData=$state<WeekReview|null>(null),reviewRows=$state<ReviewRow[]|null>(null),milestoneRows=$state<Milestone[]|null>(null),garminChanges=$state<GarminChange[]|null>(null),garminChangesFailed=$state(false),lastPhase=$state<string|null>(null),adaptOpen=$state(false),invalidLink=$state<string|null>(null),trainingSection=$state<'fitness'|'strength'|'activities'>('fitness'),liftPicked=$state<string|null>(null),liftMetric=$state<'max'|'volume'>('max'),liftRange=$state<TrendRange>('days90'),muscleRange=$state<TrendRange>('days30'),activityDay=$state<string|null>(null),activityView=$state<'list'|'calendar'>('list'),activityCalendar=$state<ActivityMonth|null>(null),progressSection=$state<'overall'|'cardio'|'strength'|'long'>('overall'),adaptLimits=$state(false),chooseOpen=$state(false),garminSheet=$state<GarminSession|null>(null),adaptState=$state<AdaptState|null>(null),weekBoard=$state<PlanBoard|null>(null),statusOffer=$state(false),savingStatus=$state(false);
  let checkingStatusOffer=false,settingsRevision=0;
  let settingsBusy=$state<Partial<Record<keyof api.Settings,boolean>>>({});
  function canApplySettingsRead(revision:number){return revision===settingsRevision && !Object.values(settingsBusy).some(Boolean) && !savingStatus}
@@ -394,8 +395,8 @@
    const changed=next[next.length-1]!==route;
    if(changed){scrollPositions.set(route,scroll?.scrollTop??0);pendingSwap=null;detailState=null;selectedFactor='';sheet=false;search=false;chooseOpen=false;garminSheet=null;quickHelp.topic=null;addDraft=null;itemSheet=null;eventSheet=false;reviewData=null;journalOpen=false;journalDayOpen=null}
    trail=next;route=next[next.length-1];
-   // Today's one-day activity list holds into a workout and back, not elsewhere.
-   if(route!=='training' && !route.startsWith('workout/'))activityDay=null;
+   // Today's one-day activity list and the calendar's month hold into a workout and back, not elsewhere.
+   if(route!=='training' && !route.startsWith('workout/')){activityDay=null;activityCalendar=null}
    const available=changed?cached(route):null;
    if(changed){
     data=available;
@@ -600,7 +601,7 @@
  {@const historical=openedDay?.page==='sleep'}
  {#snippet sleepHeader()}{#if historical}<Header title="Sleep" eyebrow={dateLabel(sleepData.date)} back={back} backLabel={parentLabel}/>{:else}<Header title="Sleep" eyebrow={sleepTab==='tonight'?tonightLabel(sleepData.sleepPlan):sleepData.startLocal?`${clock(sleepData.startLocal)} – ${clock(sleepData.endLocal)}`:dateLabel(sleepData.date)} {...rootControls}/>{/if}{/snippet}{#snippet tonightTab()}<SleepTonight sleep={sleepData} board={weekBoard} {act} {navigate} {now} reminder={settings.notifyBedtime} setReminder={on=>void patchSettings({notifyBedtime:on})} fallAsleep={settings.fallAsleepMin} setFallAsleep={m=>void patchPlan({fallAsleepMin:m})}/>{/snippet}<SleepDetail {sleepData} header={sleepHeader} {navigate} {historical} tab={sleepTab} setTab={historical?undefined:t=>navigate('sleep/'+(t==='last'?'last':'tonight'))} tonight={tonightTab}/>
 {:else if trainingData}
- {#snippet trainingHeader()}<Header title="Training" eyebrow={dateLabel(trainingData.lanes?.today ?? trainingData.week.at(-1)?.date ?? '')} {...rootControls}/>{/snippet}<TrainingTab {trainingData} header={trainingHeader} {navigate} bind:section={trainingSection} bind:muscleRange bind:day={activityDay} muscles={api.muscles} activityPage={api.activity_page}/>
+ {#snippet trainingHeader()}<Header title="Training" eyebrow={dateLabel(trainingData.lanes?.today ?? trainingData.week.at(-1)?.date ?? '')} {...rootControls}/>{/snippet}<TrainingTab {trainingData} header={trainingHeader} {navigate} bind:section={trainingSection} bind:muscleRange bind:day={activityDay} bind:activitiesView={activityView} bind:calendar={activityCalendar} muscles={api.muscles} activityPage={api.activity_page} activityMonth={api.activity_month}/>
 {:else if workoutData}
  {@const sets=workoutData.strength}<Header title={workoutData.summary.name} eyebrow={(sets?'Strength · ':'')+dateLabel(workoutData.summary.startLocal.slice(0,10))+' · '+clock(workoutData.summary.startLocal)} back={back} backLabel={parentLabel} onHelp={sets?()=>sheet=true:undefined}/><WorkoutDetail {workoutData} {navigate} help={()=>sheet=true} refresh={refreshStrength}/>
 {:else if strengthData}

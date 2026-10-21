@@ -225,6 +225,16 @@ impl Raring {
     pub fn activity_page(&self, before_start: &str, before_id: &str, icon: Option<view::Icon>) -> view::ActivityPage {
         screens::activity_page(&self.store, before_start, before_id, icon, 20)
     }
+    /// One month of stored recordings for the Activities calendar, from local
+    /// data only; `month` is any date in it, this month when absent.
+    pub fn activity_month(&self, month: Option<&str>, now: DateTime<Local>) -> Result<view::ActivityMonth> {
+        let today = now.date_naive();
+        let month = match month {
+            Some(m) => chrono::NaiveDate::parse_from_str(m, "%Y-%m-%d").map_err(|_| Error::InvalidLocal("month"))?,
+            None => today,
+        };
+        Ok(screens::activity_month(&self.store, month, today))
+    }
     /// Sets per muscle group over a range, from local sets only.
     pub fn muscles(&self, range: view::TrendRange, now: DateTime<Local>) -> Option<view::MuscleRange> {
         strength::muscles(&self.store, range, now.date_naive())

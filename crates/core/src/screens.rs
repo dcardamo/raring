@@ -1085,6 +1085,25 @@ pub fn activity_page(store: &Store, before_start: &str, before_id: &str, icon: O
         }
     }
 }
+/// The stored recordings of the month holding `month`, newest first, for the
+/// Activities calendar; no Garmin request is made.
+pub fn activity_month(store: &Store, month: NaiveDate, today: NaiveDate) -> ActivityMonth {
+    let start = month.with_day(1).unwrap_or(month);
+    let end = start.checked_add_months(chrono::Months::new(1)).map_or(start, |next| next - Duration::days(1));
+    let mut activities: Vec<ActivityCard> = store
+        .activities_between(&start.to_string(), &end.to_string())
+        .iter()
+        .filter_map(|(id, _)| activity(store, id))
+        .collect();
+    activities.reverse();
+    ActivityMonth {
+        month: start.to_string(),
+        grid_start: plan::week_start(start, plan::week_starts_on(store)).to_string(),
+        today: today.to_string(),
+        first: store.oldest_activity().and_then(|s| s.get(..10).map(str::to_owned)),
+        activities,
+    }
+}
 fn activities(store: &Store, since: &str) -> Vec<ActivityCard> {
     store
         .activity_ids(Some(since), 200)
