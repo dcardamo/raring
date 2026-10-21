@@ -82,9 +82,6 @@ In priority order; the redesign shipped (Done, item 26) without them.
 - Review the refined tokens on main's new Today/Sleep components: the four
   morning stats, separate session card, 24-hour clock and recent-nights chart.
   They are integrated in the prototype; their layout and data remain main's.
-- The Android window background (`MainActivity.kt`) and the WebView
-  `theme-color` (`app/index.html`) are still the earlier navy `#0B0F1A`, not
-  the app's `#111317`; launch and system-bar edges can show the old colour.
 
 ### Chart colour follow-ups
 
@@ -692,6 +689,12 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Status and gesture bars match the app** (commit "Paint the system bar
+  strips the app's graphite"). The Android window background and the WebView
+  `theme-color` were the earlier navy `#0B0F1A`, which showed as a strip
+  behind the status bar and the gesture bar; both are now `#111317`.
+  Verified on an emulator by sampling the status bar, body and gesture bar.
 
 - **One brand mark everywhere** (commit "Replace the app icon with one gauge
   mark everywhere"). The launcher icon (and so Obtainium's), the notification
