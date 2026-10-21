@@ -29,35 +29,21 @@ opened (approved). Move each to `docs/done.md` when it merges.
 
 ### 1. Garmin writes, starting with weight
 
-The write rules (item 21) shipped in `crates/core/src/writes.rs`, but nothing
-in the app writes yet. They cover editing an existing resource. A weigh-in is
-created rather than edited, so the first write also extends the rules to
-create and delete. Weight goes first because the Add a weight button
-already exists on Profile (disabled) and Connect shows a weigh-in without
-waiting for a watch sync.
+In progress on branch `feat-weight-write`. The weight spike and the write
+rules' create and delete shipped (docs/done.md); weigh-ins are proven against
+a local mock and the real-account spike. Weight goes first because the Add a
+weight button already exists on Profile (disabled) and Connect shows a
+weigh-in without waiting for a watch sync.
 
-1. **Weight write spike** (approved 2026-10-21). On the maintainer's account,
-   from the CLI and one request at a time: add one weigh-in with
-   `POST /weight-service/user-weight` (unverified), read it back through
-   `weight/dateRange`, check it in Garmin Connect, then delete it with the
-   client's delete-weigh-in endpoint (unverified). Record the request body,
-   units, timestamp and time zone handling, whether the reply carries the new
-   `samplePk`, and how the delete addresses the entry.
-2. **Create and delete in the write rules.** Never retry a create
-   automatically: a sent but unconfirmed create could otherwise save twice.
-   Before sending, read the day's weigh-ins; if the same value is already
-   there, say so instead of sending. A delete still needs the person's
-   confirmation. Keep the change log and the existing outcomes, and add the
-   rules to the spec's Rules: Garmin writes.
-3. **24a. Add a weight** on Profile: the weight only (Garmin's measurement
+1. **24a. Add a weight** on Profile: the weight only (Garmin's measurement
    system sets kg or lb), time defaulting to now. Hold Android's `SyncGate` or
    the desktop credential gate around the write as sync does, and save
-   refreshed tokens. Store the read-back weigh-in so Health shows it without
-   a sync. In the same change, rewrite the website's privacy page and the
-   README, which say Raring only reads from Garmin, and update the spec's
+   refreshed tokens. The core stores the read-back day, so Health shows it
+   without a sync. In the same change, rewrite the website's privacy page and
+   the README, which say Raring only reads from Garmin, and update the spec's
    Profile entry.
-4. **Delete a weigh-in** from the weight detail, with confirmation.
-5. **24b. Hydration** (`/usersummary-service/usersummary/hydration/log`),
+2. **Delete a weigh-in** from the weight detail, with confirmation.
+3. **24b. Hydration** (`/usersummary-service/usersummary/hydration/log`),
    then **24c. blood pressure** (`/bloodpressure-service/bloodpressure`; it
    can't be edited, only deleted and added again). Both unverified.
 
@@ -311,6 +297,12 @@ TalkBack or Doze.
 ## Probe a real account
 
 Read-only unless noted, serialized, within the budget, notes in `.data/`.
+
+- **Weigh-in writes beyond the spike** (writes; ask first): a weigh-in in
+  pounds converts to grams that aren't whole tenths of a kilogram; whether
+  Garmin keeps those grams exactly is unverified (the read-back compares to
+  0.1 lb, so rounding would read back differently, not fail). Deleting a
+  scale's (non-`MANUAL`) weigh-in with the same endpoint is unverified.
 
 - **Garmin Coach status and week boundary**: after a completed and a skipped
   Coach session, one `fbt-adaptive` read to see which

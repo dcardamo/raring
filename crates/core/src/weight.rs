@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 
 const FIRST: &str = "1990-01-01";
 const WINDOWS: [u32; 6] = [1, 3, 7, 14, 30, 90];
-const KG_PER_LB: f64 = 0.45359237;
+pub(crate) const KG_PER_LB: f64 = 0.45359237;
 
 pub fn freshness(
     recorded: Option<NaiveDate>,
@@ -97,6 +97,15 @@ fn smooth(rows: &BTreeMap<NaiveDate, Value>) -> BTreeMap<NaiveDate, f64> {
     result
 }
 
+/// Garmin's measurement system, once synced; never guessed.
+pub(crate) fn unit(store: &Store) -> Option<WeightUnit> {
+    match store.get("profile_settings", "me").unwrap_or(Value::Null)["measurementSystem"].as_str() {
+        Some("metric") => Some(WeightUnit::Kg),
+        Some(s) if s.starts_with("statute") => Some(WeightUnit::Lb),
+        _ => None,
+    }
+}
+
 pub fn view(
     store: &Store,
     range: TrendRange,
@@ -106,12 +115,7 @@ pub fn view(
     if end.to_string().as_str() < FIRST || end > today || range == TrendRange::Custom {
         return Err(Error::InvalidLocal("weight range or date"));
     }
-    let settings = store.get("profile_settings", "me").unwrap_or(Value::Null);
-    let unit = match settings["measurementSystem"].as_str() {
-        Some("metric") => Some(WeightUnit::Kg),
-        Some(s) if s.starts_with("statute") => Some(WeightUnit::Lb),
-        _ => None,
-    };
+    let unit = unit(store);
     let rows = measurements(store, end);
     let latest = rows.last_key_value();
     let mut view = WeightView {
@@ -130,6 +134,7 @@ pub fn view(
         points: vec![],
         changes: vec![],
         note: None,
+        last_weigh_in: None,
     };
     let Some(unit) = unit else {
         view.note = Some("Waiting for Garmin's measurement units".into());
@@ -174,6 +179,15 @@ pub fn view(
     view.change = before
         .and_then(|d| series.get(&d))
         .map(|v| convert(trend - v));
+    view.last_weigh_in = row["timestampGMT"].as_i64().map(|timestamp_gmt| WeighIn {
+        date: last.to_string(),
+        // Garmin's `date` is the local wall time written as if it were UTC.
+        time: row["date"].as_i64().and_then(DateTime::from_timestamp_millis).map(|t| t.format("%H:%M").to_string()),
+        value: convert(kilos(row).unwrap_or_default()),
+        timestamp_gmt,
+        sample_pk: row["samplePk"].as_u64().map(|n| n.to_string()),
+        source: row["sourceType"].as_str().map(str::to_owned),
+    });
     view.bmi = row["bmi"].as_f64().filter(|v| v.is_finite() && *v > 0.);
     view.body_fat = row["bodyFat"]
         .as_f64()

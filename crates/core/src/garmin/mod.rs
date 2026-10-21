@@ -322,9 +322,10 @@ impl Client {
     }
     /// Send one write. Only `writes` can create the `Explicit` proof, so sync
     /// and other reads cannot reach this. Pacing, refresh and the 401 retry
-    /// match reads; a 4xx other than 401 and 429 is Garmin's rejection.
-    pub(crate) async fn put_json(
-        &self, _: &crate::writes::Explicit, path: &str, body: &Value,
+    /// match reads (a 401 means nothing was saved); a 4xx other than 401 and
+    /// 429 is Garmin's rejection. Any 2xx, including 204, is accepted.
+    pub(crate) async fn send(
+        &self, _: &crate::writes::Explicit, method: reqwest::Method, path: &str, body: Option<&Value>,
     ) -> Result<Reply> {
         if !path.starts_with('/') || path.contains("..") || path.contains('?') || path.contains('#') || path.contains('\\') {
             return Err(Error::Decode);
@@ -340,12 +341,12 @@ impl Client {
                 }
             }
             guard.1 = Some(Instant::now());
-            let r = native(self.http.put(format!("{}{path}", self.api)))
-                .bearer_auth(&guard.0.access_token)
-                .json(body)
-                .send()
-                .await
-                .map_err(map_network)?;
+            let mut request = native(self.http.request(method.clone(), format!("{}{path}", self.api)))
+                .bearer_auth(&guard.0.access_token);
+            if let Some(body) = body {
+                request = request.json(body);
+            }
+            let r = request.send().await.map_err(map_network)?;
             let status = r.status();
             if status == StatusCode::UNAUTHORIZED && attempt == 0 {
                 guard.0 = refresh_at(&self.http, &self.auth, &guard.0).await?;

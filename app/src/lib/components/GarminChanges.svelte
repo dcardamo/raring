@@ -5,7 +5,7 @@
  import {clock} from '../format';
  // Settings' log of Raring's writes to Garmin (Rules: Garmin writes); read-only.
  let {changes,failed=false}:{changes:GarminChange[]|null,failed?:boolean}=$props();
- const RESULT:Record<WriteOutcome,string>={applied:'Saved in Garmin',differs:'Saved, but Garmin reads back something else',unconfirmed:'Sent, not confirmed',conflict:'Not sent',rejected:'Garmin refused it',failed:'Not saved',needsSignIn:'Not sent: sign in again'};
+ const RESULT:Record<WriteOutcome,string>={applied:'Saved in Garmin',differs:'Saved, but Garmin reads back something else',unconfirmed:'Sent, not confirmed',conflict:'Not sent',rejected:'Garmin refused it',failed:'Not saved',needsSignIn:'Not sent: sign in again',duplicate:'Not sent: already in Garmin'};
  const when=(at:string)=>{const d=new Date(at);return Number.isNaN(d.getTime())?'Time unavailable':`${d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})} ${clock(at)}`};
  const value=(v:string|null)=>v??'none';
 </script>
@@ -28,6 +28,6 @@
  .head small{font:500 12px Inter;color:var(--text2);white-space:nowrap}
  .changes .small{margin:0}
  .result{font:600 13px Inter;color:var(--text)}
- .result.differs,.result.unconfirmed,.result.conflict{color:var(--fair)}
+ .result.differs,.result.unconfirmed,.result.conflict,.result.duplicate{color:var(--fair)}
  .result.rejected,.result.failed,.result.needsSignIn{color:var(--poor)}
 </style>

@@ -4,6 +4,33 @@ Shipped backlog items, newest first, each with its commit and the endpoint
 facts verified while building it. The open backlog is [TODO.md](../TODO.md).
 "Verified" means a read against a real account returned the data.
 
+- **Weigh-ins in the write rules** (commit "Add weigh-in create and delete
+  to the Garmin write rules"; TODO 1, steps 1–2). Spike on the maintainer's
+  account (approved 2026-10-21), one request at a time: one weigh-in created
+  with the latest real value, read back, deleted and read back again.
+  Verified: `POST /weight-service/user-weight` with `{date, dateTimestamp,
+  gmtTimestamp, unitKey: "kg", sourceType: "MANUAL", value}` (both
+  timestamps `YYYY-MM-DDTHH:MM:SS.mmm`, local and UTC, no offset) answers
+  204 with no body, so no id. `weight/dateRange` for the day then lists it
+  with `sourceType` `MANUAL`, `weight` in grams (exact), `timestampGMT`
+  equal to the sent `gmtTimestamp` to the millisecond, `date` the local wall
+  time encoded as UTC milliseconds, and a `samplePk` near the server's
+  receive time. `DELETE /weight-service/weight/{calendarDate}/byversion/{samplePk}`
+  answers 204 with no body; the day is empty again and the earlier latest
+  weigh-in is unchanged. The core (`writes.rs`) now creates and deletes
+  weigh-ins: a fresh day read first (an earlier attempt at the same time
+  counts as saved, the same value that day is "already in Garmin", a new
+  `duplicate` outcome), one POST never resent automatically, a read-back by
+  `MANUAL` + `timestampGMT`, and the read-back day stored as sync stores it
+  (with `samplePk`). Deletes need a confirmation and a fresh read; a deleted
+  stored latest is dropped and reread at the next sync. Client writes take
+  any method (`Client::send`). Mock tests: saved, pounds, read back
+  differently, duplicate, same-moment conflict, sent but unconfirmed then
+  confirmed by the next attempt's read, read-back failure, 400 with message,
+  401 refresh, 429 backoff, confirmed delete, already gone, delete
+  unconfirmed. `raring add-weight` and `raring delete-weigh-in` run the same
+  path; no real write was sent beyond the spike.
+
 - **Status and gesture bars match the app** (commit "Paint the system bar
   strips the app's graphite"). The Android window background and the WebView
   `theme-color` were the earlier navy `#0B0F1A`, which showed as a strip

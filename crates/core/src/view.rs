@@ -1769,6 +1769,31 @@ pub enum WriteOutcome {
     Failed,
     /// Not sent: Garmin needs a new sign-in.
     NeedsSignIn,
+    /// Not sent: Garmin already has the same weigh-in that day.
+    Duplicate,
+}
+
+/// A write the person asked for (Rules: Garmin writes). Weigh-ins are
+/// created and deleted, never edited.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase", tag = "kind")]
+#[ts(export)]
+pub enum GarminWrite {
+    /// A weigh-in in the unit the person typed it in, at a local time with
+    /// its UTC offset (RFC 3339). A retry with the same time finds the first
+    /// attempt instead of adding it twice.
+    #[serde(rename_all = "camelCase")]
+    AddWeight { value: f64, unit: WeightUnit, at: String },
+    /// The weigh-in the person saw, found again by Garmin's timestamp and,
+    /// when stored, its `samplePk`. Refused unless `confirm` is set.
+    #[serde(rename_all = "camelCase")]
+    DeleteWeighIn {
+        date: String,
+        #[ts(type = "number")]
+        timestamp_gmt: i64,
+        sample_pk: Option<String>,
+        confirm: bool,
+    },
 }
 
 /// One field of a Garmin write, as display text: the person's new value,
@@ -3309,6 +3334,26 @@ pub struct WeightView {
     pub points: Vec<WeightPoint>,
     pub changes: Vec<WeightChange>,
     pub note: Option<String>,
+    /// The last stored weigh-in, for deleting it from the detail.
+    pub last_weigh_in: Option<WeighIn>,
+}
+
+/// One stored Garmin weigh-in, in the account's unit.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WeighIn {
+    /// Garmin's calendar date.
+    pub date: String,
+    /// Local wall time, `HH:MM`.
+    pub time: Option<String>,
+    pub value: f64,
+    /// Garmin's `timestampGMT`, epoch milliseconds.
+    #[ts(type = "number")]
+    pub timestamp_gmt: i64,
+    pub sample_pk: Option<String>,
+    /// Garmin's `sourceType`, such as `MANUAL`.
+    pub source: Option<String>,
 }
 
 // ---------------------------------------------------------------------------

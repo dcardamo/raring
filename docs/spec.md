@@ -963,8 +963,8 @@ next pending wind-down while signed in.
   date only prompts. A dismissal lasts its local day (kept 30 days). A wind-down
   reported before noon belongs to the evening before.
 - **Garmin writes**: every change to Garmin follows one path in the core,
-  and nothing ships a write until it has passed on a real watch (TODO item
-  20). A write runs only from the person's explicit action, never from sync
+  and a write ships only once it has passed against a real account (a watch
+  setting on a real watch). A write runs only from the person's explicit action, never from sync
   or another background job; a delete also needs an explicit confirmation.
   It starts from a fresh read of the resource and applies a typed change to
   the fields the person touched. Each change carries the value the person
@@ -982,12 +982,40 @@ next pending wind-down while signed in.
   connection failed after sending); not sent because it changed in Garmin;
   refused, with Garmin's message (any 4xx but 401/429, at most 200
   characters, never an HTML page); not saved (rate limit, not found,
-  network); or sign in again. Invalid changes are refused before any
-  request. Writes are serialized, so two saves never interleave.
-  The first resource is a watch's alarms
+  network); not sent because Garmin already has it; or sign in again.
+  Invalid changes are refused before any request. Writes are serialized, so
+  two saves never interleave. A watch's alarms
   (`/device-service/deviceservice/device-info/settings/{deviceId}`: time in
-  minutes after midnight, `alarmMode` ON/OFF, `alarmDays`, removal), proven
-  against a local mock only; nothing in the app sends it yet.
+  minutes after midnight, `alarmMode` ON/OFF, `alarmDays`, removal) are
+  proven against a local mock only; nothing in the app sends them yet.
+  - **Weigh-ins** are created and deleted, never edited. Adding one sends the
+    weight only: `POST /weight-service/user-weight` with the local `date`,
+    `dateTimestamp` (local) and `gmtTimestamp` (UTC), both
+    `YYYY-MM-DDTHH:MM:SS.mmm` without an offset, `unitKey` `kg`,
+    `sourceType` `MANUAL` and `value`. A pound value is converted at
+    0.45359237 kg and sent in kilograms to the gram; it must be 20–300 kg,
+    and the time, kept to the second, no later than a minute from now. Garmin answers 204 with no
+    body, so no id. Before sending, the day's weigh-ins are read
+    (`weight/dateRange` for that date): a `MANUAL` one at the same
+    `timestampGMT` with the same value is an earlier attempt Garmin saved,
+    so the add counts as saved and nothing is sent; another weigh-in at that
+    timestamp is a conflict; the same value (to 0.1 in the person's unit) at
+    another time that day is "already in Garmin" and nothing is sent. A
+    create is never resent automatically: after a server or connection
+    failure it is sent but unconfirmed, and trying again with the same time
+    finds it first. The read-back finds the new weigh-in by `MANUAL` and a
+    `timestampGMT` equal to the sent `gmtTimestamp` (Garmin keeps it to the
+    millisecond and lists the weight in grams); missing is unconfirmed, a
+    different value (to 0.1) reads back differently.
+  - **Deleting a weigh-in** names the one the person saw by its date,
+    `timestampGMT` and stored `samplePk`, and needs a confirmation. The fresh
+    read finds it (already gone: nothing is sent), then
+    `DELETE /weight-service/weight/{calendarDate}/byversion/{samplePk}`
+    (204, no body), and the read-back checks it is gone.
+  - Every day Garmin answers for is stored as sync stores it: its last
+    weigh-in by `timestampGMT`, with its `samplePk`, or no row, so Health and
+    Profile follow without a sync. A stored latest weigh-in that was deleted
+    is dropped and read again at the next sync.
 - **Recent Garmin changes**: every attempt that passes validation is logged
   in a versioned settings row (`garmin:changes`, `schema` 1), newest first,
   at most 50, with its time, what was written, each field's old and new value
