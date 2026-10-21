@@ -82,10 +82,9 @@ In priority order; the redesign shipped (Done, item 26) without them.
 - Review the refined tokens on main's new Today/Sleep components: the four
   morning stats, separate session card, 24-hour clock and recent-nights chart.
   They are integrated in the prototype; their layout and data remain main's.
-- The launcher icon (`app/src-tauri/icons/raring.svg`, also the website's
-  favicon and brand mark) keeps the earlier navy and mint gradient, while the
-  app and raring.app now use warm graphite and an ink brand ring. Decide
-  whether the icon follows; a new icon needs every generated size.
+- The Android window background (`MainActivity.kt`) and the WebView
+  `theme-color` (`app/index.html`) are still the earlier navy `#0B0F1A`, not
+  the app's `#111317`; launch and system-bar edges can show the old colour.
 
 ### Chart colour follow-ups
 
@@ -693,6 +692,18 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **One brand mark everywhere** (commit "Replace the app icon with one gauge
+  mark everywhere"). The launcher icon (and so Obtainium's), the notification
+  small icon, the in-app brand mark, favicon and raring.app now share one
+  mark: the app's readiness gauge with ink progress, a graphite track and a
+  green marker. `scripts/brand-icon.mjs` writes every vector copy;
+  `cargo tauri icon src-tauri/icons/icon.json` the raster sizes. Android's
+  adaptive icon now has a graphite background, a safe-zone foreground and a
+  monochrome layer for themed icons (it was a dark tile baked onto white, so
+  the circle mask cropped the gauge). The dark-theme notification tint follows
+  the marker green. Verified on an emulator: launcher, status bar, shade and
+  welcome screen; app checks, unit and UI tests and build pass.
 
 - **App-wide adaptive layout** (commits "Group Plan and Progress sections for
   responsive grid", "Make sheet layouts wrap and scroll at narrow widths"
