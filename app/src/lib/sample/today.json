@@ -1228,6 +1228,18 @@
   "lead": null,
   "adapt": null,
   "nightVitals": {
+    "restingHr": {
+      "value": 54,
+      "unit": "bpm",
+      "usual": [
+        51,
+        57
+      ],
+      "rangeSource": "raring",
+      "state": "within",
+      "delta": null,
+      "tone": "good"
+    },
     "sleepHr": {
       "value": 58,
       "unit": "bpm",

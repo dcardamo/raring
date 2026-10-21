@@ -288,11 +288,16 @@ From the session card and morning stats, in priority order.
   codes ending `_GENERIC_GYM`/`_GENERIC_BODYWEIGHT`) fall back to the name
   and duration; record new codes and their meaning when seen. Whether a
   completed Coach task keeps its phrase is unverified.
-- Evaluate the lowest overnight heart rate (a minimum of Garmin's two-minute
-  sleep samples) as a Today stat; it would be new Raring math sensitive to
-  artifacts, so it needs a rule and a real-night comparison first.
-- On an account without Health Status, compare Today's Sleep HR range (the
-  sleep record's 30-night fallback) with Garmin Connect's sleep heart rate.
+- Check the Resting HR stat on the maintainer's phone on a morning: whether
+  Garmin's daily resting HR is in the summary when the night first syncs.
+  Until it is, the stat says "Not recorded" beside a synced Sleep score.
+- On an account without Health Status, compare the Sleep HR detail's range
+  (the sleep record's 30-night fallback) with Garmin Connect's sleep heart
+  rate.
+- The Sleep HR detail (`metric/sleepHr`) lost its only link when Today's
+  stat became Resting HR; Health Status accounts still see Sleep HR on
+  Health's vitals. Link it from Sleep's overnight heart rate or fold it into
+  that vital.
 - Time to fall asleep: confirm on a phone that changing it moves tonight's
   reminder and Today's wind-down without a sync.
 
@@ -693,6 +698,20 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Resting HR on Today** (commit "Show Garmin's resting HR on Today
+  instead of Sleep HR"), at the maintainer's request for resting heart rate
+  during sleep. Today's third stat is Garmin's daily resting HR for the day
+  the night ends (`NightVitals.restingHr`) against the resting-HR chart's
+  band, Raring's usual range over the last 30 days, and opens the all-day
+  heart-rate detail. Sleep HR stays in `NightVitals` for its detail and
+  Health's vitals. Verified on the maintainer's account (a local copy of 17
+  nights, 29 Sep–16 Oct 2026): the sleep response's top-level
+  `restingHeartRate` equals the daily summary's, and both were within 1 bpm
+  of the lowest 30-minute average of the night's two-minute
+  `sleepHeartRate` samples; the overnight `avgHeartRate` ran 3–8 bpm above
+  it. Garmin's value answers "resting HR during sleep" without new Raring
+  math, so the lowest-overnight-sample evaluation is dropped.
 
 - **App-wide adaptive layout** (commits "Group Plan and Progress sections for
   responsive grid", "Make sheet layouts wrap and scroll at narrow widths"

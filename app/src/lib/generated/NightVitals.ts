@@ -3,6 +3,12 @@ import type { NightReading } from "./NightReading";
 
 export type NightVitals = { 
 /**
+ * Garmin's daily resting HR for the day the night ends, against the
+ * resting-HR chart's usual range. Never Health Status's HR, which is the
+ * overnight average.
+ */
+restingHr: NightReading, 
+/**
  * Garmin's overnight average heart rate (Health Status HR when sent).
  */
 sleepHr: NightReading, 

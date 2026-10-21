@@ -386,6 +386,10 @@ pub struct NightReading {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct NightVitals {
+    /// Garmin's daily resting HR for the day the night ends, against the
+    /// resting-HR chart's usual range. Never Health Status's HR, which is the
+    /// overnight average.
+    pub resting_hr: NightReading,
     /// Garmin's overnight average heart rate (Health Status HR when sent).
     pub sleep_hr: NightReading,
     /// Last night's average HRV against Garmin's baseline.
@@ -673,8 +677,9 @@ pub struct TodayView {
     /// The calendar day on one axis; only for the live day.
     #[serde(default)]
     pub day: Option<DayTimeline>,
-    /// Last night's Sleep HR and HRV against their usual ranges, for the
-    /// morning and the day; none from the evening on or before the night syncs.
+    /// Last night's resting HR, Sleep HR and HRV against their usual ranges,
+    /// for the morning and the day; none from the evening on or before the
+    /// night syncs.
     #[serde(default)]
     pub night_vitals: Option<NightVitals>,
     /// Fitness Age's vigorous driver on the calendar day; only for the live
@@ -1632,7 +1637,8 @@ pub struct HealthView {
     /// Health Status's Sleep HR baseline, which measures something else.
     #[serde(default)]
     pub resting_hr_range: Option<[f64; 2]>,
-    /// That night's Sleep HR and HRV against their usual ranges, as on Today.
+    /// That night's resting HR, Sleep HR and HRV against their usual ranges,
+    /// as on Today.
     #[serde(default)]
     pub night_vitals: Option<NightVitals>,
     /// A past day's detail an explicit open can fetch.

@@ -17,7 +17,7 @@ const sample=JSON.parse(await readFile(resolve('src/lib/sample/today.json'),'utf
 const windDownToday={...sample,focus:{...sample.focus,phase:'windDown',cards:['sleepPlan','focus'],until:'2025-10-16T23:06:00'}};
 const eveningToday={...sample,focus:{...sample.focus,phase:'evening',cards:['sleepPlan','focus'],until:'2025-10-16T22:00:00'}};
 // The morning stats with long usual-range lines, and today's session card below the day.
-const statsToday={...sample,call:'easy',nightVitals:{sleepHr:{value:57,unit:'bpm',usual:[48,54],rangeSource:'raring',state:'above',delta:6,tone:'fair'},hrv:{value:44,unit:'ms',usual:[48,62],rangeSource:'garmin',state:'below',delta:-11,tone:'fair'}},
+const statsToday={...sample,call:'easy',nightVitals:{...sample.nightVitals,restingHr:{value:57,unit:'bpm',usual:[48,54],rangeSource:'raring',state:'above',delta:6,tone:'fair'},hrv:{value:44,unit:'ms',usual:[48,62],rangeSource:'garmin',state:'below',delta:-11,tone:'fair'}},
  lead:{id:'session:coach:2025-10-16:1',kind:'session',headline:'An easier day may fit',line:null,action:{label:'Your plan',route:'plan',adapt:false},dismissable:false,kept:false,garmin:null,activity:null,intention:'coach:2025-10-16:1',reasons:[],
   session:{name:'Base Builder 1',source:'coach',sourceLabel:'Garmin Coach · week 1 of 4',time:null,what:'Cardio · about 45 min · target 152 bpm',effect:'Threshold: hard, sustained effort',garminEffect:'Lactate threshold',note:'Coach eased this after a short night',fit:"Harder than today's suggested effort"}}};
 

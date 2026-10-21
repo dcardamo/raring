@@ -943,10 +943,11 @@ try {
   }
  }
  console.log('Today’s session: a day headline, then a session card with what it is and Keep inside: passed');
- // Four compact stats lead Today: Sleep, Readiness, Sleep HR and HRV, each opening its detail.
+ // Four compact stats lead Today: Sleep, Readiness, resting HR and HRV, each opening its detail.
  {
   const sample=JSON.parse(await readFile(resolve('src/lib/sample/today.json'),'utf8'));
-  const nightVitals={sleepHr:{value:57,unit:'bpm',usual:[48,54],rangeSource:'raring',state:'above',delta:6,tone:'fair'},hrv:{value:44,unit:'ms',usual:[48,62],rangeSource:'garmin',state:'below',delta:-11,tone:'fair'}};
+  // Sleep HR, the overnight average, rides along but never fills the resting-HR stat.
+  const nightVitals={restingHr:{value:57,unit:'bpm',usual:[48,54],rangeSource:'raring',state:'above',delta:6,tone:'fair'},sleepHr:{value:63,unit:'bpm',usual:[55,66],rangeSource:'garmin',state:'within',delta:null,tone:'good'},hrv:{value:44,unit:'ms',usual:[48,62],rangeSource:'garmin',state:'below',delta:-11,tone:'fair'}};
   const open=async(view,width=360)=>{
    const p=await browser.newPage({viewport:{width,height:844}});p.on('pageerror',e=>errors.push(e.message));
    await p.route(u=>u.pathname==='/src/lib/sample/today.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(view)}`}));
@@ -959,7 +960,8 @@ try {
   assert.equal(new Set(tops).size,1,'one row at 360 px');
   const text=await sp.locator('.morning').textContent();
   for(const t of ['84','Good · 7:48','82','High','57','6 above usual','44','11 below usual'])assert.ok(text.includes(t),`${t} in ${text}`);
-  assert.equal(await sp.getByRole('button',{name:'Sleep HR 57 bpm, 6 above usual, usual 48–54 bpm'}).count(),1);
+  assert.ok(!text.includes('63') && !text.includes('Sleep HR'),`no Sleep HR in ${text}`);
+  assert.equal(await sp.getByRole('button',{name:'Resting HR 57 bpm, 6 above usual, usual 48–54 bpm'}).count(),1);
   // Sleep is Garmin's score in a ring like Readiness; each rating word takes its tone colour.
   assert.equal(await sp.locator('.sleep-fact .gauge').count(),1,'the sleep ring is the score');
   assert.equal(await sp.getByRole('button',{name:'Last night’s sleep, score 84, Good, 7:48 asleep'}).count(),1);
@@ -967,7 +969,7 @@ try {
   assert.deepEqual(await sp.locator('.morning small').evaluateAll(els=>els.map(e=>getComputedStyle(e).color)),[good,good,fair,fair]);
   assert.deepEqual(await contrastFailures(sp),[],'stats contrast');
   await sp.screenshot({path:resolve(output,'today-stats-360.png')});
-  for(const [name,route] of [['Sleep HR','metric/sleepHr'],['HRV','metric/hrv'],['Readiness','readiness'],['Last night','sleep/last']]){
+  for(const [name,route] of [['Resting HR','metric/heartRate'],['HRV','metric/hrv'],['Readiness','readiness'],['Last night','sleep/last']]){
    await sp.locator('.morning .stat').filter({hasText:name==='Last night'?'Sleep':name}).first().click();
    await sp.waitForURL(`**/#${route}`);await sp.goBack();await sp.waitForURL('**/#today');
   }
@@ -975,7 +977,7 @@ try {
   // The neutral wait shows no stale values; missing readings say so.
   const waitPage=await open({...sample,nightVitals:null,focus:{...sample.focus,sleepMissing:true,effort:false,lastNight:null},lead:{id:'wait:2025-10-16',kind:'waiting',headline:'Last night hasn’t synced yet',line:null,action:null,dismissable:false,kept:false,garmin:null,activity:null,intention:null,reasons:[]}});
   const waitText=await waitPage.locator('.morning').textContent();
-  assert.ok(!/7:48|\b84\b|\b82\b|\b58\b/.test(waitText) && waitText.includes('Not synced yet') && waitText.includes('Waiting'),waitText);
+  assert.ok(!/7:48|\b84\b|\b82\b|\b58\b|\b54\b/.test(waitText) && waitText.includes('Not synced yet') && waitText.includes('Waiting'),waitText);
   await waitPage.close();
   // Within the usual range is green, as on Health's vitals and the charts.
   const within=await open(sample);
@@ -986,7 +988,7 @@ try {
   assert.equal(await unscored.locator('.sleep-fact .gauge').count(),0);
   assert.ok((await unscored.locator('.sleep-fact').textContent()).includes('7:48') && (await unscored.locator('.sleep-fact').textContent()).includes('No score'));
   await unscored.close();
-  const missing=await open({...sample,nightVitals:{sleepHr:{...nightVitals.sleepHr,value:null,state:'unset',delta:null,usual:null,tone:'neutral'},hrv:{...nightVitals.hrv,state:'unset',usual:null,delta:null,tone:'neutral'}}});
+  const missing=await open({...sample,nightVitals:{...nightVitals,restingHr:{...nightVitals.restingHr,value:null,state:'unset',delta:null,usual:null,tone:'neutral'},hrv:{...nightVitals.hrv,state:'unset',usual:null,delta:null,tone:'neutral'}}});
   const missingText=await missing.locator('.morning').textContent();
   assert.ok(missingText.includes('Not recorded') && missingText.includes('Usual not set yet'),missingText);
   await missing.close();
@@ -995,7 +997,7 @@ try {
   assert.equal(await evening.locator('.morning .stat').count(),2);
   await evening.close();
  }
- console.log('Today’s stats: Sleep, Readiness, Sleep HR and HRV in one row, each opening its detail; neutral wait and evening: passed');
+ console.log('Today’s stats: Sleep, Readiness, resting HR and HRV in one row, each opening its detail; neutral wait and evening: passed');
  // Sleep · Last night (review M6, M11, M15, m8, m9, m16, m18): stage changes are neutral, the totals sit in
  // Stages, overnight tiles open their metric with clock ends and lows/highs, history is Sleep score with one
  // Time asleep overlay and round ticks, and naps say whether they were never checked or failed.

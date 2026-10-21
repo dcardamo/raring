@@ -5,7 +5,7 @@
  import {toneColor} from '../charts';
  import {duration} from '../format';
  // Four compact stats at the top of Today: last night's sleep score,
- // readiness, Sleep HR and HRV. Each opens its detail. Each rating is a word
+ // readiness, resting HR and HRV. Each opens its detail. Each rating is a word
  // in its tone colour: Garmin's level, or in or outside the usual range.
  let {today, waiting, navigate}: {today: TodayView, waiting: boolean, navigate: (route: string) => void} = $props();
  let night = $derived(today.focus.lastNight);
@@ -35,7 +35,7 @@
    default: return {text: 'Usual not set yet', mark: '', tone: null};
   }
  }
- let hr = $derived(usual(vitals?.sleepHr));
+ let hr = $derived(usual(vitals?.restingHr));
  let hrv = $derived(usual(vitals?.hrv));
  const range = (r: NightReading | null | undefined) => r?.usual ? `, usual ${fmt(r.usual[0])}–${fmt(r.usual[1])} ${r.unit}` : '';
 </script>
@@ -50,9 +50,9 @@
    <b class="label">Readiness</b><small style:color={tint(readiness?.tone)}>{readiness?.label ?? (today.missingMetricReasons.readiness && !waiting ? 'Not on this watch' : 'Waiting')}</small>
   </button>
   {#if showVitals}
-   <button class="stat hr-fact" onclick={() => navigate('metric/sleepHr')} aria-label={`Sleep HR ${vitals?.sleepHr.value != null ? fmt(vitals.sleepHr.value) + ' bpm' : 'not recorded'}, ${hr.text}${range(vitals?.sleepHr)}`}>
-    <span class="dial"><b class="n big-n">{vitals?.sleepHr.value != null ? fmt(vitals.sleepHr.value) : '—'}</b>{#if vitals?.sleepHr.value != null}<span class="unit">bpm</span>{/if}</span>
-    <b class="label">Sleep HR</b><small style:color={hr.tone}>{#if hr.mark}<i aria-hidden="true">{hr.mark + '\u00a0'}</i>{/if}{hr.text}</small>
+   <button class="stat hr-fact" onclick={() => navigate('metric/heartRate')} aria-label={`Resting HR ${vitals?.restingHr.value != null ? fmt(vitals.restingHr.value) + ' bpm' : 'not recorded'}, ${hr.text}${range(vitals?.restingHr)}`}>
+    <span class="dial"><b class="n big-n">{vitals?.restingHr.value != null ? fmt(vitals.restingHr.value) : '—'}</b>{#if vitals?.restingHr.value != null}<span class="unit">bpm</span>{/if}</span>
+    <b class="label">Resting HR</b><small style:color={hr.tone}>{#if hr.mark}<i aria-hidden="true">{hr.mark + '\u00a0'}</i>{/if}{hr.text}</small>
    </button>
    <button class="stat hrv-fact" onclick={() => navigate('metric/hrv')} aria-label={`HRV ${vitals?.hrv.value != null ? fmt(vitals.hrv.value) + ' ms' : 'not recorded'}, ${hrv.text}${range(vitals?.hrv)}`}>
     <span class="dial"><b class="n big-n">{vitals?.hrv.value != null ? fmt(vitals.hrv.value) : '—'}</b>{#if vitals?.hrv.value != null}<span class="unit">ms</span>{/if}</span>

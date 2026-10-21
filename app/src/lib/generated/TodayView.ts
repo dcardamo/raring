@@ -77,8 +77,9 @@ adapt: AdaptState | null,
  */
 day: DayTimeline | null, 
 /**
- * Last night's Sleep HR and HRV against their usual ranges, for the
- * morning and the day; none from the evening on or before the night syncs.
+ * Last night's resting HR, Sleep HR and HRV against their usual ranges,
+ * for the morning and the day; none from the evening on or before the
+ * night syncs.
  */
 nightVitals: NightVitals | null, 
 /**

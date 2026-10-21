@@ -1267,11 +1267,17 @@ fn night_reading(value: Option<f64>, unit: &str, usual: Option<[f64; 2]>, source
         },
     }
 }
-/// Last night's Sleep HR and HRV. Sleep HR is Health Status's HR with its
-/// baseline when Garmin sends it, otherwise the sleep record's overnight
-/// average against the last 30 nights' (never resting HR); HRV is the
-/// vitals card's, against Garmin's baseline.
+/// Last night's resting HR, Sleep HR and HRV. Resting HR is Garmin's daily
+/// value for the day the night ends, against the resting-HR chart's band.
+/// Sleep HR is Health Status's HR with its baseline when Garmin sends it,
+/// otherwise the sleep record's overnight average against the last 30
+/// nights' (never resting HR); HRV is the vitals card's, against Garmin's
+/// baseline.
 fn night_vitals(store: &Store, date: &str, vitals: &VitalsCard) -> NightVitals {
+    let resting = NaiveDate::parse_from_str(date, "%Y-%m-%d")
+        .ok()
+        .and_then(|d| crate::trends::daily(store, TrendMetric::RestingHr, d, d).remove(&d));
+    let resting_hr = night_reading(resting, "bpm", resting_hr_range(store, date), VitalRangeSource::Raring, false);
     let metric = health_metric(store, VitalKind::RestingHr, date);
     let sleep_hr = if let Some(m) = metric {
         let calibrating = m["status"].as_str() == Some("ONBOARDING");
@@ -1289,7 +1295,7 @@ fn night_vitals(store: &Store, date: &str, vitals: &VitalsCard) -> NightVitals {
         hrv.map_or(VitalRangeSource::None, |r| r.range_source),
         hrv.is_some_and(|r| r.status.as_deref() == Some("ONBOARDING")),
     );
-    NightVitals { sleep_hr, hrv }
+    NightVitals { resting_hr, sleep_hr, hrv }
 }
 pub fn vitals(store: &Store, date: &str) -> VitalsCard {
     let mut readings = vec![];

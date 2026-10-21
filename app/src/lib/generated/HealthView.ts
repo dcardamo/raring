@@ -33,7 +33,8 @@ intensity: IntensityCard | null,
  */
 restingHrRange: [number, number] | null, 
 /**
- * That night's Sleep HR and HRV against their usual ranges, as on Today.
+ * That night's resting HR, Sleep HR and HRV against their usual ranges,
+ * as on Today.
  */
 nightVitals: NightVitals | null, 
 /**

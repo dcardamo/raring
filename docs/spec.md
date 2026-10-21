@@ -192,12 +192,13 @@ In this order:
   at large text), each opening its detail: **Sleep** (Garmin's Sleep Score
   in a ring in its level's colour, Garmin's word for it and the time asleep
   under it, "Good · 7:33"; opens Last night), **Readiness** (Garmin's score in a
-  ring in its tone, the level word under it), **Sleep HR** and **HRV** (last
+  ring in its tone, the level word under it), **Resting HR** and **HRV** (last
   night's value with ▲ or ▼ and "6 above usual", "Within usual", "Usual not
-  set yet" or "Garmin calibrating"; they open their metric detail at 30
-  days; Rules: Night vitals on Today). Each rating word takes its tone
-  colour: Garmin's level for Sleep and Readiness, green within the usual
-  range and amber outside it for Sleep HR and HRV. A watch that
+  set yet" or "Garmin calibrating"; Resting HR opens the all-day heart-rate
+  detail and HRV its metric detail at 30 days; Rules: Night vitals on Today).
+  Each rating word takes its tone colour: Garmin's level for Sleep and
+  Readiness, green within the usual range and amber outside it for Resting
+  HR and HRV. A watch that
   can't record readiness says so. While the displayed night hasn't synced
   all four wait neutrally: no earlier score, readiness, vitals, chips or
   reconciliation shown as this morning's. A missing reading is a dash and
@@ -1513,18 +1514,22 @@ next pending wind-down while signed in.
   and skin temperature; absent/unknown capabilities do not mean unsupported.
   An overdue sleep upload belongs only in the upload card, not the unsupported
   metrics explanation.
-- **Night vitals on Today**: last night's Sleep HR is Health Status's HR
-  against its baseline when Garmin sends one, otherwise the sleep record's
-  overnight average (`avgHeartRate`) against the Normal range fallback of
-  the last 30 recorded nights' overnight averages; never resting HR. HRV is
-  the vitals card's nightly HRV against Garmin's baseline. Inside the range
-  it is "Within usual"; outside, the difference from the range's middle in
-  the metric's own units, rounded ("6 above usual"); an onboarding Health
-  Status is "Garmin calibrating"; no range is "Usual not set yet". Inside
-  the range is good-toned and outside it fair-toned in either direction
-  (attention, not a rating), as on Health's vitals and the charts;
-  calibrating and no range are neutral. Shown for the displayed night in
-  the morning and day phases only, not while that night hasn't synced.
+- **Night vitals on Today**: last night's Resting HR is Garmin's daily
+  resting HR for the day the night ends, against the resting-HR chart's band
+  (the Normal range fallback over the last 30 days' daily resting HR); never
+  Health Status's HR, which is the overnight average. HRV is the vitals
+  card's nightly HRV against Garmin's baseline. The Sleep HR detail keeps
+  Health Status's HR against its baseline when Garmin sends one, otherwise
+  the sleep record's overnight average (`avgHeartRate`) against the Normal
+  range fallback of the last 30 recorded nights' overnight averages; never
+  resting HR. Inside the range it is "Within usual"; outside, the
+  difference from the range's middle in the metric's own units, rounded
+  ("6 above usual"); an onboarding Health Status is "Garmin calibrating"; no
+  range is "Usual not set yet". Inside the range is good-toned and outside
+  it fair-toned in either direction (attention, not a rating), as on
+  Health's vitals and the charts; calibrating and no range are neutral.
+  Shown for the displayed night in the morning and day phases only, not
+  while that night hasn't synced.
 - **Suggested effort**: Garmin's readiness feedback, rephrased. The level sets
   push, steady or easy; a high load ratio caps it at steady.
 - **Biggest drag**: the readiness factor Garmin rates worst, its percentage

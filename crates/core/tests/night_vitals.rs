@@ -1,4 +1,4 @@
-//! Last night's Sleep HR and HRV on Today against their usual ranges
+//! Last night's resting HR, Sleep HR and HRV against their usual ranges
 //! (docs/spec.md, Rules: Night vitals on Today). All values are synthetic.
 use chrono::{FixedOffset, NaiveDate, NaiveDateTime, TimeZone};
 use raring_core::{screens, store::Store, view::*};
@@ -75,6 +75,7 @@ fn missing_values_and_baselines_are_unset_and_health_status_comes_first() {
     let v = vitals(&s, "08:00").unwrap();
     assert_eq!((v.sleep_hr.value, v.sleep_hr.usual, v.sleep_hr.state, v.sleep_hr.delta), (Some(55.), None, UsualState::Unset, None));
     assert_eq!((v.hrv.value, v.hrv.state, v.hrv.tone), (None, UsualState::Unset, Tone::Neutral));
+    assert_eq!((v.resting_hr.value, v.resting_hr.usual, v.resting_hr.state), (None, None, UsualState::Unset));
     // Health Status sends HR with its own baseline: it replaces the nightly fallback.
     let s = store(Some(51.));
     health(&s, json!([{"type": "HR", "value": 58, "status": "ABOVE_RANGE", "baselineLowerLimit": 48, "baselineUpperLimit": 54}]));
@@ -87,6 +88,29 @@ fn missing_values_and_baselines_are_unset_and_health_status_comes_first() {
     let v = vitals(&s, "08:00").unwrap();
     for r in [&v.sleep_hr, &v.hrv] {
         assert_eq!((r.state, r.usual, r.delta, r.tone), (UsualState::Calibrating, None, None, Tone::Neutral));
+    }
+}
+
+#[test]
+fn resting_hr_is_garmins_daily_value_against_its_own_30_day_range() {
+    // Sleep HR, from the nights or Health Status, sits above resting HR and is never its comparison.
+    let s = store(Some(51.));
+    health(&s, json!([{"type": "HR", "value": 58, "status": "IN_RANGE", "baselineLowerLimit": 52, "baselineUpperLimit": 62}]));
+    for i in 1..20 {
+        s.put("summary", &day(i), "synthetic", &json!({"restingHeartRate": 45 + i % 5})).unwrap();
+    }
+    let rows = [
+        (47, (UsualState::Within, None, Tone::Good)),
+        (53, (UsualState::Above, Some(6.), Tone::Fair)),
+        (42, (UsualState::Below, Some(-5.), Tone::Fair)),
+    ];
+    for (rhr, want) in rows {
+        s.put("summary", DATE, "synthetic", &json!({"restingHeartRate": rhr})).unwrap();
+        let v = vitals(&s, "08:00").unwrap();
+        let r = &v.resting_hr;
+        assert_eq!((r.value, r.unit.as_str(), r.usual, r.range_source), (Some(rhr as f64), "bpm", Some([45., 49.]), VitalRangeSource::Raring));
+        assert_eq!((r.state, r.delta, r.tone), want, "resting HR {rhr}");
+        assert_eq!((v.sleep_hr.value, v.sleep_hr.usual), (Some(58.), Some([52., 62.])));
     }
 }
 
