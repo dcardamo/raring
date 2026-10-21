@@ -314,6 +314,11 @@ fn health_status_notifications_name_sleep_hr_and_garmin_outliers() {
     let vitals = items.iter().find(|n| n.kind == "vitals").unwrap();
     assert!(vitals.body.contains("Garmin's baselines"));
     assert!(!vitals.body.contains("your usual range"));
+    assert_eq!(vitals.title, "2 vitals outside your ranges");
+    assert_eq!(
+        vitals.body.lines().next().unwrap(),
+        "SpO₂ 93% (usual 95–99) · Skin temp +0.8°C (usual −0.4 to +0.4)"
+    );
 
     // One Garmin outlier plus a resting-HR fallback must name both sources.
     health["metrics"].as_array_mut().unwrap().retain(|m| m["type"] == "SPO2");
@@ -1427,4 +1432,41 @@ fn garmins_sleep_schedule_is_read_daily_until_nights_are_recorded() {
     store.put("profile_settings", "me", "synthetic", &json!({"measurementSystem": "metric", "userSleep": null})).unwrap();
     checked(&store, Duration::days(2));
     assert!(!settings_due(&store, now), "read once: Garmin sent no schedule");
+}
+#[test]
+fn change_notifications_say_what_changed() {
+    let s = Store::open(":memory:").unwrap();
+    seed(&s);
+    let mut settings = s.settings();
+    settings.notify_training_status = true;
+    s.set_settings(&settings).unwrap();
+    s.put("max_metrics", "2025-01-01", "now", &json!([{"generic":{"vo2MaxValue":45.}}]))
+        .unwrap();
+    s.put("max_metrics", "2025-01-02", "now", &json!([{"generic":{"vo2MaxValue":44.}}]))
+        .unwrap();
+    s.put("fitness_age", "2025-01-01", "now", &json!({"fitnessAge":40})).unwrap();
+    s.put("fitness_age", "2025-01-02", "now", &json!({"fitnessAge":39.2})).unwrap();
+    s.put("training", "2025-01-01", "now", &json!({"trainingStatus":"MAINTAINING_2"})).unwrap();
+    s.put("training", "2025-01-02", "now", &json!({"trainingStatus":"PRODUCTIVE_6"})).unwrap();
+    let when = chrono::NaiveDate::from_ymd_opt(2025, 1, 2)
+        .unwrap()
+        .and_hms_opt(9, 0, 0)
+        .unwrap()
+        .and_local_timezone(Local)
+        .single()
+        .unwrap();
+    let items = notifications::notifications(&s, when);
+    let find = |kind: &str| items.iter().find(|n| n.kind == kind).unwrap();
+    assert_eq!(find("vo2max").title, "VO₂ max is now 44");
+    assert_eq!(find("vo2max").body, "Down from 45.");
+    assert_eq!(find("fitness-age").title, "Fitness Age is now 39");
+    assert_eq!(find("fitness-age").body, "Down from 40.");
+    assert_eq!(find("training-status").title, "Training status: Productive");
+    assert_eq!(find("training-status").body, "Was Maintaining.");
+
+    // Only Garmin's numeric suffix changed: the same status, no notification.
+    s.put("training", "2025-01-01", "now", &json!({"trainingStatus":"PRODUCTIVE_2"})).unwrap();
+    assert!(!notifications::notifications(&s, when)
+        .iter()
+        .any(|n| n.kind == "training-status"));
 }

@@ -251,8 +251,8 @@ From the Today and Sleep review's remainder, in priority order.
 - The bottom tab labels run together at 2× text ("PlanTrainingHealthProgress"
   at 390 px); stack icon and label tighter or drop to icons with names for
   assistive tech.
-- Widget and notification labels are 10 sp, under the 11 minimum (review
-  m13). 11 sp fails `StatusWidgetLayoutTest` at the provider minimum size
+- Widget labels are 10 sp, under the 11 minimum (review m13; the
+  notification now uses Android's notification text sizes). 11 sp fails `StatusWidgetLayoutTest` at the provider minimum size
   with large fonts ("Readiness" 108 > 100 px on emulator-5560); the 10 sp
   layouts pass at font scales 1.0/1.3/1.5. Reaching 11 sp needs a different
   minimum-size layout (fewer labels or a larger minimum), proven by that test.
@@ -397,6 +397,12 @@ rest, illness, limits and privacy rules.
 - Check other launchers and lock-screen privacy choices. Android can defer
   updates and allows users to dismiss ongoing notifications. Minimum-size
   RemoteViews passed emulator tests at font scales 1.0, 1.3 and 1.5.
+- Check the restyled notification on a phone (Android 16, wallpaper
+  colours): it was checked on an Android 15 emulator in light, dark and
+  1.5× text only. Android before 12 keeps the header in the collapsed view,
+  so "As of" moves there; that path is untested.
+- The per-kind alert channels replace the old "Raring" channel: a phone that
+  had changed that channel's sound or importance starts from the defaults.
 
 ### Import follow-ups
 
@@ -581,6 +587,24 @@ faces, screens, sensors and audio prompts stay in Connect.
   database (1,170 recordings since 2011), the busiest month (66 recordings)
   took a median 19 ms per desktop release CLI run (no LTO), opening the
   database and printing included; Training took 62 ms the same way.
+
+- **Notifications restyled** (commit "Restyle notifications for Android's
+  shade and say what changed"). The status notification draws no card of
+  its own: it uses Android's notification text styles, so it follows light
+  and dark, and the header says "As of …" instead of the post time.
+  Collapsed: Body Battery, stress and heart rate with icons, then "As of".
+  Expanded: the focus as the title, its reason (hidden when empty), then a
+  labelled row each with rounded bars (none for heart rate or a missing
+  reading). The small icon is the app's gauge mark, tinted mint. Alerts
+  use one channel per kind (Morning readiness, Weekly check-in, Health
+  changes, Wind-down reminder, Garmin account) with a category. Copy:
+  training status said Garmin's raw code ("Now PRODUCTIVE_6.") and fired
+  when only its numeric suffix changed; it now reads "Training status:
+  Productive" / "Was Maintaining." and compares the named status. VO₂ max
+  and Fitness Age say the new whole value and the direction ("Down from
+  45."). Vitals name the readings and their usual ranges ("SpO₂ 93% (usual
+  95–99) · Skin temp +0.8°C (usual −0.4 to +0.4)") under "2 vitals outside
+  your ranges".
 
 - **Instant page opens** (commits "Read stored nights without their
   samples" and "Open pages whole and keep cached views through a sync"),

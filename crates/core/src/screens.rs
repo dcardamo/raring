@@ -749,7 +749,7 @@ fn gauge(value: f64, max: f64, label: &str, tone: Tone, band: Option<[f64; 2]>) 
         band,
     }
 }
-fn label(v: Option<String>) -> String {
+pub(crate) fn label(v: Option<String>) -> String {
     let code = v.unwrap_or_default();
     let code = code
         .rsplit_once('_')
