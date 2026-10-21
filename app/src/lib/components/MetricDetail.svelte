@@ -7,6 +7,7 @@
  import type {TrainingView} from '../generated/TrainingView';
  import {metricDescriptions,metricSource} from '../metrics';
  import {num,dateLabel,duration} from '../format';
+ import {distanceNumber} from '../units';
  import {vitalStatus,rangeName,vitalName,vitalTrend,isSleepHr,trendBand} from '../signals';
  import HistoryChart from './HistoryChart.svelte';
  import {toneColor,batteryColor,colors,stressColors,stressNames} from '../charts';
@@ -75,7 +76,7 @@
   <p class="small">{dateLabel((data as HealthView).date)} · latest synced</p>
   <span class="pill" style:color={toneColor(vitalStatus(vital).tone)}>{vitalStatus(vital).label}</span>
  {:else}
-  <div class="metric-value n">{num(trainingValue)}{#if metric==='runningTolerance'}<span class="unit">km</span>{/if}</div>
+  {#if metric==='runningTolerance' && training}<div class="metric-value n">{distanceNumber(trainingValue,training.distanceUnit)}<span class="unit">{training.distanceUnit}</span></div>{:else}<div class="metric-value n">{num(trainingValue)}</div>{/if}
   <p class="small">Latest synced estimate</p>
  {/if}
 </div>

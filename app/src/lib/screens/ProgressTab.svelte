@@ -15,6 +15,7 @@
  import type {PeriodTotals} from '../generated/PeriodTotals';
  import {GOALS, SPORT_COLORS, SPORT_NAMES} from '../goals';
  import {dateLabel, dateLabelIn, dayMonthYear, hoursMinutes, monthLabel, num, shortMonth, signed, signedTime} from '../format';
+ import {distanceIn, milestoneValue} from '../units';
  import {addDays} from '../history';
  import * as api from '../api';
  // Progress: a report for a chosen period, the calendar, goals over time, trends
@@ -86,8 +87,8 @@
   void show(view.period,date>view.today?view.today:date);
  };
  let label = $derived(view.period === 'week' ? `${dateLabel(view.from)} – ${dateLabel(view.to)}` : view.period === 'month' ? new Date(view.from + 'T12:00:00Z').toLocaleDateString('en-GB', {month: 'long', year: 'numeric', timeZone: 'UTC'}) : `${new Date(view.from + 'T12:00:00Z').toLocaleDateString('en-GB', {month: 'short', year: 'numeric', timeZone: 'UTC'})} – ${new Date(view.to + 'T12:00:00Z').toLocaleDateString('en-GB', {month: 'short', year: 'numeric', timeZone: 'UTC'})}`);
- const rows = (t: PeriodTotals) => [['Activities', t.activities, ''], ['Active time', t.activeMin, 'h'], ['Distance', t.distanceKm, 'km'], ['Intensity', t.intensityMin, 'min']] as const;
- const fmt = (v: number | null, unit: string) => v == null ? '—' : unit === 'h' ? hoursMinutes(v) : unit === 'km' ? num(v, 1) : num(v);
+ const rows = (t: PeriodTotals) => [['Activities', t.activities, ''], ['Active time', t.activeMin, 'h'], ['Distance', distanceIn(t.distanceKm, view.distanceUnit), view.distanceUnit], ['Intensity', t.intensityMin, 'min']] as const;
+ const fmt = (v: number | null, unit: string) => v == null ? '—' : unit === 'h' ? hoursMinutes(v) : unit === 'km' || unit === 'mi' ? num(v, 1) : num(v);
  const change = (now: number | null, before: number | null, unit: string) => {
   if (now == null || before == null) return null;
   if (unit === 'h') return signedTime(now - before) || null;
@@ -152,7 +153,7 @@
 <div class="sec-h"><h2>Records and milestones</h2></div>
 {#if view.milestones.length}
  {#if view.milestones.some(m=>m.new)}<button class="secondary" onclick={markSeen}>Mark records seen</button>{/if}
- <section class="card">{#each view.milestones as m}<button class="ms" disabled={!m.route} onclick={() => m.route && navigate(m.route)}><span><b>{m.title}</b><small>{[m.value, dateLabelIn(m.date, view.today)].filter(Boolean).join(' · ')}{m.corrected ? ' · corrected after a Garmin edit' : ''}</small></span>{#if m.new}<em class="new">New</em>{/if}{#if m.route}<Icon name="chevron" size={15}/>{/if}</button>{/each}
+ <section class="card">{#each view.milestones as m}<button class="ms" disabled={!m.route} onclick={() => m.route && navigate(m.route)}><span><b>{m.title}</b><small>{[milestoneValue(m), dateLabelIn(m.date, view.today)].filter(Boolean).join(' · ')}{m.corrected ? ' · corrected after a Garmin edit' : ''}</small></span>{#if m.new}<em class="new">New</em>{/if}{#if m.route}<Icon name="chevron" size={15}/>{/if}</button>{/each}
   {#if view.historyStart}<p class="small">In available history, since {dayMonthYear(view.historyStart)}.</p>{/if}<button class="link-row archive" onclick={() => navigate('progress/milestones')}><span><b>All records and milestones</b><small>{view.milestonesTotal > view.milestones.length ? `${view.milestonesTotal} in all, by month` : 'By month, with dates'}</small></span><Icon name="chevron" size={16}/></button></section>
 {:else}<p class="small foot">Bests and other milestones appear here as Garmin records them.</p>{/if}
 </div>

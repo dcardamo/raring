@@ -1755,7 +1755,9 @@
       "id": "longest:running",
       "kind": "longest",
       "title": "Longest run",
-      "value": "10.2 km",
+      "value": "",
+      "distanceKm": 10.2,
+      "distanceUnit": "km",
       "date": "2025-10-16",
       "route": "workout/9000000000001",
       "new": false,
@@ -1765,5 +1767,6 @@
   "sleep": {
     "nights": 14,
     "belowHour": 2
-  }
+  },
+  "distanceUnit": "km"
 }

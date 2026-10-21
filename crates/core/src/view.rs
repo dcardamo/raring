@@ -1116,8 +1116,8 @@ pub struct GearItem {
     pub name: String,
     pub kind: String,
     pub status: String,
-    pub distance: Option<f64>,
-    pub threshold: Option<f64>,
+    pub distance_km: Option<f64>,
+    pub threshold_km: Option<f64>,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
@@ -1125,7 +1125,9 @@ pub struct GearItem {
 #[ts(export)]
 pub struct GearView {
     pub items: Vec<GearItem>,
-    pub unit: String,
+    /// Km or Mi by Garmin's measurement setting; M (Garmin's metres) until it
+    /// syncs.
+    pub unit: DistanceUnit,
     /// API fetch time, not a watch measurement or activity time.
     pub fetched_at: String,
 }
@@ -1166,6 +1168,9 @@ pub struct TrainingView {
     pub endurance_score: Option<f64>,
     pub hill_score: Option<f64>,
     pub running_tolerance_km: Option<f64>,
+    /// Garmin's measurement setting for running tolerance (km until it syncs,
+    /// as workouts read).
+    pub distance_unit: DistanceUnit,
     /// Garmin's latest recorded readings; absent metrics are not zero.
     pub thresholds: Vec<RecordedTrainingMetric>,
     pub workouts: Vec<ActivityCard>,
@@ -3193,7 +3198,15 @@ pub struct Milestone {
     pub id: String,
     pub kind: MilestoneKind,
     pub title: String,
+    /// Empty for a distance, which the app formats in the account's unit.
     pub value: String,
+    /// A longest distance, in km, and Garmin's measurement setting for it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub distance_km: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub distance_unit: Option<DistanceUnit>,
     pub date: String,
     pub route: Option<String>,
     /// Not seen yet on Progress.
@@ -3241,6 +3254,9 @@ pub struct ProgressView {
     /// All milestones in available history.
     #[serde(default)]
     pub milestones_total: u32,
+    /// Garmin's measurement setting for distance totals and records (km
+    /// until it syncs, as workouts read).
+    pub distance_unit: DistanceUnit,
     pub sleep: Option<SleepNeedSummary>,
     /// Week and month periods: the plan weeks covering the period, one cell
     /// per day with its goal rings (days outside the period included).

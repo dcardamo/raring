@@ -448,7 +448,12 @@ night is never shown in its place.
   setting (km, /km, km/h, m or mi, /mi, mph, ft); swims read in the pool's
   unit (m or yd) with pace per 100. Garmin's swim fields (pool length,
   lengths, SWOLF, strokes per length, stroke rate, distance per stroke) show
-  under Recorded by your watch when sent.
+  under Recorded by your watch when sent. Running tolerance, Progress's
+  distance totals and longest-distance records, and gear distances and
+  thresholds follow the same setting (km or mi; km until it syncs, as
+  workouts read; gear stays in Garmin's metres until then). The core sends
+  kilometres and the app converts them with the workouts' one formatter, so
+  a distance rounds the same on every page.
 - **Strength activities with sets** replace the effect gauges and stats with
   the sets: a hero (sets, time, reps, load, average heart rate, records), a
   card naming the sets that look off, a body map of this session, and one
@@ -1463,7 +1468,9 @@ next pending wind-down while signed in.
   daily within sync's request budget and backoff. An empty valid list replaces
   the old list, including retired or deleted items; 404, failed or malformed
   fetches retain the last good snapshot. No request on navigation. Zero
-  threshold means no distance threshold, not a retirement verdict.
+  threshold means no distance threshold, not a retirement verdict. Gear
+  reads in km or mi by the measurement setting (Units, under Workout), in
+  metres until it is known.
 - **Stored weight history**: Garmin's weigh-ins are grams; display kg or lb
   from the account's measurement system, never guessing before it is known.
   For repeated weigh-ins on a date, keep the latest timestamp; merge the latest

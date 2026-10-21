@@ -191,7 +191,17 @@ fn the_longest_distance_needs_a_few_recordings_of_the_sport() {
     act(&f.store, 3, "2025-11-07", "running", 40., Some(7_000.));
     let m = view(&f, Period::Month, "2025-11-18", at(11, 18));
     let l = m.milestones.iter().find(|m| m.kind == MilestoneKind::Longest).unwrap();
-    assert_eq!((l.title.as_str(), l.value.as_str(), l.route.as_deref()), ("Longest run", "9.8 km", Some("workout/2")));
+    assert_eq!((l.title.as_str(), l.value.as_str(), l.distance_km, l.route.as_deref()), ("Longest run", "", Some(9.8), Some("workout/2")));
+    assert_eq!(l.distance_unit, Some(DistanceUnit::Km));
+    // Totals and records stay in km; the app reads them in Garmin's unit.
+    assert_eq!((m.totals.distance_km, m.distance_unit), (21.8, DistanceUnit::Km));
+    f.store.put("profile_settings", "me", "now", &serde_json::json!({"measurementSystem": "statute_us"})).unwrap();
+    let statute = view(&f, Period::Month, "2025-11-18", at(11, 18));
+    assert_eq!((statute.totals.distance_km, statute.distance_unit), (21.8, DistanceUnit::Mi));
+    let l = statute.milestones.iter().find(|m| m.kind == MilestoneKind::Longest).unwrap();
+    assert_eq!((l.distance_km, l.distance_unit), (Some(9.8), Some(DistanceUnit::Mi)));
+    f.store.put("profile_settings", "me", "now", &serde_json::json!({"measurementSystem": "metric"})).unwrap();
+    assert_eq!(view(&f, Period::Month, "2025-11-18", at(11, 18)).distance_unit, DistanceUnit::Km);
 }
 
 #[test]

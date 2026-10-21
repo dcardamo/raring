@@ -1033,6 +1033,15 @@ pub(crate) fn activity_kind(store: &Store, id: &str) -> Option<String> {
         .filter(|k| !k.is_empty())
 }
 
+/// Kilometres or miles by Garmin's measurement setting; None until it syncs.
+pub(crate) fn account_distance_unit(store: &Store) -> Option<DistanceUnit> {
+    match store.get("profile_settings", "me")?["measurementSystem"].as_str()? {
+        "metric" => Some(DistanceUnit::Km),
+        s if s.starts_with("statute") => Some(DistanceUnit::Mi),
+        _ => None,
+    }
+}
+
 pub(crate) fn activity(store: &Store, id: &str) -> Option<ActivityCard> {
     let v = activity_payload(store, id)?;
     // The plan's sport families, so `road_biking` and `virtual_ride` read as rides.
@@ -1046,10 +1055,7 @@ pub(crate) fn activity(store: &Store, id: &str) -> Option<ActivityCard> {
         Sport::Other => Icon::Other,
     };
     let zones = store.get("zones", id).unwrap_or(Value::Null);
-    let statute = store
-        .get("profile_settings", "me")
-        .and_then(|s| s["measurementSystem"].as_str().map(|s| s.starts_with("statute")))
-        .unwrap_or(false);
+    let statute = account_distance_unit(store) == Some(DistanceUnit::Mi);
     let distance_unit = match (icon, v.get("unitOfPoolLength")["unitKey"].as_str(), statute) {
         (Icon::Swim, Some("yard"), _) | (Icon::Swim, None, true) => DistanceUnit::Yd,
         (Icon::Swim, _, _) => DistanceUnit::M,
@@ -2540,6 +2546,7 @@ pub fn training_at_calendar(store: &Store, date: &str, calendar: NaiveDate, now:
             .get("hill", date)
             .and_then(|v| num(&v, &[&["overallScore"], &["score"]])),
         thresholds: thresholds::from_store(store, date),
+        distance_unit: account_distance_unit(store).unwrap_or_default(),
         running_tolerance_km: store.get("tolerance", date).and_then(|v| {
             // The daily endpoint returns an array and reports acuteTolerance in metres.
             num(first(&v), &[&["acuteTolerance"]])

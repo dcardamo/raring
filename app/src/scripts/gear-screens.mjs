@@ -30,7 +30,7 @@ try{
  }
  const unknown=await browser.newPage({viewport:{width:390,height:900}});
  await trainingWithGear(unknown,{...training.gear,items:training.gear.items.slice(0,2).map(item=>
-  ({...item,status:'Status unavailable',distance:null,threshold:650}))});
+  ({...item,status:'Status unavailable',distanceKm:null,thresholdKm:650}))});
  await unknown.goto(`${url}/?fixture=gear#training`);
  const unknownCard=unknown.locator('.gear-card');await unknownCard.waitFor();
  assert.match(await unknownCard.textContent(),/Active count unavailable · 2 total/);

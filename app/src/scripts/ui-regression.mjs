@@ -7,6 +7,7 @@ import {contrastFailures} from './contrast.mjs';
 import {planProgressChecks} from './ui-plan-progress.mjs';
 import {visualLanguageChecks} from './ui-visual-language.mjs';
 import {dataPresentationChecks} from './ui-data-presentation.mjs';
+import {unitChecks} from './ui-units.mjs';
 
 const server=await createServer({configFile:resolve('vite.config.ts'),server:{host:'127.0.0.1',port:0}});
 const output=resolve('../.data/screens');
@@ -1974,6 +1975,7 @@ try {
  }
  console.log('U57: declined notifications are remembered and not asked again: passed');
  await planProgressChecks({browser,url,errors});
+ await unitChecks({browser,url,errors});
  // Desktop reminders: Settings states the next wind-down, or why one could not be shown.
  {
   const settingsPage=async status=>{

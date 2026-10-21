@@ -25,6 +25,7 @@
  import {SPORT_ICONS, SPORT_NAMES} from '../goals';
  import {colors, toneColor} from '../charts';
  import {dateLabel, elapsed, pace, signed, num} from '../format';
+ import {distance} from '../units';
  // Training: this week's lanes, then one story per section. Fitness answers
  // three questions (enough or too much? improving? ready for what?);
  // Strength is led by the goal and muscle gaps; Activities shows what each
@@ -104,7 +105,7 @@
  <Card title="Is my fitness improving?" extra="q-fitness" help="vo2max">
   {#if trainingData.vo2max != null}<button class="vo" onclick={() => navigate('metric/vo2max')} aria-label={`VO₂ max ${num(trainingData.vo2max)}, open its history`}><span><small>VO₂ max · Garmin</small><b class="n">{num(trainingData.vo2max)}</b>{#if trainingData.vo2maxChange30d != null && Math.abs(trainingData.vo2maxChange30d) >= 1}<em style:color={trainingData.vo2maxChange30d > 0 ? colors.good : colors.poor}>{signed(trainingData.vo2maxChange30d)} in 30 days</em>{/if}</span><span class="go">History<Icon name="chevron" size={14}/></span></button>
   {:else}<p class="small">No VO₂ max estimate from Garmin yet.</p>{/if}
-  {#if trainingData.enduranceScore != null || trainingData.hillScore != null || trainingData.runningToleranceKm != null}<div class="metrics">{#if trainingData.enduranceScore != null}<button class="metric-link" onclick={() => navigate('metric/endurance')}><b>{num(trainingData.enduranceScore)}</b><span>Endurance<Icon name="chevron" size={12}/></span></button>{/if}{#if trainingData.hillScore != null}<button class="metric-link" onclick={() => navigate('metric/hill')}><b>{num(trainingData.hillScore)}</b><span>Hill score<Icon name="chevron" size={12}/></span></button>{/if}{#if trainingData.runningToleranceKm != null}<button class="metric-link" onclick={() => navigate('metric/runningTolerance')}><b>{num(trainingData.runningToleranceKm)} km</b><span>Run tolerance<Icon name="chevron" size={12}/></span></button>{/if}</div>{/if}
+  {#if trainingData.enduranceScore != null || trainingData.hillScore != null || trainingData.runningToleranceKm != null}<div class="metrics">{#if trainingData.enduranceScore != null}<button class="metric-link" onclick={() => navigate('metric/endurance')}><b>{num(trainingData.enduranceScore)}</b><span>Endurance<Icon name="chevron" size={12}/></span></button>{/if}{#if trainingData.hillScore != null}<button class="metric-link" onclick={() => navigate('metric/hill')}><b>{num(trainingData.hillScore)}</b><span>Hill score<Icon name="chevron" size={12}/></span></button>{/if}{#if trainingData.runningToleranceKm != null}<button class="metric-link" onclick={() => navigate('metric/runningTolerance')}><b>{distance(trainingData.runningToleranceKm, trainingData.distanceUnit)}</b><span>Run tolerance<Icon name="chevron" size={12}/></span></button>{/if}</div>{/if}
  </Card>
  <Card title="What am I ready for?" extra="q-ready" help="ready-for">
   {#if trainingData.races.length}<h4>Garmin’s race predictions</h4><div class="race">{#each trainingData.races as race}<div><span>{race.label}</span><b class="n">{elapsed(race.seconds)}</b></div>{/each}</div>{/if}

@@ -1,13 +1,14 @@
 <script lang="ts">
  import Card from './Card.svelte';
  import type {GearView} from '../generated/GearView';
- import {num,dateLabel,clock} from '../format';
+ import {dateLabel,clock} from '../format';
+ import {distance as inUnit} from '../units';
  const fetched=(at:string)=>{const d=new Date(at);return Number.isNaN(d.getTime())?'time unavailable':`${dateLabel(d.toLocaleDateString('en-CA'))} ${clock(at)}`};
  let {gear}:{gear:GearView}=$props();
  let expanded=$state(false);
  let activeCount=$derived(gear.items.every(g=>g.status==='Active'||g.status==='Retired')
   ?gear.items.filter(g=>g.status==='Active').length:null);
- const distance=(value:number|null)=>value==null?'Distance unavailable':`${num(value,gear.unit==='m'?0:1)} ${gear.unit}`;
+ const distance=(km:number|null)=>km==null?'Distance unavailable':inUnit(km,gear.unit);
 </script>
 <Card title="Gear" extra="gear-card">
  <div class="gear-summary">
@@ -17,8 +18,8 @@
  {#each (expanded?gear.items:gear.items.slice(0,2)) as item (item.id)}
   <div class="gear-item">
    <div class="gear-heading"><b>{item.name}</b><span>{item.kind} · {item.status}</span></div>
-   <div class="gear-distance"><b class="n">{distance(item.distance)}</b>{#if item.threshold!=null}<span>of {distance(item.threshold)} Garmin threshold</span>{:else}<span>No Garmin distance threshold</span>{/if}</div>
-   {#if item.distance!=null && item.threshold!=null}<div class="gear-track" role="img" aria-label={`${distance(item.distance)} of ${distance(item.threshold)} Garmin threshold`}><i style:width={`${Math.min(100,item.distance/item.threshold*100)}%`}></i></div>{/if}
+   <div class="gear-distance"><b class="n">{distance(item.distanceKm)}</b>{#if item.thresholdKm!=null}<span>of {distance(item.thresholdKm)} Garmin threshold</span>{:else}<span>No Garmin distance threshold</span>{/if}</div>
+   {#if item.distanceKm!=null && item.thresholdKm!=null}<div class="gear-track" role="img" aria-label={`${distance(item.distanceKm)} of ${distance(item.thresholdKm)} Garmin threshold`}><i style:width={`${Math.min(100,item.distanceKm/item.thresholdKm*100)}%`}></i></div>{/if}
   </div>
  {/each}
  <p class="small gear-fetched">Distance from Garmin · fetched {fetched(gear.fetchedAt)}</p>

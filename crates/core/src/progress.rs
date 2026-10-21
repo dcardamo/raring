@@ -337,6 +337,7 @@ pub fn progress(store: &Store, period: Period, anchor: NaiveDate, today: NaiveDa
         milestones,
         sleep: sleep_need(store, from, end),
         milestones_total,
+        distance_unit: screens::account_distance_unit(store).unwrap_or_default(),
         ring_days: if matches!(period, Period::Week | Period::Month) { ring_days(store, &local, from, to, today, now) } else { vec![] },
         totals: totals_now,
     })
@@ -372,6 +373,7 @@ fn rep_counts(n: &[u32]) -> String {
 /// set that is the heaviest for several rep counts is one row naming its reps.
 fn present(store: &Store, records: Vec<MilestoneRecord>, current: bool, reps: &BTreeMap<String, u32>) -> Vec<Milestone> {
     let unit = strength::weight_unit(store);
+    let distance_unit = screens::account_distance_unit(store).unwrap_or_default();
     let kg = |g: f64| Some(format!("{:.1} {}", strength::weight(Some(g), unit)?, if unit == WeightUnit::Lb { "lb" } else { "kg" }).replace(".0 ", " "));
     // Bests by exercise, set (activity, weight, date) and withdrawal, each with its rep counts.
     type SetKey = (String, Option<String>, u64, String, bool);
@@ -389,11 +391,13 @@ fn present(store: &Store, records: Vec<MilestoneRecord>, current: bool, reps: &B
         let value = if m.withdrawn { "Evidence no longer available".into() } else {
             match kind {
                 MilestoneKind::Reps => format!("{} reps", m.value as u32),
-                MilestoneKind::Longest => format!("{:.1} km", m.value),
+                MilestoneKind::Longest => String::new(),
                 MilestoneKind::Best | MilestoneKind::GoalWeek => String::new(),
             }
         };
-        out.push(Milestone { id: m.id, kind, title: m.title, value, date: m.date, route: m.route, new: current && !m.seen, corrected: m.corrected });
+        let distance_km = (kind == MilestoneKind::Longest && !m.withdrawn).then_some(m.value);
+        let distance_unit = distance_km.map(|_| distance_unit);
+        out.push(Milestone { id: m.id, kind, title: m.title, value, distance_km, distance_unit, date: m.date, route: m.route, new: current && !m.seen, corrected: m.corrected });
     }
     for (_, mut group) in sets {
         group.sort_by_key(|(n, _)| *n);
@@ -413,7 +417,7 @@ fn present(store: &Store, records: Vec<MilestoneRecord>, current: bool, reps: &B
                 None => format!("{weight} · {heaviest}"),
             }
         };
-        out.push(Milestone { id: m.id, kind: MilestoneKind::Best, title: name, value, date: m.date, route: m.route, new, corrected });
+        out.push(Milestone { id: m.id, kind: MilestoneKind::Best, title: name, value, distance_km: None, distance_unit: None, date: m.date, route: m.route, new, corrected });
     }
     out.sort_by(|a, b| b.date.cmp(&a.date).then(a.id.cmp(&b.id)));
     out

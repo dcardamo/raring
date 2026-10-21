@@ -62,10 +62,11 @@ const sleep={detail:noDetail,date:'2025-10-16',startLocal:'2025-10-15T22:31:00',
 sleep.recent=[[10,452,450],[11,468,455],[12,null,null],[13,431,460],[14,476,450],[15,440,465],[16,468,450]].map(([d,asleepMin,needMin])=>({date:`2025-10-${d}`,asleepMin,needMin}));sleep.tonightFirst=false;sleep.woundDown=false;sleep.windDownOpen=false;
 sleep.napsState='available';sleep.naps=[{startLocal:'2025-10-15T23:45:00',endLocal:'2025-10-16T00:15:00',durationMin:30,feedback:null},{startLocal:'2025-10-16T13:10:00',endLocal:'2025-10-16T13:35:00',durationMin:25,feedback:null},{startLocal:null,endLocal:'2025-10-16T16:30:00',durationMin:15,feedback:null}];
 const training={acute:today.load,status:'Productive',statusTone:'good',statusWhy,headline:'In your optimal range',chips:[{icon:'flame',value:'1.1',text:'Load ratio',tone:'fair'},{icon:'clock',value:'18h',text:'Recovery',tone:'neutral'}],week:[0,142,210,0,95,320,186].map((load,i)=>({date:`2025-10-${String(i+10).padStart(2,'0')}`,load})),loadFocus:[['lowAerobic','Low aerobic',450,[300,600],false],['highAerobic','High aerobic',610,[400,800],false],['anaerobic','Anaerobic',60,[150,350],true]].map(([key,name,value,target,shortage])=>({key,name,value,target,shortage})),vo2max:52,vo2maxChange30d:1,vo2maxTrend:[49,49,50,50,50,51,51,52],races:[['5K',1300],['10K',2710],['Half marathon',5990],['Marathon',12665]].map(([label,seconds])=>({label,seconds})),enduranceScore:6800,hillScore:74,runningToleranceKm:63,thresholds:[{kind:'runningHr',value:164,unit:'bpm',recordedOn:'2025-10-13',stale:false},{kind:'runningPace',value:264,unit:'s/km',recordedOn:'2025-10-13',stale:false},{kind:'runningPower',value:280,unit:'W',recordedOn:'2025-10-12',stale:false},{kind:'cyclingFtp',value:230,unit:'W',recordedOn:'2025-10-10',stale:false},{kind:'heat',value:0,unit:'%',recordedOn:'2025-10-15',stale:false},{kind:'altitude',value:850,unit:'m',recordedOn:'2025-10-14',stale:false}],workouts:[run,bike,lowerA,swim,walk],planned:today.planned,race:{name:'City 10K',date:'2025-10-28',daysUntil:12},raceState:'available'};
+training.distanceUnit='km';
 training.gear={unit:'km',fetchedAt:'2025-10-16T10:30:00Z',items:[
- {id:'sample-shoes',name:'Road shoes',kind:'Shoes',status:'Active',distance:420,threshold:650},
- {id:'sample-bike',name:'City bike',kind:'Bike',status:'Retired',distance:1240,threshold:null},
- {id:'sample-spare',name:'Spare shoes',kind:'Shoes',status:'Active',distance:0,threshold:null}]};
+ {id:'sample-shoes',name:'Road shoes',kind:'Shoes',status:'Active',distanceKm:420,thresholdKm:650},
+ {id:'sample-bike',name:'City bike',kind:'Bike',status:'Retired',distanceKm:1240,thresholdKm:null},
+ {id:'sample-spare',name:'Spare shoes',kind:'Shoes',status:'Active',distanceKm:0,thresholdKm:null}]};
 const workout={detail:noDetail,summary:run,recoveryHours:18,stats:[['distance','Distance',10.2,'km'],['duration','Time',3134,'s'],['pace','Pace',307,'s/km'],['avgHr','Avg HR',152,'bpm'],['maxHr','Max HR',171,'bpm'],['calories','Calories',712,'kcal']].map(([key,label,value,unit])=>({key,label,value,unit})),route:[[45.421,-75.697],[45.423,-75.699],[45.426,-75.697],[45.428,-75.693],[45.429,-75.688],[45.427,-75.683],[45.424,-75.681],[45.421,-75.683],[45.42,-75.688],[45.422,-75.692],[45.421,-75.697]],heartRate:Array.from({length:210},(_,i)=>({tS:i*15,bpm:Math.round((i<32?112+i*1.3:i>184?160-(i-184)*1.1:Math.floor((i-32)/25)%2?149:164)+Math.sin(i*1.9)*2)})),zoneFloors:[120,138,154,167],splits:[321,308,302,298,305,295,301,297,310,318].map((seconds,i)=>({index:i+1,distanceKm:1,seconds,avgHr:147+i*2}))};
 // Stored streams on the HR's 15 s axis (a sensor gap at 20–21 min), summary fields this run has, and Garmin's effects.
 workout.along={tS:workout.heartRate.map(s=>s.tS),series:[
@@ -238,7 +239,7 @@ const progress={milestonesTotal:0,ringDays:[],today:'2025-10-16',period:'month',
   {start:'2025-09-29',rings:board.weekRings.map(r=>({...r,fill:r.fill/2})),current:false,mark:'ill',counted:false,met:0,goals:3,reasons:['2 ill days']},
   {start:'2025-10-06',rings:board.weekRings.map(r=>({...r,fill:1})),current:false,mark:null,counted:true,met:3,goals:3,reasons:['1 rest day']},
   {start:board.start,rings:board.weekRings,current:true,mark:null,counted:false,met:0,goals:3,reasons:['Week still in progress']}],
- milestones:[{id:'longest:running',kind:'longest',title:'Longest run',value:'10.2 km',date:'2025-10-16',route:'workout/9000000000001',new:false,corrected:false}],sleep:{nights:14,belowHour:2}};
+ milestones:[{id:'longest:running',kind:'longest',title:'Longest run',value:'',distanceKm:10.2,distanceUnit:'km',date:'2025-10-16',route:'workout/9000000000001',new:false,corrected:false}],sleep:{nights:14,belowHour:2}};
 // Training's lanes: Zone 2 and strength goals on, Thursday; eight counted weeks behind the band.
 training.lanes={start:'2025-10-13',today:'2025-10-16',lanes:[
  {kind:'zone2',goal:150,cumulative:[0,30,82,100,null,null,null],usual:{low:[0,15,30,45,60,80,100],median:[0,25,45,65,85,110,130],high:[10,40,65,90,115,140,160]},weeks:8},
@@ -248,7 +249,7 @@ training.lanes={start:'2025-10-13',today:'2025-10-16',lanes:[
 {
  const day=n=>{const d=new Date(Date.UTC(2025,8,29+n));return d.toISOString().slice(0,10)};
  const fill=(r,p)=>r>0?r/Math.max(p,r):0;
- progress.milestonesTotal=progress.milestones.length;progress.ringDays=Array.from({length:35},(_,i)=>{const date=day(i),inWeek=boardDays.find(d=>d.date===date);if(inWeek)return inWeek;
+ progress.milestonesTotal=progress.milestones.length;progress.distanceUnit='km';progress.ringDays=Array.from({length:35},(_,i)=>{const date=day(i),inWeek=boardDays.find(d=>d.date===date);if(inWeek)return inWeek;
   const future=date>'2025-10-16',lift=!future&&[1,3].includes(i%7)?1:0,z2=!future&&i%7===5?45:0,im=future?0:[0,30,25,10,40,0,55][i%7];
   return {date,today:false,future,mark:date==='2025-10-08'?'ill':date==='2025-10-09'?'ill':null,rings:[{kind:'strength',recorded:lift,planned:0,fill:fill(lift,0)},{kind:'zone2',recorded:z2,planned:0,fill:fill(z2,0)},{kind:'intensity',recorded:im,planned:0,fill:fill(im,0)}],
    done:false,notRecorded:false,planned:0,recordings:[],items:[],garmin:0,sleepScore:null}});

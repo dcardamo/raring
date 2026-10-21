@@ -4,6 +4,16 @@ Shipped backlog items, newest first, each with its commit and the endpoint
 facts verified while building it. The open backlog is [TODO.md](../TODO.md).
 "Verified" means a read against a real account returned the data.
 
+- **Distances follow Garmin's measurement setting** (commit "Read every
+  distance in Garmin's measurement units"). Running tolerance (Training tile
+  and detail), Progress's distance totals and longest-distance records, and
+  gear distances and thresholds read in km or mi from the stored
+  `measurementSystem`, through the workouts' one formatter (`units.ts`); the
+  core now sends kilometres with a `DistanceUnit`. Gear stays in Garmin's
+  metres until the setting syncs; the others read km, as workouts do.
+  Progress's Cardio section shows minutes only, so it had nothing to convert.
+  Rust and browser tests cover metric, statute and unknown settings.
+
 - **Fitness Age compared with the age then** (commit "Compare Fitness Age
   with each estimate's stored age"). Each Fitness Age trend point carries
   Garmin's `chronologicalAge` from that day's stored `fitness_age` row

@@ -22,7 +22,7 @@ availability on every account or watch.
 ## Build next
 
 In progress on branch `feat-five-followups` (worktree
-`~/.paseo/worktrees/1c8zm467/feat-five-followups`): units (6), core-generated fixtures with a swim and
+`~/.paseo/worktrees/1c8zm467/feat-five-followups`): core-generated fixtures with a swim and
 a walk (8), desktop notification clicks (in 11) and naps when an old day is
 opened (approved). Move each to `docs/done.md` when it merges.
 
@@ -104,10 +104,10 @@ Plan has no dated route. Add one, then:
   the stored nightly records before offering a fetch (the emulator demo shows
   this empty card).
 
-### 6. Units follow Garmin's measurement setting
+### 6. Watch temperature follows Garmin's measurement setting
 
-Running tolerance, Progress distance totals and gear still read km, and the
-watch temperature reads °C.
+Distances follow it everywhere (see docs/done.md); the watch temperature
+still reads °C.
 
 ### 7. Chart axes
 

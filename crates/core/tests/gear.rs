@@ -4,6 +4,7 @@ use raring_core::{
     screens,
     store::Store,
     sync,
+    view::DistanceUnit,
 };
 use serde_json::{json, Value};
 use std::{
@@ -26,13 +27,14 @@ fn gear_distance_units_missing_zero_retired_and_complete_replacement() {
     ]);
     s.put("gear", "me", "2025-01-02T09:00:00Z", &rows).unwrap();
     let view = screens::training(&s, "2025-01-02").gear.unwrap();
-    assert_eq!(view.unit, "m");
+    assert_eq!(view.unit, DistanceUnit::M);
+    assert_eq!(view.items[2].distance_km, Some(5.));
     assert_eq!(view.fetched_at, "2025-01-02T09:00:00Z");
-    assert_eq!(view.items[0].distance, Some(0.));
+    assert_eq!(view.items[0].distance_km, Some(0.));
     assert_eq!(view.items[1].status, "Retired");
-    assert_eq!(view.items[1].distance, None);
-    assert_eq!(view.items[1].threshold, None);
-    assert_eq!(view.items[2].threshold, None);
+    assert_eq!(view.items[1].distance_km, None);
+    assert_eq!(view.items[1].threshold_km, None);
+    assert_eq!(view.items[2].threshold_km, None);
     s.put(
         "profile_settings",
         "me",
@@ -41,8 +43,9 @@ fn gear_distance_units_missing_zero_retired_and_complete_replacement() {
     )
     .unwrap();
     let view = screens::training(&s, "2025-01-02").gear.unwrap();
-    assert_eq!(view.unit, "km");
-    assert_eq!(view.items[0].threshold, Some(650.));
+    assert_eq!(view.unit, DistanceUnit::Km);
+    assert_eq!(screens::training(&s, "2025-01-02").distance_unit, DistanceUnit::Km);
+    assert_eq!(view.items[0].threshold_km, Some(650.));
     s.put(
         "profile_settings",
         "me",
@@ -51,8 +54,10 @@ fn gear_distance_units_missing_zero_retired_and_complete_replacement() {
     )
     .unwrap();
     let view = screens::training(&s, "2025-01-02").gear.unwrap();
-    assert_eq!(view.unit, "mi");
-    assert!((view.items[2].distance.unwrap() - 3.10685596).abs() < 0.00001);
+    assert_eq!(view.unit, DistanceUnit::Mi);
+    assert_eq!(screens::training(&s, "2025-01-02").distance_unit, DistanceUnit::Mi);
+    // Kilometres in the contract; the app converts once, as for workouts.
+    assert_eq!(view.items[2].distance_km, Some(5.));
     s.put(
         "gear",
         "me",

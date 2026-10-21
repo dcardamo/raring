@@ -2,6 +2,7 @@
 import type { ActivityCard } from "./ActivityCard";
 import type { Chip } from "./Chip";
 import type { DayLoad } from "./DayLoad";
+import type { DistanceUnit } from "./DistanceUnit";
 import type { Gauge } from "./Gauge";
 import type { GearView } from "./GearView";
 import type { LoadFocusBar } from "./LoadFocusBar";
@@ -32,6 +33,11 @@ week: Array<DayLoad>, loadFocus: Array<LoadFocusBar>, vo2max: number | null, vo2
  * Weekly values, oldest first.
  */
 vo2maxTrend: Array<number | null>, races: Array<RacePrediction>, enduranceScore: number | null, hillScore: number | null, runningToleranceKm: number | null, 
+/**
+ * Garmin's measurement setting for running tolerance (km until it syncs,
+ * as workouts read).
+ */
+distanceUnit: DistanceUnit, 
 /**
  * Garmin's latest recorded readings; absent metrics are not zero.
  */

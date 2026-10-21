@@ -19,24 +19,24 @@
         "name": "Road shoes",
         "kind": "Shoes",
         "status": "Active",
-        "distance": 420,
-        "threshold": 650
+        "distanceKm": 420,
+        "thresholdKm": 650
       },
       {
         "id": "sample-bike",
         "name": "City bike",
         "kind": "Bike",
         "status": "Retired",
-        "distance": 1240,
-        "threshold": null
+        "distanceKm": 1240,
+        "thresholdKm": null
       },
       {
         "id": "sample-spare",
         "name": "Spare shoes",
         "kind": "Shoes",
         "status": "Active",
-        "distance": 0,
-        "threshold": null
+        "distanceKm": 0,
+        "thresholdKm": null
       }
     ]
   },
