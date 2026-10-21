@@ -58,7 +58,7 @@
  </div>
 </section>
 <style>
- .morning{margin:8px 0 16px;max-width:620px;container-type:inline-size}
+ .morning{margin:8px 0 20px;container-type:inline-size}
  .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
  .stats.two{grid-template-columns:repeat(2,minmax(0,1fr))}
  .stat{display:grid;justify-items:center;align-content:start;gap:2px;min-width:0;min-height:44px;padding:10px 4px 9px;border-radius:var(--radius-control);background:var(--card);border:1px solid var(--line);color:var(--text);text-align:center}

@@ -14,7 +14,9 @@
  let unknown = $derived(core.cumulative.slice(0, today + 1).some(v => v == null));
  let w = $state(320);
  // The goal's value is in the header; the line only needs its name at the edge.
- const H = 100, L = 32, R = 40, T = 10, B = 24;
+ const H = 100, T = 10, B = 24;
+ // Reserve text-sized gutters so neither axis nor goal label is clipped by the SVG.
+ let L=$state(33),R=$state(36);
  let max = $derived(Math.max(1, lane.goal ?? 0, ...(lane.usual?.hi ?? []), ...lane.cum.map(v => v ?? 0)) * 1.08);
  const x = (i: number) => L + (w - L - R) * (i / 6);
  const y = (v: number) => T + (1 - v / max) * (H - T - B);
@@ -28,6 +30,7 @@
  const fmt = (v: number) => lane.unit === 'sessions' ? String(v) : `${Math.round(v)}`;
 </script>
 <div class="lane" bind:clientWidth={w} data-chart="lane" {@attach declutter}>
+ <span class="gutter left" aria-hidden="true" bind:clientWidth={L}></span><span class="gutter right" aria-hidden="true" bind:clientWidth={R}></span>
  <div class="lh"><b style:color={lane.color}>{lane.name}</b><span><b class="n">{now != null ? fmt(now) : '—'}</b>{lane.goal ? ` of ${lane.goal}` : ''} {lane.unit}{usualNow != null ? ` · usual by now ${usualNow}` : ''}</span></div>
  {#if unknown}<p class="unk">Awaiting data: an activity has no Garmin zones or a day hasn't synced.</p>{/if}
  <svg width={w} height={H} role="img" aria-label={`${lane.name}: ${now != null ? `${fmt(now)} ${lane.unit}` : 'unknown'} so far${lane.goal ? ` of a ${lane.goal} goal` : ''}${usualNow != null ? `; usual week by now ${usualNow}` : ''}`}>
@@ -41,8 +44,9 @@
  </svg>
 </div>
 <style>
+ .gutter{position:absolute;visibility:hidden;pointer-events:none;width:3em}.gutter.left{font-size:11px}.gutter.right{font-size:12px}
  .lane{padding:6px 0;border-top:1px solid var(--line)}.lane:first-child{border-top:0}
- .lh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px;color:var(--text2)}.lh>b{font:600 13px Inter}.lh .n{color:var(--text);font-size:15px}
+ .lh{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px;color:var(--text2)}.lh>b{flex:none;font:600 13px Inter}.lh>span{flex:1 1 12em}.lh .n{color:var(--text);font-size:15px}
  svg{display:block}text{font-family:Inter,sans-serif}.yt,.xt{font-size:11px;fill:var(--text2)}.xt.on{fill:var(--text);font-weight:700}.vl{font:600 12px Outfit;fill:var(--text)}.gl{font:600 12px Inter;fill:var(--text2)}
  .unk{margin:2px 0 0;font-size:12px;color:var(--text2)}
 </style>

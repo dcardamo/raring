@@ -22,9 +22,9 @@
 </Card>
 
 <style>
- .ring{display:flex;align-items:center;gap:20px}
- .split{display:grid;gap:10px;min-width:0}
- .split div{display:flex;align-items:baseline;gap:8px}
+ .ring{display:flex;flex-wrap:wrap;align-items:center;gap:20px}
+ .split{display:grid;flex:1 1 12em;gap:10px;min-width:0}
+ .split div{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px}
  .split b{font-size:22px}
  .split span,p{font-size:13px;color:var(--text2)}
 </style>

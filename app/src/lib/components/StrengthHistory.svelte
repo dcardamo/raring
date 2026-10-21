@@ -115,7 +115,7 @@ const figures:[FigureChoice,string][]=[['profile','Profile'],['female','Female']
 <style>
  .lift-ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin:8px 0 4px}
  .strength-history{display:grid;gap:0 16px}
- .col{min-width:0}
+ .col{min-width:0;container-type:inline-size}
  .exercises-col{display:none}
  .dim,.note{font-size:12px;color:var(--text2)}
  .note{margin-top:12px;display:flex;align-items:center;gap:8px}
@@ -130,36 +130,36 @@ const figures:[FigureChoice,string][]=[['profile','Profile'],['female','Female']
  .exchips::-webkit-scrollbar{display:none}
  .exchips button{flex:none;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid var(--line);font:600 13px Inter;color:var(--text2);min-height:44px}
  .exchips button.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
- .tr-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:-4px 0 12px}
+ .tr-top{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px;margin:-4px 0 12px}
  .trend{display:block;width:100%;height:auto}
  .axis{fill:var(--text3);font:500 11px Inter}
- .recs{display:grid;grid-template-columns:repeat(auto-fit,minmax(52px,1fr));gap:6px}
+ .recs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,5em),1fr));gap:6px}
  .rec{background:rgba(255,255,255,.03);border-radius:13px;padding:10px 2px;text-align:center}
  .rec span{font:500 11px Inter;color:var(--text3)}
  .rec b{display:block;font:600 20px Outfit;margin:2px 0}
  .rec small{display:block;font:500 11px Inter;color:var(--text3);min-height:14px}
  .rec.new b,.rec.new small{color:var(--good)}
- .ses{display:grid;grid-template-columns:1fr minmax(74px,auto) minmax(86px,auto) 18px;gap:0 6px;align-items:center;width:100%;padding:12px 0;border:0;border-top:1px solid var(--line);background:none;text-align:left;font-size:13px;color:var(--text2);min-height:44px}
+ .ses{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0 6px;align-items:center;width:100%;padding:12px 0;border:0;border-top:1px solid var(--line);background:none;text-align:left;font-size:13px;color:var(--text2);min-height:44px}
  .ses:first-of-type{border-top:0;padding-top:0}
  .ses b{font:600 16px Outfit;color:var(--text);text-align:right}
  .ses b small{font:500 11px Inter;color:var(--text3);margin-left:2px}
- .ses .rr{text-align:right;font:500 14px Outfit}
+ .ses .rr{grid-column:1;overflow-wrap:anywhere;text-align:left;font:500 14px Outfit}
  .ses .pr{display:flex;justify-content:flex-end;color:var(--good)}
  .more{display:block;width:100%;min-height:44px;margin-top:8px;border:0;border-top:1px solid var(--line);background:none;color:var(--text);font:600 13px Inter;padding:12px 0 0}
  .nosets{margin:2px 0 0 56px;font-size:12px;color:var(--text2)}
- .mlist{list-style:none;margin:10px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:4px 16px;font-size:13px}
- .mlist li{display:grid;grid-template-columns:1fr auto 30px;gap:6px;align-items:baseline;color:var(--text2)}.mlist b{color:var(--text)}.mlist small{font-size:11px}.mlist li.gap span{color:var(--fair);font-weight:600}
+ .mlist{list-style:none;margin:10px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,13em),1fr));gap:4px 16px;font-size:13px}
+ .mlist li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;align-items:baseline;color:var(--text2)}.mlist b{color:var(--text)}.mlist small{font-size:11px}.mlist li.gap span{color:var(--fair);font-weight:600}
  .exl{display:flex;align-items:center;gap:10px;width:calc(100% + 16px);padding:10px 8px;margin:0 -8px;border:0;border-radius:12px;background:none;text-align:left;min-height:44px}
  .exl.on{background:rgba(255,255,255,.07)}
  .exl>span{flex:1;min-width:0}
- .exl b{display:block;font:600 13px Inter;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .exl b{display:block;font:600 13px Inter;overflow-wrap:anywhere}
  .exl span span{font-size:12px;color:var(--text3)}
- @media(min-width:660px){
+ @container page (min-width:50em){
   .strength-history{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
   .col>:global(.card:first-child){margin-top:0}
   .exchips{flex-wrap:wrap;overflow:visible}
  }
- @media(min-width:1000px){
+ @container page (min-width:80em){
   .strength-history{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr) minmax(0,1fr)}
   .exercises-col{display:block}
   .exchips{display:none}

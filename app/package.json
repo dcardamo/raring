@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "screenshots": "node src/scripts/screenshots.mjs",
     "test": "vitest run",
-    "test:ui": "node src/scripts/ui-regression.mjs && node src/scripts/chart-legibility.mjs",
+    "test:ui": "node src/scripts/today-layout.mjs && node src/scripts/adaptive-layout.mjs && node src/scripts/ui-regression.mjs && node src/scripts/chart-legibility.mjs",
     "test:charts": "node src/scripts/chart-legibility.mjs",
     "test:site": "node src/scripts/site-regression.mjs",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",

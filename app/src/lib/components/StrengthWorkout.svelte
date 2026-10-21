@@ -51,10 +51,10 @@ import StrengthRefresh from './StrengthRefresh.svelte';
 </div>
 <style>
  .strength-cols{display:grid;gap:0 16px}
- .col{min-width:0}
+ .col{min-width:0;container-type:inline-size}
  .hero{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:center}
  .hero-n{font:600 60px/1 Outfit;margin:6px 0 10px}
- .grid2{display:grid;grid-template-columns:auto auto;gap:14px 22px}
+ .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,7em),1fr));gap:14px 22px;flex:1 1 15em;min-width:0}
  .grid2 b{display:block;font:600 21px Outfit}
  .grid2 span{font:500 12px Inter;color:var(--text3);white-space:nowrap}
  .grid2 span.wrap{display:block;max-width:96px;white-space:normal}
@@ -69,8 +69,8 @@ import StrengthRefresh from './StrengthRefresh.svelte';
  .ex-h{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px}
  .ex-h b{display:block;font:600 16px Inter}
  .ex-h span:not(.pill){font-size:12px;color:var(--text3)}
- .setbars{display:flex;gap:8px;align-items:flex-end}
- .sbar{flex:1;max-width:58px;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}
+ .setbars{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+ .sbar{flex:0 1 3em;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}
  .sbar>b{font:600 15px Outfit}
  .sbar-t{position:relative;width:100%;height:56px;display:flex;align-items:flex-end;justify-content:center}
  .sbar-t i{position:relative;display:grid;place-items:start center;width:100%;border-radius:7px 7px 4px 4px;background:rgba(228,232,240,.78);color:var(--bg)}
@@ -79,11 +79,11 @@ import StrengthRefresh from './StrengthRefresh.svelte';
  .sbar>span{font:500 12px Outfit;color:var(--text2);white-space:nowrap}.sbar .delta{display:block;font:500 11px Outfit;color:var(--text)}
  .sbar.flag i{background:var(--fair)}
  .sbar.flag>b{color:var(--fair)}
- .sbar.key{flex:0 0 30px}
+ .sbar.key{flex:0 0 3em}
  .sbar.key b,.sbar.key span{font:600 10px Inter;color:var(--text3)}
  .lastl{margin-top:12px;font-size:12px;color:var(--text3)}
  .lastl b{display:block;color:var(--text2);font-weight:600;font-size:13px;word-spacing:3px}
- @media(min-width:660px){
+ @container page (min-width:50em){
   .strength-cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr);margin-bottom:16px}
   .col>:global(.card:first-child){margin-top:0}
  }

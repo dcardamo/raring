@@ -1,5 +1,4 @@
 <script lang="ts">
- import {masonry} from '../masonry';
  import {addDays} from '../history';
  import * as api from '../api';
  import type {HeartRateDay} from '../generated/HeartRateDay';
@@ -79,7 +78,7 @@
   <p class="small">Latest synced estimate</p>
  {/if}
 </div>
-<div class="dashboard" {@attach masonry}>
+<div class="dashboard">
  {#if metric==='heartRate' && shown}
   <Card title="Through the day">{#if shown.timeline.length}{#key shown.date}<StressTimeline heartRate={shown}/>{/key}{:else}<p class="small">No heart-rate samples for this day.</p>{/if}</Card>
   <Card title="Daily range"><div class="battery-totals"><div><b class="big n">{num(shown.minimum)}</b><span>Minimum · bpm</span></div><div><b class="big n">{num(shown.maximum)}</b><span>Maximum · bpm</span></div></div></Card>

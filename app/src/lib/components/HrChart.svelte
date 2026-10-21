@@ -7,7 +7,9 @@
  // at its real width so text keeps its size.
  let {samples,floors,durationS=0,avg=null,axis=true,name=''}:{samples:HrSample[],floors:number[],durationS?:number,avg?:number|null,axis?:boolean,name?:string}=$props();
  let w=$state(320);
- const H=160,L=34,R=8,T=20,B=20;
+ const H=160,R=8,T=20,B=20;
+ // A shared text-sized gutter keeps aligned workout axes inside their card at large text.
+ let L=$state(44);
  let maxT=$derived(Math.max(1,durationS,...samples.map(s=>s.tS)));
  let lo=$derived(Math.floor((Math.min(...samples.map(s=>s.bpm))-4)/10)*10),hi=$derived(Math.ceil((Math.max(...samples.map(s=>s.bpm))+4)/10)*10);
  const y=(v:number)=>T+(hi-v)/(hi-lo||1)*(H-T-B);
@@ -21,6 +23,7 @@
  let shownFloors=$derived(zoned?floors.map((f,i)=>({f,zone:i+2})).filter(z=>z.f>lo && z.f<hi):[]);
 </script>
 <div class="hr" bind:clientWidth={w} data-chart="hr" {@attach declutter}>
+ <span class="axis-gutter" aria-hidden="true" bind:clientWidth={L}></span>
 <svg width={w} height={H} role="img" aria-label={`Heart rate over ${Math.round(maxT/60)} minutes, ${lo}–${hi} bpm${avg!=null?`, average ${Math.round(avg)}`:''}`}>
  <defs>
   <linearGradient id="hr-zones" x1="0" y1="0" x2="0" y2={H} gradientUnits="userSpaceOnUse">
@@ -35,4 +38,6 @@
  {#if axis}{#each minutes as m,i}<text class="t" data-thin={i===0?undefined:'1'} x={x(m*60)} y={H-4} text-anchor={i===0?'start':'middle'}>{m}{i===minutes.length-1?' min':''}</text>{/each}{/if}
 </svg>
 </div>
-<style>.hr{width:100%}svg{display:block}.t{font:500 11px Inter;fill:var(--text3)}.u{font:500 12px Inter;fill:var(--text3)}.z{font:600 12px Inter;paint-order:stroke;stroke:var(--bg);stroke-width:3px}</style>
+<style>
+ .axis-gutter{position:absolute;visibility:hidden;pointer-events:none;width:4em;font-size:11px}
+.hr{width:100%}svg{display:block}.t{font:500 11px Inter;fill:var(--text3)}.u{font:500 12px Inter;fill:var(--text3)}.z{font:600 12px Inter;paint-order:stroke;stroke:var(--bg);stroke-width:3px}</style>

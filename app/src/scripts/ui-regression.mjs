@@ -556,27 +556,19 @@ try {
   for(const route of ['today','sleep','training','health','readiness','workout/9000000000001','workout/9000000000002','strength','help','help/strength-sets','metric/hrv','metric/restingHr','metric/bodyBattery','metric/stress','settings','review/latest','plan','plan/commitments','progress','profile','onboarding']) {
    await page.goto(`${url}/#${route}`);await waitRoute(route);
    const layout=await page.evaluate(()=>{
-    // Largest vertical gap between cards stacked in the same grid column.
-    const holes=(grid)=>{
-     if(!grid || getComputedStyle(grid).display!=='grid')return 0;
-     const cards=[...grid.querySelectorAll(':scope>*,:scope>.row>*')].filter(e=>getComputedStyle(e).display!=='contents').map(e=>e.getBoundingClientRect());
-     return Math.max(0,...cards.map(c=>{const above=cards.filter(o=>o!==c && o.left<c.right-1 && o.right>c.left+1 && o.bottom<=c.top+1);return above.length?c.top-Math.max(...above.map(o=>o.bottom)):0}));
-    };
-    // On wide screens Today's headline sits beside the dials, not below them.
-    const hero=()=>null;
     const main=document.querySelector('main'),grid=document.querySelector('.dashboard'),phone=document.querySelector('.phone');
-    return {viewport:innerWidth,body:document.body.scrollWidth,main:main.clientWidth,content:main.scrollWidth,shell:phone.clientWidth,height:phone.clientHeight,columns:grid?getComputedStyle(grid).gridTemplateColumns.split(' ').length:0,holes:holes(grid),hero:hero()};
+    return {viewport:innerWidth,body:document.body.scrollWidth,main:main.clientWidth,content:main.scrollWidth,shell:phone.clientWidth,height:phone.clientHeight,columns:grid?getComputedStyle(grid).gridTemplateColumns.split(' ').length:0};
    });
    assert.equal(layout.shell,width,`${width}/${route}: shell uses available width`);
    assert.equal(layout.height,900,`${width}/${route}: shell uses available height`);
    assert.ok(layout.body<=width && layout.content<=layout.main+1,`${width}/${route}: horizontal overflow ${JSON.stringify(layout)}`);
-   if(width>=660 && layout.columns)assert.equal(layout.columns,2,`${width}/${route}: two columns`);
+   if(route!=='today' && layout.columns)assert.equal(layout.columns,width>=756?2:1,`${width}/${route}: columns only when whole sections fit`);
    if(route==='health'){
     await page.locator('.weight-card .fresh').waitFor();
     assert.ok((await page.locator('.weight-card .fresh').textContent()).includes('Last weigh-in Thu 16 Oct · today'),`${width}/health: dated weigh-in`);
     assert.deepEqual(await page.locator('.weight-card .summary-pair .label').allTextContents(),['Trend weight','Trend change'],`${width}/health: trend weight and its change`);
    }
-   assert.ok(layout.holes<=18,`${width}/${route}: ${layout.holes}px hole between cards`);
+   // Unequal section heights leave space within a row; do not masonry-pack later sections into it.
    if([390,840].includes(width) && ['today','sleep','training','workout/9000000000001','workout/9000000000002','strength','help/strength-sets','health','plan','plan/commitments','progress','profile'].includes(route)) {
     await page.evaluate(()=>document.fonts.ready);
     const failures=await contrastFailures(page);

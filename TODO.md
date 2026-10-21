@@ -15,6 +15,15 @@ availability on every account or watch.
 
 ## Now
 
+### Adaptive layout device follow-ups
+
+- Dan approved Today in the Fold's actual WebView. Check the other tabs,
+  largest Android system text, TalkBack and sheets with the keyboard open
+  on the Fold. Browser text scaling does not replace those device checks.
+- Strength's existing resize-observer delivery warnings still appear during
+  rapid browser resizing. Geometry and state checks pass; investigate the
+  remaining chart observer cycle separately if it affects device behavior.
+
 ### 26a. Experience follow-ups
 
 In priority order; the redesign shipped (Done, item 26) without them.
@@ -111,8 +120,6 @@ From item 4, in priority order.
   wake day is unverified; Raring reads the displayed day's. Check against a
   schedule that differs by weekday, and whether the windows carry Garmin's
   defaults when `userSleep` does.
-- On desktop widths the masonry columns can place the leading card beside a
-  notice rather than first in reading order; check it once desktop ships.
 
 ### Sleep rhythm follow-ups
 
@@ -189,9 +196,6 @@ priority order; the bugs and most majors shipped (Done).
   `TrainingView` and show them on the detail, or stop the Training tiles from
   opening a detail until there is history (see the Trends follow-up on
   `enduranceScoreScalar`). Coordinate with the Training lane.
-- **Bottom tab labels at 2× text** (review M4): "Plan", "Training" and
-  "Health" run together and "Progress" clips. App-wide; belongs with the
-  large-text audit.
 - **Trend chart axes** (review m1, m2): round y ticks with the unit on the top
   label, and decide whether the missing-day dots under bar charts stay (the
   line charts already show gaps). Chart legibility lane.
@@ -215,10 +219,6 @@ From the chart legibility pass, in priority order.
 - Check Sleep · Tonight, Your day and the Sleep charts on the maintainer's
   phone at the largest Android font size. The browser check emulates text
   zoom by multiplying every font size; WebView's own text zoom is unverified.
-- At 2× text on 720 and 1100 px, text runs out of its card in the workout
-  stats (pace, calories, HR), the strength sets and figure toggle, Training's
-  "Run tolerance" and the respiration history reading. Fix them, then widen
-  the check's card test (Today, Sleep and Readiness only) to every page.
 - The check compares text with other text and with `data-mark` markers, not
   with bars, points or bands; mark more shapes as charts change.
 
@@ -248,9 +248,6 @@ From the Today and Sleep review's remainder, in priority order.
 - Health doesn't say when the watch can't record skin temperature or HRV
   status; Today now explains only readiness and the sleep score. Show the
   other missing-metric reasons on Health's vitals.
-- The bottom tab labels run together at 2× text ("PlanTrainingHealthProgress"
-  at 390 px); stack icon and label tighter or drop to icons with names for
-  assistive tech.
 - Widget and notification labels are 10 sp, under the 11 minimum (review
   m13). 11 sp fails `StatusWidgetLayoutTest` at the provider minimum size
   with large fonts ("Readiness" 108 > 100 px on emulator-5560); the 10 sp
@@ -339,9 +336,6 @@ From the read-only UX review of Training and workouts, in priority order.
   still read km; follow Garmin's measurement setting there too.
 - **Acute-load band per day**: the 30-day chart and metric detail use today's
   optimal range; draw Garmin's stored range for each day where it exists.
-- **Large text**: at 2x on 360 px, the strength session rows, the acute
-  bar's tick labels and the Splits "Fastest" pill still pass their card;
-  some card text still runs long at 2x (the chart lane covers charts only).
 - **Fixtures from the core**: the preview's training, strength and workout
   fixtures are still hand-made and disagree in places (lane vs board
   strength counts, squat bests, the sets check time before the workout);
@@ -555,6 +549,24 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **App-wide adaptive layout** (commits "Group Plan and Progress sections for
+  responsive grid", "Make sheet layouts wrap and scroll at narrow widths"
+  and "Keep whole sections readable across folded and wide layouts").
+  Replaced masonry and the 660px loose-child grid with intact sections and
+  text-sized column thresholds. Today keeps its header and sync separate,
+  metrics full-width and recordings with their lead. Plan and Progress group
+  headings with their content; Training, Health, Sleep and details follow
+  document-order rows. Navigation has its own shell row, named icons when
+  large labels cannot fit, and no covered final content. Sheets wrap and
+  scroll; strength selectors follow the named page container so only one
+  is visible. Workout/weekly chart gutters scale with text.
+  Verified: cargo workspace tests and clippy; Svelte/TypeScript, 126 unit
+  tests, build and UI regression; Today states at 344–1100px; 20 page/section
+  states at 344–1280px and twelve sheet/form states at 344/390/840px with
+  1×/2× text and live resizing; chart and card-spill checks on all 42 pages
+  at 360/390/720/1100px and 1×/1.3×/2× text. Synthetic screenshots are in
+  `.data/screens/today-layout-*.png` and `.data/screens/adaptive-*.png`.
 
 - **Instant page opens** (commits "Read stored nights without their
   samples" and "Open pages whole and keep cached views through a sync"),

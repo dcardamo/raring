@@ -110,7 +110,7 @@
   compare=next;
   if(next==='metric' && activeMetric && (!overlayMetric || overlayMetric===activeMetric))overlayMetric=defaultOverlay(activeMetric);
  }
- // The chart draws at its card's width; a frame's delay keeps resizing out of the masonry layout pass.
+ // Draw at the card's measured width; defer resize updates out of observer delivery.
  function measure(node:HTMLElement){
   let frame=0;
   const observer=new ResizeObserver(([entry])=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>width=entry.contentRect.width)});

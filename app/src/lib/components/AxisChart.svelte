@@ -18,7 +18,9 @@
  import {plotAxis} from '../plot';
  const patternId=$props.id();
  let w = $state(320);
- const L = 34, R = 8, T = 16, B = 20;
+ const R = 8, T = 16, B = 20;
+ // A shared text-sized gutter keeps aligned workout axes inside their card at large text.
+ let L=$state(44);
  let stepped = $derived((goals ?? []).filter((v): v is number => v != null));
  let vals = $derived([...points.map(p => p.v), ...(line ?? [])].filter((v): v is number => v != null));
  let axis = $derived(plotAxis([...vals, ...(band ?? []), ...(goal != null ? [goal] : []), ...stepped], {zero:kind==='bars',integer,min:yMin,max:yMax,cap}));
@@ -37,6 +39,7 @@
  let line2 = $derived.by(() => { if (!line) return ''; let d = '', pen = false; line.forEach((v, i) => { if (v == null) { pen = false; return; } d += `${pen ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`; pen = true; }); return d; });
 </script>
 <div class="ax" bind:clientWidth={w} data-chart="axis" {@attach declutter}>
+ <span class="axis-gutter" aria-hidden="true" bind:clientWidth={L}></span>
  {#if unit}<span class="yu">{unit}</span>{/if}
  <svg width={w} {height} role="img" aria-label={label}>
   <defs><pattern id={patternId} width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="1.5" height="5" fill="var(--goal-sleep)" opacity=".35"/></pattern></defs>
@@ -61,6 +64,8 @@
  </svg>
 </div>
 <style>
+ .axis-gutter{position:absolute;visibility:hidden;pointer-events:none;width:4em;font-size:11px}
+
  .ax{width:100%;min-width:0}.ax svg{display:block}
  text{font-family:Inter,sans-serif}
  .yt,.xt{font-size:11px;fill:var(--text2)}.yu{display:block;margin-bottom:2px;font-size:12px;color:var(--text2)}

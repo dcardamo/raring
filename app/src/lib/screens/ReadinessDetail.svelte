@@ -1,7 +1,6 @@
 <script lang="ts">
  import type {Snippet} from 'svelte';
  import type {TodayView} from '../generated/TodayView';
- import {masonry} from '../masonry';
  import Card from '../components/Card.svelte';
  import Icon from '../components/Icon.svelte';
  import Gauge from '../components/Gauge.svelte';
@@ -12,7 +11,7 @@
  import {num} from '../format';
  let {todayData,header,selectedFactor=$bindable('')}:{todayData:TodayView,header:Snippet,selectedFactor?:string}=$props();
 </script>
- <div class="page-hero">{@render header()}<div class="detail-gauge">{#if todayData.readiness}<Gauge size={240} stroke={17} value={todayData.readiness.value} max={todayData.readiness.max} label={todayData.readiness.label} caption="Readiness" color={toneColor(todayData.readiness.tone)}/>{:else}<p>{todayData.missingMetricReasons.readiness ?? 'Waiting for readiness'}</p>{/if}{#if todayData.readiness}<h2>{todayData.headline}</h2>{/if}{#if todayData.readinessWhy}<div class="why-line"><WhySheet why={todayData.readinessWhy} label={todayData.readiness?.label?`Why ${todayData.readiness.label}?`:'Why?'}/></div>{/if}</div></div><div class="dashboard" {@attach masonry}>
+ <div class="page-hero">{@render header()}<div class="detail-gauge">{#if todayData.readiness}<Gauge size={240} stroke={17} value={todayData.readiness.value} max={todayData.readiness.max} label={todayData.readiness.label} caption="Readiness" color={toneColor(todayData.readiness.tone)}/>{:else}<p>{todayData.missingMetricReasons.readiness ?? 'Waiting for readiness'}</p>{/if}{#if todayData.readiness}<h2>{todayData.headline}</h2>{/if}{#if todayData.readinessWhy}<div class="why-line"><WhySheet why={todayData.readinessWhy} label={todayData.readiness?.label?`Why ${todayData.readiness.label}?`:'Why?'}/></div>{/if}</div></div><div class="dashboard">
  {#if todayData.factors.length}<Card title="What's driving it"><p class="factor-key">Garmin factor levels · 0–100</p><div class="factor-list">{#each [...todayData.factors].sort((a,b)=>(a.percent??101)-(b.percent??101)) as factor}{@const input=todayData.readinessWhy?.inputs.find(i=>i.key===factor.key)}<button class="factor-row" aria-expanded={selectedFactor===factor.key} onclick={()=>selectedFactor=selectedFactor===factor.key?'':factor.key}><div class="factor-heading"><span>{factor.name}</span>{#if input?.value}<b class="n">{input.value}</b>{/if}<span class="rating" style:color={toneColor(factor.tone)}>{input?.rating??'Not rated'}</span></div><div class="factor-scale"><div class="bar">{#if factor.percent!=null}<i style:width={factor.percent+'%'} style:background={toneColor(factor.tone)}></i>{/if}</div><small class="factor-level">{num(factor.percent)}</small></div>{#if selectedFactor===factor.key}<p>{input?`${input.value?`${input.value} · `:''}${input.detail}`:factor.detail}</p>{/if}</button>{/each}</div></Card>{/if}
  {#if todayData.readinessTrend.length}<Card title="Readiness history"><ReadinessTrend values={todayData.readinessTrend} date={todayData.date}/></Card>{/if}
  {#if todayData.call && todayData.focus.effort}<Card title="Today's call"><EffortBar effort={todayData.call}/>{#if todayData.readinessWhy}<p class="reason">{todayData.readinessWhy.summary}</p>{/if}</Card>{/if}

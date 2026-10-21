@@ -7,7 +7,6 @@
  import type {ActivityPage} from '../generated/ActivityPage';
  import type {Icon as ActivityIcon} from '../generated/Icon';
  import type {IconName} from '../components/Icon.svelte';
- import {masonry} from '../masonry';
  import Card from '../components/Card.svelte';
  import Icon from '../components/Icon.svelte';
  import WhySheet from '../components/WhySheet.svelte';
@@ -65,14 +64,14 @@
 </script>
 <div class="page-hero">{@render header()}{#if trainingData.status}<span class="status-pill pill" style:color={toneColor(trainingData.statusTone)}>{trainingData.status}</span>{/if}
  <div class="headline training-head"><h2>{trainingData.headline}</h2>{#if trainingData.statusWhy}<div class="why-line"><WhySheet why={trainingData.statusWhy} label={trainingData.status ? `Why ${trainingData.status}?` : 'Why?'}/></div>{/if}</div></div>
-<div class="dashboard" {@attach masonry}>
+<div class="dashboard">
  {#if tw?.lanes.length}<Card title="This week" extra="week-lanes" help="training-week">{#each tw.lanes as lane (lane.kind)}<LaneChart {lane} today={todayIndex} start={tw.start}/>{/each}
   {#if tw.bySport.length}<p class="mix">{#each tw.bySport as m}<span><Icon name={SPORT_ICONS[m.sport]} size={14}/>{SPORT_NAMES[m.sport]} <b class="n">{Math.round(m.minutes)} min</b></span>{/each}</p>{/if}
   <p class="key" aria-label={`Line: so far this week.${tw.lanes.some(l => l.usual) ? ` Band: your usual week, the middle half of ${Math.max(...tw.lanes.map(l => l.weeks))} recent complete weeks.` : ''}${tw.lanes.some(l => l.goal) ? ' Dashed: your goal.' : ''}`}><span><i class="k-line"></i>this week</span>{#if tw.lanes.some(l => l.usual)}<span><i class="k-band"></i>usual week ({Math.max(...tw.lanes.map(l => l.weeks))} weeks)</span>{/if}{#if tw.lanes.some(l => l.goal)}<span><i class="k-goal"></i>goal</span>{/if}</p></Card>
  {:else if trainingData.week.length}<Card title="Training load, last 7 days"><WeekBars days={trainingData.week}/></Card>{/if}
 </div>
 <div class="train-tabs" id="training-sections" role="tablist" aria-label="Training section">{#each SECTIONS as [k, l]}<button role="tab" aria-selected={section === k} onclick={() => section = k}>{l}</button>{/each}</div>
-<div class="dashboard" {@attach masonry}>
+<div class="dashboard">
 {#if section === 'fitness'}
  <Card title="Enough, or too much?" extra="q-load" help="acute-load">
   {#if acute}
@@ -132,24 +131,24 @@
 {/if}
 </div>
 <style>
- .train-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;margin:16px 0;border:1px solid var(--line);border-radius:var(--radius-control);background:var(--bg);max-width:520px}
- .train-tabs button{min-height:44px;border-radius:var(--radius-small);border:0;background:none;color:var(--text2);font:600 13px Inter}
+ .train-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;margin:16px 0;border:1px solid var(--line);border-radius:var(--radius-control);background:var(--bg);max-width:520px}
+ .train-tabs button{min-width:0;overflow-wrap:anywhere;min-height:44px;border-radius:var(--radius-small);border:0;background:none;color:var(--text2);font:600 13px Inter}
  .train-tabs button[aria-selected=true]{background:var(--surface3);color:var(--text)}
- .metrics :global(.metric-link span){display:inline-flex;align-items:center;gap:2px}
+ .metrics :global(.metric-link span){display:inline-flex;flex-wrap:wrap;align-items:center;gap:2px}
  .key{display:flex;flex-wrap:wrap;gap:4px 14px;margin:8px 0 0;font-size:12px;color:var(--text2)}.key span{display:inline-flex;align-items:center;gap:6px}
  .key i{display:inline-block;width:16px}.k-line{height:2.4px;background:var(--ink)}.k-band{height:10px;background:rgba(228,232,240,.18);border-radius:2px}.k-goal{border-top:1.5px dashed var(--ink)}
  .mix{display:flex;flex-wrap:wrap;gap:6px 14px;margin:8px 0 0;font-size:12.5px;color:var(--text2)}.mix span{display:inline-flex;gap:5px;align-items:center}.mix b{color:var(--text)}
  h4{font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);margin:14px 0 6px}
- .load{display:grid;gap:6px}.load>div:first-child{display:flex;gap:10px;align-items:baseline}.load small{font-size:12px;color:var(--text2)}.load b{font-size:24px}.load span{font:600 13px Inter}
+ .load{display:grid;gap:6px}.load>div:first-child{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline}.load small{font-size:12px;color:var(--text2)}.load b{font-size:24px}.load span{font:600 13px Inter}
  .lbar{position:relative;height:10px;border-radius:5px;background:rgba(255,255,255,.07)}.lbar .band{position:absolute;top:0;bottom:0;background:rgba(228,232,240,.22);border-radius:5px}
  .lbar u{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border:2px solid var(--bg);border-radius:50%}
  .lticks{display:flex;flex-wrap:wrap;gap:0 8px;justify-content:space-between;font-size:11px;color:var(--text2)}
- .vo{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:0;color:var(--text);text-align:left;min-height:52px;padding:0}
+ .vo{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;width:100%;background:none;border:0;color:var(--text);text-align:left;min-height:52px;padding:0}
  .vo small{display:block;font-size:12px;color:var(--text2)}.vo b{font-size:28px;margin-right:8px}.vo em{font:600 12px Inter;font-style:normal}.go{display:inline-flex;gap:4px;align-items:center;font:600 13px Inter;color:var(--text2)}
  .planned-race{display:flex;flex-direction:column;gap:5px}.planned-race b{font:600 17px Outfit,Inter,sans-serif}.planned-race span{color:var(--text2);font-size:13px}
  .sw{display:flex;flex-wrap:wrap;gap:16px;align-items:center}.sw>div{display:grid}.big{font-size:26px}.big small{font-size:14px;color:var(--text2)}
- .mus{display:flex;gap:14px;align-items:center;margin-top:10px}.gaps{flex:1;margin:0;font-size:13.5px;color:var(--text)}
- .go-row{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:44px;margin-top:8px;padding:10px 0 0;border:0;border-top:1px solid var(--line);background:none;color:var(--text);font:600 13px Inter}
+ .mus{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:10px}.gaps{flex:1 1 12em;min-width:0;margin:0;font-size:13.5px;color:var(--text)}
+ .go-row{display:flex;gap:8px;justify-content:space-between;align-items:center;width:100%;min-height:44px;margin-top:8px;padding:10px 0 0;border:0;border-top:1px solid var(--line);background:none;color:var(--text);font:600 13px Inter}
  .chips2{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.chips2 button{display:inline-flex;gap:5px;align-items:center;min-height:36px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:none;color:var(--text2);font:600 12.5px Inter}
  .chips2 button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
  .effect-line{margin:2px 0 10px;font-size:12.5px;color:var(--text2)}

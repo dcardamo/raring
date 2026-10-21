@@ -5,7 +5,6 @@
  import * as api from '../api';
  import {dateLabel,num} from '../format';
  import {colors} from '../charts';
- import {masonry} from '../masonry';
  import RangePicker from './RangePicker.svelte';
  import MetricSummary from './MetricSummary.svelte';
  import WeightChart from './WeightChart.svelte';
@@ -65,7 +64,7 @@
  {#if ready && view}
   <div class="metric-hero"><div class="metric-value n" style:color={color}>{num(view.trend,1)}<span class="unit">{view.unit}</span></div><p class="small">Raring trend weight · Garmin scale {num(view.scale,1)} {view.unit}</p></div>
  {/if}
- <div class="dashboard" {@attach masonry}>
+ <div class="dashboard">
   <section class="card weight-card" aria-label="Weight" aria-busy={busy}>
    <h3><span>Scale and trend</span><span class="card-actions"><HelpButton topic="trend-weight"/></span></h3>
    <div class="picker"><RangePicker value={range} onchange={r=>range=r} label="Weight range"/></div>

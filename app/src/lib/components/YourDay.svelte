@@ -65,7 +65,7 @@
 </section>
 <style>
  .your-day.compact{margin-top:0}
- .your-day{margin-top:16px;border:1px solid var(--line);border-radius:var(--radius-card);background:var(--card);padding:16px 14px 12px}
+ .your-day{container-type:inline-size;min-width:0;margin-top:16px;border:1px solid var(--line);border-radius:var(--radius-card);background:var(--card);padding:16px 14px 12px}
  .yd-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}.yd-h h2{display:flex;align-items:center;gap:8px;font:600 var(--type-section)/1.35 var(--font-body);letter-spacing:-.015em;color:var(--text)}
  .row{display:grid;grid-template-columns:96px minmax(0,1fr) 56px;gap:8px;align-items:center;width:100%;padding:6px 0;background:none;border:0;color:var(--text);text-align:left;min-height:44px}
  .lab{display:flex;align-items:center;gap:6px;min-width:0}.lab :global(svg){color:var(--text2);flex:none}.lab b{font:600 12.5px/1.15 Inter;overflow-wrap:anywhere}
@@ -81,5 +81,11 @@
  .axis{padding:0;min-height:22px}.ticks{height:1.7em;background:none;font:500 11px Inter}.ticks i{position:absolute;top:2px;transform:translateX(-50%);color:var(--text2);font-style:normal}.ticks i:first-child{transform:none}.ticks i:nth-child(5){transform:translateX(-100%)}.ticks b{position:absolute;top:0;font:600 12px/1.2 Inter;color:var(--text);background:var(--card);padding:1px 4px;border-radius:4px;white-space:nowrap}
  .clock{margin:0 0 6px;font-size:12px;color:var(--text2)}
  .key{display:flex;flex-wrap:wrap;gap:4px 12px;margin:6px 0 0;font-size:12px;color:var(--text2)}.key span{display:inline-flex;gap:5px;align-items:center}.key i{width:8px;height:8px;border-radius:2px}
- @container(max-width:300px){.row{grid-template-columns:72px minmax(0,1fr) 52px}.lab b{font-size:12px}}
+ /* Give the plot its own row when labels would leave it a narrow sliver. */
+ @container(max-width:20em){
+  .row{grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:10px 0}
+  .lab{grid-column:1;grid-row:1}.val{grid-column:2;grid-row:1}
+  .track{grid-column:1 / -1;grid-row:2}
+  .axis{display:block;padding:0}.axis>span:not(.track){display:none}
+ }
 </style>

@@ -118,7 +118,7 @@ synthetic data. `design/mockup/index.html` shows the app before the redesign.
   layout: units and value scales sit outside the plot, and tick labels give
   way (thinned in a fixed order) rather than shrinking.
 - Reduced motion (the system setting) stops every animation and transition.
-- Phone first; an unfolded or desktop window adds columns without changing
+- Phone first; an unfolded or desktop window adds whole-section columns without changing
   the order.
 
 ## Screens
@@ -153,9 +153,32 @@ sign-in button. Keep the same information and expandable privacy details
 available offline in Settings. Notification permission remains
 optional after sign-in.
 
+### Adaptive layout
+
+Whole sections reflow, never loose headings or component children. Overview
+and period controls precede their content; section grids use document-order
+rows, not height-dependent masonry. Two columns need a 50em content width,
+so larger text can return an unfolded window to one column. Charts and cards
+adapt to their own usable width. Plan keeps Days together and Left/Events
+as supporting sections; Progress keeps its period report above the calendar,
+goals and records. Training, Health, Sleep and details use the same rule.
+
+Bottom navigation occupies its own shell row rather than covering scrollable
+content. At text sizes that cannot fit five readable labels, it uses icons
+with unchanged accessible names and selected state. Sheets stay within the
+dynamic viewport, wrap forms/actions and scroll to their close and final
+controls; folding preserves the open page, section and dialog.
+
 ### Today
 
-A briefing with an ending, in this order:
+A briefing with an ending. The header and watch-upload/refresh line occupy
+separate rows. Morning stats use the full content width; below them the lead
+and its session/recordings stay together as one section. Your day may sit
+beside that section only when both have room, otherwise it follows below.
+Reading order stays stable on resize and at large text; Today does not use
+masonry. Supporting cards remain in the core's phase order.
+
+In this order:
 
 - **Last night and readiness**: four compact stats in one row (two by two
   at large text), each opening its detail: **Sleep** (time asleep in a ring
@@ -203,11 +226,13 @@ A briefing with an ending, in this order:
   upload time is said once, in the header, never repeated in a card.
 - **Recorded today**: one list of everything the calendar day (Your day's)
   recorded, workouts and naps together in the order they started, directly
-  under the day's headline while the day leads. Workouts carry Garmin's benefit
-  and training effect (one decimal); naps their Body Battery change. Up to four
-  rows, then a link to all of today's activities. The headline never repeats a
-  workout from this list. Under a "Done today" headline the list goes untitled. Compact after tonight's plan: without the effect
-  labels.
+  under the day's headline while the day leads. Compact workout rows carry
+  the name, start time, duration, distance/average HR when recorded and load;
+  zones, Garmin's benefit and training effect stay in the workout detail.
+  Naps carry their Body Battery change. Up to four rows, then a link to all
+  of today's activities. The headline never repeats a workout from this
+  list. Under a "Done today" headline the list goes untitled. From evening
+  on, the list follows tonight's plan and the compact timeline.
 - **This week**: the week's rings and one line per goal beside **Left this
   week** with Do it today (not from the evening on: a weekly gap is context,
   not a command to catch up tonight), over the day cells; hidden during
@@ -425,8 +450,11 @@ Opened from Training → Strength: lifts and muscles.
   for the previous four weeks' weekly average, the strength workouts, and a
   Figure control (Profile, Female, Male) that overrides the profile's figure for every body map (Rules:
   Body-map figure).
-- Phone: one column. Unfolded (660 px+): two columns. Desktop (1000 px+):
-  exercise list, exercise detail, muscles.
+- One column until two complete sections fit at the current text size (a
+  50em content width). The exercise selector remains with its detail; a
+  separate exercise list is added only at an 80em content width. Enlarging
+  text or folding the window returns to fewer columns without losing the
+  chosen exercise, measure or range.
 
 ### Body map
 

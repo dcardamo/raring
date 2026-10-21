@@ -164,7 +164,7 @@ try {
    await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(r,100)))));
    const found=await page.evaluate(measure);
    charts=Math.max(charts,found.length);
-   const bad=[...problems(found,width,scale),...await page.evaluate(spills,/^(today|sleep|readiness)/.test(name))].map(p=>`${name} @${width}px ×${scale}: ${p}`);
+   const bad=[...problems(found,width,scale),...await page.evaluate(spills,true)].map(p=>`${name} @${width}px ×${scale}: ${p}`);
    if(shots&&(width===390||width===360)&&(scale===1||scale===2))await page.screenshot({path:resolve(output,`chart-${shots}-${name}-${width}-x${scale}.png`),fullPage:true});
    if(bad.length&&!report)assert.fail(bad.join('\n'));
    failures.push(...bad);

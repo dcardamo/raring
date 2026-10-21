@@ -110,7 +110,7 @@
  </div>
 </div>
 <style>
- .plan-layout{margin-top:16px}.plan-layout>div{min-width:0}.plan-layout .sec-h:first-child{margin-top:0}.plan-layout .days{margin-top:16px}.events-section{min-width:0}
+ .plan-layout{margin-top:16px}.plan-layout>div{min-width:0}.plan-days>.sec-h:first-child,.plan-support>.sec-h:first-child{margin-top:0}.plan-layout .days{margin-top:16px}.events-section{min-width:0}
  .wk-a{display:flex;gap:8px;align-items:center}
  :global(.sec-h:has(.qh)){display:flex;align-items:center;gap:8px}
  .row-item.serves{box-shadow:inset 3px 0 0 var(--fair)}.for,.clash{display:block;font:600 12px Inter;font-style:normal;color:var(--fair)}.clash{color:#BDAAFF}
