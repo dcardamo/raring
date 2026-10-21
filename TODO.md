@@ -463,6 +463,10 @@ In priority order.
 - **Website and README pictures**: the published screens predate the street
   map; republish them from synthetic data (`npm run screenshots`, then
   `publish-screens.mjs`).
+- **Routes across ±180°**: like the plain route before them, both fits take
+  longitudes as they are, so a route crossing the antimeridian (Fiji,
+  Chukotka) fits nearly the whole world. Unwrap its longitudes in the core and
+  `routemap.ts`, and wrap tile x when downloading and drawing.
 - Labels and pan/zoom were left out on purpose (2026-10-20); the stored tiles
   could feed them later.
 

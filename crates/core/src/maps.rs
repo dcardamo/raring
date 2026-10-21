@@ -42,6 +42,10 @@ const TOLERANCE: f64 = 0.35;
 /// Bump when drawing changes, so cards drawn before are drawn again.
 const DRAWING: u32 = 1;
 
+/// One download at a time across the app: a card opened twice, or two cards in
+/// one area, must not fetch an area twice or exceed OpenFreeMap's 4 requests.
+static DOWNLOADS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 /// A TileJSON whose tile URLs must stay on `host`.
 pub struct Source {
     pub tilejson: String,
@@ -183,19 +187,41 @@ pub async fn fetch(
     if let Some(view) = drawn(store, id, &frame) {
         return Ok(Some(view));
     }
-    let missing: Vec<Area> = frame.areas().into_iter().filter(|a| !store.map_area_stored(*a)).collect();
-    if !missing.is_empty() {
-        let http = reqwest::Client::builder()
-            .user_agent(user_agent)
-            .timeout(std::time::Duration::from_secs(30))
-            .build()
-            .map_err(|_| Error::Map("no network client"))?;
-        let template = tile_template(&http, source).await?;
-        for area in missing {
-            let tiles = download(&http, &template, area).await?;
-            let at = chrono::Utc::now().to_rfc3339();
-            if !store.put_map_area(id, area, &template, &at, &tiles)? {
+    let missing = |store: &Store| -> Vec<Area> { frame.areas().into_iter().filter(|a| !store.map_area_stored(*a)).collect() };
+    if !missing(store).is_empty() {
+        let _one_at_a_time = DOWNLOADS.lock().await;
+        // Another card may have stored them while this one waited.
+        let missing = missing(store);
+        if !missing.is_empty() {
+            if !store.maps_allowed(id) {
                 return Ok(None);
+            }
+            let host = source.host.clone();
+            let http = reqwest::Client::builder()
+                .user_agent(user_agent)
+                .timeout(std::time::Duration::from_secs(30))
+                // Redirects may not leave the source's host.
+                .redirect(reqwest::redirect::Policy::custom(move |attempt| {
+                    if attempt.previous().len() < 5 && attempt.url().as_str().starts_with(&host) {
+                        attempt.follow()
+                    } else {
+                        attempt.stop()
+                    }
+                }))
+                .build()
+                .map_err(|_| Error::Map("no network client"))?;
+            let template = tile_template(&http, source).await?;
+            for area in missing {
+                let tiles = match download(store, id, &http, &template, area).await {
+                    Ok(tiles) => tiles,
+                    // Turned off or erased meanwhile: no map rather than a failure.
+                    Err(_) if !store.maps_allowed(id) => return Ok(None),
+                    Err(e) => return Err(e),
+                };
+                let at = chrono::Utc::now().to_rfc3339();
+                if !store.put_map_area(id, area, &template, &at, &tiles)? {
+                    return Ok(None);
+                }
             }
         }
     }
@@ -235,10 +261,22 @@ async fn tile_template(http: &reqwest::Client, source: &Source) -> Result<String
         .ok_or(Error::Map("tile source"))
 }
 
-/// Every tile of an area, or an error and nothing.
-async fn download(http: &reqwest::Client, template: &str, area: Area) -> Result<Vec<(Tile, Vec<u8>)>> {
+/// Every tile of an area, or an error and nothing. No tile is requested after
+/// street maps are turned off or the workout is erased.
+async fn download(
+    store: &Store,
+    id: &str,
+    http: &reqwest::Client,
+    template: &str,
+    area: Area,
+) -> Result<Vec<(Tile, Vec<u8>)>> {
     let mut requests = futures_util::stream::iter(area_tiles(area))
-        .map(|tile| async move { tile_bytes(http, template, tile).await.map(|bytes| (tile, bytes)) })
+        .map(|tile| async move {
+            if !store.maps_allowed(id) {
+                return Err(Error::Map("street maps are off"));
+            }
+            tile_bytes(http, template, tile).await.map(|bytes| (tile, bytes))
+        })
         .buffer_unordered(PARALLEL);
     let (mut tiles, mut total) = (vec![], 0);
     while let Some(tile) = requests.next().await {
@@ -447,8 +485,8 @@ fn clip_segment(a: (f64, f64), b: (f64, f64)) -> Option<((f64, f64), (f64, f64))
     Some((if t0 == 0. { a } else { at(t0) }, if t1 == 1. { b } else { at(t1) }))
 }
 
-/// Douglas–Peucker. A closed ring's base segment has no length, so distance
-/// is measured from its point instead.
+/// Douglas–Peucker, measuring to the segment rather than its line, so a line
+/// that doubles back is kept. A closed ring's first segment has no length.
 fn simplify(points: &[(f64, f64)]) -> Vec<(f64, f64)> {
     let last = points.len().saturating_sub(1);
     if points.len() < 3 {
@@ -463,11 +501,8 @@ fn simplify(points: &[(f64, f64)]) -> Vec<(f64, f64)> {
         let length = dx.hypot(dy);
         let (mut far, mut at) = (0., i);
         for (k, p) in points.iter().enumerate().take(j).skip(i + 1) {
-            let d = if length > 0. {
-                (dy * (p.0 - a.0) - dx * (p.1 - a.1)).abs() / length
-            } else {
-                (p.0 - a.0).hypot(p.1 - a.1)
-            };
+            let t = if length > 0. { (((p.0 - a.0) * dx + (p.1 - a.1) * dy) / (length * length)).clamp(0., 1.) } else { 0. };
+            let d = (p.0 - a.0 - t * dx).hypot(p.1 - a.1 - t * dy);
             if d > far {
                 (far, at) = (d, k);
             }

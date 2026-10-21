@@ -4,14 +4,18 @@
  import {fit,mercator} from '../routemap';
  let {route,map=null,id=''}:{route:[number,number][],map?:RouteMapView|null,id?:string}=$props();
  // A card whose area isn't drawn yet asks once while it shows; the core downloads each area at most once.
- let drawn=$state<{id:string,map:RouteMapView|null}|null>(null);
+ // Answers belong to a workout and its route's frame, so one never draws over a changed route.
+ let key=$derived(map?`${id} ${map.frame.x0} ${map.frame.y0} ${map.frame.scale}`:'');
+ let answer=$state<{key:string,map:RouteMapView|null}|null>(null);
+ let asked='';
  $effect(()=>{
-  if(map?.state!=='missing' || !id || drawn?.id===id)return;
-  const asked=id;
-  api.route_map(asked).then(next=>{if(asked===id)drawn={id:asked,map:next}},()=>{if(asked===id)drawn={id:asked,map}});
+  if(map?.state!=='missing' || !id || asked===key)return;
+  asked=key;
+  const request=key,waiting=map;
+  api.route_map(id).then(next=>{answer={key:request,map:next}},()=>{answer={key:request,map:waiting}});
  });
- // The core's answer wins only while the page still has a map; none means street maps are off.
- let shown=$derived(map&&drawn?.id===id?drawn.map:map);
+ // None from the page means street maps are off.
+ let shown=$derived(map&&answer?.key===key?answer.map:map);
  let layers=$derived(shown?.state==='ready'?shown.layers:[]);
  let projected=$derived(route.map(mercator).filter((p):p is [number,number]=>p!==null));
  let frame=$derived(shown?.frame??fit(projected));

@@ -255,6 +255,12 @@ fn simplifying_a_closed_ring_keeps_its_shape() {
     assert!((area(&simple).abs() - area(&ring).abs()).abs() / area(&ring).abs() < 0.02);
 }
 
+#[test]
+fn simplifying_keeps_a_line_that_doubles_back() {
+    let line = [(10., 10.), (100., 10.), (20., 10.)];
+    assert_eq!(simplify(&line), line.to_vec());
+}
+
 fn complete_area(store: &Store, id: &str, frame: &Frame, tile: &[u8]) {
     for area in frame.areas() {
         let tiles: Vec<(Tile, Vec<u8>)> = area_tiles(area).into_iter().map(|t| (t, tile.to_vec())).collect();
@@ -420,10 +426,62 @@ async fn nothing_is_requested_or_kept_with_street_maps_off_or_the_workout_gone()
     store.set_settings(&crate::view::Settings { street_maps: false, ..Default::default() }).unwrap();
     assert_eq!(fetch(&store, "1", &route, &source(&server), "Raring").await.unwrap(), None);
     assert!(server.heads.lock().unwrap().is_empty());
-    // A workout erased while its area downloads (sign-out, another account) keeps nothing.
+    // An erased workout (sign-out, another account) asks for nothing and keeps nothing.
     store.set_settings(&Default::default()).unwrap();
     store.forget_account().unwrap();
     assert_eq!(fetch(&store, "1", &route, &source(&server), "Raring").await.unwrap(), None);
+    assert!(server.heads.lock().unwrap().is_empty(), "nothing is asked for an erased workout");
+    assert_eq!(counts(&store), (0, 0, 0));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn redirects_may_not_leave_the_sources_host() {
+    let route = loop_route();
+    let store = store_with_workout("1", &route);
+    let elsewhere = serve(|_, _| (200, synthetic_tile()));
+    let target = format!("{}/tile.pbf", elsewhere.url);
+    let server = serve(move |base, path| match path {
+        "/planet" => (200, format!(r#"{{"tiles":["{base}/tiles/{{z}}/{{x}}/{{y}}.pbf"]}}"#).into_bytes()),
+        _ => (302, target.clone().into_bytes()),
+    });
+    assert!(fetch(&store, "1", &route, &source(&server), "Raring").await.is_err());
+    assert!(elsewhere.heads.lock().unwrap().is_empty());
+    assert_eq!(counts(&store), (0, 0, 0));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn two_cards_in_one_area_download_it_once() {
+    let route = loop_route();
+    let store = store_with_workout("1", &route);
+    let nearby: Vec<[f64; 2]> = route.iter().map(|[lat, lon]| [lat + 0.0005, lon + 0.0005]).collect();
+    put_workout(&store, "2", &nearby);
+    assert_eq!(Frame::fit(&route).unwrap().areas(), Frame::fit(&nearby).unwrap().areas());
+    let server = tile_server(None);
+    let tiles = source(&server);
+    let (a, b) = tokio::join!(fetch(&store, "1", &route, &tiles, "Raring"), fetch(&store, "2", &nearby, &tiles, "Raring"));
+    assert!(a.unwrap().is_some() && b.unwrap().is_some());
+    let areas = Frame::fit(&route).unwrap().areas().len();
+    assert_eq!(server.heads.lock().unwrap().len(), 1 + 64 * areas, "one TileJSON and each tile once");
+    assert!(server.busiest.load(Ordering::SeqCst) <= PARALLEL);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn turning_street_maps_off_stops_a_download() {
+    let route = loop_route();
+    let store = Arc::new(store_with_workout("1", &route));
+    let (shared, tile, asked) = (Arc::clone(&store), synthetic_tile(), Arc::new(AtomicUsize::new(0)));
+    let server = serve(move |base, path| match path {
+        "/planet" => (200, format!(r#"{{"tiles":["{base}/tiles/{{z}}/{{x}}/{{y}}.pbf"]}}"#).into_bytes()),
+        _ => {
+            if asked.fetch_add(1, Ordering::SeqCst) == 2 {
+                shared.set_settings(&crate::view::Settings { street_maps: false, ..Default::default() }).unwrap();
+            }
+            (200, tile.clone())
+        }
+    });
+    assert_eq!(fetch(&store, "1", &route, &source(&server), "Raring").await.unwrap(), None);
+    let requested = server.heads.lock().unwrap().len() - 1;
+    assert!(requested <= 3 + PARALLEL, "no tile is asked for once street maps are off: {requested}");
     assert_eq!(counts(&store), (0, 0, 0));
 }
 

@@ -1249,9 +1249,11 @@ next pending wind-down while signed in.
   tiles, usually 20–40 km across, more for long rides), so the server sees an
   area several times the card's size, never the route. Only a route card
   showing a workout without a drawn map asks; opening a page, prefetch, sync
-  and background work never download or draw. An area downloads with at most
-  4 parallel requests and a User-Agent naming Raring, all or nothing, and is
-  kept: other workouts there draw with no request. Each card is drawn once
+  and background work never download or draw. One area downloads at a time
+  across the app, with at most 4 parallel requests, a User-Agent naming Raring
+  and no redirect off the host, all or nothing, and is kept: other workouts
+  there draw with no request. No tile is asked for once street maps are off or
+  the workout is erased. Each card is drawn once
   (clipped to the card, simplified to 0.35 px, one decimal) and kept with its
   workout; a changed route or drawing draws it again. Tunnels, rail, ferries,
   buildings and labels aren't drawn. Map rows are written only while street

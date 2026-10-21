@@ -754,6 +754,11 @@ impl Store {
         tx.commit()?;
         Ok(true)
     }
+    /// Street maps are on and the workout is still stored.
+    pub(crate) fn maps_allowed(&self, activity: &str) -> bool {
+        let db = self.db.lock().unwrap();
+        db.query_row(&format!("SELECT {MAPS_ALLOWED}"), [activity], |r| r.get(0)).unwrap_or(false)
+    }
     pub(crate) fn route_map(&self, activity: &str) -> Option<String> {
         let db = self.db.lock().unwrap();
         db.query_row("SELECT json FROM route_maps WHERE activity=?1", [activity], |r| r.get(0))
