@@ -19,6 +19,7 @@ import sampleReviews from './sample/reviews.json';
 import sampleProfile from './sample/profile.json';
 import sampleDomains from './sample/progressDomains.json';
 import type { ProgressDomains } from './generated/ProgressDomains';
+import type { DomainQuery } from './generated/DomainQuery';
 import type { Milestone } from './generated/Milestone';
 import type { ProfileView } from './generated/ProfileView';
 import type { LiftSeries } from './generated/LiftSeries';
@@ -31,6 +32,7 @@ import type { TodayView } from './generated/TodayView';
 import type { SleepView } from './generated/SleepView';
 import type { TrainingView } from './generated/TrainingView';
 import type { WorkoutView } from './generated/WorkoutView';
+import type { RouteMapView } from './generated/RouteMapView';
 import type { StrengthView } from './generated/StrengthView';
 import type { StrengthSession } from './generated/StrengthSession';
 import type { HealthView } from './generated/HealthView';
@@ -38,7 +40,8 @@ import type { CheckinView } from './generated/CheckinView';
 import type { Settings } from './generated/Settings';
 import type { TrendQuery } from './generated/TrendQuery';
 import type { TrendView } from './generated/TrendView';
-import { sampleTrend } from './sample/trend';
+import { sampleTrend, sampleStressMonth } from './sample/trend';
+import type { StressMonth } from './generated/StressMonth';
 import type { LocalAction } from './generated/LocalAction';
 import type { PlanBoard } from './generated/PlanBoard';
 import type { WeekReview } from './generated/WeekReview';
@@ -61,7 +64,7 @@ export const supportsStatusSurfaces = (isTauri() && /Android/.test(navigator.use
 // Desktop delivers reminders itself while the app runs; Android schedules them natively.
 export const desktopReminders = isTauri() && !/Android/.test(navigator.userAgent);
 export type ReminderStatus = {supported:boolean;granted:boolean;error:string|null;nextAt:string|null};
-export const defaultSettings = {notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,notifyStatus:false,statusOfferSeen:false,bedtimeLeadMin:30,fallAsleepMin:15,adaptiveToday:true,journalEnabled:false,planPrompt:true,bodyFigure:'profile'} satisfies Settings;
+export const defaultSettings = {notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,notifyStatus:false,statusOfferSeen:false,bedtimeLeadMin:30,fallAsleepMin:15,adaptiveToday:true,journalEnabled:false,planPrompt:true,bodyFigure:'profile',streetMaps:true} satisfies Settings;
 let previewSettings:Settings = {...defaultSettings};
 const copy = <T>(value:T):T => structuredClone(value);
 const call = <T>(name:string,args:Record<string,unknown>|undefined,fallback:T):Promise<T> => isTauri()?invoke<T>(name,args):Promise.resolve(copy(fallback));
@@ -107,7 +110,7 @@ export const lift_series = (key:string,range:TrendRange):Promise<LiftSeries|null
  return Promise.resolve({key,name:e.name,unit:(sampleStrength as unknown as StrengthView).unit,range,from:from||(points[0]?.date??sampleToday.date),to:sampleToday.date,points});
 };
 export const milestone_archive = ():Promise<Milestone[]> => call('milestone_archive',undefined,(sampleProgress as unknown as {milestones:Milestone[]}).milestones);
-export const progress_domains = ():Promise<ProgressDomains> => call('progress_domains',undefined,sampleDomains as unknown as ProgressDomains);
+export const progress_domains = (query:DomainQuery):Promise<ProgressDomains> => call('progress_domains',{query},sampleDomains as unknown as ProgressDomains);
 export const profile = ():Promise<ProfileView> => call('profile',undefined,sampleProfile as unknown as ProfileView);
 export const training = (date?:string):Promise<TrainingView> => call('training',{date},sampleTraining as unknown as TrainingView);
 export const workout = (id:string):Promise<WorkoutView> => {
@@ -115,9 +118,19 @@ export const workout = (id:string):Promise<WorkoutView> => {
  const history={...sampleStrengthWorkoutHistory,...sampleOtherWorkouts} as unknown as Record<string,WorkoutView>;
  const listed=sampleTraining.workouts.find(a=>a.id===id);
  // Other listed preview activities keep their own summary, never a run's charts.
- const summaryOnly=listed?{summary:listed,recoveryHours:null,stats:[],route:[],heartRate:[],zoneFloors:[],splits:[],strength:null,along:null,more:[],recorded:[],selfEvaluation:null,effects:[],vo2maxNew:null,counted:null}:null;
+ const summaryOnly=listed?{summary:listed,recoveryHours:null,stats:[],route:[],heartRate:[],zoneFloors:[],splits:[],strength:null,along:null,more:[],recorded:[],selfEvaluation:null,effects:[],vo2maxNew:null,counted:null,map:null}:null;
  const value=id===sampleStrengthWorkout.summary.id?sampleStrengthWorkout:id===sampleWorkout.summary.id?sampleWorkout:Object.hasOwn(history,id)?history[id]:summaryOnly;
- return value?Promise.resolve(copy(value as unknown as WorkoutView)):Promise.reject(new Error('No preview workout for this ID'));
+ if(!value)return Promise.reject(new Error('No preview workout for this ID'));
+ const view=copy(value as unknown as WorkoutView);
+ return Promise.resolve(previewSettings.streetMaps?view:{...view,map:null});
+};
+// The route card's street map: the core downloads the workout's area once if needed and draws the card once.
+export const route_map = async (id:string):Promise<RouteMapView|null> => {
+ if(isTauri())return invoke<RouteMapView|null>('route_map',{id});
+ if(!previewSettings.streetMaps || id!==sampleWorkout.summary.id)return null;
+ // The preview's drawn sample, in its own chunk: only a card still waiting for its map loads it.
+ const drawn=(await import('./sample/workoutMap.json')).default as unknown as RouteMapView;
+ return {...copy(drawn),state:'ready'};
 };
 export const strength = (date?:string):Promise<StrengthView|null> => call('strength',{date},sampleStrength as unknown as StrengthView);
 // One explicit Garmin read of a workout's sets; navigation never calls it.
@@ -125,10 +138,11 @@ export const refresh_strength = (id:string):Promise<StrengthSession|null> => isT
 export const health = (date?:string):Promise<HealthView> => isTauri()?invoke<HealthView>('health',{date}):Promise.resolve({...copy(sampleHealth as unknown as HealthView),...(date?{date}:{}),journalEnabled:previewSettings.journalEnabled});
 export const heart_rate_day = (date:string):Promise<HeartRateDay> => isTauri()?invoke<HeartRateDay>('heart_rate_day',{date}):Promise.resolve({...((sampleHealth as unknown as HealthView).heartRateDay),date});
 // An explicit open of a past day or an older workout; navigation prefetch never calls these.
-export const fetch_day_detail = (date:string,scope:'sleep'|'day'):Promise<void> => isTauri()?invoke<void>('fetch_day_detail',{date,scope}):Promise.resolve();
+export const fetch_day_detail = (date:string,scope:'sleep'|'day'|'stress'):Promise<void> => isTauri()?invoke<void>('fetch_day_detail',{date,scope}):Promise.resolve();
 export const fetch_workout_detail = (id:string):Promise<void> => isTauri()?invoke<void>('fetch_workout_detail',{id}):Promise.resolve();
 export const checkin = (weekStart?:string):Promise<CheckinView> => call('checkin',{weekStart},sampleCheckin as unknown as CheckinView);
 export const trend = (query:TrendQuery):Promise<TrendView> => isTauri()?invoke<TrendView>('trend',{query}):Promise.resolve().then(()=>sampleTrend(query));
+export const stress_month = (month:string):Promise<StressMonth> => isTauri()?invoke<StressMonth>('stress_month',{month}):Promise.resolve().then(()=>sampleStressMonth(month));
 // The preview keeps local changes in memory; only the Rust core applies the plan rules.
 let previewBoard:PlanBoard = copy(sampleBoard as unknown as PlanBoard);
 export const plan_board = (date?:string):Promise<PlanBoard> => call('plan_board',{date},previewBoard);

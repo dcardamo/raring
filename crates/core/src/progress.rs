@@ -428,18 +428,34 @@ pub fn milestone_archive(store: &Store, today: NaiveDate, now: DateTime<Utc>) ->
     Ok(present(store, local::sync_milestones(store, &evidence, today)?, true, &set_reps(&evidence)))
 }
 
-const DOMAIN_WEEKS: i64 = 12;
+/// The most weeks and months one domain view reads: two years of weeks, ten of months.
+const MAX_WEEKS: u32 = 104;
+const MAX_MONTHS: u32 = 120;
 
-/// Weeks and months for Progress's Cardio, Strength and Long-term.
-pub fn domains(store: &Store, today: NaiveDate, now: DateTime<Utc>) -> ProgressDomains {
+/// Weeks and months for Progress's Cardio, Strength and Long-term, each
+/// ending with the week or month the query names.
+pub fn domains(store: &Store, today: NaiveDate, now: DateTime<Utc>, query: &DomainQuery) -> crate::Result<ProgressDomains> {
+    let earliest = NaiveDate::from_ymd_opt(1990, 1, 1).unwrap();
+    let anchor = |end: &Option<String>| match end {
+        None => Ok(today),
+        Some(end) => NaiveDate::parse_from_str(end, "%Y-%m-%d")
+            .ok()
+            .filter(|d| (earliest..=today).contains(d))
+            .ok_or(crate::Error::InvalidLocal("progress date must be between 1990 and today")),
+    };
     let local = local::load(store);
     let wk = plan::week_starts_on(store);
     let this_week = plan::week_start(today, wk);
+    let last_week = plan::week_start(anchor(&query.weeks_end)?, wk);
+    let first_week = last_week - Duration::days(7 * (i64::from(query.weeks.clamp(1, MAX_WEEKS)) - 1));
+    let last_month = month_start(anchor(&query.months_end)?);
+    let month_count = query.months.clamp(1, MAX_MONTHS);
+    let first_month = last_month - Months::new(month_count - 1);
     let history = store.cursor("listed:lo").and_then(|d| NaiveDate::parse_from_str(&d, "%Y-%m-%d").ok());
-    let vo2 = trends::daily(store, TrendMetric::Vo2max, this_week - Duration::days(7 * DOMAIN_WEEKS) - Duration::days(400), today);
-    let weeks = (0..DOMAIN_WEEKS)
-        .rev()
-        .map(|i| this_week - Duration::days(7 * i))
+    let vo2 = trends::daily(store, TrendMetric::Vo2max, first_week.min(first_month), today);
+    let weeks = first_week
+        .iter_weeks()
+        .take_while(|w| *w <= last_week)
         .filter(|w| history.is_some_and(|h| *w + Duration::days(6) >= h))
         .map(|w| {
             let board = ledger::board_with(store, &local, w, today, now);
@@ -466,16 +482,15 @@ pub fn domains(store: &Store, today: NaiveDate, now: DateTime<Utc>) -> ProgressD
             }
         })
         .collect();
-    let first_month = month_start(today) - Months::new(11);
-    let span_from = first_month;
-    let acts = activities(store, span_from, today);
-    let read = |m| trends::daily(store, m, span_from, today);
+    let span_to = month_end(last_month).min(today);
+    let acts = activities(store, first_month, span_to);
+    let read = |m| trends::daily(store, m, first_month, span_to);
     let (rhr, hrv, fa) = (read(TrendMetric::RestingHr), read(TrendMetric::Hrv), read(TrendMetric::FitnessAge));
     let avg = |series: &BTreeMap<NaiveDate, f64>, a: NaiveDate, b: NaiveDate| {
         let v: Vec<f64> = series.range(a..=b).map(|(_, v)| *v).collect();
         (!v.is_empty()).then(|| v.iter().sum::<f64>() / v.len() as f64)
     };
-    let months = (0..12)
+    let months = (0..month_count)
         .map(|i| {
             let m = first_month + Months::new(i);
             let end = month_end(m).min(today);
@@ -490,10 +505,14 @@ pub fn domains(store: &Store, today: NaiveDate, now: DateTime<Utc>) -> ProgressD
             }
         })
         .collect();
-    ProgressDomains {
+    Ok(ProgressDomains {
         today: today.to_string(),
         goals: ledger::board_with(store, &local, today, today, now).goals.map(|g| g.targets),
+        weeks_from: first_week.to_string(),
+        weeks_to: (last_week + Duration::days(6)).to_string(),
         weeks,
+        months_from: first_month.to_string(),
+        months_to: month_end(last_month).to_string(),
         months,
-    }
+    })
 }

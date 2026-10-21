@@ -138,7 +138,6 @@ button:disabled{cursor:default}
 .left-item .excluded{flex:none;font-size:12px;color:var(--text2)}
 .left-item .small-edit{flex:none;min-height:36px;padding:6px 10px;border-radius:11px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text);font:600 12px Inter}
 .link-row{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:44px;margin-top:6px;background:none;border:0;border-top:1px solid var(--line);color:var(--text);font:600 13px Inter;padding:8px 0 0}
-.end-note{text-align:center;color:var(--text2);font-size:12px;margin:18px 0 8px}
 @container(max-width:340px){.week-card .wk2{grid-template-columns:1fr}}
 .sleep-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;margin:12px 0 16px;border:1px solid var(--line);border-radius:var(--radius-control);background:var(--bg);max-width:420px}
 .sleep-tabs button{min-height:44px;border-radius:var(--radius-small);border:0;background:none;color:var(--text2);font:600 13px Inter}

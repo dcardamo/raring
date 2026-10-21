@@ -718,6 +718,26 @@ pub(crate) fn sscore(v: &Value) -> Option<f64> {
         ],
     )
 }
+/// Garmin's Sleep Score with Garmin's word for it (Excellent, Good, Fair,
+/// Poor) when sent, otherwise the word for its band. The tone follows the
+/// bands (Rules: Chart colours).
+fn sleep_gauge(raw: &Value) -> Option<Gauge> {
+    let score = sscore(raw)?;
+    let word = string(sleep(raw), &[&["sleepScores", "overall", "qualifierKey"]])
+        .map(|q| label(Some(q)))
+        .filter(|w| !w.is_empty())
+        .unwrap_or_else(|| {
+            if score >= 80. {
+                "Good"
+            } else if score >= 60. {
+                "Fair"
+            } else {
+                "Poor"
+            }
+            .into()
+        });
+    Some(gauge(score, 100., &word, rules::score(score), None))
+}
 fn current_rscore(v: &Value) -> Option<f64> {
     num(readiness(v), &[&["score"], &["trainingReadinessScore"]])
 }
@@ -857,9 +877,12 @@ pub(crate) fn acute(v: &Value) -> Option<f64> {
         )
     })
 }
+/// Garmin's optimal acute-load range. Training Status sends it as the
+/// chronic-load bounds (`minTrainingLoadChronic`, `maxTrainingLoadChronic`),
+/// the range its `acwrStatus` rates OPTIMAL.
 fn band(v: &Value) -> Option<[f64; 2]> {
     let nested = &training_device(v)["acuteTrainingLoadDTO"];
-    let low = num(nested, &[&["minOptimalLoad"], &["optimalRangeMin"]]).or_else(|| {
+    let low = num(nested, &[&["minTrainingLoadChronic"], &["minOptimalLoad"], &["optimalRangeMin"]]).or_else(|| {
         num(
             v,
             &[
@@ -869,7 +892,7 @@ fn band(v: &Value) -> Option<[f64; 2]> {
             ],
         )
     })?;
-    let high = num(nested, &[&["maxOptimalLoad"], &["optimalRangeMax"]]).or_else(|| {
+    let high = num(nested, &[&["maxTrainingLoadChronic"], &["maxOptimalLoad"], &["optimalRangeMax"]]).or_else(|| {
         num(
             v,
             &[
@@ -880,6 +903,30 @@ fn band(v: &Value) -> Option<[f64; 2]> {
         )
     })?;
     Some([low, high])
+}
+/// Acute load on a scale with Garmin's optimal range as its band, as Today
+/// and Training draw it: Low, Optimal or High against that range.
+fn acute_gauge(training: &Value) -> Option<Gauge> {
+    let amount = acute(training)?;
+    let band = band(training);
+    Some(gauge(
+        amount,
+        // A round scale end, so the bar's last tick is a tidy number.
+        ((amount * 1.3).max(band.map(|b| b[1] * 1.2).unwrap_or(1000.)) / 100.).ceil() * 100.,
+        match band {
+            Some([lo, _]) if amount < lo => "Low",
+            Some([_, hi]) if amount > hi => "High",
+            Some(_) => "Optimal",
+            None => "",
+        },
+        match band {
+            Some([lo, hi]) if amount >= lo && amount <= hi => Tone::Good,
+            Some([_, hi]) if amount > hi => Tone::Poor,
+            Some(_) => Tone::Fair,
+            None => Tone::Neutral,
+        },
+        band,
+    ))
 }
 /// Garmin's rating as a tone. Without a rating the factor stays neutral:
 /// Raring doesn't rate Garmin's percentages itself.
@@ -1061,6 +1108,7 @@ pub(crate) fn activity(store: &Store, id: &str) -> Option<ActivityCard> {
             .zip(v.number(&["vigorousIntensityMinutes"]))
             .filter(|(m, g)| *m >= 0. && *g >= 0.)
             .map(|(m, g)| m + 2. * g),
+        vigorous_min: v.number(&["vigorousIntensityMinutes"]).filter(|g| *g >= 0.),
     })
 }
 /// Stored recordings older than one already shown, newest first. The sport
@@ -1111,11 +1159,16 @@ fn activities(store: &Store, since: &str) -> Vec<ActivityCard> {
         .filter_map(|id| activity(store, id))
         .collect()
 }
-pub(crate) fn age(store: &Store, date: &str) -> FitnessAgeCard {
-    let (recorded_on, v) = store
+/// Garmin's Fitness Age estimate for `date`: that day's, else the latest before it.
+fn fitness_age_row(store: &Store, date: &str) -> Option<(String, Value)> {
+    store
         .get("fitness_age", date)
-        .map(|v| (Some(date.to_owned()), v))
-        .or_else(|| store.history("fitness_age", date, 1).pop().map(|(d, v)| (Some(d), v)))
+        .map(|v| (date.to_owned(), v))
+        .or_else(|| store.history("fitness_age", date, 1).pop())
+}
+pub(crate) fn age(store: &Store, date: &str) -> FitnessAgeCard {
+    let (recorded_on, v) = fitness_age_row(store, date)
+        .map(|(d, v)| (Some(d), v))
         .unwrap_or((None, Value::Null));
     let fitness_age = num(&v, &[&["fitnessAge"], &["fitnessAgeData", "fitnessAge"]]);
     let trend: Vec<Option<f64>> = (0..12)
@@ -1189,8 +1242,9 @@ fn garmin_tone(status: &str) -> Tone {
     }
 }
 /// One night's reading against its usual range: within, or the difference
-/// from the range's middle (Rules: Night vitals on Today).
-fn night_reading(value: Option<f64>, unit: &str, usual: Option<[f64; 2]>, source: VitalRangeSource, calibrating: bool, higher_is_worse: bool) -> NightReading {
+/// from the range's middle (Rules: Night vitals on Today). Toned like
+/// Health's vitals: good inside the range, fair outside it either way.
+fn night_reading(value: Option<f64>, unit: &str, usual: Option<[f64; 2]>, source: VitalRangeSource, calibrating: bool) -> NightReading {
     let usual = usual.filter(|_| !calibrating);
     let (state, delta) = match (value, usual) {
         _ if calibrating => (UsualState::Calibrating, None),
@@ -1199,7 +1253,6 @@ fn night_reading(value: Option<f64>, unit: &str, usual: Option<[f64; 2]>, source
         (Some(_), Some(_)) => (UsualState::Within, None),
         _ => (UsualState::Unset, None),
     };
-    let unwelcome = if higher_is_worse { state == UsualState::Above } else { state == UsualState::Below };
     NightReading {
         value,
         unit: unit.into(),
@@ -1207,7 +1260,11 @@ fn night_reading(value: Option<f64>, unit: &str, usual: Option<[f64; 2]>, source
         range_source: if usual.is_some() { source } else { VitalRangeSource::None },
         state,
         delta,
-        tone: if unwelcome { Tone::Fair } else { Tone::Neutral },
+        tone: match state {
+            UsualState::Within => Tone::Good,
+            UsualState::Above | UsualState::Below => Tone::Fair,
+            UsualState::Unset | UsualState::Calibrating => Tone::Neutral,
+        },
     }
 }
 /// Last night's Sleep HR and HRV. Sleep HR is Health Status's HR with its
@@ -1218,11 +1275,11 @@ fn night_vitals(store: &Store, date: &str, vitals: &VitalsCard) -> NightVitals {
     let metric = health_metric(store, VitalKind::RestingHr, date);
     let sleep_hr = if let Some(m) = metric {
         let calibrating = m["status"].as_str() == Some("ONBOARDING");
-        night_reading(finite_number(&m["value"]), "bpm", garmin_range(&m), VitalRangeSource::Garmin, calibrating, true)
+        night_reading(finite_number(&m["value"]), "bpm", garmin_range(&m), VitalRangeSource::Garmin, calibrating)
     } else {
         let night = |d: &str| sleep_row(store, d).and_then(|v| night_value(&v, Night::HeartRate));
         let history: Vec<f64> = (0..30).filter_map(|i| night(&date_sub(date, i))).collect();
-        night_reading(night(date), "bpm", rules::normal(&history), VitalRangeSource::Raring, false, true)
+        night_reading(night(date), "bpm", rules::normal(&history), VitalRangeSource::Raring, false)
     };
     let hrv = vitals.readings.iter().find(|r| r.kind == VitalKind::Hrv);
     let hrv = night_reading(
@@ -1231,7 +1288,6 @@ fn night_vitals(store: &Store, date: &str, vitals: &VitalsCard) -> NightVitals {
         hrv.and_then(|r| r.normal),
         hrv.map_or(VitalRangeSource::None, |r| r.range_source),
         hrv.is_some_and(|r| r.status.as_deref() == Some("ONBOARDING")),
-        false,
     );
     NightVitals { sleep_hr, hrv }
 }
@@ -1470,10 +1526,11 @@ fn utc_millis(value: &Value) -> Option<i64> {
         return Some(if n.abs() < 100_000_000_000 { n * 1000 } else { n });
     }
     let text = value.as_str()?;
+    // List pages write "2026-10-15 16:13:57"; details use a T.
     chrono::DateTime::parse_from_rfc3339(text)
         .map(|d| d.timestamp_millis())
         .ok()
-        .or_else(|| NaiveDateTime::parse_from_str(text, "%Y-%m-%dT%H:%M:%S%.f")
+        .or_else(|| NaiveDateTime::parse_from_str(&text.replacen(' ', "T", 1), "%Y-%m-%dT%H:%M:%S%.f")
             .ok().map(|d| d.and_utc().timestamp_millis()))
 }
 fn local_millis(v: &Value, field: &str) -> Option<i64> {
@@ -1485,6 +1542,27 @@ fn clip_elapsed(from: i64, to: i64, start: i64, duration_min: f64) -> Option<[f6
     let left = ((from - start) as f64 / 60_000.).max(0.);
     let right = ((to - start) as f64 / 60_000.).min(duration_min);
     (right > left).then_some([left, right])
+}
+
+/// Recorded activities that started on `date` or the day before, as elapsed
+/// minutes from `start` (the day's UTC start) clipped to the day. Without a
+/// GMT start, only a known constant source offset can place a local start.
+fn activity_ranges(store: &Store, date: &str, start: i64, duration_min: f64, offset: Option<i64>) -> Vec<[f64; 2]> {
+    let mut ranges = Vec::new();
+    for (id, _) in store.activities_between(&date_sub(date, 1), date) {
+        let Some(a) = activity(store, &id) else { continue };
+        let payload = activity_payload(store, &id);
+        let from = payload.as_ref().and_then(|p| {
+            [&p.detail["summaryDTO"]["startTimeGMT"], &p.detail["startTimeGMT"],
+             &p.listed["summaryDTO"]["startTimeGMT"], &p.listed["startTimeGMT"]]
+                .iter().find_map(|v| utc_millis(v))
+        }).or_else(|| offset.and_then(|zone| NaiveDateTime::parse_from_str(&a.start_local, "%Y-%m-%dT%H:%M:%S%.f")
+            .ok().map(|t| t.and_utc().timestamp_millis()-zone)));
+        if let Some(range) = from.and_then(|from| clip_elapsed(from, from + (a.duration_s * 1000.) as i64, start, duration_min)) {
+            ranges.push(range);
+        }
+    }
+    ranges
 }
 
 pub fn heart_rate_day(store: &Store, date: &str) -> HeartRateDay {
@@ -1545,7 +1623,7 @@ pub fn heart_rate_day(store: &Store, date: &str) -> HeartRateDay {
         }
     }
     let mut sleep_intervals = Vec::new();
-    let mut activities = Vec::new();
+    let mut activities = vec![];
     if let Some(start) = start {
         for wake_day in [date.to_owned(), date_sub(date, -1)] {
             let Some(record) = sleep_row(store, &wake_day) else { continue };
@@ -1557,19 +1635,7 @@ pub fn heart_rate_day(store: &Store, date: &str) -> HeartRateDay {
                 sleep_intervals.push(range);
             }
         }
-        for (id, _) in store.activities_between(&date_sub(date, 1), date) {
-            let Some(a) = activity(store, &id) else { continue };
-            let payload = activity_payload(store, &id);
-            let from = payload.as_ref().and_then(|p| {
-                [&p.detail["summaryDTO"]["startTimeGMT"], &p.detail["startTimeGMT"],
-                 &p.listed["summaryDTO"]["startTimeGMT"], &p.listed["startTimeGMT"]]
-                    .iter().find_map(|v| utc_millis(v))
-            }).or_else(|| offset.and_then(|zone| NaiveDateTime::parse_from_str(&a.start_local, "%Y-%m-%dT%H:%M:%S%.f")
-                .ok().map(|t| t.and_utc().timestamp_millis()-zone)));
-            if let Some(range) = from.and_then(|from| clip_elapsed(from, from + (a.duration_s * 1000.) as i64, start, duration_min)) {
-                activities.push(range);
-            }
-        }
+        activities = activity_ranges(store, date, start, duration_min, offset);
     }
     HeartRateDay {
         date: date.into(),
@@ -1589,11 +1655,11 @@ pub fn stress(store: &Store, date: &str) -> StressCard {
     let level = average.map(stress_level);
     let qualifier =
         string(&summary, &[&["stressQualifier"]]).filter(|q| !q.is_empty() && q != "UNKNOWN");
-    let tone = match qualifier.as_deref() {
-        Some("CALM" | "BALANCED") => Tone::Good,
-        Some("STRESSFUL") => Tone::Fair,
-        Some("VERY_STRESSFUL") => Tone::Poor,
-        _ => match level {
+    let tone = match qualifier.as_deref().and_then(crate::stress::coverage) {
+        Some(crate::stress::Coverage::Day(word)) => word.tone(),
+        // An awake-only word doesn't rate the whole day, as on the calendar.
+        Some(_) => Tone::Neutral,
+        None => match level {
             Some(StressLevel::Rest | StressLevel::Low) => Tone::Good,
             Some(StressLevel::Medium) => Tone::Fair,
             Some(StressLevel::High) => Tone::Poor,
@@ -1601,6 +1667,18 @@ pub fn stress(store: &Store, date: &str) -> StressCard {
         },
     };
     let (timeline, active) = stress_timeline(&raw);
+    let workouts = utc_millis(&raw["startTimestampGMT"])
+        .map(|start| {
+            // Local-only activity times need the day's offset, unless a clock change moves it.
+            let offset = local_millis(&raw, "startTimestampLocal").map(|local| local - start).filter(|zone| {
+                match (utc_millis(&raw["endTimestampGMT"]), local_millis(&raw, "endTimestampLocal")) {
+                    (Some(end), Some(local)) => local - end == *zone,
+                    _ => true,
+                }
+            });
+            activity_ranges(store, date, start, 1440., offset)
+        })
+        .unwrap_or_default();
     let midnight = NaiveDate::parse_from_str(date, "%Y-%m-%d")
         .ok()
         .and_then(|d| d.and_hms_opt(0, 0, 0));
@@ -1640,6 +1718,7 @@ pub fn stress(store: &Store, date: &str) -> StressCard {
         timeline,
         active,
         sleep: asleep,
+        workouts,
         active_s: num(&summary, &[&["activityStressDuration"]]).filter(|s| *s >= 0.),
         time,
         trend: (0..30)
@@ -1919,7 +1998,6 @@ pub fn today_at_calendar(store: &Store, date: &str, now: DateTime<FixedOffset>, 
     // The factor Garmin rates worst, its percentage breaking ties; unrated
     // factors never count.
     let biggest_drag = rules::limiting_factor(&factors).map(|f| f.name.clone());
-    let load = acute(&t);
     let b = store.get("battery", date).unwrap_or(Value::Null);
     let b = b.as_array().and_then(|a| a.first()).unwrap_or(&b);
     let summary = store.get("summary", date).unwrap_or(Value::Null);
@@ -2002,35 +2080,8 @@ pub fn today_at_calendar(store: &Store, date: &str, now: DateTime<FixedOffset>, 
                 None,
             )
         }),
-        sleep: sscore(&s).map(|v| {
-            gauge(
-                v,
-                100.,
-                if v >= 80. {
-                    "Good"
-                } else if v >= 60. {
-                    "Fair"
-                } else {
-                    "Poor"
-                },
-                rules::score(v),
-                None,
-            )
-        }),
-        load: load.map(|v| {
-            gauge(
-                v,
-                (v * 1.3).max(band(&t).map(|b| b[1] * 1.2).unwrap_or(1000.)),
-                "Acute load",
-                match band(&t) {
-                    Some([lo, hi]) if v >= lo && v <= hi => Tone::Good,
-                    Some([_, hi]) if v > hi => Tone::Poor,
-                    Some(_) => Tone::Fair,
-                    None => Tone::Neutral,
-                },
-                band(&t),
-            )
-        }),
+        sleep: sleep_gauge(&s),
+        load: acute_gauge(&t),
         headline,
         factors,
         readiness_why: None,
@@ -2092,6 +2143,7 @@ pub fn today_at_calendar(store: &Store, date: &str, now: DateTime<FixedOffset>, 
         adapt: None,
         day: None,
         night_vitals: None,
+        fitness: None,
     };
     let night_phase = matches!(view.focus.phase, DayPhase::Evening | DayPhase::WindDown | DayPhase::LateNight);
     if !night_phase && !view.focus.sleep_missing {
@@ -2118,7 +2170,20 @@ pub(crate) fn detail_kinds(part: DayDetailPart) -> &'static [&'static str] {
         DayDetailPart::Sleep => &["sleep", "hrv"],
         DayDetailPart::Stress => &["stress", "summary"],
         DayDetailPart::Vitals => &["health_status"],
+        DayDetailPart::FitnessAge => &["fitness_age"],
         DayDetailPart::Workout => &["activity", "splits", "zones", "details"],
+    }
+}
+/// An opened past Health day's parts, in order: its Fitness Age, then its stress and vitals.
+const HEALTH_DAY: &[DayDetailPart] = &[DayDetailPart::FitnessAge, DayDetailPart::Stress, DayDetailPart::Vitals];
+/// The parts an explicit open of a page scope fetches: a night (`sleep`), a
+/// Health day (`day`) or a day's stress detail (`stress`), which shows no Fitness Age.
+pub fn day_detail_parts(scope: &str) -> Option<&'static [DayDetailPart]> {
+    match scope {
+        "sleep" => Some(&[DayDetailPart::Sleep]),
+        "day" => Some(HEALTH_DAY),
+        "stress" => Some(&HEALTH_DAY[1..]),
+        _ => None,
     }
 }
 /// A row that is absent was never read on this phone; a stored null is
@@ -2155,7 +2220,6 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
     // Only the shown night is read whole: its overnight charts draw its samples.
     let raw = store.get("sleep", date).unwrap_or(Value::Null);
     let v = sleep(&raw);
-    let score = sscore(&raw);
     let asleep = asleep_min(&raw);
     let need = sleep_need(&raw);
     let (naps, naps_state) = crate::naps_journal::naps(store, date);
@@ -2192,21 +2256,7 @@ pub fn sleep_view(store: &Store, date: &str) -> SleepView {
         naps_state,
         start_local: local_time(v, &["sleepStartTimestampLocal"]),
         end_local: local_time(v, &["sleepEndTimestampLocal"]),
-        score: score.map(|v| {
-            gauge(
-                v,
-                100.,
-                if v >= 80. {
-                    "Good"
-                } else if v >= 60. {
-                    "Fair"
-                } else {
-                    "Poor"
-                },
-                rules::score(v),
-                None,
-            )
-        }),
+        score: sleep_gauge(&raw),
         asleep_min: asleep,
         need_min: need,
         headline,
@@ -2435,26 +2485,7 @@ pub fn training_at_calendar(store: &Store, date: &str, calendar: NaiveDate, now:
     .collect();
     let (race_state, race) = planned::race(store, &calendar.to_string(), now);
     let mut view = TrainingView {
-        acute: load.map(|amount| {
-            gauge(
-                amount,
-                // A round scale end, so the bar's last tick is a tidy number.
-                ((amount * 1.3).max(band(&v).map(|b| b[1] * 1.2).unwrap_or(1000.)) / 100.).ceil() * 100.,
-                match band(&v) {
-                    Some([lo, _]) if amount < lo => "Low",
-                    Some([_, hi]) if amount > hi => "High",
-                    Some(_) => "Optimal",
-                    None => "",
-                },
-                match band(&v) {
-                    Some([lo, hi]) if amount >= lo && amount <= hi => Tone::Good,
-                    Some([_, hi]) if amount > hi => Tone::Poor,
-                    Some(_) => Tone::Fair,
-                    None => Tone::Neutral,
-                },
-                band(&v),
-            )
-        }),
+        acute: acute_gauge(&v),
         status: status.clone().map(|s| label(Some(s))),
         status_tone: status
             .as_ref()
@@ -2712,7 +2743,9 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
         .get("max_metrics", &day)
         .and_then(|m| vo2(&m))
         .filter(|today| historical_vo2(store, &date_sub(&day, 1)) != Some(*today));
+    let map = crate::maps::stored(store, id, &route);
     Some(WorkoutView {
+        map,
         counted: None,
         along,
         more,
@@ -2829,7 +2862,7 @@ pub fn strength(store: &Store, date: &str) -> Option<StrengthView> {
         .collect();
     crate::strength::history(store, date, workouts)
 }
-fn body_weight(store: &Store, date: &str) -> Option<BodyWeightCard> {
+pub(crate) fn body_weight(store: &Store, date: &str) -> Option<BodyWeightCard> {
     let end = NaiveDate::parse_from_str(date, "%Y-%m-%d").ok()?;
     let start = end - Duration::days(83);
     let rows = store.history("weight", date, 1000);
@@ -2888,12 +2921,10 @@ fn body_weight(store: &Store, date: &str) -> Option<BodyWeightCard> {
 pub fn health(store: &Store, date: &str) -> HealthView {
     health_at_calendar(store, date, date)
 }
-/// Live Health retains its sleep-day vitals while the private journal follows
-/// the actual local calendar day, as planned Training does.
-pub fn health_at_calendar(store: &Store, date: &str, calendar: &str) -> HealthView {
-    let vitals = vitals(store, date);
-    let body_weight = body_weight(store, date);
-    let v = store.get("fitness_age", date).unwrap_or(Value::Null);
+/// Garmin's Fitness Age drivers on `date` and the one that would help most
+/// (the biggest lever), from the estimate the Fitness Age card shows.
+pub(crate) fn drivers(store: &Store, date: &str, body_weight: Option<&BodyWeightCard>) -> (Vec<Driver>, Option<Lever>) {
+    let v = fitness_age_row(store, date).map_or(Value::Null, |(_, v)| v);
     let drivers: Vec<Driver> = [
         ("vo2max", "VO2max", "ml/kg/min"),
         ("restingHr", "Resting HR", "bpm"),
@@ -2920,7 +2951,7 @@ pub fn health_at_calendar(store: &Store, date: &str, calendar: &str) -> HealthVi
             .or_else(|| {
                 // A weigh-in can supply the displayed driver, not Garmin's target or age estimate.
                 // An old reading stays on the dated tile, not a current driver.
-                let recent = body_weight.as_ref().filter(|w| {
+                let recent = body_weight.filter(|w| {
                     NaiveDate::parse_from_str(date, "%Y-%m-%d").ok()
                         .zip(NaiveDate::parse_from_str(&w.measured_on, "%Y-%m-%d").ok())
                         .is_some_and(|(today, measured)| (0..=30).contains(&(today - measured).num_days()))
@@ -2997,6 +3028,15 @@ pub fn health_at_calendar(store: &Store, date: &str, calendar: &str) -> HealthVi
         })
         .max_by(|a, b| a.0.total_cmp(&b.0))
         .map(|(_, lever)| lever);
+    (drivers, lever)
+}
+/// Live Health retains its sleep-day vitals while the private journal follows
+/// the actual local calendar day, as planned Training does; Fitness Age's
+/// vigorous window ends on the calendar day too.
+pub fn health_at_calendar(store: &Store, date: &str, calendar: &str) -> HealthView {
+    let vitals = vitals(store, date);
+    let body_weight = body_weight(store, date);
+    let (drivers, lever) = drivers(store, date, body_weight.as_ref());
     let journal_enabled = store.settings().journal_enabled;
     HealthView {
         date: date.into(),
@@ -3005,6 +3045,7 @@ pub fn health_at_calendar(store: &Store, date: &str, calendar: &str) -> HealthVi
         fitness_age: age(store, date),
         lever,
         drivers,
+        vigorous: NaiveDate::parse_from_str(calendar, "%Y-%m-%d").ok().and_then(|d| crate::fitness::window(store, d)),
         night_vitals: Some(night_vitals(store, date, &vitals)),
         vitals,
         stress: stress(store, date),
@@ -3014,7 +3055,7 @@ pub fn health_at_calendar(store: &Store, date: &str, calendar: &str) -> HealthVi
             plan::intensity(store, plan::week_start(d, plan::week_starts_on(store)), d)
         }),
         resting_hr_range: resting_hr_range(store, date),
-        detail: day_detail(store, date, &[DayDetailPart::Stress, DayDetailPart::Vitals]),
+        detail: day_detail(store, date, HEALTH_DAY),
     }
 }
 /// The resting-HR chart plots Garmin's daily resting HR, so its band comes

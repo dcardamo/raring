@@ -7,6 +7,7 @@ import type { EventWeek } from "./EventWeek";
 import type { GarminSession } from "./GarminSession";
 import type { GoalLedger } from "./GoalLedger";
 import type { GoalVersion } from "./GoalVersion";
+import type { PlanFitness } from "./PlanFitness";
 import type { PlanItem } from "./PlanItem";
 import type { PlanPrompt } from "./PlanPrompt";
 import type { PlannedState } from "./PlannedState";
@@ -59,4 +60,8 @@ eventWeek: EventWeek | null,
 /**
  * This week of an adaptive Garmin Coach plan, when one is active.
  */
-coach: CoachWeek | null, };
+coach: CoachWeek | null, 
+/**
+ * This week's vigorous minutes against Fitness Age's weekly target, read-only.
+ */
+fitness: PlanFitness | null, };

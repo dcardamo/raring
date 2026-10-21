@@ -215,7 +215,7 @@ async fn main() -> Result<()> {
         },
         Some("day-detail")=>{
             let date=args.get(1).context("day-detail YYYY-MM-DD")?;
-            let parts=[raring_core::view::DayDetailPart::Sleep,raring_core::view::DayDetailPart::Stress,raring_core::view::DayDetailPart::Vitals];
+            let parts=[raring_core::view::DayDetailPart::Sleep,raring_core::view::DayDetailPart::FitnessAge,raring_core::view::DayDetailPart::Stress,raring_core::view::DayDetailPart::Vitals];
             let (tokens,report)=core.fetch_day_detail(read_tokens()?,date,&parts).await?;
             save_tokens(&tokens)?;if report.auth_failed{bail!("sign in again")};
             if report.rate_limited{bail!("rate limited")};
@@ -230,6 +230,16 @@ async fn main() -> Result<()> {
             if let Some(error)=report.error{bail!("{error}")};
             show(&report)?;
         },
+        // A workout's street map, downloading its areas from OpenFreeMap once. With --route FILE (a JSON array of
+        // [lat, lon]) it draws a synthetic route in a scratch store instead, as for the preview's sample run.
+        Some("route-map")=>{let started=std::time::Instant::now();
+            let map=if args.get(1).is_some_and(|a|a=="--route"){
+                let route:Vec<[f64;2]>=serde_json::from_str(&fs::read_to_string(args.get(2).context("route-map --route FILE")?)?)?;
+                let store=raring_core::store::Store::open(":memory:")?;
+                store.put("activity","route","synthetic",&serde_json::json!({"activityId":"route","summaryDTO":{"startTimeLocal":"2025-01-01T00:00:00"}}))?;
+                raring_core::maps::fetch(&store,"route",&route,&raring_core::maps::Source::openfreemap(),&raring_core::maps::user_agent(env!("CARGO_PKG_VERSION"))).await?
+            }else{core.fetch_route_map(args.get(1).context("route-map ACTIVITY_ID | route-map --route FILE")?,env!("CARGO_PKG_VERSION")).await?};
+            eprintln!("route map in {} ms, {} bytes",started.elapsed().as_millis(),serde_json::to_string(&map)?.len());show(&map)?},
         Some("export")=>{let path=Path::new(args.get(1).context("export FILE.zip")?);if path.exists(){bail!("export file already exists")};core.export(path, env!("CARGO_PKG_VERSION"))?;println!("Exported {}",path.display());},
         // Validate an export's settings and, with --apply, import them for this phone's account.
         Some("import")=>{let apply=args.iter().any(|a|a=="--apply");
@@ -250,6 +260,8 @@ async fn main() -> Result<()> {
         Some("trend")=>{let current=core.current_date(now);let arg=|k:&str|args.windows(2).find(|v|v[0]==k).map(|v|v[1].clone());
             let query=raring_core::view::TrendQuery{metric:enum_arg(args.get(1).context("trend METRIC")?.clone())?,range:enum_arg(arg("--range").unwrap_or("days30".into()))?,end:arg("--date"),overlay:arg("--overlay").map(enum_arg).transpose()?,previous:args.iter().any(|a|a=="--previous"),start:arg("--start"),comparison_start:arg("--comparison-start")};
             let started=std::time::Instant::now();let view=core.trend(&query,&current).map_err(anyhow::Error::msg)?;eprintln!("trend read in {} ms",started.elapsed().as_millis());show(&view)?},
+        Some("stress-month")=>{let current=core.current_date(now);let month=args.get(1).cloned().unwrap_or_else(||current.clone());
+            show(&core.stress_month(&month,&current).map_err(anyhow::Error::msg)?)?},
         // One raw read-only request, unscrubbed: for checking an endpoint's shape locally.
         Some("fetch")=>{let kind=args.get(1).context("fetch KIND [KEY]")?;let key=args.get(2).map(String::as_str).unwrap_or("");
             let client=garmin::Client::new(read_tokens()?)?;
@@ -300,7 +312,7 @@ async fn main() -> Result<()> {
             save_tokens(&client.tokens().await)?;
             println!("Scrubbed capture at {}. Review it manually before sharing.",out.display());
         },
-        _=>bail!("usage: raring login [--import FILE] | sync [--budget N] | status | demo [--date YYYY-MM-DD] | show SCREEN [--date YYYY-MM-DD] [--at YYYY-MM-DDTHH:MM] | set-plan JSON | notifications | trend METRIC [--range days7|days30|days90|year|all|custom] [--start DATE] [--date DATE] [--overlay METRIC] [--previous] [--comparison-start DATE] | day-detail YYYY-MM-DD | workout-detail ACTIVITY_ID | fetch KIND [KEY] | capture --out DIR")
+        _=>bail!("usage: raring login [--import FILE] | sync [--budget N] | status | demo [--date YYYY-MM-DD] | show SCREEN [--date YYYY-MM-DD] [--at YYYY-MM-DDTHH:MM] | set-plan JSON | notifications | trend METRIC [--range days7|days30|days90|year|all|custom] [--start DATE] [--date DATE] [--overlay METRIC] [--previous] [--comparison-start DATE] | stress-month [YYYY-MM] | day-detail YYYY-MM-DD | workout-detail ACTIVITY_ID | route-map ACTIVITY_ID|--route FILE | fetch KIND [KEY] | capture --out DIR")
     }
     Ok(())
 }

@@ -9,6 +9,8 @@
  let timeline=$derived(heartRate?.timeline??stress?.timeline??[]);
  let ranges=$derived(heartRate?.activities??stress?.active??[]);
  let sleep=$derived(heartRate?.sleep??(stress?.sleep?[stress.sleep]:[]));
+ // Recorded workouts sit above the stress plot; Garmin's own "moving" strip stays below it.
+ let workouts=$derived(heartRate?[]:stress?.workouts??[]);
  let step=$derived(heartRate?2:3);
  let dayMinutes=$derived(heartRate?.durationMin??1440);
  let left=$derived(compact?0:26),width=$derived(W-left),top=$derived(compact?2:26),h=$derived(compact?44:120);
@@ -35,7 +37,8 @@
  let slot=$derived(Math.min(selected??latest,timeline.length-1));
  let reading=$derived(slot<0?null:timeline[slot]??null);
  let moving=$derived(slot>=0 && ranges.some(([a,b])=>slot*step>=a && slot*step<b));
- let label=$derived(slot<0?'No readings yet':`${heartRate?elapsed(slot*step)+' into the day':time(slot*step)}: ${reading!=null?heartRate?`${num(reading)} bpm`:`${num(reading)}, ${stressNames[stressLevel(reading)]}`:moving?heartRate?'activity, no reading':'active, not rated':'no reading'}`);
+ let training=$derived(slot>=0 && workouts.some(([a,b])=>slot*step>=a && slot*step<b));
+ let label=$derived(slot<0?'No readings yet':`${heartRate?elapsed(slot*step)+' into the day':time(slot*step)}: ${reading!=null?heartRate?`${num(reading)} bpm`:`${num(reading)}, ${stressNames[stressLevel(reading)]}`:training?'workout, not rated':moving?heartRate?'activity, no reading':'active, not rated':'no reading'}`);
  function key(e:KeyboardEvent){
   const last=timeline.length-1,jump=e.shiftKey?20:1;
   const next=e.key==='ArrowLeft'?slot-jump:e.key==='ArrowRight'?slot+jump:e.key==='Home'?0:e.key==='End'?last:null;
@@ -53,7 +56,7 @@
  <div class="readout" aria-live="polite">
   {#if slot>=0}<span>{heartRate?`${elapsed(slot*step)} into the day`:time(slot*step)}</span>{/if}
   {#if reading!=null}<b class="n" style:color={heartRate?colors.ink:stressColors[stressLevel(reading)]}>{num(reading)}</b><em>{heartRate?'bpm':stressNames[stressLevel(reading)]}</em>
-  {:else if moving}<em>{heartRate?'Activity · no reading':'Active · not rated'}</em>{:else if slot>=0}<em>No reading</em>{/if}
+  {:else if training}<em>Workout · not rated</em>{:else if moving}<em>{heartRate?'Activity · no reading':'Active · not rated'}</em>{:else if slot>=0}<em>No reading</em>{/if}
  </div>
 {/if}
 {#if compact}
@@ -65,6 +68,7 @@
  {#each sleep as [a,b]}<rect x={x(a)} y={top-(compact?2:8)} width={Math.max(0,x(b)-x(a))} height={h+(compact?4:8)} rx="6" fill={colors.ink} opacity=".09"/>{#if !compact}<text x={x(a)>W-60?x(a)-50:x(a)+4} y={top-12} fill={colors.ink} font-size="12">Asleep</text>{/if}{/each}
  {#if !compact}{#each heartRate?[60,100,140]:[25,50,75] as level}<line x1={left} x2={W} y1={y(level)} y2={y(level)} stroke="currentColor" opacity=".07"/><text data-thin="2" x="0" y={y(level)+4} fill="var(--text3)" font-size="11">{level}</text>{/each}{/if}
  {#each ranges as [a,b]}<rect x={x(a)} y={top+h-(compact?4:6)} width={Math.max(1.5,x(b)-x(a))} height={compact?4:6} rx="2" fill={colors.secondary} opacity=".85"/>{/each}
+ {#if !compact}{#each workouts as [a,b]}<rect class="workout" x={x(a)} y={top-6} width={Math.max(1.5,x(b)-x(a))} height="4" rx="2" fill={colors.ink} opacity=".85" data-mark="workout"/>{/each}{/if}
  {#if compact}<line x1="0" x2={W} y1={top+h+.5} y2={top+h+.5} stroke="currentColor" opacity=".12"/>{/if}
  {#each Object.entries(paths) as [level,d]}{#if d}<path {d} fill={heartRate?colors.ink:stressColors[level]} opacity=".9"/>{/if}{/each}
  {#if !compact && slot>=0}<line x1={x(slot*step+step/2)} x2={x(slot*step+step/2)} y1={top-8} y2={top+h} stroke="currentColor" opacity=".4" stroke-dasharray="2 3"/>{/if}
@@ -72,7 +76,7 @@
 {/snippet}
 {#if !compact}
  {#if heartRate && dayMinutes!==1440}<p class="axis-note">A {num(dayMinutes/60,1)}-hour day: hours count from its start</p>{/if}
- <div class="legend">{#if heartRate}<span><i style:background={colors.ink}></i>Heart rate</span>{/if}<span><i class="strip" style:background={colors.secondary}></i>{heartRate?'Activity':'Active'}</span>{#if sleep.length}<span><i style:background={colors.ink} style:opacity=".5"></i>Asleep</span>{/if}</div>
+ <div class="legend">{#if heartRate}<span><i style:background={colors.ink}></i>Heart rate</span>{/if}{#if workouts.length}<span><i class="strip" style:background={colors.ink}></i>Workout</span>{/if}<span><i class="strip" style:background={colors.secondary}></i>{heartRate?'Activity':'Active'}</span>{#if sleep.length}<span><i style:background={colors.ink} style:opacity=".5"></i>Asleep</span>{/if}</div>
 {/if}
 <style>
  svg{display:block;width:100%;height:auto;overflow:visible;font-family:Inter,sans-serif;color:var(--text)}

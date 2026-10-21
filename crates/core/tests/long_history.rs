@@ -48,8 +48,11 @@ fn three_years_of_history_reads_within_budget() {
         let p = timed(&format!("Progress {period:?}"), 500, &mut times, || core.progress(period, &day, now).unwrap());
         assert!(p.totals.activities > 0);
     }
-    let domains = timed("Progress domains", 300, &mut times, || core.progress_domains(now));
+    let domains = timed("Progress domains", 300, &mut times, || core.progress_domains(&DomainQuery::default(), now).unwrap());
     assert_eq!(domains.weeks.len(), 12);
+    let longest = DomainQuery { weeks: 52, months: 60, ..Default::default() };
+    let domains = timed("Progress domains (a year of weeks, five years of months)", 800, &mut times, || core.progress_domains(&longest, now).unwrap());
+    assert_eq!((domains.weeks.len(), domains.months.len()), (52, 60));
     let all = timed("Milestone archive", 300, &mut times, || core.milestone_archive(now).unwrap());
     assert!(!all.is_empty(), "three years of rising lifts award milestones");
     timed("Strength", 150, &mut times, || core.strength(&day));

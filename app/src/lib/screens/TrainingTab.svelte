@@ -16,6 +16,7 @@
  import WeekBars from '../components/WeekBars.svelte';
  import LaneChart from '../components/LaneChart.svelte';
  import LoadFocus from '../components/LoadFocus.svelte';
+ import LoadBar from '../components/LoadBar.svelte';
  import HistoryChart from '../components/HistoryChart.svelte';
  import BodyMap from '../components/BodyMap.svelte';
  import ActivityRow from '../components/ActivityRow.svelte';
@@ -94,10 +95,7 @@
 {#if section === 'fitness'}
  <Card title="Enough, or too much?" extra="q-load" help="acute-load">
   {#if acute}
-   <div class="load"><div><small>Acute load · Garmin</small><b class="n">{num(acute.value)}</b><span style:color={toneColor(acute.tone)}>{acute.label}</span></div>
-    <div class="lbar" role="img" aria-label={`Acute load ${num(acute.value)}${acute.band ? `; Garmin's optimal range ${acute.band[0]}–${acute.band[1]}` : ''}; scale to ${acute.max}`}>
-     {#if acute.band}<i class="band" style:left={acute.band[0] / acute.max * 100 + '%'} style:width={(acute.band[1] - acute.band[0]) / acute.max * 100 + '%'}></i>{/if}<u style:left={Math.min(100, acute.value / acute.max * 100) + '%'} style:background={toneColor(acute.tone)}></u></div>
-    <div class="lticks"><span>0</span>{#if acute.band}<span>Optimal {acute.band[0]}–{acute.band[1]}</span>{/if}<span>{acute.max}</span></div></div>
+   <LoadBar load={acute}/>
   {:else}<p class="small">Garmin hasn’t sent an acute load yet.</p>{/if}
   {#if trainingData.loadFocus.length}<h4>Load focus · last 4 weeks</h4><LoadFocus bars={trainingData.loadFocus}/>{/if}
  </Card>
@@ -168,10 +166,6 @@
  .key i{display:inline-block;width:16px}.k-line{height:2.4px;background:var(--ink)}.k-band{height:10px;background:rgba(228,232,240,.18);border-radius:2px}.k-goal{border-top:1.5px dashed var(--ink)}
  .mix{display:flex;flex-wrap:wrap;gap:6px 14px;margin:8px 0 0;font-size:12.5px;color:var(--text2)}.mix span{display:inline-flex;gap:5px;align-items:center}.mix b{color:var(--text)}
  h4{font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);margin:14px 0 6px}
- .load{display:grid;gap:6px}.load>div:first-child{display:flex;gap:10px;align-items:baseline}.load small{font-size:12px;color:var(--text2)}.load b{font-size:24px}.load span{font:600 13px Inter}
- .lbar{position:relative;height:10px;border-radius:5px;background:rgba(255,255,255,.07)}.lbar .band{position:absolute;top:0;bottom:0;background:rgba(228,232,240,.22);border-radius:5px}
- .lbar u{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border:2px solid var(--bg);border-radius:50%}
- .lticks{display:flex;flex-wrap:wrap;gap:0 8px;justify-content:space-between;font-size:11px;color:var(--text2)}
  .vo{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:0;color:var(--text);text-align:left;min-height:52px;padding:0}
  .vo small{display:block;font-size:12px;color:var(--text2)}.vo b{font-size:28px;margin-right:8px}.vo em{font:600 12px Inter;font-style:normal}.go{display:inline-flex;gap:4px;align-items:center;font:600 13px Inter;color:var(--text2)}
  .planned-race{display:flex;flex-direction:column;gap:5px}.planned-race b{font:600 17px Outfit,Inter,sans-serif}.planned-race span{color:var(--text2);font-size:13px}

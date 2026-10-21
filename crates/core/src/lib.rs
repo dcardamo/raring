@@ -4,12 +4,14 @@ pub mod day;
 pub mod lanes;
 pub mod demo;
 mod export;
+pub mod fitness;
 pub mod garmin;
 mod gear;
 pub mod import;
 pub mod lead;
 pub mod ledger;
 pub mod local;
+pub mod maps;
 pub mod notifications;
 mod naps_journal;
 pub mod phase;
@@ -23,6 +25,7 @@ pub mod settings;
 pub mod status;
 pub mod store;
 pub mod strength;
+pub mod stress;
 pub mod sync;
 pub mod trends;
 pub mod view;
@@ -50,6 +53,8 @@ pub enum Error {
     InvalidLocal(&'static str),
     #[error("status snapshot: {0}")]
     Snapshot(#[from] std::io::Error),
+    #[error("street map: {0}")]
+    Map(&'static str),
 }
 pub type Result<T> = std::result::Result<T, Error>;
 pub struct Raring {
@@ -146,6 +151,7 @@ impl Raring {
         let mut view = screens::today_at_calendar(&self.store, display_date, now.fixed_offset(), now.date_naive());
         lead::apply(&self.store, &mut view, now.date_naive(), now.fixed_offset());
         view.day = Some(day::timeline(&self.store, &view, now.date_naive(), now.fixed_offset(), day::day_minutes(now.date_naive())));
+        view.fitness = fitness::today(&self.store, &view, now.date_naive());
         view
     }
     pub fn sleep(&self, date: &str) -> view::SleepView {
@@ -218,6 +224,7 @@ impl Raring {
             lines,
             plan_item: board.items.iter().find(|p| p.recording.as_deref() == Some(id)).map(|p| p.intention.name.clone().unwrap_or_else(|| lead::sport_name(p.intention.sport).to_owned())),
             bests: local.milestones.items.iter().filter(|m| m.activity.as_deref() == Some(id) && !m.withdrawn).map(|m| m.title.clone()).collect(),
+            fitness: fitness::count(&self.store, view.summary.vigorous_min, date, now.date_naive()),
         });
         Some(view)
     }
@@ -299,6 +306,12 @@ impl Raring {
         }
         Ok((client.tokens().await, report))
     }
+    /// A workout's street map: downloads the areas its route card needs that
+    /// aren't on the phone, then draws the card once (Rules: Street maps).
+    pub async fn fetch_route_map(&self, id: &str, app_version: &str) -> Result<Option<view::RouteMapView>> {
+        let Some(workout) = screens::workout(&self.store, id) else { return Ok(None) };
+        maps::fetch(&self.store, id, &workout.route, &maps::Source::openfreemap(), &maps::user_agent(app_version)).await
+    }
     /// One explicit read of a strength workout's sets, with the updated detail.
     /// Navigation never calls this; only a person asking for a Garmin refresh does.
     pub async fn refresh_strength_sets(
@@ -319,6 +332,10 @@ impl Raring {
     /// A trend chart's points; `today` is the default last day.
     pub fn trend(&self, query: &view::TrendQuery, today: &str) -> std::result::Result<view::TrendView, String> {
         trends::trend(&self.store, query, today)
+    }
+    /// One month of the stress calendar (`month` is YYYY-MM or a date in it).
+    pub fn stress_month(&self, month: &str, today: &str) -> std::result::Result<view::StressMonth, String> {
+        stress::month(&self.store, month, today)
     }
     pub fn plan(&self, date: &str) -> view::PlanView {
         plan::view(&self.store, date)
@@ -373,9 +390,10 @@ impl Raring {
     pub fn milestone_archive(&self, now: DateTime<Local>) -> Result<Vec<view::Milestone>> {
         progress::milestone_archive(&self.store, now.date_naive(), now.with_timezone(&chrono::Utc))
     }
-    /// Progress's Cardio, Strength and Long-term views, from local data only.
-    pub fn progress_domains(&self, now: DateTime<Local>) -> view::ProgressDomains {
-        progress::domains(&self.store, now.date_naive(), now.with_timezone(&chrono::Utc))
+    /// Progress's Cardio, Strength and Long-term views for the chosen weeks and
+    /// months, from local data only.
+    pub fn progress_domains(&self, query: &view::DomainQuery, now: DateTime<Local>) -> Result<view::ProgressDomains> {
+        progress::domains(&self.store, now.date_naive(), now.with_timezone(&chrono::Utc), query)
     }
     pub fn progress(&self, period: view::Period, date: &str, now: DateTime<Local>) -> Result<view::ProgressView> {
         let anchor = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d").map_err(|_| Error::InvalidLocal("date"))?;
@@ -531,6 +549,9 @@ impl Raring {
         let previous = self.store.settings();
         let mut settings = update(&previous)?;
         self.store.set_settings(&settings)?;
+        if previous.street_maps && !settings.street_maps {
+            self.store.erase_maps()?;
+        }
         if let Err(error) = self.write_status_snapshot(Local::now(), *signed_out) {
             // Only a new status opt-in depends on publishing its cache. Never
             // restore an older settings object: all other edits, particularly
