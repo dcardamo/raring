@@ -93,12 +93,30 @@ object SyncScheduler {
 class SyncWorker(context: Context, params: WorkerParameters): CoroutineWorker(context, params) {
     companion object {
         private const val TAG = "RaringSync"
-        private const val CHANNEL = "raring"
+        private data class Channel(val id: String, val name: String, val description: String, val category: String)
+        // One Android channel per kind, so each can be silenced or made louder in Android Settings.
+        private val channels = listOf(
+            Channel("readiness", "Morning readiness", "Last night's sleep and readiness once they sync.", NotificationCompat.CATEGORY_STATUS),
+            Channel("review", "Weekly check-in", "Monday's review of the week before.", NotificationCompat.CATEGORY_RECOMMENDATION),
+            Channel("changes", "Health changes", "VO\u2082 max, Fitness Age, training status and vitals outside their ranges.", NotificationCompat.CATEGORY_STATUS),
+            Channel("wind-down", "Wind-down reminder", "When tonight's wind-down starts.", NotificationCompat.CATEGORY_REMINDER),
+            Channel("account", "Garmin account", "When Raring needs you to sign in again.", NotificationCompat.CATEGORY_ERROR),
+        )
+        private fun channelFor(kind: String) = channels.first { it.id == when (kind) {
+            "morning" -> "readiness"
+            "weekly" -> "review"
+            "bedtime" -> "wind-down"
+            "account" -> "account"
+            else -> "changes"
+        } }
         fun channel(context: Context) {
-            (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
-                .createNotificationChannel(NotificationChannel(CHANNEL, "Raring", NotificationManager.IMPORTANCE_DEFAULT))
+            val manager = context.getSystemService(NotificationManager::class.java)
+            for (c in channels) manager.createNotificationChannel(
+                NotificationChannel(c.id, c.name, NotificationManager.IMPORTANCE_DEFAULT).apply { description = c.description })
+            // Replaced by the per-kind channels above.
+            manager.deleteNotificationChannel("raring")
         }
-        fun notify(context: Context, id: String, title: String, body: String, target: String): Boolean {
+        fun notify(context: Context, kind: String, id: String, title: String, body: String, target: String): Boolean {
             channel(context)
             if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 Log.i(TAG, "notification permission missing")
@@ -107,9 +125,12 @@ class SyncWorker(context: Context, params: WorkerParameters): CoroutineWorker(co
             val intent = Intent(context, MainActivity::class.java).putExtra("target", target)
                 .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             val pending = PendingIntent.getActivity(context, id.hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-            val notification = NotificationCompat.Builder(context, CHANNEL)
-                .setSmallIcon(R.drawable.ic_notification).setContentTitle(title).setContentText(body)
+            val channel = channelFor(kind)
+            val notification = NotificationCompat.Builder(context, channel.id)
+                .setSmallIcon(R.drawable.ic_notification).setColor(ContextCompat.getColor(context, R.color.status_accent))
+                .setContentTitle(title).setContentText(body)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+                .setCategory(channel.category)
                 .setAutoCancel(true).setContentIntent(pending).build()
             (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(id.hashCode(), notification)
             Log.i(TAG, "notification posted: ${id.substringBefore(':')}")
@@ -135,7 +156,7 @@ class SyncWorker(context: Context, params: WorkerParameters): CoroutineWorker(co
                 if (tokens == null) {
                     AccountSession.suspendLocked(applicationContext)
                     SyncScheduler.cancel(applicationContext)
-                    notify(applicationContext, "auth-required", "Sign in to Garmin again", "Open Raring to reconnect", "today")
+                    notify(applicationContext, "account", "auth-required", "Sign in to Garmin again", "Open Raring to reconnect", "today")
                     return@withLock Result.success()
                 }
                 if (!AccountSession.active(applicationContext)) {
@@ -149,7 +170,7 @@ class SyncWorker(context: Context, params: WorkerParameters): CoroutineWorker(co
                         tokens = TokenVault.load(applicationContext) ?: return@withLock Result.failure()
                     } catch (_: Exception) {
                         SyncScheduler.cancel(applicationContext)
-                        notify(applicationContext, "auth-required", "Sign in to Garmin again", "Account identity could not be verified", "today")
+                        notify(applicationContext, "account", "auth-required", "Sign in to Garmin again", "Account identity could not be verified", "today")
                         return@withLock Result.success()
                     }
                 }
@@ -157,7 +178,7 @@ class SyncWorker(context: Context, params: WorkerParameters): CoroutineWorker(co
                 if (prepared.optBoolean("authFailed")) {
                     AccountSession.suspendLocked(applicationContext)
                     SyncScheduler.cancel(applicationContext)
-                    notify(applicationContext, "auth-required", "Sign in to Garmin again", "Open Raring to reconnect", "today")
+                    notify(applicationContext, "account", "auth-required", "Sign in to Garmin again", "Open Raring to reconnect", "today")
                     return@withLock Result.success()
                 }
                 if (prepared.has("error")) return@withLock Result.retry()
@@ -169,7 +190,7 @@ class SyncWorker(context: Context, params: WorkerParameters): CoroutineWorker(co
                 if (response.optBoolean("authFailed")) {
                     AccountSession.suspendLocked(applicationContext)
                     SyncScheduler.cancel(applicationContext)
-                    notify(applicationContext, "auth-required", "Sign in to Garmin again", "Open Raring to reconnect", "today")
+                    notify(applicationContext, "account", "auth-required", "Sign in to Garmin again", "Open Raring to reconnect", "today")
                     return@withLock Result.success()
                 }
                 // Persist a rotated token before handling partial endpoint failures.
@@ -178,7 +199,7 @@ class SyncWorker(context: Context, params: WorkerParameters): CoroutineWorker(co
                 val alerts = response.optJSONArray("notifications") ?: org.json.JSONArray()
                 for (i in 0 until alerts.length()) {
                     val alert = alerts.getJSONObject(i)
-                    if (notify(applicationContext, alert.getString("id"), alert.getString("title"), alert.getString("body"), alert.optString("target", "today"))) {
+                    if (notify(applicationContext, alert.getString("kind"), alert.getString("id"), alert.getString("title"), alert.getString("body"), alert.optString("target", "today"))) {
                         val tags = org.json.JSONArray().put(JSONObject().put("kind", alert.getString("kind"))
                             .put("tag", alert.getString("tag")).put("title", "").put("body", ""))
                         val marked = JSONObject(NativeBridge.markSent(db, tags.toString(), now))

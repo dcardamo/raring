@@ -731,9 +731,13 @@ Both widgets and the optional ongoing notification always show "As of" with
 the selected watch's upload date and time, or "As of unavailable".
 
 The notification has a separate low-importance, silent channel, no sound or
-vibration, and private lock-screen content. Collapsed: battery, stress and
-heart-rate icons and values. Expanded: battery/stress bars, phase-aware focus
-and its reason. Latest heart rate uses the current calendar day's last measured
+vibration, and private lock-screen content. It sits on Android's own
+notification surface: no card of its own, Android's notification text styles,
+so it follows the system's light or dark theme. Collapsed: battery, stress and
+heart-rate icons and values, then "As of". Expanded: the header carries "As
+of" in place of the post time; the phase-aware focus is the title, then its
+reason, then a labelled row each for Body Battery and stress (with bars) and
+heart rate (no bar). A missing reading hides its bar. Latest heart rate uses the current calendar day's last measured
 sample from the shared all-day HR parser. It remains blank without samples;
 resting/overnight heart rate is not a substitute.
 It starts off, is offered once on Today after the first successful sync, and
@@ -816,6 +820,15 @@ Sent by the phone itself.
 | Training status changed       | On sync                                      | Off     |
 | Wind-down reminder            | Wind-down time of tonight's plan (lead 30 min before bedtime, configurable) | Off     |
 | Persistent status (Android)   | Existing sync; silent, no extra Garmin requests | Off     |
+
+Each kind posts to its own Android channel (Morning readiness, Weekly
+check-in, Health changes for VO2max, Fitness Age, training status and vitals,
+Wind-down reminder, and Garmin account for sign-in), so Android Settings can
+silence one without the others. A change names the new value and the old one:
+"VO₂ max is now 44" / "Down from 45.", "Training status: Productive" / "Was
+Maintaining." (Garmin's named status; a new numeric suffix alone is no
+change). The vitals notification says how many are outside their ranges and
+names each with its usual range.
 
 The morning readiness notification opens Today, the weekly check-in the
 latest review (`#review/latest`), the bedtime reminder Sleep · Tonight

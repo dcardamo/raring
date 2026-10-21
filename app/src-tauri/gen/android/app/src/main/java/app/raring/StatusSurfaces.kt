@@ -17,6 +17,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.os.Build
 import android.util.Log
+import android.view.View
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
@@ -91,38 +92,49 @@ internal object StatusSurfaces {
             return
         }
         manager.createNotificationChannel(NotificationChannel(CHANNEL, "Status at a glance", NotificationManager.IMPORTANCE_LOW).apply {
+            description = "Silent readings and today's focus from the last watch upload."
             setSound(null, null)
             enableVibration(false)
             setShowBadge(false)
             lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
         })
-        val compact = RemoteViews(context.packageName, R.layout.status_notification_compact)
-        compact.setTextViewText(R.id.status_asof, status.asOf)
-        compact.setTextViewText(R.id.status_battery, status.battery.display)
-        compact.setTextViewText(R.id.status_stress, status.stress.display)
-        compact.setTextViewText(R.id.status_hr, status.heartRate.display)
-        val expanded = RemoteViews(context.packageName, R.layout.status_notification_expanded)
-        expanded.setTextViewText(R.id.status_asof, status.asOf)
-        expanded.setTextViewText(R.id.status_battery, status.battery.display)
-        expanded.setTextViewText(R.id.status_stress, status.stress.display)
-        expanded.setTextViewText(R.id.status_hr, status.heartRate.display)
-        expanded.setTextViewText(R.id.status_focus, status.focus)
-        expanded.setTextViewText(R.id.status_reason, status.reason)
-        expanded.setProgressBar(R.id.status_battery_bar, 100, status.battery.value?.toInt() ?: 0, false)
-        expanded.setProgressBar(R.id.status_stress_bar, 100, status.stress.value?.toInt() ?: 0, false)
-        expanded.setViewVisibility(R.id.status_battery_bar, if (status.battery.value == null) android.view.View.INVISIBLE else android.view.View.VISIBLE)
-        expanded.setViewVisibility(R.id.status_stress_bar, if (status.stress.value == null) android.view.View.INVISIBLE else android.view.View.VISIBLE)
-        // HR is a reading, not a 0–100 gauge: no invented scale.
+        val compact = statusViews(context, R.layout.status_notification_compact, status)
+        val expanded = statusViews(context, R.layout.status_notification_expanded, status)
         val notice = NotificationCompat.Builder(context, CHANNEL)
-            .setSmallIcon(R.drawable.ic_notification).setContentTitle("Raring")
-            .setContentText("${status.asOf} · ${status.focus}")
+            .setSmallIcon(R.drawable.ic_notification).setColor(ContextCompat.getColor(context, R.color.status_accent))
+            .setContentTitle(status.focus.ifEmpty { "Raring" }).setContentText(status.asOf)
+            // The post time is not the reading's time: the header names the upload instead.
+            .setShowWhen(false).setSubText(status.asOf)
             .setCustomContentView(compact).setCustomBigContentView(expanded)
             .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .setContentIntent(pending(context, status.target))
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setOngoing(true).setSilent(true).setOnlyAlertOnce(true)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setPriority(NotificationCompat.PRIORITY_LOW).build()
         manager.notify(ID, notice)
+    }
+    internal fun statusViews(context: Context, layout: Int, status: StatusSnapshot): RemoteViews {
+        val view = RemoteViews(context.packageName, layout)
+        view.setTextViewText(R.id.status_battery, status.battery.display)
+        view.setTextViewText(R.id.status_stress, status.stress.display)
+        view.setTextViewText(R.id.status_hr, status.heartRate.display)
+        if (layout == R.layout.status_notification_compact) {
+            view.setTextViewText(R.id.status_asof, status.asOf)
+            // Before Android 12 the collapsed view keeps the header, which already says it.
+            if (Build.VERSION.SDK_INT < 31) view.setViewVisibility(R.id.status_asof, View.GONE)
+            return view
+        }
+        view.setTextViewText(R.id.status_focus, status.focus)
+        view.setTextViewText(R.id.status_reason, status.reason)
+        view.setViewVisibility(R.id.status_reason, if (status.reason.isEmpty()) View.GONE else View.VISIBLE)
+        // Heart rate is a reading, not a 0–100 gauge: no invented scale. A missing reading hides
+        // its bar, since an empty track would read as zero.
+        for ((bar, metric) in listOf(R.id.status_battery_bar to status.battery, R.id.status_stress_bar to status.stress)) {
+            view.setProgressBar(bar, 100, metric.value?.toInt() ?: 0, false)
+            view.setViewVisibility(bar, if (metric.value == null) View.INVISIBLE else View.VISIBLE)
+        }
+        return view
     }
     private val renderLock = Any()
     fun suspendSession(context: Context) = synchronized(renderLock) {
