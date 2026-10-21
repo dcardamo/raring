@@ -21,6 +21,12 @@ availability on every account or watch.
 
 ## Build next
 
+In progress on branch `feat-five-followups` (worktree
+`~/.paseo/worktrees/1c8zm467/feat-five-followups`): Fitness Age compared
+with the age then (in 9), units (6), core-generated fixtures with a swim and
+a walk (8), desktop notification clicks (in 11) and naps when an old day is
+opened (approved). Move each to `docs/done.md` when it merges.
+
 ### 1. Garmin writes, starting with weight
 
 The write rules (item 21) shipped in `crates/core/src/writes.rs`, but nothing
@@ -375,8 +381,7 @@ Read-only unless noted, serialized, within the budget, notes in `.data/`.
   a light band for the workout strip if it doesn't tie a rise to a session.
 - **Re-reads**: read `fitness_age` again on a vigorous day (one request); re-read
   a workout's detail for 48 hours so a later self-evaluation is seen (only
-  details carry it, so list-only recordings show it once opened); read naps
-  when an older day is opened (naps sync only the last two days).
+  details carry it, so list-only recordings show it once opened).
 - **Older strength sets**: confirm history sync's `strength_without_sets` queue
   fills them before a person opens the workout, or leave them to Refresh from
   Garmin.
