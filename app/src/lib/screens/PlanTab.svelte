@@ -66,6 +66,8 @@
  <section class="card note"><Icon name="moon" size={18}/><div><b>Sleep timing is now an observation</b><p class="small">Your earlier asleep-on-time target is kept as a reference and compared with each night’s saved plan, without a verdict. Earlier weeks keep their results.</p><button class="secondary" onclick={() => navigate('sleep/tonight')}>Review timing</button><button class="secondary" onclick={() => act({action: 'observationExplained'})}>Got it</button></div></section>
 {/if}
 
+<div class="dashboard plan-layout">
+ <div class="plan-days">
 <div class="sec-h"><h2>Days</h2><HelpButton topic="rings"/></div>
 <section class="card days">
  <DayCells days={board.days} {selected} select={d => picked = d} coachRest={board.coach?.sessions.filter(c => c.restDay).map(c => c.date)}/>
@@ -89,7 +91,8 @@
  {#if selected >= board.today}<button class="secondary" onclick={() => openAdd({date: selected})}>Add a session</button>{/if}
  {#if garminNote}<p class="small">{garminNote}.</p>{/if}
 </section>
-
+ </div>
+ <div class="plan-support">
 {#if board.backlogPaused || board.backlog.length}
  <div class="sec-h"><h2>Left this week</h2></div>
  <section class="card">
@@ -98,17 +101,22 @@
  </section>
 {/if}
 
+<section class="events-section">
 <div class="sec-h"><h2>Events</h2><button class="link" onclick={openEvent}>Add a race or event</button></div>
 {#each board.events as e}
  <div class="card event"><span class="cd"><b class="n">{e.daysUntil}</b><small>days</small></span><span><b>{e.name}</b><small>{dateLabelIn(e.date, board.today)} · {e.source === 'garmin' ? `Garmin calendar${e.partial ? ' · later races may be missing' : ''}` : 'Saved on this phone'}</small>{#if ev && ev.event.name === e.name && ev.event.date === e.date}<small class="ev-week">{SPORT_NAMES[ev.sport]} this week: {Math.round(ev.recordedMin)} min recorded</small>{/if}</span>{#if e.id}<button class="link" aria-label={`Remove ${e.name}`} onclick={() => remove(e)}>Remove</button>{/if}</div>
 {:else}<p class="small none">No race or event yet.</p>{/each}
+</section>
+ </div>
+</div>
 <style>
+ .plan-layout{margin-top:16px}.plan-layout>div{min-width:0}.plan-layout .sec-h:first-child{margin-top:0}.plan-layout .days{margin-top:16px}.events-section{min-width:0}
  .wk-a{display:flex;gap:8px;align-items:center}
  :global(.sec-h:has(.qh)){display:flex;align-items:center;gap:8px}
  .row-item.serves{box-shadow:inset 3px 0 0 var(--fair)}.for,.clash{display:block;font:600 12px Inter;font-style:normal;color:var(--fair)}.clash{color:#BDAAFF}
  .needs{display:grid;gap:6px;margin-top:12px}
  .need{display:grid;grid-template-columns:minmax(0,1fr) 15px;gap:8px;align-items:center;width:100%;min-height:44px;padding:8px 10px;border:1px dashed rgba(255,181,71,.45);border-radius:12px;background:rgba(255,181,71,.06);color:var(--text2);font-size:13px;text-align:left}.need b{color:var(--fair);font-weight:600}
- .nr-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;align-items:center;padding:2px 2px 2px 10px;font-size:13px;color:var(--text2)}
+ .nr-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:2px 2px 2px 10px;font-size:13px;color:var(--text2)}.nr-row span{min-width:0;flex:1 1 100%}.nr-row .small-edit{white-space:normal;text-align:center}
  .coach-line{margin:10px 0 0;font-size:13px;color:var(--text2)}.coach-line span{color:#BDAAFF}.coach-line b{color:var(--text);font-weight:600}
  .row-item small.ask{color:var(--fair)}.ev-week{color:var(--fair)}
  .wk{padding:14px}.wk-h{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px}.wk-h h2{font:600 20px Outfit}.wk-h small{display:block;font-size:11.5px;color:var(--goal-sleep);margin-top:2px}
@@ -116,14 +124,14 @@
  .note{display:flex;gap:12px;align-items:flex-start}.note b{font:600 15px Outfit}.note :global(svg){color:var(--goal-sleep);flex:none;margin-top:2px}
  .sec-h{display:flex;justify-content:space-between;align-items:baseline;margin:22px 4px 0}.sec-h h2{font:600 19px Outfit}
  .days{padding:12px 10px}.agenda-h{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);margin:14px 2px 4px;padding-top:10px}.agenda-h h3{margin:0;font:600 17px Outfit;color:var(--text);text-transform:none;letter-spacing:0}
- .row-item{display:grid;grid-template-columns:32px 1fr 15px;align-items:center;gap:12px;width:100%;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.03);color:var(--text);text-align:left}
+ .row-item{display:grid;grid-template-columns:32px minmax(0,1fr) 15px;align-items:center;gap:12px;width:100%;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.03);color:var(--text);text-align:left;overflow-wrap:anywhere}
  .row-item:disabled{cursor:default}.row-item small{display:block;font:600 11px Inter;color:var(--text3)}.row-item b{display:block;font:600 15px Inter}.row-item em{display:block;font-style:normal;font-size:12px;color:var(--text2);margin-top:2px}
  .row-item.done small{color:var(--good)}.row-item.muted{opacity:.72}.row-item.garmin{border-style:dashed;border-color:rgba(164,139,255,.35)}
  .ico{width:32px;height:32px;border-radius:11px;display:grid;place-items:center;background:rgba(255,255,255,.08)}.ico.outline{background:none;border:1.5px solid var(--text3)}.done .ico{background:rgba(61,220,151,.16);color:var(--good)}.gm{font-size:20px;color:#BDAAFF;background:none}
  .empty-day{color:var(--text3);font-size:13px;margin:12px 4px}
- .left{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:14px}.left li{display:grid;grid-template-columns:10px 1fr auto;gap:8px;align-items:center}.left i{width:9px;height:9px;border-radius:50%;background:var(--c)}
+ .left{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:14px}.left li{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.left li span{flex:1 1 10em;min-width:0;overflow-wrap:anywhere}.left i{flex:none;width:9px;height:9px;border-radius:50%;background:var(--c)}.left .small-edit{white-space:normal;text-align:center}
  .link{background:none;border:0;color:var(--ink);font:600 13px Inter;min-height:40px}
- .event{display:grid;grid-template-columns:40px 1fr auto;gap:10px;align-items:center}.event b{display:block;font:600 15px Inter}.event small{display:block;font-size:12px;color:var(--text2)}
+ .event{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.event>span:nth-child(2){flex:1 1 10em;min-width:0;overflow-wrap:anywhere}.event .link{margin-left:auto;white-space:normal;text-align:right}.event b{display:block;font:600 15px Inter}.event small{display:block;font-size:12px;color:var(--text2)}
  .cd{display:grid;place-items:center;line-height:1}.cd b{font-size:20px;color:var(--fair)}.cd small{font-size:12px;color:var(--text2)}
  .none{margin:8px 4px}
 </style>
