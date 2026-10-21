@@ -12,6 +12,10 @@
     "sleepScore": 0,
     "restDays": []
   },
+  "weeksFrom": "2025-07-28",
+  "weeksTo": "2025-10-19",
+  "monthsFrom": "2024-11-01",
+  "monthsTo": "2025-10-31",
   "weeks": [
     {
       "start": "2025-07-28",

@@ -192,6 +192,7 @@
   "intensity": {
     "start": "2025-10-13",
     "end": "2025-10-19",
+    "through": "2025-10-19",
     "total": 162,
     "moderate": 62,
     "vigorous": 50,

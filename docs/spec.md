@@ -25,7 +25,9 @@ synthetic data. `design/mockup/index.html` shows the app before the redesign.
   scenes; the full-screen loading state is only for a first launch with no
   data.
 - **Private.** Data stays on the device. No accounts, analytics, or services
-  other than Garmin.
+  other than Garmin, except street maps: map areas downloaded from OpenFreeMap,
+  which learns an area around a workout, never the route; one switch turns
+  them off (Rules: Street maps).
 - **Cross-platform.** One Rust core and one Svelte UI for Android, iOS and
   desktop. Native code is limited to what a platform requires, such as
   background scheduling; everything else lives in the shared code.
@@ -107,7 +109,11 @@ synthetic data. `design/mockup/index.html` shows the app before the redesign.
   band for Garmin's target. Unknown amounts are not filled; measured zero
   stays zero. Duration rows name the clock format instead of adding percentages
   with an unclear denominator. Period plots use round ticks; count ticks are
-  integers. Gaps are drawn as gaps. Shared single-metric charts use
+  integers. Gaps are drawn as gaps: nothing is plotted for a missing reading,
+  and on line and dot charts a faint dashed line joins the readings either
+  side so a trend reads across it; a reading with no neighbour keeps its
+  dot. Garmin's occasional estimates (VO₂ max, Fitness Age) are joined by one
+  line instead (Trends). Shared single-metric charts use
   2 px main traces, quiet 1 px gridlines and green-tinted usual-range bands
   with dashed edges; range bars (vitals, drivers) tint the usual range or
   Garmin's target green under the reading's dot; goal lanes
@@ -148,6 +154,8 @@ Before sign-in, explain that Raring reads a Garmin account, not a watch, and
 that Garmin Connect must keep syncing the watch's data. State that the app
 sends no data to Raring, has no analytics or telemetry, and keeps downloaded
 history on the phone. Exports leave the phone only when the user shares them.
+The privacy details say what street maps' downloads reveal (Rules: Street
+maps).
 Explain the unofficial connection and watch-dependent metrics before the
 sign-in button. Keep the same information and expandable privacy details
 available offline in Settings. Notification permission remains
@@ -155,27 +163,31 @@ optional after sign-in.
 
 ### Today
 
-A briefing with an ending, in this order:
+A briefing, in this order:
 
 - **Last night and readiness**: four compact stats in one row (two by two
-  at large text), each opening its detail: **Sleep** (time asleep in a ring
-  against Garmin's need, the Sleep Score under it; opens Last night),
-  **Readiness** (Garmin's score in a ring in its tone, the level word under
-  it), **Sleep HR** and **HRV** (last night's value with ▲ or ▼ and "6
-  above usual", "Within usual", "Usual not set yet" or "Garmin calibrating";
-  they open their metric detail at 30 days; Rules: Night vitals on Today). A
-  tone colour appears only with its words, when Garmin rates a reading low
-  or it is outside its usual range in the unwelcome direction. A watch that
+  at large text), each opening its detail: **Sleep** (Garmin's Sleep Score
+  in a ring in its level's colour, Garmin's word for it and the time asleep
+  under it, "Good · 7:33"; opens Last night), **Readiness** (Garmin's score in a
+  ring in its tone, the level word under it), **Sleep HR** and **HRV** (last
+  night's value with ▲ or ▼ and "6 above usual", "Within usual", "Usual not
+  set yet" or "Garmin calibrating"; they open their metric detail at 30
+  days; Rules: Night vitals on Today). Each rating word takes its tone
+  colour: Garmin's level for Sleep and Readiness, green within the usual
+  range and amber outside it for Sleep HR and HRV. A watch that
   can't record readiness says so. While the displayed night hasn't synced
   all four wait neutrally: no earlier score, readiness, vitals, chips or
   reconciliation shown as this morning's. A missing reading is a dash and
-  "Not recorded". From the evening on only Sleep and Readiness stay. A score
-  without a duration is labelled as one.
+  "Not recorded". From the evening on only Sleep and Readiness stay. A night
+  without a score shows its time asleep and says "No score".
 - **The lead**: one headline, at most one line and one action, chosen by the
   gates in Rules: Today's lead; a suggestion can be dismissed with "Not
   today". When Garmin's readiness allows, the **effort** strip (Rest, Easy,
   Steady, Push) marks the suggested level, with one reason line from
-  Garmin's inputs under it. It is a display, not buttons. When a session
+  Garmin's inputs under it. On Garmin's push call, while vigorous minutes
+  are Fitness Age's biggest lever and today has none yet, one
+  more line names it ("Your Fitness Age lever: vigorous minutes, 17 of
+  Garmin's 75 a week"; Rules: Fitness Age window). It is a display, not buttons. When a session
   leads, the headline is about the day ("A steady day fits"), never the
   session's name.
 - **Today's session**: a separate card below the day's context, with the
@@ -185,6 +197,9 @@ A briefing with an ending, in this order:
   another** sit inside it (Rules: Today's choice), so they act on the
   session. There is no effort scale
   beside a recorded workout (the day can finish) or from the evening on.
+  Under a "Done today" headline acute load takes its place: a dot on
+  Garmin's optimal-range bar, as on Training, opening its history. Garmin
+  sets no daily load target; its target is that range for the 7-day load.
   Evening, wind-down and late night lead with tonight's sleep (the evening
   and wind-down cards carry the same sleep clock, compact, beside the
   wind-down, in-bed and window times) and keep any
@@ -204,21 +219,33 @@ A briefing with an ending, in this order:
 - **Recorded today**: one list of everything the calendar day (Your day's)
   recorded, workouts and naps together in the order they started, directly
   under the day's headline while the day leads. Workouts carry Garmin's benefit
-  and training effect (one decimal); naps their Body Battery change. Up to four
+  and training effect (one decimal), and their Garmin vigorous minutes as a
+  green chip ("+24 vigorous min") while Garmin's Fitness Age has a vigorous
+  target; naps their Body Battery change. Up to four
   rows, then a link to all of today's activities. The headline never repeats a
   workout from this list. Under a "Done today" headline the list goes untitled. Compact after tonight's plan: without the effect
-  labels.
+  labels, keeping the vigorous chip.
 - **This week**: the week's rings and one line per goal beside **Left this
   week** with Do it today (not from the evening on: a weekly gap is context,
   not a command to catch up tonight), over the day cells; hidden during
   wind-down and late night, with the weekly check-in link and the
   plan-your-week prompt. Without weekly goals it says so.
+- **Fitness Age**: on a day that moved it, one compact card after This week:
+  Garmin's vigorous minutes as the six-week average its Fitness Age driver
+  uses, before and with today's minutes ("17 → 21 min/wk"), small bars for
+  the six seven-day blocks (today's minutes the green top of the last,
+  Garmin's weekly target dashed) and Garmin's age at that target ("At 75 a
+  week, Garmin puts you at 37.8 · now 39"). It opens Health. The day Garmin's
+  estimate falls a whole year the card moves under Recorded today (wherever
+  the phase puts that list) and leads
+  with it ("New Garmin estimate: 39, down from 40"); a rise stays on Health
+  and in the notification. A day with neither has no card, and wind-down and
+  late night hide it (Rules: Fitness Age window).
 - While older history is still downloading, the upload line adds "History
   since" its first month.
 - Watch-upload and missing-reading notices sit above last night and
   readiness; Today explains only the readings it shows (readiness and the
-  sleep score). The ending
-  says "That's today." The plan-your-week prompt appears on root pages when
+  sleep score). The plan-your-week prompt appears on root pages when
   due (Rules: Plan prompt). Settings → Today → "Follow my day" keeps a fixed
   order for irregular schedules (Rules: Time of day).
 
@@ -249,7 +276,9 @@ Two tabs, **Last night** and **Tonight** (Rules: Sleep tabs).
 
 Last night:
 
-- Score gauge, and a time-asleep bar with a marker at Garmin's sleep need
+- Score gauge with Garmin's word for the score (Excellent, Good, Fair or
+  Poor; without one, the band's word from Rules: Chart colours), and a
+  time-asleep bar with a marker at Garmin's sleep need
   for that night (when the watch reports it), labeled as last night's need.
   The scale fits both amounts; the difference is neutral, not a more-is-better
   verdict. A missing duration has no fill.
@@ -349,10 +378,18 @@ night is never shown in its place.
     range is shared with Strength), and a link to Strength.
   - **Activities**: every stored recording with Garmin's primary benefit,
     training effect and intensity minutes as one text line, filterable by
-    sport. The last 31 days open instantly; Show older pages back through
-    stored history (filtered by sport before the page limit) without a
-    Garmin request. Today's "All today's activities" opens this section
-    narrowed to that day; the old `#activities` link opens Training.
+    sport, as a **List** or a **Calendar**. The list's last 31 days open
+    instantly; Show older pages back through stored history (filtered by
+    sport before the page limit) without a Garmin request. The calendar reads
+    one stored month at a time, also without a Garmin request: weeks start on
+    Garmin's week start, each day shows its recordings' sport icons in start
+    order (two, or one and a count) and the month's recordings are listed
+    under it, newest first. Tapping a day narrows the list to that day;
+    ‹ › step a month and the month's name opens a year of months to jump to,
+    from the oldest stored recording's month to this one. The sport filter
+    applies to both views; the view, month and day hold across a workout and
+    Back. Today's "All today's activities" opens this section narrowed to
+    that day; the old `#activities` link opens Training.
 - Latest recorded Garmin running lactate-threshold HR and pace, running threshold
   power, cycling FTP, heat acclimation and acclimated altitude in a compact
   Training card, each with its own recorded date. Missing, null or stale
@@ -364,7 +401,8 @@ night is never shown in its place.
 
 - Training load, aerobic and anaerobic Training Effect gauges, primary
   benefit and recovery time.
-- Stats grid, route map, heart-rate chart colored by zone (bpm axis, each
+- Stats grid, route map over streets, water and parks (Rules: Street maps),
+  heart-rate chart colored by zone (bpm axis, each
   zone's floor labelled, the average marked, round minute ticks), time-in-zone
   rows with each zone's bpm range and recorded duration on a shared zero-based
   scale (no percentage column); missing/invalid zone durations say Not recorded,
@@ -392,7 +430,8 @@ night is never shown in its place.
   and offers Refresh from Garmin (Rules: Explicit strength refresh). Raring
   never changes the sets; fixing them is a later Garmin write.
 - **How it counted**: the workout's share of this week's goals, the plan
-  session it completed and any milestone (Rules: How it counted).
+  session it completed, any milestone and its vigorous minutes toward
+  Fitness Age (Rules: How it counted).
 - **Along the way**: the stored streams this activity has (pace or speed,
   elevation, cadence, power, breathing rate, stamina, performance condition,
   watch temperature) on heart rate's time axis; **What it did**: Garmin's
@@ -526,12 +565,17 @@ says so on its chart (Rules: Reading freshness).
   history chart (opening on the latest estimate) with your age now as a dashed
   line and each estimate coloured against it (Rules: Chart colours).
 - **Drivers**: VO2max, resting heart rate, BMI or body fat, and vigorous
-  minutes as tiles with range bars, Garmin's target in words ("Target ≥ 150
+  minutes as tiles with range bars, Garmin's target in words ("Target ≥ 75
   min/wk") and Met or how far off it is; no trend arrows. The driver that would
-  help most (the biggest lever) adds the age you'd reach at its target. Garmin's Fitness Age component owns its
+  help most (the biggest lever) adds the age you'd reach at its target. The
+  drivers come from the estimate the Fitness Age card shows. Garmin's Fitness Age component owns its
   target and age estimate; a recorded weigh-in can supply a missing BMI or
   body-fat value measured in the last 30 days but never creates a target or
-  Fitness Age prediction.
+  Fitness Age prediction. Under the tiles, the six seven-day blocks of
+  Garmin's vigorous minutes the vigorous driver averages, from the window's
+  first day to "Last 7 days", each with its minutes, Garmin's weekly target
+  dashed, today's minutes green ("+24 today") and the average before and with
+  today (Rules: Fitness Age window).
 - **Intensity minutes**: this plan week's total as a ring against Garmin's
   weekly goal, with moderate and vigorous minutes; it opens the weekly plan.
 - When two or more vitals are outside their personal ranges, an amber
@@ -539,15 +583,22 @@ says so on its chart (Rules: Reading freshness).
   diagnosing an illness. A partially calibrated monitor reports only the
   readings it can compare.
 - **A past day**: the Progress calendar and a selected trend point open
-  `#health/YYYY-MM-DD`, anchored to that date: its charts end there, its
-  stress and vitals are that day's, and the journal's seven days end there.
-  The stress detail (`#metric/stress/YYYY-MM-DD`) shows that day's timeline;
+  `#health/YYYY-MM-DD`, anchored to that date: its charts and weight end
+  there; its Fitness Age (Garmin's estimate as of that date, with that
+  estimate's drivers), stress and vitals are that day's; intensity minutes
+  are its plan week up to that day (Garmin's whole-week row when the days
+  are incomplete), named by the days they cover (a passed week opens its
+  review, this week the plan); the weigh-in's age is counted from that day;
+  and the journal's seven days end there.
+  The stress detail (`#metric/stress/YYYY-MM-DD`) shows that day's timeline
+  and reads only that day's stress and vitals;
   the all-day heart-rate detail (`#metric/heartRate/YYYY-MM-DD`) opens that
-  day and reads its heart-rate day on demand. Missing per-day detail (sleep,
-  HRV, stress, the daily summary, Health Status) is fetched once on opening
-  and kept, inside the shared budget and backoff; the page says while it
-  loads, and says when Garmin has nothing for that day. Today's readings are
-  never substituted for an older date (Rules: Opened past days and workouts).
+  day and reads its heart-rate day on demand. Missing per-day detail (Fitness
+  Age, sleep, HRV, stress, the daily summary, Health Status) is fetched once
+  on opening and kept, inside the shared budget and backoff; the page says
+  while it loads, and says when Garmin has nothing for that day. Today's
+  readings are never substituted for an older date (Rules: Opened past days
+  and workouts).
 
 ### Trends
 
@@ -555,7 +606,12 @@ Every trend chart (Readiness, the vitals, stress, Body Battery, VO2max,
 acute load, Fitness Age and Sleep's history card) is the same interactive chart, drawn from local data.
 Health's cards use its compact form (Health), except Fitness Age, whose card is
 its bar and opens the chart. Garmin's sparse estimates (VO2max,
-Fitness Age) open on the latest estimate rather than an empty latest day.
+Fitness Age) open on the latest estimate rather than an empty latest day,
+and one line joins their estimates in order (the previous period's and an
+overlay's too), with a dot on each estimate beside a day without one. A day
+without a new estimate isn't a missing reading: it has no gap mark and
+reads "No new estimate". Daily readings' line breaks at a missing day, which
+keeps its gap mark, and a faint dashed line joins the readings either side.
 
 - Shared range control: 7D, 14D, 30D, 90D, 1Y and Max (All history), plus Dates for a chosen training block. Up to 90 days shows each day; longer
   ranges show weekly or monthly averages, and the selected point says how many
@@ -598,7 +654,11 @@ Backlog, Garmin Coach).
   it may be, opens its sheet; sessions not recorded are one row (how many and
   which days) that opens them with Reschedule and Let it go. This week of a
   Garmin Coach plan is one read-only line with how many are done; its
-  sessions are in the days.
+  sessions are in the days. While Garmin's Fitness Age has a vigorous
+  target, one read-only line under the goals gives this plan week's Garmin
+  vigorous minutes against it with a bar ("Fitness Age · vigorous 30 of 75 min
+  this week", "Garmin's target · read-only") and opens Health. It is a Garmin
+  reading, not a goal: no ring, backlog or review.
 - **Goals** (`#plan/commitments`): steppers for strength sessions, Zone 2,
   Zone 4–5 and intensity minutes (Garmin's weekly goal until changed), sleep
   timing (asleep by or wind down at a chosen time) and an average Sleep Score.
@@ -648,7 +708,7 @@ Four sections, the choice kept across a detail and Back:
   milestones (dated with the year when it isn't this one) with a link to all
   of them (`#progress/milestones`, by month).
 - **Cardio**: Zone 2, Zone 4–5 (while it has a goal) and intensity minutes per
-  week for 12 weeks, each week against its own target as a stepped dashed line
+  week, each week against its own target as a stepped dashed line
   (intensity following Garmin's goal says "Garmin goal"), and Garmin's VO2max
   estimates on the same weeks (Rules: Progress domains). The current week's
   bar is outlined (its tick stays a date; spoken labels say this week).
@@ -658,6 +718,12 @@ Four sections, the choice kept across a detail and Back:
 - **Long-term**: training hours, resting heart rate, overnight HRV, VO2max and
   Fitness Age by month, each opening its detail; the current month's bar is
   outlined and spoken labels say "so far".
+- **Their dates**: chosen like Overall's period. Cardio and Strength share
+  plan weeks (12 weeks, 6 months or a year), Long-term has months (a year, 2
+  or 5 years), each with previous and next that move a whole window, the next
+  stopping at the current week or month; the window's dates head the charts.
+  Dates without downloaded weeks say so, and a chart without readings keeps
+  its baseline and says so instead of drawing a scale.
 
 Follow-through and measured change stay apart; nothing is a grade. Domain
 charts key the outlined current period, dashed weekly goal and hatched/dotted
@@ -678,8 +744,9 @@ page, never the overnight Sleep HR detail.
 - **Settings**: notifications, the wind-down lead, the time to fall asleep
   (also on Sleep · Tonight beside the plan), persistent status, Follow
   my day (and that Raring doesn't learn from how you use the app), the
-  plan-your-week prompt, journal consent, recent Garmin changes once there are
-  any (Rules: Recent Garmin changes), export, a validated import of another
+  plan-your-week prompt, journal consent, street maps (Rules: Street maps),
+  recent Garmin changes once there are any (Rules: Recent Garmin changes),
+  export, a validated import of another
   export's settings (Rules: Import), sign-out, help and how Raring works.
   History on the phone is on Profile. Export and Import each lead with one
   line, the rest behind "What's included"; an import preview (with years)
@@ -721,9 +788,13 @@ Both widgets and the optional ongoing notification always show "As of" with
 the selected watch's upload date and time, or "As of unavailable".
 
 The notification has a separate low-importance, silent channel, no sound or
-vibration, and private lock-screen content. Collapsed: battery, stress and
-heart-rate icons and values. Expanded: battery/stress bars, phase-aware focus
-and its reason. Latest heart rate uses the current calendar day's last measured
+vibration, and private lock-screen content. It sits on Android's own
+notification surface: no card of its own, Android's notification text styles,
+so it follows the system's light or dark theme. Collapsed: battery, stress and
+heart-rate icons and values, then "As of". Expanded: the header carries "As
+of" in place of the post time; the phase-aware focus is the title, then its
+reason, then a labelled row each for Body Battery and stress (with bars) and
+heart rate (no bar). A missing reading hides its bar. Latest heart rate uses the current calendar day's last measured
 sample from the shared all-day HR parser. It remains blank without samples;
 resting/overnight heart rate is not a substitute.
 It starts off, is offered once on Today after the first successful sync, and
@@ -806,6 +877,15 @@ Sent by the phone itself.
 | Training status changed       | On sync                                      | Off     |
 | Wind-down reminder            | Wind-down time of tonight's plan (lead 30 min before bedtime, configurable) | Off     |
 | Persistent status (Android)   | Existing sync; silent, no extra Garmin requests | Off     |
+
+Each kind posts to its own Android channel (Morning readiness, Weekly
+check-in, Health changes for VO2max, Fitness Age, training status and vitals,
+Wind-down reminder, and Garmin account for sign-in), so Android Settings can
+silence one without the others. A change names the new value and the old one:
+"VO₂ max is now 44" / "Down from 45.", "Training status: Productive" / "Was
+Maintaining." (Garmin's named status; a new numeric suffix alone is no
+change). The vitals notification says how many are outside their ranges and
+names each with its usual range.
 
 The morning readiness notification opens Today, the weekly check-in the
 latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
@@ -1040,7 +1120,11 @@ next pending wind-down while signed in.
   on, its share (a strength recording is that week's Nth strength session of
   the target; Zone 2 and Zone 4–5 add its own zone minutes), the week's
   recorded total, the plan item it completed, and any milestone awarded for
-  it. With no weekly goal on and nothing else to say, the card is left out
+  it; while Garmin's six-week window holds its vigorous minutes, it names
+  them toward Fitness Age with its plan week's Garmin vigorous total against
+  the driver's weekly target and the last day they count ("Counts in
+  Garmin's six-week average through Wed 26 Nov"; Rules: Fitness Age window).
+  With no weekly goal on and nothing else to say, the card is left out
   rather than implying a goal rejected the workout. Garmin's estimates (VO₂ max, Fitness Age) are never credited to one
   workout.
 - **Muscle gaps**: sets per muscle group over a range ending today (7D–1Y,
@@ -1109,7 +1193,9 @@ next pending wind-down while signed in.
   Progress shows the latest 12 and links to it.
 - **Progress domains**: from local data only. Week and month periods carry
   ring cells for the whole plan weeks covering them (the Rings rule). Cardio
-  and Strength show the 12 plan weeks ending this week from covered history:
+  and Strength show the chosen number of plan weeks (12, 26 or 52) ending
+  with the week holding the chosen date (this week until one is chosen),
+  from covered history:
   recorded Zone 2 and Zone 4–5 minutes (unknown when any activity lacks zones
   or the activity list is incomplete), Garmin's weekly intensity minutes
   (Plan progress), strength activities, and Garmin's latest VO₂ max estimate
@@ -1117,7 +1203,9 @@ next pending wind-down while signed in.
   incomplete list, carries that mark. Each week carries its own targets (Goal
   ledger: in effect at its end, Garmin's weekly goal for intensity following
   it), none before goals began or while a goal was off. Long-term
-  shows 12 calendar months: recorded minutes (none before history or with an
+  shows the chosen number of calendar months (12, 24 or 60) ending with the
+  month holding its chosen date (this month until one is chosen); a chosen
+  date lies between 1990 and today: recorded minutes (none before history or with an
   uncovered day), the month's average of Garmin's daily resting heart rate
   and overnight HRV, and the latest VO₂ max and Fitness Age estimates dated in
   it. Nothing is interpolated.
@@ -1234,6 +1322,33 @@ next pending wind-down while signed in.
   ending last night against each night's own Garmin need: how many recorded
   nights were below it, never a running debt. A missing night is labelled,
   not zero.
+- **Street maps**: on by default; Settings → Street maps turns them off. A
+  route card draws streets, water and parks from OpenStreetMap vector tiles
+  (OpenMapTiles schema) served by OpenFreeMap, with no key or account; its
+  TileJSON names the week's tiles, which must stay on its host. The core and
+  the card share one fit: Web Mercator, the route filling at most 310×128 of
+  the 358×176 card around its centre, zoomed in no closer than 2^16 256-px
+  tiles across the world, so a map arriving never moves the route. Tiles come
+  from the zoom that puts about 140 card pixels across one, at most z13. They
+  download by area: the 8×8 block of tiles at that zoom around the card (64
+  tiles, usually 20–40 km across, more for long rides), so the server sees an
+  area several times the card's size, never the route. Only a route card
+  showing a workout without a drawn map asks; opening a page, prefetch, sync
+  and background work never download or draw. One area downloads at a time
+  across the app, with at most 4 parallel requests, a User-Agent naming Raring
+  and no redirect off the host, all or nothing, and is kept: other workouts
+  there draw with no request. No tile is asked for once street maps are off or
+  the workout is erased. Each card is drawn once
+  (clipped to the card, simplified to 0.35 px, one decimal) and kept with its
+  workout; a changed route or drawing draws it again. Tunnels, rail, ferries,
+  buildings and labels aren't drawn. Map rows are written only while street
+  maps are on and the workout is still stored, so a download that outlives
+  opting out, sign-out or an account switch keeps nothing; turning street
+  maps off, sign-out and an account switch erase them. Exports leave maps
+  out. The card credits © OpenMapTiles © OpenStreetMap in its corner;
+  Settings and the privacy details link the licence as
+  openstreetmap.org/copyright. A failed download leaves the route on its own
+  and is tried again the next time the card shows.
 - **Opened past days and workouts**: only an explicit open of a page whose
   route names its own date or activity reads Garmin for that detail;
   navigation prefetch, cached tabs and ordinary sync never do. One open reads
@@ -1329,10 +1444,11 @@ next pending wind-down while signed in.
   the vitals card's nightly HRV against Garmin's baseline. Inside the range
   it is "Within usual"; outside, the difference from the range's middle in
   the metric's own units, rounded ("6 above usual"); an onboarding Health
-  Status is "Garmin calibrating"; no range is "Usual not set yet". Higher
-  Sleep HR and lower HRV outside the range are fair-toned; everything else is
-  neutral. Shown for the displayed night in the morning and day phases only,
-  not while that night hasn't synced.
+  Status is "Garmin calibrating"; no range is "Usual not set yet". Inside
+  the range is good-toned and outside it fair-toned in either direction
+  (attention, not a rating), as on Health's vitals and the charts;
+  calibrating and no range are neutral. Shown for the displayed night in
+  the morning and day phases only, not while that night hasn't synced.
 - **Suggested effort**: Garmin's readiness feedback, rephrased. The level sets
   push, steady or easy; a high load ratio caps it at steady.
 - **Biggest drag**: the readiness factor Garmin rates worst, its percentage
@@ -1548,7 +1664,8 @@ next pending wind-down while signed in.
     above poor.
   - Neutral: weight, VO₂ max, time asleep, Progress's monthly averages, sleep's
     overnight curves and lift history, and range metrics without a shown
-    band, in the neutral blue.
+    band, in the neutral blue. Fitness Age's six-week vigorous bars are this
+    blue, with today's minutes green and Garmin's target a dashed ink line.
 - **Plan week**: Garmin's intensity-minutes week, taken from the dates of its
   weekly intensity rows (Monday until they sync). Garmin's intensity week
   can differ from the account's start-of-week setting; following
@@ -1576,6 +1693,28 @@ next pending wind-down while signed in.
   by" and "helping", never "because" or a cause Garmin didn't give. Numbers
   are Garmin's; the only arithmetic is hours from Garmin's recovery minutes
   and the existing 30-day VO2max change. No new scores, no medical claims.
+- **Fitness Age window**: Garmin's vigorous-minutes driver
+  (`vigorousMinutesAvg`, `numOfWeeksForIm` 6) is the daily summaries'
+  `vigorousIntensityMinutes` over the 42 days ending on the estimate's day,
+  that day included, divided by 6 (verified against six estimates, 3–16 Oct
+  2026). Raring applies the same sum to Garmin's daily figures ending on the
+  calendar day (a past Health day: that day): six seven-day blocks, their
+  average, and the average without that day's minutes. A day without
+  Garmin's figure makes its block and the average unknown, never zero;
+  explicit zeros count. Garmin's target (`targetValue`) and the age it gives
+  there (`potentialAge`) come from the latest estimate on or before the day;
+  without a vigorous target there is no window. Garmin's vigorous days
+  (`vigorousDaysAvg`) follow no daily threshold Raring could verify and
+  aren't counted. Raring never projects the estimate. Today's card shows on
+  a day with vigorous minutes (after This week) or on the day the estimate
+  is lower in whole years than the previous stored one, compared as the
+  notification does (under Recorded today); never in wind-down or late
+  night. The lever line needs Garmin's push call with the effort shown,
+  vigorous minutes as the biggest lever of the estimate the window reads, a
+  known average and no vigorous minutes today. A recording's vigorous
+  minutes count from its day through the 41 after it. Plan's line and How it
+  counted sum the plan week's daily figures through today, unknown while one
+  is missing.
 - **Plan progress**: intensity minutes are Garmin's weekly total for the
   plan week: the daily summaries' moderate minutes plus twice the vigorous
   ones (Garmin's own weighting), against the target or Garmin's weekly goal.
@@ -1779,6 +1918,10 @@ next pending wind-down while signed in.
 - `app/` (Tauri 2, Svelte and TypeScript): the UI, sign-in and settings. The
   UI reaches the core through one small typed API, so a web build can swap in
   HTTP later.
+- **Street maps**: the core downloads map tiles itself and draws each route
+  card into SVG path data, so the WebView's content security policy still
+  allows no outside host. Tiles, complete areas and drawn cards live in their
+  own SQLite tables beside the raw cache (Rules: Street maps).
 - **Background sync**: a small Kotlin plugin schedules WorkManager jobs,
   hourly, and every 15 minutes in the morning until readiness arrives. A job
   calls the Rust core directly over JNI, without starting the UI, then posts
@@ -1867,8 +2010,10 @@ next pending wind-down while signed in.
   read when opened, and its one explicit detail fetch follows that open.
   A local change (goals, sessions, Adapt, routines) clears the cache and
   rereads the visible page and the header's Adapt state. Training's and
-  Progress's chosen sections are kept for the session; Progress's domain
-  views and the milestone archive are read when first shown. A completed
+  Progress's chosen sections, and the dates of Progress's domain sections,
+  are kept for the session (sign-out resets them); Progress's domain views
+  are read when first shown and when their dates change, and the milestone
+  archive when first shown. A completed
   sync or a changed sync timestamp invalidates in-flight reads and prefetches
   the tabs again, but keeps cached views: until a page is read again it opens
   with what it had, so a sync never empties one. A local day rollover

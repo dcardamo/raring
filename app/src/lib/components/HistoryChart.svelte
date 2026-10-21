@@ -57,7 +57,10 @@
  let activeDecimals=$derived(primary?trendDecimals(primary):decimals);
  let activeReadiness=$derived(activeMetric==='readiness' || !activeMetric && readiness);
  // Garmin's estimates arrive every few days or weeks: open on the latest one, not an empty latest day.
- let sparse=$derived(activeMetric==='vo2max'||activeMetric==='fitnessAge');
+ const estimates=(m:TrendMetric|null|undefined)=>m==='vo2max'||m==='fitnessAge';
+ let sparse=$derived(estimates(activeMetric));
+ // A day without a new estimate isn't a missing reading.
+ let none=$derived(sparse?'No new estimate':'Not recorded');
  const latestOffset=(list:TrendPoint[])=>{const last=list.findLastIndex(p=>p.value!=null);return last<0?0:list.length-1-last};
  $effect(()=>{
   generation();
@@ -89,7 +92,12 @@
  let R=$derived(overlay?W-40:W-8);
  const x=(i:number)=>L+(i+.5)*(R-L)/Math.max(count,1);
  const y=(v:number,s:[number,number]=scale)=>12+(s[1]-v)/(s[1]-s[0])*(H-28);
- const path=(list:TrendPoint[],s:[number,number])=>list.map((p,i)=>p.value==null?'':`${i && list[i-1].value!=null?'L':'M'}${x(i).toFixed(1)},${y(p.value,s).toFixed(1)}`).join('');
+ // Readings break at a missing day; one line joins estimates, since a day without a new one isn't missing.
+ const path=(list:TrendPoint[],s:[number,number],join=false)=>{let drawn=false;return list.map((p,i)=>{if(p.value==null)return '';const step=drawn && (join || list[i-1].value!=null)?'L':'M';drawn=true;return `${step}${x(i).toFixed(1)},${y(p.value,s).toFixed(1)}`}).join('')};
+ // A point beside a gap is a dot: a lone reading, or an estimate where the line crosses days without one.
+ const dotted=(list:TrendPoint[],i:number,join:boolean)=>join?list[i-1]?.value==null || list[i+1]?.value==null:list[i-1]?.value==null && list[i+1]?.value==null;
+ // Over missing readings a faint dashed line joins the readings either side, so the trend reads across the gap (still marked under the axis).
+ const bridges=(list:TrendPoint[],s:[number,number])=>{let d='',prev=-1;list.forEach((p,i)=>{if(p.value==null)return;if(prev>=0&&prev<i-1)d+=`M${x(prev).toFixed(1)},${y(list[prev].value!,s).toFixed(1)}L${x(i).toFixed(1)},${y(p.value,s).toFixed(1)}`;prev=i});return d};
  let present=$derived(points.filter(p=>p.value!=null).length);
  // Stress days Garmin rated only in part: hollow, outside every average.
  let partlyWorn=$derived(bucket==='day'?points.filter(p=>p.value==null&&p.partial!=null).length:0);
@@ -100,7 +108,7 @@
  let tileUnit=$derived(activeUnit.startsWith('/') || activeUnit==='min'?'':activeUnit);
  let canOpenDay=$derived(!!openDay && !!selected && bucket==='day' && (selected.value!=null || selected.partial!=null) && selected.start<latestDay);
  let selectedDate=$derived(selected?bucket==='day'?dateLabel(selected.start)+(range==='custom'||range==='all'?' '+selected.start.slice(0,4):''):pointLabel(selected,bucket):'');
- let selectedText=$derived(selected?`${selectedDate}: ${selected.value==null?selected.partial!=null?show(selected.partial)+', partly worn, not in the average':'Not recorded':show(selected.value)+' '+(activeUnit==='min'?'h:mm':activeUnit)}`:'');
+ let selectedText=$derived(selected?`${selectedDate}: ${selected.value==null?selected.partial!=null?show(selected.partial)+', partly worn, not in the average':none:show(selected.value)+' '+(activeUnit==='min'?'h:mm':activeUnit)}`:'');
  let barWidth=$derived(Math.max(1.5,Math.min(22,(R-L)/Math.max(count,1)*.62)));
  const pairs=Object.keys(trendNames) as TrendMetric[];
  let choices=$derived(pairs.filter(m=>m!==activeMetric));
@@ -136,7 +144,7 @@
  {#snippet inspectedReading()}
  <div class="history-reading" class:inspected={!local} aria-live="polite" aria-atomic="true">
   <div class="reading-values">
-   <div><b class="n" style:color={selected?.value==null?toneColor('neutral'):tint(selected.value)}>{show(selected?.value ?? selected?.partial)}</b><span>{selected?.value==null?selected?.partial!=null?'partly worn · not averaged':'Not recorded':bucket==='week'?'weekly average':bucket==='month'?'monthly average':activeUnit==='min'?'h:mm':activeUnit}</span></div>
+   <div><b class="n" style:color={selected?.value==null?toneColor('neutral'):tint(selected.value)}>{show(selected?.value ?? selected?.partial)}</b><span>{selected?.value==null?selected?.partial!=null?'partly worn · not averaged':none:bucket==='week'?'weekly average':bucket==='month'?'monthly average':activeUnit==='min'?'h:mm':activeUnit}</span></div>
    {#if overlay && selected}<div class="overlay-reading"><b class="n">{trendValue(overlay.points[index]?.value,overlay.unit,overlayDecimals)}</b><span>{overlay.name}</span></div>{/if}
    {#if previous && selected}<div class="overlay-reading"><b class="n">{show(previous.points[index]?.value)}</b><span>{comparisonStart?'comparison block':'period before'}</span></div>{/if}
   </div>
@@ -158,7 +166,7 @@
  <div data-chart="history">
  <div class="plot-units"><span>{activeLabel}{activeUnit?' · '+(activeUnit==='min'?'h:mm':activeUnit):''}</span>{#if overlay}<span>{overlay.name} · {overlay.unit} (right)</span>{/if}</div>
  <button class="chart-surface" tabindex={compact?0:-1} aria-hidden={compact?undefined:true} aria-label={compact?`${activeLabel} chart. ${selectedText}. Left and right arrows choose a day.`:undefined} onclick={selectFromChart} onkeydown={compact?(e)=>{if(e.key==='ArrowLeft'&&index>0){e.preventDefault();offset++}else if(e.key==='ArrowRight'&&index<count-1){e.preventDefault();offset--}}:undefined}>
-  <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${activeLabel}, ${count} ${bucketName}. ${present} recorded.${partlyWorn?` ${partlyWorn} partly worn, not averaged.`:''} Missing readings are gaps.`}>
+  <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${activeLabel}, ${count} ${bucketName}. ${sparse?`${present} with an estimate, joined in order.`:`${present} recorded.${partlyWorn?` ${partlyWorn} partly worn, not averaged.`:''} Missing readings are gaps.`}`}>
    {#if colored}<defs><linearGradient id={id+'-tone'} gradientUnits="userSpaceOnUse" x1="0" x2="0" y1={y(scale[1])} y2={y(scale[0])}>{#each stops as s}<stop offset={s.offset} stop-color={s.color}/>{/each}</linearGradient></defs>{/if}
    {#if shownBand}
     <rect class="history-band" x={L} y={y(shownBand[1])} width={R-L} height={Math.max(1,y(shownBand[0])-y(shownBand[1]))} fill={colors.good} fill-opacity=".1"/>
@@ -172,23 +180,24 @@
    {#if overlay}{#each axis2.ticks as tick}<text x={W} y={y(tick,scale2)+3} fill="var(--text3)" font-size="11" text-anchor="end">{trendValue(tick,overlay.unit,overlayDecimals)}</text>{/each}{/if}
    {#if ageLine!=null}<line class="age-line" x1={L} x2={R} y1={y(ageLine)} y2={y(ageLine)} stroke={colors.ink} stroke-opacity=".6" stroke-dasharray="5 4" stroke-width="1.2"/>{/if}
    {#if count}<line x1={x(index)} x2={x(index)} y1="8" y2={H-12} stroke="currentColor" opacity=".35" stroke-dasharray="2 3"/>{/if}
-   {#if previous}<path class="history-previous" d={path(previous.points,scale)} fill="none" stroke={colors.ink} stroke-opacity=".45" stroke-width="1.6" stroke-dasharray="4 4" stroke-linecap="round"/>{/if}
-   {#if !activeReadiness}<path class="history-line" d={path(points,scale)} fill="none" stroke={colored?`url(#${id}-tone)`:color} stroke-width="var(--stroke-chart)" stroke-linecap="round" stroke-linejoin="round"/>{/if}
+   {#if previous}<path class="history-previous" d={path(previous.points,scale,sparse)} fill="none" stroke={colors.ink} stroke-opacity=".45" stroke-width="1.6" stroke-dasharray="4 4" stroke-linecap="round"/>{/if}
+   {#if !activeReadiness && !sparse}<path class="history-bridge" d={bridges(points,scale)} fill="none" stroke={colored?`url(#${id}-tone)`:color} stroke-width="1.5" stroke-dasharray="3 4" stroke-linecap="round" stroke-opacity=".6"/>{/if}
+   {#if !activeReadiness}<path class="history-line" d={path(points,scale,sparse)} fill="none" stroke={colored?`url(#${id}-tone)`:color} stroke-width="var(--stroke-chart)" stroke-linecap="round" stroke-linejoin="round"/>{/if}
    {#each points as p,i}
     {#if p.value!=null}
      {#if activeReadiness}
       <rect class="history-bar" x={x(i)-barWidth/2} y={Math.min(H-18,y(p.value))} width={barWidth} height={Math.max(2,H-16-y(p.value))} rx={Math.min(2,barWidth/2)} fill={tint(p.value)} opacity={index===i?1:overlay?.4:.55}/>
-     {:else if index===i || count<=40 || (points[i-1]?.value==null && points[i+1]?.value==null)}
+     {:else if index===i || count<=40 || dotted(points,i,sparse)}
       <circle cx={x(i)} cy={y(p.value)} r={index===i?4:2.5} fill={tint(p.value)} stroke="var(--card)" stroke-width={index===i?2:0}/>
      {/if}
     {:else if p.partial!=null && bucket==='day'}<circle class="history-partial" cx={x(i)} cy={y(p.partial)} r={index===i?4:3} fill="var(--card)" stroke={colors.secondary} stroke-width={index===i?2:1.5}/>
-    {:else}<circle class="history-gap" cx={x(i)} cy={H-9} r="1.5" fill="currentColor" opacity=".3"/>{/if}
+    {:else if !sparse}<circle class="history-gap" cx={x(i)} cy={H-9} r="1.5" fill="currentColor" opacity=".3"/>{/if}
    {/each}
    {#each [previous,overlay] as other}
-    {#if other}{#each other.points as p,i}{#if p.value!=null && other.points[i-1]?.value==null && other.points[i+1]?.value==null}<circle class="isolated-point" cx={x(i)} cy={y(p.value,other===overlay?scale2:scale)} r="2.5" fill={colors.secondary}/>{/if}{/each}{/if}
+    {#if other}{#each other.points as p,i}{#if p.value!=null && dotted(other.points,i,other===overlay?estimates(overlay?.metric):sparse)}<circle class="isolated-point" cx={x(i)} cy={y(p.value,other===overlay?scale2:scale)} r="2.5" fill={colors.secondary}/>{/if}{/each}{/if}
    {/each}
    {#if overlay}
-    <path class="history-overlay" d={path(overlay.points,scale2)} fill="none" stroke={colors.secondary} stroke-width="1.6" stroke-dasharray="6 3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path class="history-overlay" d={path(overlay.points,scale2,estimates(overlay.metric))} fill="none" stroke={colors.secondary} stroke-width="1.6" stroke-dasharray="6 3" stroke-linecap="round" stroke-linejoin="round"/>
     {#if overlay.points[index]?.value!=null}<circle cx={x(index)} cy={y(overlay.points[index].value!,scale2)} r="4" fill="var(--bg)" stroke={colors.secondary} stroke-width="2"/>{/if}
    {/if}
   </svg>
@@ -201,7 +210,7 @@
   <input aria-label={'Selected '+activeLabel.toLowerCase()+' date'} aria-describedby={id} aria-valuetext={selectedText} type="range" min="0" max={Math.max(0,count-1)} step="1" value={index} oninput={(e)=>offset=count-1-Number(e.currentTarget.value)}/>
   <button aria-label="Next reading" disabled={index>=count-1} onclick={()=>offset--}><Icon name="arrow-right" size={17}/></button>
  </div>{/if}
- <span id={id} class="sr-only">{activeLabel}, {count} {bucketName}. {present} recorded.{partlyWorn?` ${partlyWorn} partly worn, not averaged.`:''} Missing readings are gaps. Use the slider to select a date.</span>
+ <span id={id} class="sr-only">{activeLabel}, {count} {bucketName}. {sparse?`${present} with an estimate, joined in order.`:`${present} recorded.${partlyWorn?` ${partlyWorn} partly worn, not averaged.`:''} Missing readings are gaps.`} Use the slider to select a date.</span>
  <div class="history-legend">
   {#if shownBand}<span><i class="band"></i>{bandLabel} · {show(shownBand[0])}–{show(shownBand[1])}{activeUnit && activeUnit!=='min'?' '+activeUnit:''}</span>{/if}
   {#if ageLine!=null}<span><i class="line dashed"></i>Your age {show(ageLine)}</span>{/if}

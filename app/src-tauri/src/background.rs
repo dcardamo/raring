@@ -360,15 +360,10 @@ fn detail_on_demand(
     let result = if !activity_id.is_empty() {
         rt.block_on(core.fetch_workout_detail(tokens, activity_id))
     } else {
-        let parts: Vec<raring_core::view::DayDetailPart> = match scope {
-            "sleep" => vec![raring_core::view::DayDetailPart::Sleep],
-            "day" => vec![
-                raring_core::view::DayDetailPart::Stress,
-                raring_core::view::DayDetailPart::Vitals,
-            ],
-            _ => return serde_json::json!({"error": "unknown day detail scope"}),
+        let Some(parts) = raring_core::screens::day_detail_parts(scope) else {
+            return serde_json::json!({"error": "unknown day detail scope"});
         };
-        rt.block_on(core.fetch_day_detail(tokens, date, &parts))
+        rt.block_on(core.fetch_day_detail(tokens, date, parts))
     };
     match result {
         Ok((tokens, report)) => serde_json::json!({

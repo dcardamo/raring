@@ -1,7 +1,7 @@
 use crate::{
     screens,
     store::Store,
-    view::{Settings, SleepView, TodayView, Tone, VitalKind, VitalRangeSource},
+    view::{Settings, SleepView, TodayView, Tone, VitalKind, VitalRangeSource, VitalReading},
 };
 use chrono::{DateTime, Datelike, Local, NaiveDateTime, Timelike};
 use serde::{Deserialize, Serialize};
@@ -79,6 +79,46 @@ fn morning_body(view: &TodayView, sleep: &SleepView) -> String {
         .collect::<Vec<_>>()
         .join("\n")
 }
+/// Whole numbers, as the change test compares them.
+fn change_line(now: f64, before: f64) -> String {
+    let direction = if now.round() > before.round() { "Up" } else { "Down" };
+    format!("{direction} from {before:.0}.")
+}
+fn number(v: f64) -> String {
+    if (v - v.round()).abs() < 0.05 {
+        format!("{v:.0}")
+    } else {
+        format!("{v:.1}")
+    }
+}
+fn vital_line(r: &VitalReading) -> Option<String> {
+    let name = match r.kind {
+        VitalKind::RestingHr if r.status.is_some() || r.range_source == VitalRangeSource::Garmin => {
+            "Sleep HR"
+        }
+        VitalKind::RestingHr => "Resting HR",
+        VitalKind::Hrv => "HRV",
+        VitalKind::Respiration => "Respiration",
+        VitalKind::Spo2 => "SpO₂",
+        VitalKind::SkinTemp => "Skin temp",
+    };
+    let unit = match r.unit.as_str() {
+        "%" | "°C" => r.unit.clone(),
+        unit => format!(" {unit}"),
+    };
+    let value = r.value?;
+    // Skin temperature is a change from Garmin's baseline, so it carries a sign.
+    let signed = r.kind == VitalKind::SkinTemp;
+    let show = |v: f64| match number(v) {
+        n if signed && v > 0. && n != "0" => format!("+{n}"),
+        n => n.replace('-', "−"),
+    };
+    Some(match r.normal {
+        Some([lo, hi]) if signed => format!("{name} {}{unit} (usual {} to {})", show(value), show(lo), show(hi)),
+        Some([lo, hi]) => format!("{name} {}{unit} (usual {}–{})", show(value), show(lo), show(hi)),
+        None => format!("{name} {}{unit}", show(value)),
+    })
+}
 pub fn notifications(store: &Store, now: DateTime<Local>) -> Vec<Notification> {
     let day = now.date_naive().to_string();
     let mut result = vec![];
@@ -133,21 +173,31 @@ pub fn notifications(store: &Store, now: DateTime<Local>) -> Vec<Notification> {
         );
     }
     if view.vitals.off_count >= 2 {
-        let mut outliers = view.vitals.readings.iter().filter(|r| r.tone == Tone::Fair);
-        let garmin = outliers.clone().any(|r| {
+        let outliers: Vec<_> = view.vitals.readings.iter().filter(|r| r.tone == Tone::Fair).collect();
+        let garmin = outliers.iter().any(|r| {
             r.status.is_some() || r.range_source == VitalRangeSource::Garmin
         });
-        let raring = outliers.any(|r| r.range_source == VitalRangeSource::Raring);
+        let raring = outliers.iter().any(|r| r.range_source == VitalRangeSource::Raring);
         let source = match (garmin, raring) {
             (true, true) => "Garmin's baselines or Raring's usual ranges",
             (true, false) => "Garmin's baselines",
             (false, true) => "Raring's usual ranges",
             (false, false) => "personal ranges",
         };
+        // Collapsed notifications show only the first line, so it names the readings.
+        let named = outliers
+            .iter()
+            .filter_map(|r| vital_line(r))
+            .collect::<Vec<_>>()
+            .join(" · ");
         add(
             "vitals",
-            "Vitals outside range",
-            format!("Several readings are outside {source}. Take it easy and check how you feel."),
+            &format!("{} vitals outside your ranges", view.vitals.off_count),
+            [named, format!("Outside {source}. Take it easy and check how you feel.")]
+                .into_iter()
+                .filter(|line| !line.is_empty())
+                .collect::<Vec<_>>()
+                .join("\n"),
             day.clone(),
         );
     }
@@ -160,8 +210,8 @@ pub fn notifications(store: &Store, now: DateTime<Local>) -> Vec<Notification> {
             if v.round() != previous.round() {
                 add(
                     "fitness-age",
-                    "Fitness Age changed",
-                    format!("Now {v:.0} years."),
+                    &format!("Fitness Age is now {v:.0}"),
+                    change_line(v, previous),
                     format!("{day}:{v:.2}"),
                 );
             }
@@ -179,8 +229,8 @@ pub fn notifications(store: &Store, now: DateTime<Local>) -> Vec<Notification> {
             if v.round() != previous.round() {
                 add(
                     "vo2max",
-                    "VO2max changed",
-                    format!("Now {v:.1}."),
+                    &format!("VO₂ max is now {v:.0}"),
+                    change_line(v, previous),
                     format!("{day}:{v:.2}"),
                 );
             }
@@ -188,13 +238,18 @@ pub fn notifications(store: &Store, now: DateTime<Local>) -> Vec<Notification> {
     }
     let statuses = store.history("training", &day, 2);
     if statuses.len() == 2 {
-        let current = screens::status(&statuses[0].1);
-        let before = screens::status(&statuses[1].1);
-        if current.is_some() && current != before {
+        // Garmin's codes carry a numeric suffix ("PRODUCTIVE_6") that is not a new status.
+        let named = |v| screens::status(v).map(|s| screens::label(Some(s))).filter(|s| !s.is_empty());
+        let current = named(&statuses[0].1);
+        let before = named(&statuses[1].1);
+        if let Some(now) = current.as_ref().filter(|_| current != before) {
             add(
                 "training-status",
-                "Training status changed",
-                format!("Now {}.", current.unwrap_or_default()),
+                &format!("Training status: {now}"),
+                match before {
+                    Some(was) => format!("Was {was}."),
+                    None => "Previously not reported.".into(),
+                },
                 day.clone(),
             );
         }

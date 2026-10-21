@@ -174,6 +174,80 @@ export async function planProgressChecks({browser,url,errors}){
   await page.close();
  }
  console.log('Progress: readable totals, one comparison, dated records, per-week goals, current period marked: passed');
+ // Cardio, Strength and Long-term choose their own window like Overall's period: plan weeks for
+ // Cardio and Strength, months for Long-term, stepping back and forward; the choice outlasts a detail.
+ {
+  const page=await browser.newPage({viewport:{width:390,height:844}});
+  page.on('pageerror',e=>errors.push(e.message));
+  await page.addInitScript(base=>{
+   window.isTauri=true;window.domainCalls=[];localStorage.setItem('notifications-step-done','1');
+   window.__TAURI_INTERNALS__={transformCallback:()=>1,invoke:async(command,args)=>{
+    if(command.startsWith('plugin:'))return 1;
+    if(command==='get_settings')return {};
+    if(command==='progress_domains'){
+     const q=args.query,d=structuredClone(base.progress_domains);
+     window.domainCalls.push(q);
+     if(q.weeksEnd){d.weeksFrom='2023-10-16';d.weeksTo='2024-10-20';d.weeks=[];}
+     else if(q.weeks===52)d.weeksFrom='2024-10-21';
+     if(q.monthsEnd){d.monthsFrom='2015-11-01';d.monthsTo='2020-10-31';d.months=d.months.map(m=>({...m,minutes:null,restingHr:null,hrv:null,vo2max:null,fitnessAge:null}));}
+     else if(q.months===60){d.monthsFrom='2020-11-01';d.months[5].vo2max=null;d.months[2].restingHr=null;d.months[4].restingHr=null;}
+     return d;
+    }
+    if(command in base)return structuredClone(base[command]);
+    return null;
+   }};
+  },base);
+  const called=q=>page.waitForFunction(q=>window.domainCalls.some(c=>Object.entries(q).every(([k,v])=>c[k]===v)),q);
+  const label=()=>page.locator('.dom-range h2').textContent().then(t=>t.trim());
+  const period=page.getByRole('group',{name:'Period',exact:true});
+  const next=page.getByRole('button',{name:'Next period'});
+  await page.goto(`${url}/#progress`);
+  await page.getByRole('tab',{name:'Cardio'}).click();
+  await page.getByRole('region',{name:'Zone 2 minutes per week'}).waitFor();
+  assert.deepEqual((await period.getByRole('button').allTextContents()).map(t=>t.trim()),['12 weeks','6 months','Year']);
+  assert.equal(await period.getByRole('button',{name:'12 weeks'}).getAttribute('aria-pressed'),'true');
+  assert.equal(await label(),'28 Jul – 19 Oct 2025');
+  assert.ok(await next.isDisabled(),'the current window has nothing after it');
+  await period.getByRole('button',{name:'Year',exact:true}).click();
+  await called({weeks:52,weeksEnd:null});
+  await page.waitForFunction(()=>document.querySelector('.dom-range h2')?.textContent==='21 Oct 2024 – 19 Oct 2025');
+  await page.getByRole('button',{name:'Previous period'}).click();
+  await called({weeks:52,weeksEnd:'2024-10-17'});
+  await page.getByText('No weeks of downloaded history in these dates.').waitFor();
+  assert.equal(await label(),'16 Oct 2023 – 20 Oct 2024');
+  assert.ok(!await next.isDisabled());
+  await page.getByRole('tab',{name:'Long-term'}).click();
+  await page.getByRole('region',{name:'Training per month'}).waitFor();
+  assert.deepEqual((await period.getByRole('button').allTextContents()).map(t=>t.trim()),['Year','2 years','5 years']);
+  assert.equal(await label(),'Nov 2024 – Oct 2025');
+  await period.getByRole('button',{name:'5 years'}).click();
+  await called({months:60,monthsEnd:null});
+  await page.waitForFunction(()=>document.querySelector('.dom-range h2')?.textContent==='Nov 2020 – Oct 2025');
+  // Estimates either side of a gap are joined by a dashed line; a month with no neighbour keeps its dot.
+  const vo2=page.getByRole('region',{name:'VO₂ max and Fitness Age by month'});
+  assert.match(await vo2.locator('path.bridge').first().getAttribute('d'),/^M[\d.]+,[\d.]+L/,'a dashed join over the missing estimate');
+  assert.equal(await page.getByRole('region',{name:'Resting heart rate by month'}).locator('circle[r="2.5"]').count(),2,'each month with no neighbour (Dec and Feb) keeps its dot');
+  // Months without readings keep a baseline and say so, never a made-up scale.
+  await page.getByRole('button',{name:'Previous period'}).click();
+  await called({months:60,monthsEnd:'2020-10-01'});
+  const hrv=page.getByRole('region',{name:'Overnight HRV by month'});
+  await hrv.getByText('No readings').waitFor();
+  assert.equal(await hrv.locator('text.yt').count(),0,'no ticks without readings');
+  await hrv.getByRole('button',{name:'Details'}).click();
+  await page.waitForFunction(()=>location.hash==='#metric/hrv');
+  await page.goBack();
+  await page.getByRole('region',{name:'Training per month'}).waitFor();
+  assert.equal(await period.getByRole('button',{name:'5 years'}).getAttribute('aria-pressed'),'true','Back keeps the months');
+  assert.equal(await label(),'Nov 2015 – Oct 2020');
+  await page.getByRole('tab',{name:'Cardio'}).click();
+  await page.getByText('No weeks of downloaded history in these dates.').waitFor();
+  assert.equal(await period.getByRole('button',{name:'Year',exact:true}).getAttribute('aria-pressed'),'true','and the weeks');
+  await next.click();
+  await page.waitForFunction(()=>document.querySelector('.dom-range h2')?.textContent==='21 Oct 2024 – 19 Oct 2025');
+  assert.ok(await next.isDisabled(),'stepping forward to now follows today again');
+  await page.close();
+ }
+ console.log('Progress: Cardio, Strength and Long-term choose and step their own weeks and months, kept across Back: passed');
  // Plan's week card gathers what needs you: reviews name the recording and open
  // the session; not-recorded sessions are one row with Reschedule and Let it go
  // (PP-M1, M2); a recording that may be a session says so (PP-B15).

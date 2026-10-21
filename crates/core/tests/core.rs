@@ -314,6 +314,11 @@ fn health_status_notifications_name_sleep_hr_and_garmin_outliers() {
     let vitals = items.iter().find(|n| n.kind == "vitals").unwrap();
     assert!(vitals.body.contains("Garmin's baselines"));
     assert!(!vitals.body.contains("your usual range"));
+    assert_eq!(vitals.title, "2 vitals outside your ranges");
+    assert_eq!(
+        vitals.body.lines().next().unwrap(),
+        "SpO₂ 93% (usual 95–99) · Skin temp +0.8°C (usual −0.4 to +0.4)"
+    );
 
     // One Garmin outlier plus a resting-HR fallback must name both sources.
     health["metrics"].as_array_mut().unwrap().retain(|m| m["type"] == "SPO2");
@@ -1346,6 +1351,30 @@ fn activities_page_back_through_stored_history_by_sport() {
     assert_eq!(all.last().map(String::as_str), Some("2000"));
 }
 #[test]
+fn activity_calendar_reads_one_month_of_stored_history() {
+    use raring_core::screens::activity_month;
+    let store = Store::open(":memory:").unwrap();
+    let day = |y, m, d| chrono::NaiveDate::from_ymd_opt(y, m, d).unwrap();
+    let empty = activity_month(&store, day(2025, 10, 17), day(2025, 10, 20));
+    assert_eq!((empty.month.as_str(), empty.first, empty.activities.len()), ("2025-10-01", None, 0));
+    for (id, kind, start) in [(1, "hiking", "2025-03-02 09:00:00"), (2, "running", "2025-09-30 23:30:00"), (3, "running", "2025-10-01 06:00:00"),
+        (4, "cycling", "2025-10-01 18:00:00"), (5, "lap_swimming", "2025-10-15 07:00:00"), (6, "walking", "2025-10-31 21:00:00"), (7, "running", "2025-11-01 00:10:00")] {
+        store.put("activity", &id.to_string(), "now", &json!({"activityId": id, "activityName": kind, "activityTypeDTO": {"typeKey": kind},
+            "summaryDTO": {"startTimeLocal": start, "duration": 1800.}})).unwrap();
+    }
+    let october = activity_month(&store, day(2025, 10, 17), day(2025, 10, 20));
+    assert_eq!(october.month, "2025-10-01");
+    assert_eq!(october.today, "2025-10-20");
+    let ids: Vec<&str> = october.activities.iter().map(|a| a.id.as_str()).collect();
+    assert_eq!(ids, ["6", "5", "4", "3"], "the month's first and last days, newest first, nothing either side");
+    assert_eq!(october.first.as_deref(), Some("2025-03-02"), "the oldest stored recording bounds the calendar");
+    assert_eq!(october.grid_start, "2025-09-29", "weeks start on Monday without Garmin's week");
+    store.put("intensity_weeks", "me", "now", &json!([{"calendarDate": "2025-10-19"}])).unwrap();
+    assert_eq!(activity_month(&store, day(2025, 10, 1), day(2025, 10, 20)).grid_start, "2025-09-28", "Garmin's Sunday weeks");
+    let december = activity_month(&store, day(2025, 12, 31), day(2025, 10, 20));
+    assert_eq!((december.month.as_str(), december.activities.len()), ("2025-12-01", 0));
+}
+#[test]
 fn activities_read_in_garmin_units_and_swims_in_the_pool_unit() {
     use raring_core::view::DistanceUnit;
     let store = Store::open(":memory:").unwrap();
@@ -1403,4 +1432,41 @@ fn garmins_sleep_schedule_is_read_daily_until_nights_are_recorded() {
     store.put("profile_settings", "me", "synthetic", &json!({"measurementSystem": "metric", "userSleep": null})).unwrap();
     checked(&store, Duration::days(2));
     assert!(!settings_due(&store, now), "read once: Garmin sent no schedule");
+}
+#[test]
+fn change_notifications_say_what_changed() {
+    let s = Store::open(":memory:").unwrap();
+    seed(&s);
+    let mut settings = s.settings();
+    settings.notify_training_status = true;
+    s.set_settings(&settings).unwrap();
+    s.put("max_metrics", "2025-01-01", "now", &json!([{"generic":{"vo2MaxValue":45.}}]))
+        .unwrap();
+    s.put("max_metrics", "2025-01-02", "now", &json!([{"generic":{"vo2MaxValue":44.}}]))
+        .unwrap();
+    s.put("fitness_age", "2025-01-01", "now", &json!({"fitnessAge":40})).unwrap();
+    s.put("fitness_age", "2025-01-02", "now", &json!({"fitnessAge":39.2})).unwrap();
+    s.put("training", "2025-01-01", "now", &json!({"trainingStatus":"MAINTAINING_2"})).unwrap();
+    s.put("training", "2025-01-02", "now", &json!({"trainingStatus":"PRODUCTIVE_6"})).unwrap();
+    let when = chrono::NaiveDate::from_ymd_opt(2025, 1, 2)
+        .unwrap()
+        .and_hms_opt(9, 0, 0)
+        .unwrap()
+        .and_local_timezone(Local)
+        .single()
+        .unwrap();
+    let items = notifications::notifications(&s, when);
+    let find = |kind: &str| items.iter().find(|n| n.kind == kind).unwrap();
+    assert_eq!(find("vo2max").title, "VO₂ max is now 44");
+    assert_eq!(find("vo2max").body, "Down from 45.");
+    assert_eq!(find("fitness-age").title, "Fitness Age is now 39");
+    assert_eq!(find("fitness-age").body, "Down from 40.");
+    assert_eq!(find("training-status").title, "Training status: Productive");
+    assert_eq!(find("training-status").body, "Was Maintaining.");
+
+    // Only Garmin's numeric suffix changed: the same status, no notification.
+    s.put("training", "2025-01-01", "now", &json!({"trainingStatus":"PRODUCTIVE_2"})).unwrap();
+    assert!(!notifications::notifications(&s, when)
+        .iter()
+        .any(|n| n.kind == "training-status"));
 }
