@@ -9,13 +9,19 @@ import type { JournalDay } from "./JournalDay";
 import type { Lever } from "./Lever";
 import type { NightVitals } from "./NightVitals";
 import type { StressCard } from "./StressCard";
+import type { VigorousWindow } from "./VigorousWindow";
 import type { VitalsCard } from "./VitalsCard";
 
 export type HealthView = { 
 /**
  * Local date, YYYY-MM-DD.
  */
-date: string, journal: Array<JournalDay>, journalEnabled: boolean, fitnessAge: FitnessAgeCard, lever: Lever | null, drivers: Array<Driver>, vitals: VitalsCard, stress: StressCard, heartRateDay: HeartRateDay, bodyWeight: BodyWeightCard | null, 
+date: string, journal: Array<JournalDay>, journalEnabled: boolean, fitnessAge: FitnessAgeCard, lever: Lever | null, drivers: Array<Driver>, 
+/**
+ * The six weeks of vigorous minutes Garmin averages, ending on the
+ * calendar day (the requested day for a past one).
+ */
+vigorous: VigorousWindow | null, vitals: VitalsCard, stress: StressCard, heartRateDay: HeartRateDay, bodyWeight: BodyWeightCard | null, 
 /**
  * This week's intensity minutes, when Garmin reported any day of it.
  */

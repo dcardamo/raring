@@ -1130,6 +1130,7 @@
       "benefit": "Tempo",
       "avgHr": 152,
       "intensityMin": 62,
+      "vigorousMin": 24,
       "distanceUnit": "km"
     }
   ],
@@ -1231,7 +1232,7 @@
       "rangeSource": "garmin",
       "state": "within",
       "delta": null,
-      "tone": "neutral"
+      "tone": "good"
     },
     "hrv": {
       "value": 58,
@@ -1243,8 +1244,30 @@
       "rangeSource": "garmin",
       "state": "within",
       "delta": null,
-      "tone": "neutral"
+      "tone": "good"
     }
+  },
+  "fitness": {
+    "window": {
+      "end": "2025-10-16",
+      "weeks": [
+        14,
+        31,
+        6,
+        27,
+        20,
+        30
+      ],
+      "today": 24,
+      "average": 21.333333333333332,
+      "beforeToday": 17.333333333333332,
+      "target": 75,
+      "ageAtTarget": 37.8
+    },
+    "age": 39,
+    "droppedFrom": null,
+    "card": "afterWeek",
+    "leverLine": false
   },
   "focus": {
     "phase": "wake",

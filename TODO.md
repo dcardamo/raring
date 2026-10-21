@@ -168,16 +168,9 @@ From item 11, in priority order.
 - Weekly trend buckets run Monday to Sunday. Consider aligning them with
   Garmin's reported intensity-week boundary, which the weekly plan already
   uses; a display preference need not match that data window.
-- Fitness Age history is limited to downloaded per-day estimates: each
-  synced day since install and each opened past day, so Long-term's Fitness
-  Age chart and its history detail are nearly empty. `GET
-  /fitnessage-service/fitnessage/{date}` returns Garmin's estimate as of any
-  past date (verified 2026-10-20, read-only: a date a month back and one a
-  year back each returned their own `fitnessAge`, the `chronologicalAge`
-  then and `components`; `lastUpdated` can be a few days before the date).
-  A history download of one read per month (the month's last day) would give
-  every month a point, at one request per month of history.
-- Endurance, hill score and race predictions have no long-history rows. The web GraphQL lists
+- Fitness Age history is limited to downloaded per-day estimates, though a
+  past date's estimate is readable (Fitness Age window follow-ups); endurance,
+  hill score and race predictions have no long-history rows. The web GraphQL lists
   `enduranceScoreScalar` and `hillScoreScalar` (start, end, weekly
   aggregation); unverified.
 
@@ -230,6 +223,27 @@ From the chart legibility pass, in priority order.
   the check's card test (Today, Sleep and Readiness only) to every page.
 - The check compares text with other text and with `data-mark` markers, not
   with bars, points or bands; mark more shapes as charts change.
+
+### Fitness Age window follow-ups
+
+From the Fitness Age window on Today, Plan and Health, in priority order.
+
+- Live with it on the maintainer's phone for a week: the card after This
+  week on a vigorous day, under Recorded today the day Garmin's estimate
+  drops, the push-morning lever line, and Plan's line; TalkBack on the bars
+  and the large-text layout of the card.
+- Garmin's estimate is read once a day at the first sync, so a Garmin update
+  later that day reaches Today's drop card the next morning. Decide whether a
+  vigorous day should read `fitness_age` again (one request, in budget).
+- Vigorous days: `vigorousDaysAvg` is not "days with 10 or more vigorous
+  minutes": the 15 Oct 2026 estimate said 0.1 with two such days in its
+  window, while 16 Oct said 0.3 over the same days. Find Garmin's rule before
+  counting days anywhere.
+- Fitness Age history: a past date's `fitnessage/{date}` returns that day's
+  estimate (see the Done entry), so a budgeted backfill could fill the
+  history chart and Progress's Long-term months beyond the downloaded days.
+  Opened past Health days now store theirs; one read per month (its last
+  day) would give every month a point, at one request per month of history.
 
 ### Today session and morning stats follow-ups
 
@@ -359,7 +373,9 @@ From the read-only UX review of Training and workouts, in priority order.
 - **Units elsewhere**: running tolerance, Progress distance totals and gear
   still read km; follow Garmin's measurement setting there too.
 - **Acute-load band per day**: the 30-day chart and metric detail use today's
-  optimal range; draw Garmin's stored range for each day where it exists.
+  optimal range; draw Garmin's stored range for each day where it exists
+  (each day's Training Status carries `minTrainingLoadChronic` and
+  `maxTrainingLoadChronic`).
 - **Large text**: at 2x on 360 px, the strength session rows, the acute
   bar's tick labels and the Splits "Fastest" pill still pass their card;
   some card text still runs long at 2x (the chart lane covers charts only).
@@ -611,14 +627,15 @@ faces, screens, sensors and audio prompts stay in Connect.
 
 - **Joined chart points** (commit "Join chart points with a line, dashed
   across gaps"), from the maintainer: Long-term's VO₂ max and Fitness Age
-  were bare dots, hard to read as a trend. Line and dot charts (Progress's
-  domain charts, every trend chart on Health and the metric details) now
-  join neighbouring readings, with a faint dashed line across a gap; nothing
-  is plotted for a gap, and the trend charts still mark missing days under
-  the axis. A monthly average with no neighbour was invisible on a line
+  were bare dots, hard to read as a trend. Progress's line and dot charts
+  and the daily trend charts (Health's cards, the metric details) now join
+  neighbouring readings, with a faint dashed line across a gap; nothing is
+  plotted for a gap, and the trend charts still mark missing days under the
+  axis. On the trend charts Garmin's estimates keep the one line of "Join
+  Garmin's VO₂ max and Fitness Age estimates in one line". A monthly average with no neighbour was invisible on a line
   chart and now has a dot. Fitness Age still has at most one point a month,
-  only where estimates are stored (see the Trends follow-up on its history
-  download).
+  only where estimates are stored (see the Fitness Age window follow-up on
+  its history).
 
 - **Dates for Progress's Cardio, Strength and Long-term** (commit "Choose
   the weeks and months on Progress's Cardio, Strength and Long-term"), from
@@ -650,6 +667,67 @@ faces, screens, sensors and audio prompts stay in Connect.
   and the journal says its seven days end there. Checked in a browser
   preview on a copy of the full-history database; the phone's real fetch is
   unverified.
+
+- **Fitness Age on Today and Plan** (commits "Show Fitness Age's vigorous
+  window on Today, Plan and Health" and "Read Fitness Age's lever from the
+  window's estimate and keep its card under Recorded today", the second from
+  a review), from the maintainer wanting Today and
+  Plan to show progress toward Health's Fitness Age levers, positively.
+  The workout-driven lever is vigorous minutes, so Raring shows Garmin's
+  vigorous driver live from the daily summaries, never the age moving per
+  workout. Today: a "+24 vigorous min" chip on recorded workouts; a compact
+  card after This week on a day with vigorous minutes (six-week average
+  before and with today, six seven-day bars with today's minutes green,
+  Garmin's age at its target), moving under Recorded today the day Garmin's
+  estimate drops a whole year; on Garmin's push call before any vigorous
+  minutes, one line names the lever. Plan: one read-only line with this
+  week's vigorous minutes against Garmin's target (the maintainer chose a
+  line over a goal). Health: the same bars under the drivers. How it
+  counted: the workout's vigorous minutes, its week's total and the last day
+  they count. Before/after mockups (synthetic) are in
+  `.data/mockups/fitness-age/`. The demo seed's vigorous target is now 75.
+  - Verified read-only on a real account (2026-10-20, five requests beside the
+    stored daily rows): `/fitnessage-service/fitnessage/{date}` returns the estimate
+    as of a past date, with `lastUpdated` its day or an earlier one (asking
+    for 6 Oct 2026 returned 5 Oct's: Garmin doesn't estimate every day).
+    `components.vigorousMinutesAvg.value` equalled the daily summaries'
+    `vigorousIntensityMinutes` over the 42 days ending on the estimate's day,
+    that day included, ÷ 6, for 3, 5, 8, 12, 15 and 16 Oct 2026; six Monday
+    weeks (12 Oct: 4.0 against Garmin's 12.8) and the 42 days before the
+    estimate's day (3 Oct: 24.7 against 18.3) did not. `targetValue` was 75
+    and `numOfWeeksForIm` 6; a met driver (`rhr`) carries no target, and
+    `bmi`'s `potentialAge` was older than the estimate itself, so only the
+    lever's age is shown. Per-activity vigorous minutes can sum below the
+    day's (all-day minutes count), so the window reads the daily summaries.
+
+- **Phone feedback on Today and Training** (commits "Today: score ring for
+  Sleep, green in-range vitals and no closing line", "Join Garmin's VO₂ max
+  and Fitness Age estimates in one line", "Name the Sleep Score with
+  Garmin's word" and "Read Garmin's optimal acute-load range and show it on
+  Today after a workout"), from the maintainer's phone. Today's Sleep stat
+  is Garmin's Sleep Score in a ring in its level's colour, like Readiness,
+  with Garmin's word and the time asleep under it ("Good · 7:33"), instead
+  of time asleep in a full ring against the need; every rating word in the
+  row takes its tone colour. Sleep HR and HRV are green within the usual
+  range and amber outside it in either direction (core `NightReading.tone`),
+  as on Health's vitals and the charts. "That's today." is gone. VO₂ max and
+  Fitness Age histories join Garmin's estimates in one line, dotted where it
+  crosses days without one, with no gap marks; before, a line appeared only
+  where two estimates fell on consecutive days. VO₂ max beside the status at
+  the top of Training was tried and reverted: it looked wrong to the
+  maintainer, pushed the status's Why below it and took VO₂ max out of "Is
+  my fitness improving?". Garmin sets no daily load target, so under Done
+  today acute load is a dot on Garmin's optimal range, as on Training.
+  Verified on the maintainer's account: Training Status sends that range as
+  `acuteTrainingLoadDTO.minTrainingLoadChronic` and `maxTrainingLoadChronic`
+  (its `acwrStatus` agreed on every day checked), which Raring hadn't read,
+  so Training had shown no range; the older weekly load tunnel
+  (`loadTunnelMin`, `loadTunnelMax`, `weeklyTrainingLoad`) is null. Health
+  Status's `HR` equals the sleep record's `avgHeartRate` and sits above
+  Garmin's daily resting HR, so the stat stays "Sleep HR". Garmin's `maxmet`
+  daily rows exist only on days it updates VO₂ max. The Sleep Score's word
+  is `sleepScores.overall.qualifierKey`; Garmin's EXCELLENT (from 90) is
+  unverified on this account.
 
 - **Street maps under workout routes** (commits "Draw workout routes over
   street maps from OpenFreeMap" and "Keep street-map downloads to one area at

@@ -49,9 +49,10 @@ fn health(store: &Store, metrics: Value) {
 fn sleep_hr_and_hrv_are_within_above_or_below_their_usual_range() {
     // (Sleep HR, HRV) -> (state, delta, tone) for each
     let rows = [
-        (51., 50., (UsualState::Within, None, Tone::Neutral), (UsualState::Within, None, Tone::Neutral)),
+        (51., 50., (UsualState::Within, None, Tone::Good), (UsualState::Within, None, Tone::Good)),
         (57., 40., (UsualState::Above, Some(6.), Tone::Fair), (UsualState::Below, Some(-10.), Tone::Fair)),
-        (46., 60., (UsualState::Below, Some(-6.), Tone::Neutral), (UsualState::Above, Some(10.), Tone::Neutral)),
+        // Outside in the welcome direction is still outside the usual range.
+        (46., 60., (UsualState::Below, Some(-6.), Tone::Fair), (UsualState::Above, Some(10.), Tone::Fair)),
     ];
     for (hr, ms, want_hr, want_hrv) in rows {
         let s = store(Some(hr));

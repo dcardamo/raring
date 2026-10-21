@@ -627,5 +627,6 @@ pub fn board_with(store: &Store, local: &LocalRecords, anchor: NaiveDate, today:
         events: event_lines,
         event_week,
         coach,
+        fitness: crate::fitness::plan_week(store, start, today),
     }
 }

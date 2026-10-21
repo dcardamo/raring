@@ -50,6 +50,7 @@
  <div class="wk-h"><div><h2>{range}</h2>{#if board.pause}<small>{board.pause.reason === 'ill' ? 'Ill' : 'Paused'} {board.pause.wholeWeek ? 'all week' : `since ${dayName(board.pause.since)}`}{board.pause.until && !board.pause.wholeWeek ? ` to ${dayName(board.pause.until)}` : ''}{board.backlogPaused ? '' : ' · nothing to catch up'}</small>{/if}</div>
   <span class="wk-a"><HelpButton topic="plan"/><button class="small-edit" onclick={() => navigate('plan/commitments')}><Icon name="pencil" size={13}/>Goals</button></span></div>
  <WeekSummary {board} onGoals={() => navigate('plan/commitments')}/>
+ {#if board.fitness}{@const f = board.fitness}<button class="fa-plan" onclick={() => navigate('health')}><span class="fa-ico"><Icon name="heart" size={15}/></span><span class="fa-text"><span><b>Fitness Age</b> · vigorous <b class="n">{f.vigorous == null ? '—' : Math.round(f.vigorous)}</b> of {Math.round(f.target)} min this week</span>{#if f.vigorous != null}<i class="fa-bar" aria-hidden="true"><i style:width={`${Math.min(100, f.vigorous / f.target * 100)}%`}></i></i>{/if}<small>Garmin’s target · read-only</small></span><Icon name="chevron" size={15}/></button>{/if}
  {#if review.length || missed.length}
   <div class="needs" role="group" aria-label="Needs you">
    {#each review as p (p.intention.id)}<button class="need" onclick={() => openItem(p)}><span><b>Needs review</b> {reviewText(p)}</span><Icon name="chevron" size={15}/></button>{/each}
@@ -103,6 +104,10 @@
  <div class="card event"><span class="cd"><b class="n">{e.daysUntil}</b><small>days</small></span><span><b>{e.name}</b><small>{dateLabelIn(e.date, board.today)} · {e.source === 'garmin' ? `Garmin calendar${e.partial ? ' · later races may be missing' : ''}` : 'Saved on this phone'}</small>{#if ev && ev.event.name === e.name && ev.event.date === e.date}<small class="ev-week">{SPORT_NAMES[ev.sport]} this week: {Math.round(ev.recordedMin)} min recorded</small>{/if}</span>{#if e.id}<button class="link" aria-label={`Remove ${e.name}`} onclick={() => remove(e)}>Remove</button>{/if}</div>
 {:else}<p class="small none">No race or event yet.</p>{/each}
 <style>
+ .fa-plan{display:grid;grid-template-columns:28px 1fr 16px;gap:10px;align-items:center;width:100%;min-height:44px;margin-top:14px;padding:11px 0 0;border:0;border-top:1px solid var(--line);background:none;color:var(--text2);text-align:left;font-size:13px}
+ .fa-text{display:block;min-width:0}.fa-plan b{color:var(--text);font-weight:600}.fa-plan small{display:block;margin-top:3px;font-size:12px;color:var(--text3)}
+ .fa-bar{display:block;height:6px;margin-top:7px;border-radius:3px;background:rgba(255,255,255,.07);overflow:hidden}.fa-bar i{display:block;height:100%;border-radius:3px;background:var(--amount)}
+ .fa-ico{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:color-mix(in srgb,var(--good) 12%,transparent);color:var(--good)}
  .wk-a{display:flex;gap:8px;align-items:center}
  :global(.sec-h:has(.qh)){display:flex;align-items:center;gap:8px}
  .row-item.serves{box-shadow:inset 3px 0 0 var(--fair)}.for,.clash{display:block;font:600 12px Inter;font-style:normal;color:var(--fair)}.clash{color:#BDAAFF}

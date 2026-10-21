@@ -25,6 +25,7 @@
     "benefit": "Tempo",
     "avgHr": 152,
     "intensityMin": 62,
+    "vigorousMin": 24,
     "distanceUnit": "km"
   },
   "recoveryHours": 18,
@@ -2000,7 +2001,14 @@
     "planItem": null,
     "bests": [
       "Longest run"
-    ]
+    ],
+    "fitness": {
+      "minutes": 24,
+      "week": 30,
+      "thisWeek": true,
+      "target": 75,
+      "until": "2025-11-26"
+    }
   },
   "strength": null
 }

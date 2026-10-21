@@ -215,3 +215,24 @@ fn invalid_overnight_summaries_are_absent_and_legacy_series_still_works() {
         vec![Some(50.), Some(51.)]
     );
 }
+
+#[test]
+fn acute_load_is_rated_against_garmins_chronic_bounds_on_today_and_training() {
+    let store = Store::open(":memory:").unwrap();
+    for (amount, status, label, tone) in [
+        (150, "LOW", "Low", Tone::Fair),
+        (250, "OPTIMAL", "Optimal", Tone::Good),
+        (360, "HIGH", "High", Tone::Poor),
+    ] {
+        put(
+            &store,
+            "training",
+            DAY,
+            json!({"mostRecentTrainingStatus":{"latestTrainingStatusData":{"device-b":{"primaryTrainingDevice":true,"trainingStatus":4,"acuteTrainingLoadDTO":{"dailyTrainingLoadAcute":amount,"dailyTrainingLoadChronic":226,"minTrainingLoadChronic":180.8,"maxTrainingLoadChronic":339.0,"acwrStatus":status}}}}}),
+        );
+        let acute = screens::training(&store, DAY).acute.unwrap();
+        assert_eq!((acute.value, acute.band, acute.label.as_str(), acute.tone), (amount as f64, Some([180.8, 339.]), label, tone), "{status}");
+        assert_eq!(acute.max % 100., 0., "a round scale end");
+        assert_eq!(screens::today(&store, DAY).load, Some(acute), "Today draws the same bar");
+    }
+}

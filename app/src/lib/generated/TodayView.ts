@@ -15,6 +15,7 @@ import type { PlannedTraining } from "./PlannedTraining";
 import type { Reconciliation } from "./Reconciliation";
 import type { SleepPlan } from "./SleepPlan";
 import type { StressCard } from "./StressCard";
+import type { TodayFitness } from "./TodayFitness";
 import type { TodayFocus } from "./TodayFocus";
 import type { TodayLead } from "./TodayLead";
 import type { VitalsCard } from "./VitalsCard";
@@ -79,4 +80,9 @@ day: DayTimeline | null,
  * Last night's Sleep HR and HRV against their usual ranges, for the
  * morning and the day; none from the evening on or before the night syncs.
  */
-nightVitals: NightVitals | null, };
+nightVitals: NightVitals | null, 
+/**
+ * Fitness Age's vigorous driver on the calendar day; only for the live
+ * day, while Garmin's estimate has a vigorous-minutes target.
+ */
+fitness: TodayFitness | null, };
