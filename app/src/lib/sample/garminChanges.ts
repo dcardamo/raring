@@ -2,6 +2,7 @@
 import type {GarminChange} from '../generated/GarminChange';
 const time={field:'alarm:7.alarmTime',label:'Alarm time',before:'06:30',after:'07:00'};
 export const sampleGarminChanges=[
+ {at:'2025-10-16T07:50:00Z',resource:'Weight',fields:[{field:'weighIn:1760615880000',label:'Weigh-in added',before:null,after:'81.3 kg at 07:58 on 16 Oct'}],outcome:'applied',message:null,mismatches:[],waitingForWatch:false},
  {at:'2025-10-16T07:40:00Z',resource:'Watch alarms',fields:[time],outcome:'applied',message:null,mismatches:[],waitingForWatch:true},
  {at:'2025-10-16T07:20:00Z',resource:'Watch alarms',fields:[time],outcome:'differs',message:null,mismatches:[{...time,before:'07:00',after:'06:30'}],waitingForWatch:false},
  {at:'2025-10-15T21:05:00Z',resource:'Watch alarms',fields:[{field:'alarm:8.alarmDays',label:'Alarm days',before:'Once',after:'Monday, Friday'}],outcome:'rejected',message:'Invalid alarm days',mismatches:[],waitingForWatch:false},

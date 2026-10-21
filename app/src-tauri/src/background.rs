@@ -444,7 +444,7 @@ pub extern "system" fn Java_app_raring_NativeBridge_garminWrite(
     let json = match result {
         Ok(Ok(json)) => json,
         Ok(Err(error)) => serde_json::json!({ "error": error }).to_string(),
-        Err(_) => "{\"error\":\"Garmin write failed before sending\"}".into(),
+        Err(_) => "{\"error\":\"The Garmin write stopped unexpectedly; Garmin may or may not have it\"}".into(),
     };
     match env.new_string(json) {
         Ok(v) => v.into_raw(),

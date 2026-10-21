@@ -5,17 +5,19 @@
  import {dateLabel,num} from '../format';
  import {refusal,writeSummary} from '../garminWrite';
  // The weight detail's last weigh-in, deleted from Garmin only after an in-place confirmation
- // (Rules: Garmin writes). The core finds it again in a fresh read before deleting.
- let {weighIn,unit,onwrite}:{weighIn:WeighIn,unit:WeightUnit,onwrite?:()=>void}=$props();
+ // (Rules: Garmin writes). The core finds it again in a fresh read before deleting. A deleted
+ // weigh-in is handed to the parent, which drops it; other answers stay here.
+ let {weighIn,unit,onwrite,ondeleted}:{weighIn:WeighIn,unit:WeightUnit,onwrite?:()=>void,ondeleted?:(text:string)=>void}=$props();
  let confirming=$state(false),busy=$state(false),status=$state('');
  let label=$derived(`${num(weighIn.value,1)} ${unit} · ${dateLabel(weighIn.date)}${weighIn.time?` · ${weighIn.time}`:''}`);
  async function remove(){
   busy=true;status='';
   try{
    const change=await api.garmin_write({kind:'deleteWeighIn',date:weighIn.date,timestampGmt:weighIn.timestampGmt,samplePk:weighIn.samplePk,confirm:true});
-   status=change.outcome==='applied'?'Deleted from Garmin.':writeSummary(change);
    confirming=false;
-   if(change.outcome==='applied'||change.outcome==='conflict')onwrite?.();
+   if(change.outcome==='applied'){ondeleted?.(`Deleted ${label} from Garmin.`);return}
+   status=writeSummary(change);
+   if(change.outcome==='conflict'||change.outcome==='needsSignIn')onwrite?.();
   }catch(e){status=refusal(e)}finally{busy=false}
  }
 </script>

@@ -20,12 +20,23 @@ export function withOffset(local:string):string|null{
  return `${local}:00${sign}${pad(Math.floor(abs/60))}:${pad(abs%60)}`;
 }
 
+// Garmin accepted an add but its list doesn't show it yet: the list may lag, or the weigh-in may be
+// filed under another date, so a retry could add a second one.
+const NOT_LISTED='weigh-ins don’t show it yet';
+function unconfirmedAdvice(change:GarminChange):string{
+ const field=change.fields[0]?.field??'';
+ if(!field.startsWith('weighIn:'))return 'Check Garmin Connect to see whether it changed';
+ if(change.fields[0].after===null)return 'Try again: Raring reads Garmin first, so only this weigh-in can be deleted';
+ if((change.message??'').replace(/'/g,'’').includes(NOT_LISTED))return 'Wait a few minutes or check Garmin Connect before adding it again';
+ return 'Try again: Raring checks Garmin first, so it won’t be saved twice';
+}
+
 /** One line for a write's result: Garmin's answer, its message and what differs. */
 export function writeSummary(change:GarminChange):string{
  const parts=[RESULT[change.outcome]];
  if(change.message)parts.push(change.message);
  for(const m of change.mismatches)parts.push(m.before===null&&m.after===null?`${m.label} came back different`:`${m.label}: sent ${m.before??'none'}, Garmin has ${m.after??'none'}`);
- if(change.outcome==='unconfirmed')parts.push('Try again: Raring checks Garmin first, so it won’t be saved twice');
+ if(change.outcome==='unconfirmed')parts.push(unconfirmedAdvice(change));
  return parts.join('. ')+'.';
 }
 /** A refusal before anything was sent, as the shell reports it. */

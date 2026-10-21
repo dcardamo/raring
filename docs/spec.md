@@ -595,7 +595,8 @@ says so on its chart (Rules: Reading freshness).
   Help ("?") explains smoothing. Adding a weight lives on Profile only (Profile and
   Settings). The detail's Last weigh-in (value, date, time, entered by hand
   or from Garmin) can be deleted from Garmin after an in-place confirmation
-  (Rules: Garmin writes). Weight follows Garmin's
+  (Rules: Garmin writes); a deleted weigh-in leaves the card, which names
+  what was deleted. Weight follows Garmin's
   measurement system (kg/lb), not activity-set units in isolation. Missing
   measurements stay gaps, never zero; no notifications or unsolicited weight
   targets. Until the account units sync, the card waits rather than guessing.
@@ -783,9 +784,12 @@ page, never the overnight Sleep HR detail.
   and Help (Rules: Profile). Add a weight opens a form under the facts:
   the weight in Garmin's unit and a time that defaults to now, saved to
   Garmin (Rules: Garmin writes). The time stays fixed while the form is open,
-  so trying again after "sent, not confirmed" repeats the same weigh-in. A
-  saved weight closes the form with Garmin's answer; any other answer stays
-  in the form. Until Garmin's units sync, the button waits.
+  so trying again after "sent, not confirmed" repeats the same weigh-in;
+  when Garmin accepted it but its list doesn't show it yet, Raring says to
+  wait or check Connect instead. A saved weight closes the form with
+  Garmin's answer; any other answer stays in the form, and "sign in again"
+  also rereads the status so sign-in shows. Until Garmin's units sync, the
+  button waits.
 - **Adapt** (every root header): Rest today, I'm ill, Pause training,
   Lighter week, Limits and My routines; Resume shows the goals first (Rules:
   Adapt, My routines).

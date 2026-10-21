@@ -535,7 +535,8 @@ async fn garmin_write(app: tauri::AppHandle, request: GarminWrite) -> Result<Gar
             .run_mobile_plugin_async::<Response>("garminWrite", serde_json::json!({"request": request}))
             .await
             .map_err(|e| e.to_string())?;
-        if core(&app)?.session_identity().as_ref() != Some(&expected) {
+        // Sign in again suspends this same session, so it isn't another account.
+        if response.change.outcome != WriteOutcome::NeedsSignIn && core(&app)?.session_identity().as_ref() != Some(&expected) {
             return Err("Account changed while writing to Garmin".into());
         }
         return Ok(response.change);

@@ -16,7 +16,12 @@ describe('garmin writes',()=>{
   expect(writeSummary(change({}))).toBe('Saved in Garmin.');
   expect(writeSummary(change({outcome:'duplicate',message:'Garmin already has 81.3 kg at 06:58 on 21 Oct that day'}))).toBe('Not sent: already in Garmin. Garmin already has 81.3 kg at 06:58 on 21 Oct that day.');
   expect(writeSummary(change({outcome:'differs',mismatches:[{field:'weight',label:'Weight',before:'165.0 lb',after:'154.3 lb'}]}))).toBe('Saved, but Garmin reads back something else. Weight: sent 165.0 lb, Garmin has 154.3 lb.');
-  expect(writeSummary(change({outcome:'unconfirmed',message:'Couldn’t reach Garmin; Garmin may or may not have saved it'}))).toMatch(/Sent, not confirmed\. .*Try again: Raring checks Garmin first/);
+  expect(writeSummary(change({outcome:'unconfirmed',message:'Couldn’t reach Garmin; Garmin may or may not have saved it'}))).toMatch(/Sent, not confirmed\. .*Check Garmin Connect to see whether it changed\.$/);
+  const added={field:'weighIn:1',label:'Weigh-in added',before:null,after:'81.3 kg at 07:58 on 21 Oct'};
+  const deleted={field:'weighIn:1',label:'Weigh-in deleted',before:'81.3 kg at 07:58 on 21 Oct',after:null};
+  expect(writeSummary(change({outcome:'unconfirmed',fields:[added],message:"Garmin accepted it, but its weigh-ins don't show it yet"}))).toMatch(/Wait a few minutes or check Garmin Connect before adding it again\.$/);
+  expect(writeSummary(change({outcome:'unconfirmed',fields:[added],message:'Saved, but Garmin’s read-back failed'}))).toMatch(/won’t be saved twice\.$/);
+  expect(writeSummary(change({outcome:'unconfirmed',fields:[deleted],message:'Garmin answered with error 502; Garmin may or may not have saved it'}))).toMatch(/only this weigh-in can be deleted\.$/);
   expect(refusal(new Error('Not connected to Garmin; nothing was sent'))).toBe('Not connected to Garmin; nothing was sent');
   expect(refusal('Error: Account verification required')).toBe('Account verification required');
  });

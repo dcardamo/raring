@@ -243,8 +243,9 @@
   const next:ProgressPage={progress};
   views.set('progress',next);data=next;pendingSwap=null;loading=false;
  }
- // A Garmin write stored Garmin's answer locally; every view rereads it.
- function garminWritten(){clearViews();void refresh(true)}
+ // A Garmin write stored Garmin's answer locally; every view rereads it, and the
+ // status too, so a write that needs sign-in again shows sign-in.
+ function garminWritten(){clearViews();void refresh(true,true)}
  function clearSessionViews(){progressQuery={period:'month'};progressRevision++;progressDomains={...FIRST_DOMAINS};weightRange='days30';clearViews()}
  function navigate(to:string){navigation.navigate(to)}
  function back(){return closeSheet() || navigation.back()}

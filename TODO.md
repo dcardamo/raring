@@ -40,6 +40,17 @@ rules and each with an approved real-account spike first:
 Both unverified. Body fat, BMI and other composition fields stay out of the
 weight write.
 
+Weigh-in follow-ups from the branch review:
+- **Tokens after a panic**: if the Android JNI write (`background.rs`,
+  `Java_app_raring_NativeBridge_garminWrite`) panics after the request was
+  sent, its refreshed tokens are lost and the change isn't returned; the
+  reply now says Garmin may or may not have it. Return the tokens (and log
+  the attempt) from a panic-safe path.
+- **A delete without `samplePk`**: a stored weigh-in from Garmin's latest
+  endpoint has no `samplePk`, so the delete finds it by `timestampGMT`
+  alone. Two weigh-ins at the same millisecond are unlikely but would be
+  ambiguous; require a unique match or the `samplePk` from the fresh read.
+
 ### 2. Stress timeline on clock-change days (before 1 Nov)
 
 The stress timeline and its workouts keep a fixed 24-hour axis from the

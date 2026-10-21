@@ -17,7 +17,8 @@
   busy=true;error='';result=null;
   try{
    const change=await api.garmin_write({kind:'addWeight',value,unit,at:when});
-   if(change.outcome==='applied'||change.outcome==='differs'){open=false;saved=writeSummary(change);onwrite()}else result=change;
+   if(change.outcome==='applied'||change.outcome==='differs'){open=false;saved=writeSummary(change);onwrite()}
+   else{result=change;if(change.outcome==='needsSignIn')onwrite()}
   }catch(e){error=refusal(e)}finally{busy=false}
  }
 </script>

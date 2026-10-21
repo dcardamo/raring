@@ -24,6 +24,8 @@
  const COMPACT:TrendRange[]=['days7','days30','days90','year'];
  let wanted=$derived<TrendRange>(compact && !COMPACT.includes(range)?'days30':range);
  let view=$state<WeightView|null>(untrack(()=>initial??null)),busy=$state(false),error=$state('');
+ // The weigh-in just deleted from Garmin, hidden even before the reread drops it.
+ let deleted=$state<{at:number,text:string}|null>(null);
  const generation=getContext<()=>number>('trend-generation')??(()=>0);
  const color=colors.neutral;
  $effect(()=>{
@@ -73,8 +75,13 @@
    <div class="picker"><RangePicker value={range} onchange={r=>range=r} label="Weight range"/></div>
    {@render history()}
   </section>
-  {#if ready && view?.lastWeighIn && view.unit && !endDate}
-   <Card title="Last weigh-in"><DeleteWeighIn weighIn={view.lastWeighIn} unit={view.unit} {onwrite}/></Card>
+  {#if ready && view?.unit && !endDate && (view.lastWeighIn || deleted)}
+   <Card title="Last weigh-in">
+    {#if deleted}<p class="small deleted" role="status">{deleted.text}</p>{/if}
+    {#if view.lastWeighIn && view.lastWeighIn.timestampGmt!==deleted?.at}
+     {#key view.lastWeighIn.timestampGmt}<DeleteWeighIn weighIn={view.lastWeighIn} unit={view.unit} {onwrite} ondeleted={text=>{deleted={at:view!.lastWeighIn!.timestampGmt,text};onwrite?.()}}/>{/key}
+    {/if}
+   </Card>
   {/if}
   {#if ready && view?.changes.length}
    <Card title={`Trend change · ending ${dateLabel(view.to!)}`} extra="weight-changes">
@@ -89,6 +96,7 @@
 {/if}
 <style>
  .picker{display:flex;min-width:0}
+ .deleted{margin:0 0 10px}
  .period-summary{margin:16px 0}
  .period-source{font:400 12px/1.5 Inter;color:var(--text2);margin:0 0 10px;overflow-wrap:anywhere}
  .fresh{display:flex;align-items:center;gap:5px;margin:8px 0 0;font-size:12px;color:var(--text2)}.fresh.stale{color:var(--fair);font-weight:600}

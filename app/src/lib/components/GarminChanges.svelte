@@ -14,7 +14,7 @@
  {:else if changes.length===0}<p class="small">Raring hasn’t changed anything in Garmin. Each change you make here will be listed with Garmin’s answer.</p>
  {:else}<ul class="changes" aria-label="Recent Garmin changes">{#each changes as change,i (change.at+i)}<li>
   <div class="head"><b>{change.resource}</b><small>{when(change.at)}</small></div>
-  {#each change.fields as f (f.field)}<div class="small">{f.label}: {#if f.after===null}{value(f.before)}{:else}{value(f.before)} → {f.after}{/if}</div>{/each}
+  {#each change.fields as f (f.field)}<div class="small">{f.label}: {#if f.after===null}{value(f.before)}{:else if f.before===null}{f.after}{:else}{f.before} → {f.after}{/if}</div>{/each}
   <div class="result {change.outcome}">{RESULT[change.outcome]+(change.waitingForWatch?' · Waiting for watch sync':'')}</div>
   {#if change.message}<div class="small">{change.message}</div>{/if}
   {#each change.mismatches as m (m.field)}<div class="small">{#if m.before===null && m.after===null}{m.label} came back different{:else}{m.label}: sent {value(m.before)}, Garmin has {value(m.after)}{/if}</div>{/each}

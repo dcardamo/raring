@@ -45,12 +45,14 @@ try {
   const log=changes.getByRole('list',{name:'Recent Garmin changes'});
   await log.waitFor();
   const rows=log.getByRole('listitem');
-  assert.equal(await rows.count(),5);
-  assert.match(await rows.nth(0).textContent(),/Alarm time: 06:30 → 07:00.*Saved in Garmin · Waiting for watch sync/);
-  assert.match(await rows.nth(1).textContent(),/Alarm time: sent 07:00, Garmin has 06:30/);
-  assert.match(await rows.nth(2).textContent(),/Garmin refused it.*Invalid alarm days/);
-  assert.match(await rows.nth(3).textContent(),/Not sent.*alarm time is now 06:40/);
-  assert.match(await rows.nth(4).textContent(),/Alarm removed: 05:45.*Not saved.*limiting requests/);
+  assert.equal(await rows.count(),6);
+  assert.match(await rows.nth(0).textContent(),/Weigh-in added: 81\.3 kg at 07:58 on 16 Oct\s*Saved in Garmin/);
+  assert.doesNotMatch(await rows.nth(0).textContent(),/none/,'a new weigh-in has no before');
+  assert.match(await rows.nth(1).textContent(),/Alarm time: 06:30 → 07:00.*Saved in Garmin · Waiting for watch sync/);
+  assert.match(await rows.nth(2).textContent(),/Alarm time: sent 07:00, Garmin has 06:30/);
+  assert.match(await rows.nth(3).textContent(),/Garmin refused it.*Invalid alarm days/);
+  assert.match(await rows.nth(4).textContent(),/Not sent.*alarm time is now 06:40/);
+  assert.match(await rows.nth(5).textContent(),/Alarm removed: 05:45.*Not saved.*limiting requests/);
   assert.equal(await changes.locator('.card').filter({hasText:'Recent Garmin changes'}).locator('button,input').count(),0,'the log only lists changes');
   await log.scrollIntoViewIfNeeded();
   await changes.screenshot({path:resolve(output,`garmin-changes-${width}.png`),fullPage:true});
@@ -1684,7 +1686,17 @@ try {
   assert.equal(await last.getByRole('group').count(),0,'cancel sends nothing');
   await last.getByRole('button',{name:'Delete this weigh-in'}).click();
   await last.getByRole('button',{name:'Delete from Garmin'}).click();
-  await last.getByRole('status').filter({hasText:'Deleted from Garmin.'}).waitFor();
+  await last.getByRole('status').filter({hasText:'Deleted 72.9 kg · Thu 16 Oct · 08:00 from Garmin.'}).waitFor();
+  assert.equal(await last.getByRole('button',{name:'Delete this weigh-in'}).count(),0,'the deleted weigh-in is gone from the card');
+  assert.equal(await last.locator('.reading').count(),0,'its reading is gone too');
+  assert.equal(await last.getByRole('status').count(),1,'one line names what was deleted');
+  // Garmin needs a new sign-in: the answer is shown and nothing else changes here.
+  await wp.goto(`${url}/?fixture=weight-write&outcome=needsSignIn#profile`);
+  await wp.getByRole('button',{name:'Add a weight'}).click();
+  const again=wp.getByRole('form',{name:'Add a weight'});
+  await again.getByRole('spinbutton').fill('81.3');
+  await again.getByRole('button',{name:'Save to Garmin'}).click();
+  await again.getByRole('status').filter({hasText:'Not sent: sign in again.'}).waitFor();
   assert.deepEqual(await contrastFailures(wp),[],'Weight detail contrast');
   await wp.close();
  }
