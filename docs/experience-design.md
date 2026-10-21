@@ -2098,6 +2098,7 @@ These explain metric boundaries, not new endpoint verification:
 - [Garmin: exercise load and EPOC](https://www.garmin.com/en-US/blog/fitness/what-is-epoc-defining-excess-post-exercise-oxygen-consumption/)
 - [Garmin: factors used by Sleep Coach](https://www.garmin.com/en-US/blog/fitness/five-factors-garmin-sleep-coach-uses-to-find-your-sleep-needs/)
 
-Implementation-specific verified payload facts remain in `TODO.md` and source
-tests. Public explanations do not establish that a particular account supplies
-a field or that the app has already implemented it.
+Implementation-specific verified payload facts remain in `docs/done.md`,
+`TODO.md` and source tests. Public explanations do not establish that a
+particular account supplies a field or that the app has already implemented
+it.
