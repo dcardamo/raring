@@ -152,11 +152,10 @@ each day's Training Status `minTrainingLoadChronic`/`maxTrainingLoadChronic`.
 - **Sign-in error wording**: map the native sign-in failures (no network,
   cancelled, Garmin refused) to one plain line each once their messages are
   known; Raring now only drops the "Error:" prefix.
-- **Widget labels at 11 sp** (review m13): 11 sp fails
-  `StatusWidgetLayoutTest` at the provider minimum size with large fonts
-  ("Readiness" 108 > 100 px on emulator-5560); the 10 sp layouts pass at font
-  scales 1.0/1.3/1.5. Needs a different minimum-size layout (fewer labels or a
-  larger minimum), proven by that test.
+- **Widget labels at 11 sp** (review m13): the redesigned widgets keep the
+  gauge caption and "As of" at 10 sp, which pass `StatusWidgetLayoutTest` at
+  font scales 1.0/1.3/1.5 at the 150×190 dp and 280×170 dp minimums. 11 sp
+  needs a larger minimum or fewer lines, proven by that test.
 - **Help pages**: "How targets count" and "Rest days and paused weeks".
 - **Website and README pictures** predate the street map; republish them from
   synthetic data (`npm run screenshots`, then `publish-screens.mjs`).
@@ -240,13 +239,15 @@ TalkBack or Doze.
   Doze; if reminders arrive late, offer exact alarms behind Android's
   alarms-and-reminders permission.
 - Tapping each notification: morning, weekly check-in, bedtime → Tonight.
-- Both widgets and the silent notification after a Connect sync: readings,
-  upload time and the latest HR sample against Today; metric taps, permission
-  denial, Settings off/on, reboot and overnight Doze; other launchers and
-  lock-screen privacy.
-- The restyled notification on Android 16 with wallpaper colours (checked on
-  an Android 15 emulator only). Android before 12 moves "As of" to the
-  collapsed header; untested.
+- On a phone that showed the removed status notification: after the update
+  the notification and its "Status at a glance" channel are gone without
+  opening the app (emulator test only).
+- Both redesigned widgets after a Connect sync: readings and upload time
+  against Today; the small one opens at 2×2 and the medium at 4×2 (Android
+  12+ uses the target cell sizes, older launchers the 150×190 dp and
+  280×170 dp minimums); the picker preview, metric taps (HRV opens its
+  detail), reboot and overnight Doze; other launchers; the HRV row against
+  Today's HRV card. Checked only as RemoteViews renders.
 - The per-kind alert channels replaced the old "Raring" channel; a phone that
   changed that channel's sound or importance starts from the defaults.
 - The app's notifications switch off in Android Settings while the permission

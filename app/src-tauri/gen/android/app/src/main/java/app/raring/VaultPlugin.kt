@@ -43,7 +43,7 @@ class VaultPlugin(private val activity: Activity): Plugin(activity) {
     }
     override fun onNewIntent(intent: Intent) { openTarget(intent) }
     private fun openTarget(intent: Intent?) {
-        val target = intent?.getStringExtra("target")?.takeIf { it in setOf("today", "checkin", "sleep", "sleep/last", "sleep/tonight", "training", "health", "readiness", "metric/bodyBattery", "metric/stress") } ?: return
+        val target = intent?.getStringExtra("target")?.takeIf { it in setOf("today", "checkin", "sleep", "sleep/last", "sleep/tonight", "training", "health", "readiness", "metric/hrv", "metric/bodyBattery", "metric/stress") } ?: return
         webview?.post { webview?.loadUrl("http://tauri.localhost/#$target") }
         intent.removeExtra("target")
     }

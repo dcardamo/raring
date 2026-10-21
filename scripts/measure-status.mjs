@@ -1,5 +1,5 @@
 // Offline native refresh cost, not a model of phone battery drain or Garmin radio cost.
-// Seed synthetic demo data and enable status in the debug app first. No usable tokens.
+// Seed synthetic demo data in the debug app first. No usable tokens.
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {mkdirSync,writeFileSync} from 'node:fs';
@@ -9,7 +9,7 @@ const pkg='app.raring.debug',out='.data/status-widgets';
 mkdirSync(out,{recursive:true});
 assert.doesNotMatch(adb('shell','run-as',pkg,'ls','no_backup'),/tokens\.enc/,'never benchmark with Garmin credentials');
 const snapshot=()=>JSON.parse(adb('shell','run-as',pkg,'cat','files/raring.status.json'));
-assert.equal(snapshot().enabled,true,'enable status on synthetic demo data first');
+assert.equal(snapshot().version,1,'seed synthetic demo data first');
 adb('shell','am','force-stop',pkg);
 adb('shell','dumpsys','battery','unplug');
 try {

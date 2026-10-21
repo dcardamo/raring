@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Notification readouts sit on Android's own notification surface, which follows the system theme. -->
+<!-- The accent tints notification icons, which follow the system theme. -->
 <resources>
-    <color name="status_icon">#5F6670</color>
-    <color name="status_track">#1F000000</color>
-    <color name="status_fill">#2F6AB0</color>
     <color name="status_accent">#2BA982</color>
 </resources>

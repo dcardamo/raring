@@ -10,15 +10,16 @@ internal data class StatusMetric(val value: Double?, val tone: String) {
 }
 
 internal data class StatusSnapshot(
-    val enabled: Boolean, val asOf: String, val focus: String, val reason: String,
-    val target: String, val readiness: StatusMetric, val sleep: StatusMetric,
-    val battery: StatusMetric, val stress: StatusMetric, val heartRate: StatusMetric
+    val asOf: String, val focus: String, val target: String,
+    val readiness: StatusMetric, val sleep: StatusMetric,
+    val hrv: StatusMetric, val hrvStatus: String
 ) {
     companion object {
         private val tones = setOf("good", "fair", "poor", "neutral")
         private val targets = setOf("today", "readiness", "sleep")
         private val stamp = DateTimeFormatter.ofPattern("d MMM, HH:mm")
-        private fun metric(json: JSONObject, key: String): StatusMetric {
+        // Scores are 0–100; HRV is milliseconds, with no such ceiling.
+        private fun metric(json: JSONObject, key: String, max: Double = 100.0): StatusMetric {
             val item = json.getJSONObject(key)
             val tone = item.getString("tone").lowercase()
             require(tone in tones)
@@ -26,13 +27,12 @@ internal data class StatusSnapshot(
             val rawValue = item.get("value")
             require(rawValue == JSONObject.NULL || rawValue is Number)
             val value = if (rawValue == JSONObject.NULL) null else (rawValue as Number).toDouble()
-            require(value == null || (value.isFinite() && value >= 0 && (key == "heartRate" || value <= 100)))
+            require(value == null || (value.isFinite() && value >= 0 && value <= max))
             return StatusMetric(value, tone)
         }
         fun parse(raw: String): StatusSnapshot? = try {
             val json = JSONObject(raw)
-            require(json.get("version") == 1)
-            require(json.get("enabled") is Boolean)
+            require(json.get("version") == 2)
             require(json.getString("phase") in setOf("overview", "wake", "day", "evening", "windDown", "lateNight"))
             // An absent upload time is not a fresh reading. Never substitute generatedAt.
             val uploaded = runCatching { json.optString("asOf").takeIf { it.isNotBlank() && it != "null" }
@@ -41,10 +41,9 @@ internal data class StatusSnapshot(
             java.time.LocalDate.parse(json.getString("date"))
             val target = json.getString("focusTarget")
             require(target in targets)
-            StatusSnapshot(json.getBoolean("enabled"), "As of $uploaded", json.getString("focusLine"),
-                json.optString("focusReason").takeUnless { it == "null" } ?: "", target,
-                metric(json, "readiness"), metric(json, "sleep"), metric(json, "bodyBattery"),
-                metric(json, "stress"), metric(json, "heartRate"))
+            val hrvStatus = json.getJSONObject("hrv").optString("status").takeUnless { it == "null" } ?: ""
+            StatusSnapshot("As of $uploaded", json.getString("focusLine"), target,
+                metric(json, "readiness"), metric(json, "sleep"), metric(json, "hrv", 1000.0), hrvStatus)
         } catch (_: Exception) { null }
     }
 }

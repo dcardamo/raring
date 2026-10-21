@@ -1,3 +1,6 @@
-<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android" android:minWidth="140dp" android:minHeight="300dp" android:minResizeWidth="140dp" android:minResizeHeight="300dp"
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+ android:minWidth="150dp" android:minHeight="190dp" android:minResizeWidth="150dp" android:minResizeHeight="190dp"
+ android:targetCellWidth="2" android:targetCellHeight="2"
  android:initialLayout="@layout/status_widget_small" android:previewLayout="@layout/status_widget_small"
+ android:description="@string/widget_small_description"
  android:updatePeriodMillis="1800000" android:resizeMode="horizontal|vertical" android:widgetCategory="home_screen"/>
