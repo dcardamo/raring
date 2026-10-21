@@ -576,8 +576,10 @@ faces, screens, sensors and audio prompts stay in Connect.
 
 ## Done
 
-- **Fitness Age on Today and Plan** (commit "Show Fitness Age's vigorous
-  window on Today, Plan and Health"), from the maintainer wanting Today and
+- **Fitness Age on Today and Plan** (commits "Show Fitness Age's vigorous
+  window on Today, Plan and Health" and "Read Fitness Age's lever from the
+  window's estimate and keep its card under Recorded today", the second from
+  a review), from the maintainer wanting Today and
   Plan to show progress toward Health's Fitness Age levers, positively.
   The workout-driven lever is vigorous minutes, so Raring shows Garmin's
   vigorous driver live from the daily summaries, never the age moving per
