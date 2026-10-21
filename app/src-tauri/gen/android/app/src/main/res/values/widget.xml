@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The app's dark tokens (docs/spec.md, Look). Widgets stay dark like the app. -->
+<resources>
+    <color name="widget_surface">#1B1E24</color>
+    <color name="widget_ink">#F4F1EA</color>
+    <color name="widget_text2">#C2C8D1</color>
+    <color name="widget_text3">#A1ABB9</color>
+    <color name="widget_line">#2A2E35</color>
+    <dimen name="widget_radius">16dp</dimen>
+    <string name="widget_small_description">Readiness and today\'s focus, from your last watch upload</string>
+    <string name="widget_medium_description">Readiness, sleep, Body Battery and stress, from your last watch upload</string>
+</resources>

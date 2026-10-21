@@ -6,33 +6,29 @@
 .sf-section{padding:18px 12px 24px;margin-bottom:18px;border:1px solid var(--line);border-radius:26px;background:linear-gradient(160deg,#192238,#101522 66%)}
 .sf-section>h2{font:600 21px/1.2 Outfit,Inter;margin-bottom:16px}
 .sf-label{font:600 10px Inter;letter-spacing:.13em;text-transform:uppercase;color:var(--text2);margin:18px 2px 8px}
-.sf-widget-top{display:flex;align-items:center;justify-content:space-between;gap:6px}
-.sf-brand{display:inline-flex;align-items:center;gap:7px;font:600 12px Inter;color:var(--text)}
-.sf-brand img{width:20px;height:20px;border-radius:6px}
-.sf-time{font:500 11px Inter;color:var(--text2);white-space:nowrap}
+.sf-time{font:400 10px Inter;color:var(--text3);white-space:nowrap}
 .sf-widget-pair{display:grid;gap:12px}
-.sf-widget{border-radius:24px;border:1px solid rgba(255,255,255,.1);background:#121a29;box-shadow:0 10px 24px rgba(0,0,0,.22);padding:12px;overflow:hidden}
-.sf-small{width:164px;height:164px;display:flex;flex-direction:column;align-items:center;padding:10px 12px}
-.sf-small .sf-widget-top{align-self:stretch}
-.sf-small .sf-brand{font-size:11px}
-.sf-small .sf-brand img{width:17px;height:17px}
-.sf-gauge{position:relative;display:grid;place-items:center;flex:none}
-.sf-gauge-text{position:absolute;display:flex;align-items:center;justify-content:center;flex-direction:column;inset:0}
-.sf-gauge-text b{font:600 25px/1 Outfit,Inter;min-height:25px}
-.sf-gauge-text span{font:600 9px Inter;color:var(--text2);margin-top:3px}
-.sf-small .sf-gauge{margin-top:2px}
-.sf-small-focus{font:600 12px/1.15 Outfit,Inter;text-align:center;margin-top:-4px;max-width:100%;min-height:28px;display:grid;place-items:center}
-.sf-small>.sf-time{margin-top:auto;font-size:10px}
-.sf-medium{width:100%;min-height:192px;padding:12px}
-.sf-medium .sf-widget-top{margin-bottom:10px}
-.sf-medium-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
-.sf-readiness,.sf-tile{height:136px;min-width:0;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.05);border-radius:13px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-.sf-readiness .sf-gauge-text b{font-size:22px;min-height:22px}
-.sf-readiness>span{font:600 10px Outfit,Inter;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-.sf-tile span{font:500 10px/1.25 Inter;color:var(--text2);min-height:27px;display:flex;align-items:center;justify-content:center}
-.sf-tile b{font:600 25px/1.1 Outfit,Inter;min-height:28px;margin-top:6px}
-.sf-tile small{font:500 10px Inter;color:var(--text2);min-height:14px;margin-top:3px}
-.sf-home .sf-home-pair{display:grid;grid-template-columns:164px 1fr;gap:12px}
+/* The app's card surface and the launcher's own corner radius; no border or brand header. */
+.sf-widget{border-radius:16px;background:#1B1E24;padding:12px;overflow:hidden;display:flex;flex-direction:column}
+.sf-gauge{position:relative;flex:none}
+.sf-gauge svg{display:block;width:100%;height:100%}
+.sf-gauge b{position:absolute;inset:0;display:grid;place-items:center;font:500 24px/1 Outfit,Inter;color:var(--text)}
+.sf-gauge span{position:absolute;left:0;right:0;bottom:0;text-align:center;font:400 10px/1 Inter;color:var(--text2)}
+.sf-missing{color:var(--text3)!important}
+.sf-small{width:164px;height:196px;align-items:center}
+.sf-small-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.sf-small-focus{font:500 12px/1.25 Inter;text-align:center;margin-top:6px;color:var(--text)}
+.sf-small>.sf-time{margin-top:4px}
+.sf-medium{width:100%;min-height:156px}
+.sf-medium-body{flex:1;display:flex;align-items:center;gap:16px}
+.sf-medium .sf-gauge b{font-size:26px}
+.sf-rows{flex:1;display:flex;flex-direction:column;min-height:96px}
+.sf-row{flex:1;display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid #2A2E35}
+.sf-row:first-child{border-top:0}
+.sf-row span{font:400 12px Inter;color:var(--text2)}
+.sf-row b{font:500 18px Outfit,Inter;color:var(--text)}
+.sf-medium>.sf-time{margin-top:4px}
+.sf-home .sf-home-pair{display:grid;grid-template-columns:164px 1fr;gap:12px;align-items:start}
 .sf-home .sf-medium{grid-column:span 2}
 .sf-home-apps{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;justify-items:center;align-content:center}
 .sf-home-apps .happ i,.sf-home-apps .happ img{width:42px;height:42px}

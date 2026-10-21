@@ -6,21 +6,22 @@ const SURFACE = {
 };
 const hasMetric = v => v !== null && v !== undefined;
 const freshness = s => `<span class="sf-time">As of ${s.asOf}</span>`;
-const surfaceBrand = () => `<span class="sf-brand"><img src="../../site/assets/icon.svg" alt="">Raring</span>`;
+// A dash, not a blank or a zero, says a reading is missing.
+const reading = v => hasMetric(v) ? `<b class="n">${v}</b>` : '<b class="n sf-missing">—</b>';
 
 function surfaceGauge(s, size) {
-  return `<div class="sf-gauge">${arc({size, value: s.readiness ?? 0, color: C.good, stroke: 8})}
-    <div class="sf-gauge-text"><b class="n">${hasMetric(s.readiness) ? s.readiness : ''}</b><span>Readiness</span></div></div>`;
+  return `<div class="sf-gauge tap" data-go="today" style="width:${size}px;height:${size}px">${arc({size, value: s.readiness ?? 0, color: hasMetric(s.readiness) ? C.good : 'transparent', stroke: size * .08, marker: hasMetric(s.readiness)})}
+    ${reading(s.readiness)}<span>Readiness</span></div>`;
 }
 function statusSmall(s) {
-  return `<div class="sf-widget sf-small tap" data-go="today"><div class="sf-widget-top">${surfaceBrand()}</div>
-    ${surfaceGauge(s, 78)}<div class="sf-small-focus">${s.focus}</div>${freshness(s)}</div>`;
+  return `<div class="sf-widget sf-small tap" data-go="today"><div class="sf-small-body">${surfaceGauge(s, 72)}
+    <div class="sf-small-focus">${s.focus}</div></div>${freshness(s)}</div>`;
 }
 function statusMedium(s) {
-  const metric = (label, val, route, extra = '') => `<div class="sf-tile tap" data-go="${route}"><span>${label}</span><b class="n">${hasMetric(val) ? val : ''}</b>${hasMetric(val) ? `<small>${extra}</small>` : ''}</div>`;
-  return `<div class="sf-widget sf-medium"><div class="sf-widget-top">${surfaceBrand()}${freshness(s)}</div>
-    <div class="sf-medium-grid"><div class="sf-readiness tap" data-go="today">${surfaceGauge(s, 76)}<span>${hasMetric(s.readiness) ? 'High' : ''}</span></div>
-    ${metric('Sleep', s.sleep, 'sleep', '/100')}${metric('Body Battery', s.bb, 'today', '/100')}${metric('Stress', s.stress, 'today', '/100')}</div></div>`;
+  const row = (label, val, route) => `<div class="sf-row tap" data-go="${route}"><span>${label}</span>${reading(val)}</div>`;
+  return `<div class="sf-widget sf-medium"><div class="sf-medium-body">${surfaceGauge(s, 80)}
+    <div class="sf-rows">${row('Sleep', s.sleep, 'sleep')}${row('Body Battery', s.bb, 'today')}${row('Stress', s.stress, 'today')}</div></div>
+    ${freshness(s)}</div>`;
 }
 
 function surfaceSection(title, s) {

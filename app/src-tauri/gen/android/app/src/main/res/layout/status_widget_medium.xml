@@ -1,37 +1,44 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
- android:orientation="vertical" android:background="@drawable/status_card" android:padding="10dp"
- android:layout_width="match_parent" android:layout_height="match_parent">
- <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-  <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
-   android:text="Raring" android:textColor="#EAF0F5" android:textSize="12sp" android:textStyle="bold"/>
-  <TextView android:id="@+id/status_asof" android:layout_width="wrap_content" android:layout_height="wrap_content"
-   android:textColor="#B2C2D3" android:textSize="10sp"/>
- </LinearLayout>
+ android:id="@android:id/background" android:orientation="vertical" android:background="@drawable/status_card"
+ android:padding="12dp" android:layout_width="match_parent" android:layout_height="match_parent">
  <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
   android:orientation="horizontal" android:gravity="center_vertical">
-  <LinearLayout android:id="@+id/status_tile_readiness" android:layout_width="0dp" android:layout_weight="1"
-   android:layout_height="110dp" android:gravity="center" android:orientation="vertical" android:background="@drawable/status_tile">
-   <FrameLayout android:layout_width="match_parent" android:layout_height="72dp">
-    <ImageView android:id="@+id/status_gauge" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitCenter"/>
-    <TextView android:id="@+id/status_readiness" android:layout_width="match_parent" android:layout_height="match_parent"
-     android:gravity="center" android:textColor="#FFFFFF" android:textSize="20sp" android:textStyle="bold"/>
-   </FrameLayout>
-   <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Readiness" android:textSize="10sp" android:textColor="#B2C2D3"/>
+  <FrameLayout android:id="@+id/status_tile_readiness" android:layout_width="80dp" android:layout_height="80dp"
+   android:layout_marginEnd="16dp">
+   <ImageView android:id="@+id/status_gauge" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:importantForAccessibility="no"/>
+   <TextView android:id="@+id/status_readiness" android:layout_width="match_parent" android:layout_height="match_parent"
+     android:gravity="center" android:includeFontPadding="false" android:fontFamily="sans-serif-medium" android:textColor="@color/widget_ink" android:textSize="26sp"/>
+   <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Readiness"
+     android:layout_gravity="bottom|center_horizontal" android:includeFontPadding="false" android:textColor="@color/widget_text2" android:textSize="10sp"/>
+  </FrameLayout>
+  <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+   android:minHeight="96dp" android:orientation="vertical">
+  <LinearLayout android:id="@+id/status_tile_sleep" android:layout_width="match_parent" android:layout_height="0dp"
+   android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
+   <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Sleep"
+    android:textColor="@color/widget_text2" android:textSize="12sp"/>
+   <TextView android:id="@+id/status_sleep" android:layout_width="wrap_content" android:layout_height="wrap_content"
+    android:layout_marginStart="8dp" android:fontFamily="sans-serif-medium" android:textColor="@color/widget_ink" android:textSize="18sp"/>
   </LinearLayout>
-  <LinearLayout android:id="@+id/status_tile_sleep" android:layout_width="0dp" android:layout_weight="1"
-   android:layout_height="110dp" android:gravity="center" android:orientation="vertical" android:background="@drawable/status_tile">
-   <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Sleep" android:textSize="10sp" android:textColor="#B2C2D3"/>
-   <TextView android:id="@+id/status_sleep" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="23sp" android:textColor="#FFFFFF"/>
+  <FrameLayout android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/widget_line"/>
+  <LinearLayout android:id="@+id/status_tile_battery" android:layout_width="match_parent" android:layout_height="0dp"
+   android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
+   <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Body Battery"
+    android:textColor="@color/widget_text2" android:textSize="12sp"/>
+   <TextView android:id="@+id/status_battery" android:layout_width="wrap_content" android:layout_height="wrap_content"
+    android:layout_marginStart="8dp" android:fontFamily="sans-serif-medium" android:textColor="@color/widget_ink" android:textSize="18sp"/>
   </LinearLayout>
-  <LinearLayout android:id="@+id/status_tile_battery" android:layout_width="0dp" android:layout_weight="1"
-   android:layout_height="110dp" android:gravity="center" android:orientation="vertical" android:background="@drawable/status_tile">
-   <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Body Battery" android:textSize="10sp" android:textColor="#B2C2D3"/>
-   <TextView android:id="@+id/status_battery" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="23sp" android:textColor="#FFFFFF"/>
+  <FrameLayout android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/widget_line"/>
+  <LinearLayout android:id="@+id/status_tile_stress" android:layout_width="match_parent" android:layout_height="0dp"
+   android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
+   <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Stress"
+    android:textColor="@color/widget_text2" android:textSize="12sp"/>
+   <TextView android:id="@+id/status_stress" android:layout_width="wrap_content" android:layout_height="wrap_content"
+    android:layout_marginStart="8dp" android:fontFamily="sans-serif-medium" android:textColor="@color/widget_ink" android:textSize="18sp"/>
   </LinearLayout>
-  <LinearLayout android:id="@+id/status_tile_stress" android:layout_width="0dp" android:layout_weight="1"
-   android:layout_height="110dp" android:gravity="center" android:orientation="vertical" android:background="@drawable/status_tile">
-   <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Stress" android:textSize="10sp" android:textColor="#B2C2D3"/>
-   <TextView android:id="@+id/status_stress" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="23sp" android:textColor="#FFFFFF"/>
   </LinearLayout>
  </LinearLayout>
+ <TextView android:id="@+id/status_asof" android:layout_width="match_parent" android:layout_height="wrap_content"
+  android:layout_marginTop="4dp" android:textColor="@color/widget_text3" android:textSize="10sp"/>
 </LinearLayout>

@@ -482,7 +482,10 @@ item 26 kept with its shared rest, illness, limits and privacy rules.
   update and confirm the notification and its "Status at a glance" channel
   are gone without opening the app. Verified only by an emulator test.
 - On a real phone, add both widgets and compare readings/upload time after a
-  Connect sync. Check metric taps, reboot and overnight Doze.
+  Connect sync. Check that the small one opens at 2×2 and the medium at 4×2
+  (Android 12+ uses the target cell sizes; older launchers use the 150×190 dp
+  and 280×150 dp minimums), the picker preview, metric taps, reboot and
+  overnight Doze. The redesign was checked only as RemoteViews renders.
 - Check upgrading an existing installation and reconnecting the same Garmin
   account: cached history and local targets should survive identity
   verification. Different-account isolation has been tested with synthetic
@@ -692,6 +695,16 @@ faces, screens, sensors and audio prompts stay in Connect.
 - Nutrition logging: Garmin limits it to its subscription.
 
 ## Done
+
+- **Cleaner widgets** (commit "Redesign the home-screen widgets"). Both use
+  the app's card surface, ink and status colours (they kept the old navy and
+  an outline), the launcher's corner radius, and the app's gauge with its
+  marker; the "Raring" header is gone. The small widget is a true 2×2 (it
+  was declared 140×300 dp, four rows, mostly empty) with the readiness label
+  inside the gauge and the focus below. The medium widget lists sleep, Body
+  Battery and stress beside the gauge instead of four touching tiles. A
+  missing reading is a muted dash. The layout test renders the production
+  RemoteViews builder rather than a copy of it.
 
 - **Persistent status notification removed** (commit "Remove the persistent
   status notification"). Body Battery, stress and heart rate reach Raring

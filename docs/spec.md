@@ -822,17 +822,22 @@ Weekly focus), a line each.
 
 ## Android status surfaces
 
-A small home-screen widget shows readiness and Today's focus; a medium one
-shows readiness, sleep score, Body Battery and the latest measured stress.
-Tapping a reading opens its detail; the small widget's focus opens readiness,
-sleep or Today as appropriate. Missing readings are blank, never zero.
+A small (2×2) home-screen widget shows the readiness gauge and Today's focus;
+a medium (4×2) one shows the readiness gauge beside a list of sleep score,
+Body Battery and the latest measured stress. Both use the app's card surface
+and type colours, the launcher's corner radius on Android 12 and later, and
+the app's gauge (a 270° arc open at the bottom, coloured by Garmin's rating,
+with a marker at the reading); there is no brand header. Tapping the gauge
+opens readiness and a list row its detail; elsewhere the small widget opens
+readiness, sleep or Today as its focus suggests, and the medium one Today.
+A missing reading is a muted dash and an empty track, never a blank or zero.
 Both widgets always show "As of" with the selected watch's upload date and
 time, or "As of unavailable". While resting, ill, paused or limited, the
 small widget's focus says so and carries no training call, from the same
 local records as Today, republished offline on each local change. Widgets
 never show limits, injury notes, routines, journal entries or weight.
-Their declared minimum and minimum resize sizes are 140×300 dp (small) and
-300×180 dp (medium); focus and upload time can wrap. Android RemoteViews are
+Their declared minimum and minimum resize sizes are 150×190 dp (small) and
+280×150 dp (medium); focus and upload time can wrap. Android RemoteViews are
 tested at those actual bounds with 1.0, 1.3 and 1.5 font scales, including
 missing readings.
 
@@ -1376,7 +1381,7 @@ next pending wind-down while signed in.
   link opens Tonight when Today's phase is evening, wind-down or late night,
   otherwise Last night; the bedtime reminder and Today's tonight line open
   Tonight. Anything showing last night (Today's last-night tile and moon
-  chip, Your day's sleep row, naps, the widget's Sleep tile, search's "Last
+  chip, Your day's sleep row, naps, the widget's Sleep row, search's "Last
   night's sleep") opens Last night. Tonight shows the saved sleep plan
   (wind-down, Garmin's window or the asleep-by estimate, usual wake, Garmin's
   need, with when Raring read it, its weekday unless today), the week's sleep

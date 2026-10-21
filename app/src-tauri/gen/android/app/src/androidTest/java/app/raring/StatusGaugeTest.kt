@@ -36,8 +36,8 @@ class StatusGaugeTest {
         val missing = StatusSurfaces.gauge(StatusMetric(null, "neutral"))
         val present = StatusSurfaces.gauge(StatusMetric(82.0, "good"))
         // Top of the arc is colored only with a real reading; its track remains for null.
-        assertNotEquals(0, missing.getPixel(56, 8))
-        assertNotEquals(missing.getPixel(56, 8), present.getPixel(56, 8))
-        assertEquals(0, missing.getPixel(56, 52))
+        assertNotEquals(0, missing.getPixel(40, 8))
+        assertNotEquals(missing.getPixel(40, 8), present.getPixel(40, 8))
+        assertEquals(0, missing.getPixel(40, 40))
     }
 }

@@ -19,28 +19,26 @@ earlier silent, ongoing status notification (Body Battery, stress and latest
 heart rate) was removed: readings arrive only when the watch uploads to
 Connect, so an always-visible readout of fast-changing values was often wrong.
 
-The small widget gives readiness the only status-colored gauge and makes the
-focus the next line; the medium widget holds readiness, sleep, Body Battery and
-stress in four equal tiles. All widgets show **As of**, even when some values
-are unavailable. A blank gauge/number/bar means missing, never zero; the
-missing example names the wait without inventing a readiness verdict. Daytime
+Both widgets sit on the app's card surface (`#1B1E24`) with its ink and
+supporting-text colours, no border and no brand header: the gauge is the mark.
+The gauge matches the app's (270° arc open at the bottom, Garmin's rating
+colour, a white marker at the reading) with the number inside and "Readiness"
+in the opening. The small widget adds the focus line below; the medium widget
+lists sleep, Body Battery and stress beside the gauge, one tappable row each.
+All widgets show **As of**, even when some values are unavailable. A missing
+reading is a muted dash with an empty track, never a blank or zero. Daytime
 focus can update after an activity sync. In the evening it becomes wind-down
 and Garmin's window rather than an effort instruction; the readiness number
-still belongs to today's snapshot. The small widget opens
-Today, Sleep opens Sleep, and the other medium tiles open Today in the mock.
-The native implementation opens each matching detail; the focus opens
-Readiness or Sleep, and neutral waiting opens Today.
+still belongs to today's snapshot. The native gauge opens Readiness, each row
+its detail, and the rest of the small widget follows the focus.
 
-Implementation screenshots (synthetic data) are
-`shots/android-widget-small.png`, `android-widget-medium.png` and
-`android-widget-missing.png`. Native screenshots are from emulator-5584. The review's minimum-size renders
-are `shots/widget-min-{small,medium}-{1.0,1.3,1.5}.png`: actual RemoteViews
-inflated at the declared 140×300 dp / 300×180 dp bounds, with text-size assertions
-confirming each font scale. Focus and upload time wrap rather than disappear;
-tests check every nonempty line, child bounds and metric tap regions, plus
-missing-data cases. `shots/review-widget-*-font150.png` shows the launcher on
-emulator-5584 with the system font scale set to 1.5. These do not claim
-coverage of other launchers or physical phones.
+The minimum-size renders are `shots/widget-min-{small,medium}-{1.0,1.3,1.5}.png`
+and `widget-min-{small,medium}-missing.png`: actual RemoteViews inflated at the
+declared 150×190 dp / 280×150 dp bounds on emulator-5560, with text-size
+assertions confirming each font scale. Focus and upload time wrap rather than
+disappear; tests check every nonempty line, child bounds and tap regions, plus
+missing-data cases. These are not launcher captures and do not claim coverage
+of other launchers or physical phones.
 
 The existing hourly network schedule stays unchanged. `scripts/measure-status.mjs`
 measures accelerated offline refreshes only (seed a synthetic demo, select

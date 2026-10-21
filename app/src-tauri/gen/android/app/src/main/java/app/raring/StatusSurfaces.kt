@@ -12,8 +12,10 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.os.Build
 import android.util.Log
 import android.widget.RemoteViews
+import androidx.core.content.ContextCompat
 import org.json.JSONObject
 import java.io.File
 import java.time.OffsetDateTime
@@ -24,12 +26,13 @@ internal fun safeStatusTarget(route: String) = route.takeIf { it in setOf("today
 internal object StatusSurfaces {
     private const val RETIRED_CHANNEL = "raring-status"
     private const val RETIRED_ID = 7002
-    private val track = Color.rgb(58, 68, 81)
+    private val track = Color.rgb(52, 58, 67)
+    private val surface = Color.rgb(27, 30, 36)
     private fun tone(tone: String) = when (tone) {
-        "good" -> Color.rgb(105, 215, 157)
-        "fair" -> Color.rgb(244, 189, 91)
-        "poor" -> Color.rgb(245, 120, 115)
-        else -> Color.rgb(169, 182, 198)
+        "good" -> Color.rgb(96, 211, 160)
+        "fair" -> Color.rgb(242, 184, 94)
+        "poor" -> Color.rgb(241, 126, 120)
+        else -> Color.rgb(194, 200, 209)
     }
     private fun pending(context: Context, route: String): PendingIntent {
         val target = safeStatusTarget(route)
@@ -38,40 +41,60 @@ internal object StatusSurfaces {
         return PendingIntent.getActivity(context, target.hashCode(), intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
-    // Draw only the track for absent readings. Never turn null into 0.
-    internal fun gauge(metric: StatusMetric, density: Float = 1f): Bitmap {
-        val bitmap = Bitmap.createBitmap((112 * density).toInt(), (92 * density).toInt(), Bitmap.Config.ARGB_8888)
+    // The app's gauge: a 270° arc open at the bottom, with a marker at the reading.
+    // Absent readings draw only the track. Never turn null into 0.
+    internal fun gauge(metric: StatusMetric, density: Float = 1f, sizeDp: Float = 80f): Bitmap {
+        val px = (sizeDp * density).toInt()
+        val bitmap = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap).apply { scale(density, density) }
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 9f; strokeCap = Paint.Cap.ROUND }
-        // Open at the bottom, like the app's gauges.
-        val bounds = android.graphics.RectF(12f, 8f, 100f, 96f)
+        val stroke = sizeDp * 0.08f
+        val inset = stroke * 1.1f
+        val bounds = android.graphics.RectF(inset, inset, sizeDp - inset, sizeDp - inset)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = stroke; strokeCap = Paint.Cap.ROUND }
         paint.color = track
         canvas.drawArc(bounds, 135f, 270f, false, paint)
         metric.value?.let {
+            val sweep = 270f * (it / 100).toFloat().coerceIn(0f, 1f)
             paint.color = tone(metric.tone)
-            canvas.drawArc(bounds, 135f, (270f * (it / 100)).toFloat(), false, paint)
+            if (sweep > 0) canvas.drawArc(bounds, 135f, sweep, false, paint)
+            val angle = Math.toRadians((135f + sweep).toDouble())
+            val r = bounds.width() / 2
+            val x = bounds.centerX() + r * Math.cos(angle).toFloat()
+            val y = bounds.centerY() + r * Math.sin(angle).toFloat()
+            val dot = Paint(Paint.ANTI_ALIAS_FLAG)
+            dot.color = surface
+            canvas.drawCircle(x, y, stroke * 0.62f + 1.5f, dot)
+            dot.color = Color.WHITE
+            canvas.drawCircle(x, y, stroke * 0.62f, dot)
         }
         return bitmap
     }
-    private fun widget(context: Context, medium: Boolean, status: StatusSnapshot?): RemoteViews {
+    private const val DASH = "\u2014"
+    // A dash, not a blank or a zero, says a reading is missing.
+    private fun reading(view: RemoteViews, id: Int, metric: StatusMetric?, context: Context) {
+        val value = metric?.value?.let { metric.display }
+        view.setTextViewText(id, value ?: DASH)
+        view.setTextColor(id, ContextCompat.getColor(context, if (value == null) R.color.widget_text3 else R.color.widget_ink))
+    }
+    internal fun widgetViews(context: Context, medium: Boolean, status: StatusSnapshot?): RemoteViews {
         val view = RemoteViews(context.packageName, if (medium) R.layout.status_widget_medium else R.layout.status_widget_small)
         val readiness = status?.readiness ?: StatusMetric(null, "neutral")
-        view.setImageViewBitmap(R.id.status_gauge, gauge(readiness, context.resources.displayMetrics.density))
-        view.setTextViewText(R.id.status_readiness, readiness.display)
+        // Matches the layouts' gauge frames.
+        view.setImageViewBitmap(R.id.status_gauge, gauge(readiness, context.resources.displayMetrics.density, if (medium) 80f else 72f))
+        reading(view, R.id.status_readiness, readiness, context)
         view.setTextViewText(R.id.status_asof, status?.asOf ?: "As of unavailable")
+        view.setOnClickPendingIntent(R.id.status_tile_readiness, pending(context, "readiness"))
         if (medium) {
-            view.setTextViewText(R.id.status_sleep, status?.sleep?.display ?: "")
-            view.setTextViewText(R.id.status_battery, status?.battery?.display ?: "")
-            view.setTextViewText(R.id.status_stress, status?.stress?.display ?: "")
-            view.setOnClickPendingIntent(R.id.status_tile_readiness, pending(context, "readiness"))
+            reading(view, R.id.status_sleep, status?.sleep, context)
+            reading(view, R.id.status_battery, status?.battery, context)
+            reading(view, R.id.status_stress, status?.stress, context)
+            view.setOnClickPendingIntent(android.R.id.background, pending(context, "today"))
             view.setOnClickPendingIntent(R.id.status_tile_sleep, pending(context, "sleep/last"))
             view.setOnClickPendingIntent(R.id.status_tile_battery, pending(context, "metric/bodyBattery"))
             view.setOnClickPendingIntent(R.id.status_tile_stress, pending(context, "metric/stress"))
         } else {
             view.setTextViewText(R.id.status_focus, status?.focus ?: "")
-            view.setOnClickPendingIntent(R.id.status_widget_root, pending(context, status?.target ?: "today"))
-            view.setOnClickPendingIntent(R.id.status_gauge, pending(context, "readiness"))
-            view.setOnClickPendingIntent(R.id.status_readiness, pending(context, "readiness"))
+            view.setOnClickPendingIntent(android.R.id.background, pending(context, status?.target ?: "today"))
         }
         return view
     }
@@ -80,7 +103,7 @@ internal object StatusSurfaces {
     private fun retireNotification(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.cancel(RETIRED_ID)
-        manager.deleteNotificationChannel(RETIRED_CHANNEL)
+        if (Build.VERSION.SDK_INT >= 26) manager.deleteNotificationChannel(RETIRED_CHANNEL)
     }
     private val renderLock = Any()
     fun suspendSession(context: Context) = synchronized(renderLock) {
@@ -112,7 +135,7 @@ internal object StatusSurfaces {
         val manager = AppWidgetManager.getInstance(context)
         for ((provider, medium) in listOf(StatusSmallWidget::class.java to false, StatusMediumWidget::class.java to true)) {
             val ids = manager.getAppWidgetIds(ComponentName(context, provider))
-            if (ids.isNotEmpty()) manager.updateAppWidget(ids, widget(context, medium, status))
+            if (ids.isNotEmpty()) manager.updateAppWidget(ids, widgetViews(context, medium, status))
         }
     }
     // All producers serialize with token-vault writes and sign-out. No network work.
