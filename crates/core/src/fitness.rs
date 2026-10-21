@@ -13,9 +13,12 @@ use serde_json::Value;
 /// estimate's day, that day included, per week (their sum ÷ 6).
 pub const WINDOW_DAYS: i64 = 42;
 
-/// Garmin's estimate for `date`: that day's, else the latest before it.
+/// Garmin's estimate for `date` with its day: that day's, else the latest before it.
+fn estimate_on(store: &Store, date: &str) -> Option<(String, Value)> {
+    store.history("fitness_age", date, 1).pop()
+}
 fn estimate(store: &Store, date: &str) -> Option<Value> {
-    store.history("fitness_age", date, 1).pop().map(|(_, v)| v)
+    estimate_on(store, date).map(|(_, v)| v)
 }
 
 /// Garmin's weekly vigorous-minutes target and the age it gives there, from
@@ -35,6 +38,16 @@ fn minutes(store: &Store, day: NaiveDate) -> Option<f64> {
     store.get("summary", &day.to_string())?["vigorousIntensityMinutes"]
         .as_f64()
         .filter(|n| n.is_finite() && *n >= 0.)
+}
+
+/// Garmin's vigorous minutes in the plan week starting `start`, through
+/// `today`; unknown while any of those days lacks Garmin's figure.
+fn week_minutes(store: &Store, start: NaiveDate, today: NaiveDate) -> Option<f64> {
+    let through = (start + Duration::days(6)).min(today);
+    if start > through {
+        return None;
+    }
+    start.iter_days().take_while(|d| *d <= through).map(|d| minutes(store, d)).sum()
 }
 
 /// The window ending on `end`, while Garmin's estimate there has a target.
@@ -87,13 +100,17 @@ pub fn today(store: &Store, view: &TodayView, calendar: NaiveDate) -> Option<Tod
     } else {
         None
     };
+    // The line names vigorous minutes, so only that driver as the lever, read
+    // from the same estimate as the window.
     let lever_line = view.call == Some(Effort::Push)
         && view.focus.effort
         && !vigorous_today
         && window.average.is_some()
-        && screens::drivers(store, &day, screens::body_weight(store, &day).as_ref())
-            .1
-            .is_some_and(|l| matches!(l.key.as_str(), "vigorousMinutes" | "vigorousDays"));
+        && estimate_on(store, &day).is_some_and(|(on, _)| {
+            screens::drivers(store, &on, screens::body_weight(store, &on).as_ref())
+                .1
+                .is_some_and(|l| l.key == "vigorousMinutes")
+        });
     Some(TodayFitness {
         age: estimate(store, &day).and_then(|v| v["fitnessAge"].as_f64()),
         dropped_from,
@@ -115,7 +132,7 @@ pub fn count(store: &Store, minutes: Option<f64>, date: NaiveDate, today: NaiveD
     let start = plan::week_start(date, starts);
     Some(FitnessCount {
         minutes,
-        week: plan::intensity(store, start, today).map(|i| i.vigorous),
+        week: week_minutes(store, start, today),
         this_week: start == plan::week_start(today, starts),
         target,
         until: until.to_string(),
@@ -129,7 +146,7 @@ pub fn plan_week(store: &Store, start: NaiveDate, today: NaiveDate) -> Option<Pl
     }
     let (target, _) = component(&estimate(store, &today.to_string())?)?;
     Some(PlanFitness {
-        vigorous: plan::intensity(store, start, today).map(|i| i.vigorous),
+        vigorous: week_minutes(store, start, today),
         target,
     })
 }

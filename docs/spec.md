@@ -175,8 +175,8 @@ A briefing with an ending, in this order:
   gates in Rules: Today's lead; a suggestion can be dismissed with "Not
   today". When Garmin's readiness allows, the **effort** strip (Rest, Easy,
   Steady, Push) marks the suggested level, with one reason line from
-  Garmin's inputs under it. On Garmin's push call, while vigorous activity
-  is Fitness Age's biggest lever and today has no vigorous minutes yet, one
+  Garmin's inputs under it. On Garmin's push call, while vigorous minutes
+  are Fitness Age's biggest lever and today has none yet, one
   more line names it ("Your Fitness Age lever: vigorous minutes, 17 of
   Garmin's 75 a week"; Rules: Fitness Age window). It is a display, not buttons. When a session
   leads, the headline is about the day ("A steady day fits"), never the
@@ -212,7 +212,7 @@ A briefing with an ending, in this order:
   target; naps their Body Battery change. Up to four
   rows, then a link to all of today's activities. The headline never repeats a
   workout from this list. Under a "Done today" headline the list goes untitled. Compact after tonight's plan: without the effect
-  labels.
+  labels, keeping the vigorous chip.
 - **This week**: the week's rings and one line per goal beside **Left this
   week** with Do it today (not from the evening on: a weekly gap is context,
   not a command to catch up tonight), over the day cells; hidden during
@@ -224,7 +224,8 @@ A briefing with an ending, in this order:
   the six seven-day blocks (today's minutes the green top of the last,
   Garmin's weekly target dashed) and Garmin's age at that target ("At 75 a
   week, Garmin puts you at 37.8 · now 39"). It opens Health. The day Garmin's
-  estimate falls a whole year the card moves under Recorded today and leads
+  estimate falls a whole year the card moves under Recorded today (wherever
+  the phase puts that list) and leads
   with it ("New Garmin estimate: 39, down from 40"); a rise stays on Health
   and in the notification. A day with neither has no card, and wind-down and
   late night hide it (Rules: Fitness Age window).
@@ -1593,9 +1594,11 @@ next pending wind-down while signed in.
   is lower in whole years than the previous stored one, compared as the
   notification does (under Recorded today); never in wind-down or late
   night. The lever line needs Garmin's push call with the effort shown,
-  vigorous minutes or days as Health's biggest lever, a known average and no
-  vigorous minutes today. A recording's vigorous minutes count from its day
-  through the 41 after it.
+  vigorous minutes as the biggest lever of the estimate the window reads, a
+  known average and no vigorous minutes today. A recording's vigorous
+  minutes count from its day through the 41 after it. Plan's line and How it
+  counted sum the plan week's daily figures through today, unknown while one
+  is missing.
 - **Plan progress**: intensity minutes are Garmin's weekly total for the
   plan week: the daily summaries' moderate minutes plus twice the vigorous
   ones (Garmin's own weighting), against the target or Garmin's weekly goal.

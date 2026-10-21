@@ -188,3 +188,31 @@ fn a_recording_without_goals_still_says_how_it_counted_toward_fitness_age() {
     drop(core);
     let _ = std::fs::remove_dir_all(dir);
 }
+
+#[test]
+fn the_lever_line_reads_the_windows_estimate_and_names_only_vigorous_minutes() {
+    let store = Store::open(":memory:").unwrap();
+    days(&store, pattern);
+    store.put("summary", END, "now", &json!({"vigorousIntensityMinutes": 0, "moderateIntensityMinutes": 0})).unwrap();
+    estimate(&store, &back(2), 39., unmet());
+    let mut view = today_view(&store);
+    (view.call, view.focus.effort) = (Some(Effort::Push), true);
+    assert!(fitness::today(&store, &view, end()).unwrap().lever_line, "between Garmin's estimates");
+    store.put("fitness_age", &back(2), "now", &json!({"fitnessAge": 39, "components": {
+        "vigorousMinutesAvg": {"value": 80.0, "targetValue": 75}, "vigorousDaysAvg": {"value": 1.0, "targetValue": 3}}})).unwrap();
+    assert!(!fitness::today(&store, &view, end()).unwrap().lever_line, "vigorous days as the lever: the line would misname it");
+}
+
+#[test]
+fn a_weeks_vigorous_minutes_need_only_garmins_vigorous_figures() {
+    let store = Store::open(":memory:").unwrap();
+    estimate(&store, END, 39., unmet());
+    for b in 0..42 {
+        store.put("summary", &back(b), "now", &json!({"vigorousIntensityMinutes": if b == 0 { 18 } else { 2 }})).unwrap();
+    }
+    let monday = end() - Duration::days(3);
+    assert_eq!(fitness::plan_week(&store, monday, end()).unwrap().vigorous, Some(24.), "no moderate figures needed");
+    store.put("summary", &back(1), "now", &json!({"moderateIntensityMinutes": 4})).unwrap();
+    assert_eq!(fitness::plan_week(&store, monday, end()).unwrap().vigorous, None, "a day without Garmin's vigorous figure");
+    assert_eq!(fitness::count(&store, Some(5.), monday, end()).unwrap().week, None);
+}

@@ -1459,6 +1459,13 @@ try {
   assert.equal(await heroCard.evaluate(el=>el.previousElementSibling?.classList.contains('recorded')),true,'under Recorded today the day Garmin’s estimate drops');
   assert.ok((await heroCard.textContent()).includes('New Garmin estimate: 39, down from 40'));
   await hero.close();
+  const evening=await open('today',{...sample,focus:{...sample.focus,phase:'evening',cards:['sleepPlan','day','focus'],until:'2025-10-16T22:00:00',effort:false,planOpen:true},fitness:{...sample.fitness,age:39,droppedFrom:40,card:'hero'}});
+  const eveningCard=evening.locator('.fa-today');
+  await eveningCard.waitFor();
+  assert.equal(await eveningCard.evaluate(el=>el.previousElementSibling?.classList.contains('recorded')),true,'in the evening the drop card still follows Recorded today');
+  const compact=await evening.locator('.card.recorded').textContent();
+  assert.ok(compact.includes('+24 vigorous min') && !compact.includes('Aerobic 3.8'),'the compact list keeps the vigorous chip, not the effect labels');
+  await evening.close();
   const quiet={...sample.fitness.window,weeks:[14,31,6,27,20,6],today:0,average:104/6,beforeToday:104/6};
   const push=await open('today',{...sample,activities:[],fitness:{...sample.fitness,window:quiet,card:null,leverLine:true}});
   await push.getByText('That’s today.',{exact:true}).waitFor();
@@ -1640,7 +1647,9 @@ try {
    if(next)assert.equal(await recorded.count(),0,`${time}: yesterday's run isn't recorded today`);
    else{
     assert.ok(await top('.dashboard .your-day')<await recorded.evaluate(el=>el.getBoundingClientRect().top),`${time}: then recorded today`);
-    assert.equal(await recorded.locator('.pill').count(),0,`${time}: recorded today is compact`);
+    // Compact drops the effect labels; the run's vigorous chip (Rules: Fitness Age window) stays.
+    assert.equal(await recorded.locator('.pill:not(.ok)').count(),0,`${time}: recorded today is compact`);
+    assert.equal(await recorded.locator('.pill.ok').textContent(),'+24 vigorous min',`${time}: the vigorous chip stays`);
    }
    // The plan card carries the window and opens Tonight; the hero doesn't repeat either.
    assert.equal(await night.locator('.hero .acts').count(),0,`${time}: no second Tonight's plan button`);

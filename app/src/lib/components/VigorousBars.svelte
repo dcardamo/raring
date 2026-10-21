@@ -30,7 +30,8 @@
  .plot{position:relative;height:var(--plot);display:flex;align-items:flex-end;gap:6px;padding-right:var(--gutter);border-bottom:1px solid var(--line-strong);margin-top:16px}
  .compact .plot{gap:4px;margin-top:6px}
  .col{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch}
- .col b{display:block;margin-bottom:3px;text-align:center;font:600 12px/1 Outfit,Inter;color:var(--text2);white-space:nowrap}
+ /* A week near the target puts its label on the dashed line: the backing keeps it readable. */
+ .col b{position:relative;z-index:2;align-self:center;margin-bottom:3px;padding:1px 3px;border-radius:3px;background:var(--card);text-align:center;font:600 12px/1 Outfit,Inter;color:var(--text2);white-space:nowrap}
  .col.last b{color:var(--text)}
  .bar{display:flex;flex-direction:column;justify-content:flex-start;background:var(--amount);opacity:.78;border-radius:4px 4px 2px 2px;min-height:2px;overflow:hidden}
  .last .bar{opacity:1;box-shadow:0 0 0 1.5px var(--card),0 0 0 3px var(--ink)}
