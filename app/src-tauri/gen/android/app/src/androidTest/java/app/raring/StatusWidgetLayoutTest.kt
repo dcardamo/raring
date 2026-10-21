@@ -115,18 +115,55 @@ class StatusWidgetLayoutTest {
         }
     }
 
-    @Test fun expandedNotificationLabelsFitAtLargeFont() {
-        val config = Configuration(app.resources.configuration).apply { fontScale = 1.5f }
-        val context = app.createConfigurationContext(config)
-        val remote = RemoteViews(context.packageName, R.layout.status_notification_expanded)
-        remote.setTextViewText(R.id.status_asof, eveningAsOf)
-        val root = remote.apply(context, null)
+    private fun notificationStatus(missing: Boolean) = StatusSnapshot(true,
+        if (missing) "As of unavailable" else eveningAsOf, eveningFocus,
+        if (missing) "" else "Garmin's window starts at 22:30", "sleep",
+        StatusMetric(if (missing) null else 87.0, "good"), StatusMetric(if (missing) null else 84.0, "good"),
+        StatusMetric(if (missing) null else 100.0, "good"), StatusMetric(if (missing) null else 100.0, "neutral"),
+        StatusMetric(if (missing) null else 188.0, "neutral"))
+
+    // The decorated notification gives custom content about 300 dp on a phone.
+    private fun renderedNotification(context: Context, layout: Int, missing: Boolean): View {
+        val root = StatusSurfaces.statusViews(context, layout, notificationStatus(missing)).apply(context, null)
         val width = (300 * context.resources.displayMetrics.density).toInt()
         root.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
         root.layout(0, 0, root.measuredWidth, root.measuredHeight)
-        for (label in listOf("Body Battery", "Stress", eveningAsOf)) {
-            checkText(root, textViews(root).single { it.text.toString() == label }, label)
+        return root
+    }
+
+    @Test fun notificationReadoutsFitAtLargeFonts() {
+        for (fontScale in listOf(1f, 1.3f, 1.5f)) for (missing in listOf(false, true)) {
+            val config = Configuration(app.resources.configuration).apply { this.fontScale = fontScale }
+            val context = app.createConfigurationContext(config)
+            val expanded = renderedNotification(context, R.layout.status_notification_expanded, missing)
+            for (label in listOf("Body Battery", "Stress", "Heart rate", eveningFocus)) {
+                checkText(expanded, textViews(expanded).single { it.text.toString() == label }, label)
+            }
+            for ((id, value) in listOf(R.id.status_battery to "100", R.id.status_stress to "100", R.id.status_hr to "188")) {
+                checkText(expanded, expanded.findViewById(id), if (missing) "" else value)
+            }
+            val reason = expanded.findViewById<TextView>(R.id.status_reason)
+            if (missing) assertEquals(View.GONE, reason.visibility)
+            else checkText(expanded, reason, "Garmin's window starts at 22:30")
+            for (bar in listOf(R.id.status_battery_bar, R.id.status_stress_bar)) {
+                assertEquals("a missing reading hides its bar rather than showing zero",
+                    if (missing) View.INVISIBLE else View.VISIBLE, expanded.findViewById<View>(bar).visibility)
+            }
+            assertTrue("expanded content fits Android's 252 dp limit",
+                expanded.height <= 252 * context.resources.displayMetrics.density)
+            val compact = renderedNotification(context, R.layout.status_notification_compact, missing)
+            checkText(compact, compact.findViewById(R.id.status_asof), if (missing) "As of unavailable" else eveningAsOf)
+            for ((id, value) in listOf(R.id.status_battery to "100", R.id.status_stress to "100", R.id.status_hr to "188")) {
+                checkText(compact, compact.findViewById(id), if (missing) "" else value)
+            }
+            for ((name, view) in listOf("expanded" to expanded, "compact" to compact)) {
+                val image = android.graphics.Bitmap.createBitmap(view.width, view.height, android.graphics.Bitmap.Config.ARGB_8888)
+                view.draw(android.graphics.Canvas(image))
+                java.io.File(app.filesDir, "notification-$name-$fontScale-${if (missing) "missing" else "values"}.png")
+                    .outputStream().use { image.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+                image.recycle()
+            }
         }
     }
 

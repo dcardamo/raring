@@ -25,7 +25,9 @@ synthetic data. `design/mockup/index.html` shows the app before the redesign.
   scenes; the full-screen loading state is only for a first launch with no
   data.
 - **Private.** Data stays on the device. No accounts, analytics, or services
-  other than Garmin.
+  other than Garmin, except street maps: map areas downloaded from OpenFreeMap,
+  which learns an area around a workout, never the route; one switch turns
+  them off (Rules: Street maps).
 - **Cross-platform.** One Rust core and one Svelte UI for Android, iOS and
   desktop. Native code is limited to what a platform requires, such as
   background scheduling; everything else lives in the shared code.
@@ -152,6 +154,8 @@ Before sign-in, explain that Raring reads a Garmin account, not a watch, and
 that Garmin Connect must keep syncing the watch's data. State that the app
 sends no data to Raring, has no analytics or telemetry, and keeps downloaded
 history on the phone. Exports leave the phone only when the user shares them.
+The privacy details say what street maps' downloads reveal (Rules: Street
+maps).
 Explain the unofficial connection and watch-dependent metrics before the
 sign-in button. Keep the same information and expandable privacy details
 available offline in Settings. Notification permission remains
@@ -353,10 +357,18 @@ night is never shown in its place.
     range is shared with Strength), and a link to Strength.
   - **Activities**: every stored recording with Garmin's primary benefit,
     training effect and intensity minutes as one text line, filterable by
-    sport. The last 31 days open instantly; Show older pages back through
-    stored history (filtered by sport before the page limit) without a
-    Garmin request. Today's "All today's activities" opens this section
-    narrowed to that day; the old `#activities` link opens Training.
+    sport, as a **List** or a **Calendar**. The list's last 31 days open
+    instantly; Show older pages back through stored history (filtered by
+    sport before the page limit) without a Garmin request. The calendar reads
+    one stored month at a time, also without a Garmin request: weeks start on
+    Garmin's week start, each day shows its recordings' sport icons in start
+    order (two, or one and a count) and the month's recordings are listed
+    under it, newest first. Tapping a day narrows the list to that day;
+    ‹ › step a month and the month's name opens a year of months to jump to,
+    from the oldest stored recording's month to this one. The sport filter
+    applies to both views; the view, month and day hold across a workout and
+    Back. Today's "All today's activities" opens this section narrowed to
+    that day; the old `#activities` link opens Training.
 - Latest recorded Garmin running lactate-threshold HR and pace, running threshold
   power, cycling FTP, heat acclimation and acclimated altitude in a compact
   Training card, each with its own recorded date. Missing, null or stale
@@ -368,7 +380,8 @@ night is never shown in its place.
 
 - Training load, aerobic and anaerobic Training Effect gauges, primary
   benefit and recovery time.
-- Stats grid, route map, heart-rate chart colored by zone (bpm axis, each
+- Stats grid, route map over streets, water and parks (Rules: Street maps),
+  heart-rate chart colored by zone (bpm axis, each
   zone's floor labelled, the average marked, round minute ticks), time-in-zone
   rows with each zone's bpm range and recorded duration on a shared zero-based
   scale (no percentage column); missing/invalid zone durations say Not recorded,
@@ -693,8 +706,9 @@ page, never the overnight Sleep HR detail.
 - **Settings**: notifications, the wind-down lead, the time to fall asleep
   (also on Sleep · Tonight beside the plan), persistent status, Follow
   my day (and that Raring doesn't learn from how you use the app), the
-  plan-your-week prompt, journal consent, recent Garmin changes once there are
-  any (Rules: Recent Garmin changes), export, a validated import of another
+  plan-your-week prompt, journal consent, street maps (Rules: Street maps),
+  recent Garmin changes once there are any (Rules: Recent Garmin changes),
+  export, a validated import of another
   export's settings (Rules: Import), sign-out, help and how Raring works.
   History on the phone is on Profile. Export and Import each lead with one
   line, the rest behind "What's included"; an import preview (with years)
@@ -736,9 +750,13 @@ Both widgets and the optional ongoing notification always show "As of" with
 the selected watch's upload date and time, or "As of unavailable".
 
 The notification has a separate low-importance, silent channel, no sound or
-vibration, and private lock-screen content. Collapsed: battery, stress and
-heart-rate icons and values. Expanded: battery/stress bars, phase-aware focus
-and its reason. Latest heart rate uses the current calendar day's last measured
+vibration, and private lock-screen content. It sits on Android's own
+notification surface: no card of its own, Android's notification text styles,
+so it follows the system's light or dark theme. Collapsed: battery, stress and
+heart-rate icons and values, then "As of". Expanded: the header carries "As
+of" in place of the post time; the phase-aware focus is the title, then its
+reason, then a labelled row each for Body Battery and stress (with bars) and
+heart rate (no bar). A missing reading hides its bar. Latest heart rate uses the current calendar day's last measured
 sample from the shared all-day HR parser. It remains blank without samples;
 resting/overnight heart rate is not a substitute.
 It starts off, is offered once on Today after the first successful sync, and
@@ -821,6 +839,15 @@ Sent by the phone itself.
 | Training status changed       | On sync                                      | Off     |
 | Wind-down reminder            | Wind-down time of tonight's plan (lead 30 min before bedtime, configurable) | Off     |
 | Persistent status (Android)   | Existing sync; silent, no extra Garmin requests | Off     |
+
+Each kind posts to its own Android channel (Morning readiness, Weekly
+check-in, Health changes for VO2max, Fitness Age, training status and vitals,
+Wind-down reminder, and Garmin account for sign-in), so Android Settings can
+silence one without the others. A change names the new value and the old one:
+"VO₂ max is now 44" / "Down from 45.", "Training status: Productive" / "Was
+Maintaining." (Garmin's named status; a new numeric suffix alone is no
+change). The vitals notification says how many are outside their ranges and
+names each with its usual range.
 
 The morning readiness notification opens Today, the weekly check-in the
 latest review (`#review/latest`), the bedtime reminder Sleep · Tonight
@@ -1253,6 +1280,33 @@ next pending wind-down while signed in.
   ending last night against each night's own Garmin need: how many recorded
   nights were below it, never a running debt. A missing night is labelled,
   not zero.
+- **Street maps**: on by default; Settings → Street maps turns them off. A
+  route card draws streets, water and parks from OpenStreetMap vector tiles
+  (OpenMapTiles schema) served by OpenFreeMap, with no key or account; its
+  TileJSON names the week's tiles, which must stay on its host. The core and
+  the card share one fit: Web Mercator, the route filling at most 310×128 of
+  the 358×176 card around its centre, zoomed in no closer than 2^16 256-px
+  tiles across the world, so a map arriving never moves the route. Tiles come
+  from the zoom that puts about 140 card pixels across one, at most z13. They
+  download by area: the 8×8 block of tiles at that zoom around the card (64
+  tiles, usually 20–40 km across, more for long rides), so the server sees an
+  area several times the card's size, never the route. Only a route card
+  showing a workout without a drawn map asks; opening a page, prefetch, sync
+  and background work never download or draw. One area downloads at a time
+  across the app, with at most 4 parallel requests, a User-Agent naming Raring
+  and no redirect off the host, all or nothing, and is kept: other workouts
+  there draw with no request. No tile is asked for once street maps are off or
+  the workout is erased. Each card is drawn once
+  (clipped to the card, simplified to 0.35 px, one decimal) and kept with its
+  workout; a changed route or drawing draws it again. Tunnels, rail, ferries,
+  buildings and labels aren't drawn. Map rows are written only while street
+  maps are on and the workout is still stored, so a download that outlives
+  opting out, sign-out or an account switch keeps nothing; turning street
+  maps off, sign-out and an account switch erase them. Exports leave maps
+  out. The card credits © OpenMapTiles © OpenStreetMap in its corner;
+  Settings and the privacy details link the licence as
+  openstreetmap.org/copyright. A failed download leaves the route on its own
+  and is tried again the next time the card shows.
 - **Opened past days and workouts**: only an explicit open of a page whose
   route names its own date or activity reads Garmin for that detail;
   navigation prefetch, cached tabs and ordinary sync never do. One open reads
@@ -1772,6 +1826,10 @@ next pending wind-down while signed in.
 - `app/` (Tauri 2, Svelte and TypeScript): the UI, sign-in and settings. The
   UI reaches the core through one small typed API, so a web build can swap in
   HTTP later.
+- **Street maps**: the core downloads map tiles itself and draws each route
+  card into SVG path data, so the WebView's content security policy still
+  allows no outside host. Tiles, complete areas and drawn cards live in their
+  own SQLite tables beside the raw cache (Rules: Street maps).
 - **Background sync**: a small Kotlin plugin schedules WorkManager jobs,
   hourly, and every 15 minutes in the morning until readiness arrives. A job
   calls the Rust core directly over JNI, without starting the UI, then posts

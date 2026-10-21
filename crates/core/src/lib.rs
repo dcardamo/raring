@@ -10,6 +10,7 @@ pub mod import;
 pub mod lead;
 pub mod ledger;
 pub mod local;
+pub mod maps;
 pub mod notifications;
 mod naps_journal;
 pub mod phase;
@@ -50,6 +51,8 @@ pub enum Error {
     InvalidLocal(&'static str),
     #[error("status snapshot: {0}")]
     Snapshot(#[from] std::io::Error),
+    #[error("street map: {0}")]
+    Map(&'static str),
 }
 pub type Result<T> = std::result::Result<T, Error>;
 pub struct Raring {
@@ -225,6 +228,16 @@ impl Raring {
     pub fn activity_page(&self, before_start: &str, before_id: &str, icon: Option<view::Icon>) -> view::ActivityPage {
         screens::activity_page(&self.store, before_start, before_id, icon, 20)
     }
+    /// One month of stored recordings for the Activities calendar, from local
+    /// data only; `month` is any date in it, this month when absent.
+    pub fn activity_month(&self, month: Option<&str>, now: DateTime<Local>) -> Result<view::ActivityMonth> {
+        let today = now.date_naive();
+        let month = match month {
+            Some(m) => chrono::NaiveDate::parse_from_str(m, "%Y-%m-%d").map_err(|_| Error::InvalidLocal("month"))?,
+            None => today,
+        };
+        Ok(screens::activity_month(&self.store, month, today))
+    }
     /// Sets per muscle group over a range, from local sets only.
     pub fn muscles(&self, range: view::TrendRange, now: DateTime<Local>) -> Option<view::MuscleRange> {
         strength::muscles(&self.store, range, now.date_naive())
@@ -288,6 +301,12 @@ impl Raring {
             report.error = Some("Garmin is rate limiting reads; try again later".into());
         }
         Ok((client.tokens().await, report))
+    }
+    /// A workout's street map: downloads the areas its route card needs that
+    /// aren't on the phone, then draws the card once (Rules: Street maps).
+    pub async fn fetch_route_map(&self, id: &str, app_version: &str) -> Result<Option<view::RouteMapView>> {
+        let Some(workout) = screens::workout(&self.store, id) else { return Ok(None) };
+        maps::fetch(&self.store, id, &workout.route, &maps::Source::openfreemap(), &maps::user_agent(app_version)).await
     }
     /// One explicit read of a strength workout's sets, with the updated detail.
     /// Navigation never calls this; only a person asking for a Garmin refresh does.
@@ -522,6 +541,9 @@ impl Raring {
         let previous = self.store.settings();
         let mut settings = update(&previous)?;
         self.store.set_settings(&settings)?;
+        if previous.street_maps && !settings.street_maps {
+            self.store.erase_maps()?;
+        }
         if let Err(error) = self.write_status_snapshot(Local::now(), *signed_out) {
             // Only a new status opt-in depends on publishing its cache. Never
             // restore an older settings object: all other edits, particularly

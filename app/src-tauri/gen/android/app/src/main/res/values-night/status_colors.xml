@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="status_icon">#C2C8D1</color>
+    <color name="status_track">#33FFFFFF</color>
+    <color name="status_fill">#76ACEE</color>
+    <color name="status_accent">#7DF5BD</color>
+</resources>

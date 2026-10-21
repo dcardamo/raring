@@ -75,6 +75,14 @@ impl Store {
                 CREATE TABLE IF NOT EXISTS cursors (key TEXT PRIMARY KEY, value TEXT NOT NULL);
                 PRAGMA user_version=1; COMMIT;")?;
         }
+        if version < 2 {
+            // Street maps: an area's tiles arrive together; map_areas lists the complete ones.
+            db.execute_batch("BEGIN;
+                CREATE TABLE IF NOT EXISTS map_tiles (z INTEGER NOT NULL, x INTEGER NOT NULL, y INTEGER NOT NULL, data BLOB NOT NULL, PRIMARY KEY(z,x,y));
+                CREATE TABLE IF NOT EXISTS map_areas (z INTEGER NOT NULL, x INTEGER NOT NULL, y INTEGER NOT NULL, source TEXT NOT NULL, fetched_at TEXT NOT NULL, PRIMARY KEY(z,x,y));
+                CREATE TABLE IF NOT EXISTS route_maps (activity TEXT PRIMARY KEY, json TEXT NOT NULL);
+                PRAGMA user_version=2; COMMIT;")?;
+        }
         Ok(Self {
             db: Mutex::new(db),
             path,
@@ -644,6 +652,7 @@ impl Store {
         }
         if old.as_deref().is_some_and(|old| old != identity) {
             tx.execute_batch("DELETE FROM raw; DELETE FROM activities; DELETE FROM notifications; DELETE FROM cursors; DELETE FROM settings;")?;
+            tx.execute_batch(ERASE_MAPS)?;
         }
         tx.execute("INSERT INTO raw (endpoint,key,fetched_at,json) VALUES ('profile','me',?1,?2) ON CONFLICT(endpoint,key) DO UPDATE SET fetched_at=excluded.fetched_at,json=excluded.json", params![at, profile.to_string()])?;
         let session = serde_json::json!({"identity": identity, "active": false});
@@ -702,9 +711,88 @@ impl Store {
         Ok(true)
     }
     pub fn forget_account(&self) -> rusqlite::Result<()> {
-        self.db.lock().unwrap().execute_batch("DELETE FROM raw; DELETE FROM activities; DELETE FROM notifications; DELETE FROM cursors; DELETE FROM settings;")
+        let db = self.db.lock().unwrap();
+        db.execute_batch("DELETE FROM raw; DELETE FROM activities; DELETE FROM notifications; DELETE FROM cursors; DELETE FROM settings;")?;
+        db.execute_batch(ERASE_MAPS)
+    }
+    pub(crate) fn map_area_stored(&self, (z, x, y): TileKey) -> bool {
+        let db = self.db.lock().unwrap();
+        db.query_row("SELECT EXISTS(SELECT 1 FROM map_areas WHERE z=?1 AND x=?2 AND y=?3)", params![z, x, y], |r| r.get(0))
+            .unwrap_or(false)
+    }
+    /// A stored tile's data, empty where the source had none.
+    pub(crate) fn map_tile(&self, z: u8, x: u32, y: u32) -> Option<Vec<u8>> {
+        let db = self.db.lock().unwrap();
+        db.query_row("SELECT data FROM map_tiles WHERE z=?1 AND x=?2 AND y=?3", params![z, x, y], |r| r.get(0))
+            .optional()
+            .ok()
+            .flatten()
+    }
+    /// Saves a downloaded area in one transaction, only while street maps are
+    /// on and the workout that asked is still stored, so a download that ends
+    /// after opting out, signing out or switching accounts leaves nothing.
+    pub(crate) fn put_map_area(
+        &self,
+        activity: &str,
+        (z, x, y): TileKey,
+        source: &str,
+        at: &str,
+        tiles: &[(TileKey, Vec<u8>)],
+    ) -> rusqlite::Result<bool> {
+        let mut db = self.db.lock().unwrap();
+        let tx = db.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        if !tx.query_row(&format!("SELECT {MAPS_ALLOWED}"), [activity], |r| r.get::<_, bool>(0))? {
+            return Ok(false);
+        }
+        {
+            let mut insert = tx.prepare("INSERT INTO map_tiles VALUES (?1,?2,?3,?4) ON CONFLICT(z,x,y) DO UPDATE SET data=excluded.data")?;
+            for ((z, x, y), data) in tiles {
+                insert.execute(params![z, x, y, data])?;
+            }
+        }
+        tx.execute("INSERT INTO map_areas VALUES (?1,?2,?3,?4,?5) ON CONFLICT(z,x,y) DO UPDATE SET source=excluded.source,fetched_at=excluded.fetched_at", params![z, x, y, source, at])?;
+        tx.commit()?;
+        Ok(true)
+    }
+    /// Street maps are on and the workout is still stored.
+    pub(crate) fn maps_allowed(&self, activity: &str) -> bool {
+        let db = self.db.lock().unwrap();
+        db.query_row(&format!("SELECT {MAPS_ALLOWED}"), [activity], |r| r.get(0)).unwrap_or(false)
+    }
+    pub(crate) fn route_map(&self, activity: &str) -> Option<String> {
+        let db = self.db.lock().unwrap();
+        db.query_row("SELECT json FROM route_maps WHERE activity=?1", [activity], |r| r.get(0))
+            .optional()
+            .ok()
+            .flatten()
+    }
+    /// Keeps a drawn card under the same conditions as `put_map_area`.
+    pub(crate) fn put_route_map(&self, activity: &str, json: &str) -> rusqlite::Result<bool> {
+        let db = self.db.lock().unwrap();
+        let changed = db.execute(
+            &format!("INSERT INTO route_maps (activity,json) SELECT ?1, ?2 WHERE {MAPS_ALLOWED} ON CONFLICT(activity) DO UPDATE SET json=excluded.json"),
+            params![activity, json],
+        )?;
+        Ok(changed != 0)
+    }
+    pub(crate) fn erase_maps(&self) -> rusqlite::Result<()> {
+        self.db.lock().unwrap().execute_batch(ERASE_MAPS)
+    }
+    /// Rows in map_areas, map_tiles and route_maps.
+    #[cfg(test)]
+    pub(crate) fn map_rows(&self) -> (i64, i64, i64) {
+        let db = self.db.lock().unwrap();
+        let count = |table: &str| db.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0)).unwrap();
+        (count("map_areas"), count("map_tiles"), count("route_maps"))
     }
 }
+
+/// A map tile's or area's zoom, x and y.
+pub(crate) type TileKey = (u8, u32, u32);
+const ERASE_MAPS: &str = "DELETE FROM map_tiles; DELETE FROM map_areas; DELETE FROM route_maps;";
+/// Street maps are on (the default, so a settings row without the field
+/// counts) and workout ?1 is stored.
+const MAPS_ALLOWED: &str = "(NOT EXISTS (SELECT 1 FROM settings WHERE key='settings' AND json_extract(value,'$.streetMaps')=0) AND EXISTS (SELECT 1 FROM activities WHERE id=?1))";
 
 #[cfg(test)]
 mod tests {

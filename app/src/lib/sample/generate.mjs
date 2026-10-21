@@ -1,5 +1,5 @@
 // Synthetic values transcribed from design/mockup/index.html; regenerate with node generate.mjs.
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 // Views whose per-day and per-activity detail is already stored.
 const noDetail={missing:[],unavailable:[]};
 const activity=(id,name,icon,start,duration,distance,load,zones,te,benefit,avgHr=null,intensityMin=null)=>({id,icon,name,startLocal:`2025-10-${start}`,durationS:duration,distanceKm:distance,load,zoneSeconds:zones,aerobicTe:te,aerobicLabel:te?'Improving':null,anaerobicTe:te?1.2:null,anaerobicLabel:te?'Minor':null,benefit,avgHr,intensityMin,distanceUnit:'km'});
@@ -72,6 +72,9 @@ workout.more=[{key:'movingDuration',label:'Moving time',value:3101,unit:'s'},{ke
  {key:'differenceBodyBattery',label:'Body Battery',value:-9,unit:'points'},{key:'elevationLoss',label:'Descent',value:41,unit:'m'},{key:'strideLength',label:'Stride length',value:113.4,unit:'cm'},{key:'recoveryHeartRate',label:'Recovery heart rate',value:31,unit:'bpm'}];
 workout.effects=[{kind:'aerobic',value:3.8,band:'Improving',line:'builds your aerobic base',garminLabel:'Improving'},{kind:'anaerobic',value:1.2,band:'Minor benefit',line:'little sprint or hard work',garminLabel:'Minor'}];
 workout.vo2maxNew=null;
+// The run's street map, drawn by the core from OpenFreeMap tiles: `raring route-map --route` with this route.
+// Map data © OpenStreetMap contributors (ODbL) and © OpenMapTiles; the card shows the credit.
+workout.map=JSON.parse(readFileSync(new URL('workoutMap.json',import.meta.url),'utf8'));
 // A pool swim (25 m lengths, 100 m splits, swim fields as Garmin's summary names them) and a walk without streams.
 const swimHr=Array.from({length:128},(_,i)=>({tS:i*15,bpm:Math.round(118+Math.min(i,40)*.5+Math.sin(i/3)*4)}));
 const otherWorkouts={
@@ -86,6 +89,7 @@ const otherWorkouts={
  [walk.id]:{detail:noDetail,summary:walk,recoveryHours:null,stats:[['distance','Distance',4.1,'km'],['duration','Time',2880,'s'],['pace','Pace',702,'s/km'],['averageHR','Avg HR',104,'bpm']].map(([key,label,value,unit])=>({key,label,value,unit})),
   route:[],heartRate:Array.from({length:192},(_,i)=>({tS:i*15,bpm:Math.round(98+Math.sin(i/11)*6)})),zoneFloors:[120,138,154,167],splits:[[1,690],[1,701],[1,708],[1,712],[.1,69]].map(([distanceKm,seconds],i)=>({index:i+1,distanceKm,seconds,avgHr:102+i})),
   along:null,more:[{key:'movingDuration',label:'Moving time',value:2830,unit:'s'}],effects:[{kind:'aerobic',value:1.1,band:'Minor benefit',line:'easy movement',garminLabel:'Improving'}],vo2maxNew:null,counted:{week:'2025-10-06',goals:true,lines:[],planItem:null,bests:[]},strength:null}};
+for(const w of Object.values(otherWorkouts))w.map=null;
 writeFileSync(new URL('otherWorkouts.json',import.meta.url),JSON.stringify(otherWorkouts,null,2)+'\n');
 workout.counted={week:'2025-10-13',goals:true,lines:[{kind:'zone2',amount:18,position:null,recorded:100,target:150}],planItem:null,bests:['Longest run']};
 const health={detail:noDetail,nightVitals,date:today.date,bodyWeight:{value:72.4,unit:'kg',measuredOn:'2025-10-14',bmi:23.8,bodyFat:null,trend:[71.8,null,72.1,null,72.6,72.3,null,72.5,72.4,null,72.2,72.4]},fitnessAge:age,lever:{key:'vigorousMinutes',name:'Vigorous minutes',current:112,target:150,unit:'min/wk',ageIfMet:38},stress,intensity:{start:'2025-10-13',end:'2025-10-19',through:'2025-10-16',total:124,moderate:64,vigorous:30,goal:150},drivers:[['vo2max','VO₂ max',52,'',55,true,'good'],['restingHr','Resting HR',46,'bpm',54,true,'good'],['bmi','BMI',23.8,'',25,true,'good'],['vigorousMinutes','Vigorous',112,'min/wk',150,false,'fair']].map(([key,name,value,unit,target,met,tone])=>({key,name,value,unit,target,met,tone})),vitals};
@@ -110,6 +114,7 @@ const exercises=[
 ];
 const strengthSummary=lowerA;
 const strengthWorkout={detail:noDetail,counted:{week:'2025-10-13',goals:true,lines:[{kind:'strength',amount:1,position:2,recorded:3,target:4}],planItem:'Strength',bests:[]},along:null,more:[],effects:[],vo2maxNew:null,summary:strengthSummary,recoveryHours:14,stats:[['duration','Time',2882,'s'],['avgHr','Avg HR',118,'bpm'],['maxHr','Max HR',151,'bpm'],['calories','Calories',312,'kcal']].map(([key,label,value,unit])=>({key,label,value,unit})),route:[],heartRate:Array.from({length:192},(_,i)=>({tS:i*15,bpm:Math.round(104+Math.abs(Math.sin(i/9))*34+Math.sin(i*1.7)*3)})),zoneFloors:[120,138,154,167],splits:[],strength:{unit:'kg',figure:'female',checkedAt:'2025-10-15T19:30:00Z',sets:16,reps:161,unknownRepSets:0,restS:1520,records:1,setsRecorded:true,zeroRepSets:1,missingRepSets:0,doubledSets:1,unnamedSets:3,muscles:muscleSets({quads:6,glutes:9,hamstrings:3,calves:3}),exercises}};
+strengthWorkout.map=null;
 const mondays=Array.from({length:12},(_,i)=>{const d=new Date(Date.UTC(2025,6,28+i*7));return d.toISOString().slice(0,10)});
 const weekly=mondays.map((weekStart,i)=>({weekStart,muscles:i===11?muscleSets(musclesThisWeek):muscleSets(Object.fromEntries(MUSCLES.map((m,j)=>[m,i===5?Math.round(avg4[m]*.3):Math.max(0,Math.round(avg4[m]+Math.sin(i*1.3+j)*2.5))])))}));
 const last4=Object.fromEntries(MUSCLES.map((m,j)=>[m,weekly.slice(8).reduce((a,w)=>a+w.muscles[j].sets,0)]));
@@ -161,6 +166,7 @@ for(const id of historyIds){
   zeroRepSets:0,missingRepSets:0,doubledSets:0,unnamedSets:0,muscles:muscleSets(counts),exercises:exs,
  }};
 }
+for(const w of Object.values(strengthWorkoutHistory))w.map=null;
 writeFileSync(new URL('strengthWorkoutHistory.json',import.meta.url),JSON.stringify(strengthWorkoutHistory,null,2)+'\n');
 
 // Synthetic daily HR with sleep, an activity and two missing intervals.

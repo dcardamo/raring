@@ -749,7 +749,7 @@ fn gauge(value: f64, max: f64, label: &str, tone: Tone, band: Option<[f64; 2]>) 
         band,
     }
 }
-fn label(v: Option<String>) -> String {
+pub(crate) fn label(v: Option<String>) -> String {
     let code = v.unwrap_or_default();
     let code = code
         .rsplit_once('_')
@@ -1088,6 +1088,25 @@ pub fn activity_page(store: &Store, before_start: &str, before_id: &str, icon: O
             }
             (start, id) = (next_start, next_id);
         }
+    }
+}
+/// The stored recordings of the month holding `month`, newest first, for the
+/// Activities calendar; no Garmin request is made.
+pub fn activity_month(store: &Store, month: NaiveDate, today: NaiveDate) -> ActivityMonth {
+    let start = month.with_day(1).unwrap_or(month);
+    let end = start.checked_add_months(chrono::Months::new(1)).map_or(start, |next| next - Duration::days(1));
+    let mut activities: Vec<ActivityCard> = store
+        .activities_between(&start.to_string(), &end.to_string())
+        .iter()
+        .filter_map(|(id, _)| activity(store, id))
+        .collect();
+    activities.reverse();
+    ActivityMonth {
+        month: start.to_string(),
+        grid_start: plan::week_start(start, plan::week_starts_on(store)).to_string(),
+        today: today.to_string(),
+        first: store.oldest_activity().and_then(|s| s.get(..10).map(str::to_owned)),
+        activities,
     }
 }
 fn activities(store: &Store, since: &str) -> Vec<ActivityCard> {
@@ -2741,7 +2760,9 @@ pub fn workout(store: &Store, id: &str) -> Option<WorkoutView> {
         .get("max_metrics", &day)
         .and_then(|m| vo2(&m))
         .filter(|today| historical_vo2(store, &date_sub(&day, 1)) != Some(*today));
+    let map = crate::maps::stored(store, id, &route);
     Some(WorkoutView {
+        map,
         counted: None,
         along,
         more,
