@@ -1,6 +1,6 @@
 use chrono::Local;
 use raring_core::{account, store::Store, Raring};
-use serde_json::json;
+use serde_json::{json, Value};
 use std::fs;
 
 #[test]
@@ -14,6 +14,14 @@ fn a_suspended_session_hides_the_snapshot_but_keeps_the_account() {
     // Test fixture for an already verified session; the HTTP verification has separate tests.
     store.set_setting("account_session", &json!({"identity":account::profile_identity(&profile),"active":true}).to_string()).unwrap();
     let core = Raring::open(&path).unwrap();
+    core.refresh_status_snapshot(Local::now()).unwrap();
+    assert!(core.surface_snapshot().unwrap().is_some());
+    // A version-1 file from before the HRV swap is never shown with the old fields.
+    let file = path.with_extension("status.json");
+    let mut old: Value = serde_json::from_slice(&fs::read(&file).unwrap()).unwrap();
+    old["version"] = 1.into();
+    fs::write(&file, old.to_string()).unwrap();
+    assert!(core.surface_snapshot().unwrap().is_none());
     core.refresh_status_snapshot(Local::now()).unwrap();
     assert!(core.surface_snapshot().unwrap().is_some());
     core.suspend_session().unwrap();

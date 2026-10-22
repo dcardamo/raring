@@ -48,10 +48,11 @@ class StatusWidgetLayoutTest {
         } finally { parser.close() }
     }
 
+    // "Unbalanced" and a three-digit HRV are the widest values the medium row holds.
     private fun snapshot(missing: Boolean) = if (missing) StatusSnapshot("As of unavailable", waitingFocus, "today",
-        StatusMetric(null, "neutral"), StatusMetric(null, "neutral"), StatusMetric(null, "neutral"), StatusMetric(null, "neutral"))
+        StatusMetric(null, "neutral"), StatusMetric(null, "neutral"), StatusMetric(null, "neutral"), "")
     else StatusSnapshot(eveningAsOf, eveningFocus, "sleep", StatusMetric(87.0, "good"), StatusMetric(100.0, "good"),
-        StatusMetric(100.0, "good"), StatusMetric(100.0, "neutral"))
+        StatusMetric(112.0, "fair"), "Unbalanced")
 
     private fun rendered(context: Context, medium: Boolean, missing: Boolean): Pair<View, Size> {
         val size = providerSize(context, if (medium) R.xml.status_widget_medium else R.xml.status_widget_small)
@@ -131,17 +132,25 @@ class StatusWidgetLayoutTest {
                 checkText(root, root.findViewById(R.id.status_readiness), if (missing) "\u2014" else "87")
                 checkInside(root, root.findViewById(R.id.status_gauge), "gauge")
                 val tiles = (listOf(R.id.status_tile_readiness) + if (medium) listOf(R.id.status_tile_sleep,
-                    R.id.status_tile_battery, R.id.status_tile_stress) else emptyList()).map { root.findViewById<View>(it) }
+                    R.id.status_tile_hrv) else emptyList()).map { root.findViewById<View>(it) }
                 tiles.forEachIndexed { i, tile -> checkInside(root, tile, "tile $i tap region") }
                 for (i in tiles.indices) for (j in i + 1 until tiles.size) {
                     assertTrue("tile tap regions overlap", !Rect.intersects(boundsInRoot(tiles[i], root), boundsInRoot(tiles[j], root)))
                 }
                 if (medium) {
-                    for (label in listOf("Sleep", "Body Battery", "Stress")) {
+                    for (label in listOf("Sleep", "HRV")) {
                         checkText(root, textViews(root).single { it.text.toString() == label }, label)
                     }
-                    for (id in listOf(R.id.status_sleep, R.id.status_battery, R.id.status_stress)) {
-                        checkText(root, root.findViewById(id), value)
+                    checkText(root, root.findViewById(R.id.status_sleep), value)
+                    checkText(root, root.findViewById(R.id.status_hrv), if (missing) "\u2014" else "112")
+                    val status = root.findViewById<TextView>(R.id.status_hrv_status)
+                    val unit = root.findViewById<TextView>(R.id.status_hrv_unit)
+                    if (missing) {
+                        assertEquals("no status word or unit beside a dash", View.GONE, status.visibility)
+                        assertEquals(View.GONE, unit.visibility)
+                    } else {
+                        checkText(root, status, "Unbalanced")
+                        checkText(root, unit, "ms")
                     }
                 } else {
                     checkText(root, root.findViewById(R.id.status_focus), if (missing) waitingFocus else eveningFocus)

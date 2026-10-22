@@ -8,5 +8,5 @@
     <color name="widget_line">#2A2E35</color>
     <dimen name="widget_radius">16dp</dimen>
     <string name="widget_small_description">Readiness and today\'s focus, from your last watch upload</string>
-    <string name="widget_medium_description">Readiness, sleep, Body Battery and stress, from your last watch upload</string>
+    <string name="widget_medium_description">Readiness, sleep score and overnight HRV, from your last watch upload</string>
 </resources>

@@ -14,6 +14,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.os.Build
 import android.util.Log
+import android.view.View
 import android.widget.RemoteViews
 import androidx.core.content.ContextCompat
 import org.json.JSONObject
@@ -21,7 +22,7 @@ import java.io.File
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
-internal fun safeStatusTarget(route: String) = route.takeIf { it in setOf("today", "readiness", "sleep", "sleep/last", "metric/bodyBattery", "metric/stress") } ?: "today"
+internal fun safeStatusTarget(route: String) = route.takeIf { it in setOf("today", "readiness", "sleep", "sleep/last", "metric/hrv") } ?: "today"
 
 internal object StatusSurfaces {
     private const val RETIRED_CHANNEL = "raring-status"
@@ -86,12 +87,16 @@ internal object StatusSurfaces {
         view.setOnClickPendingIntent(R.id.status_tile_readiness, pending(context, "readiness"))
         if (medium) {
             reading(view, R.id.status_sleep, status?.sleep, context)
-            reading(view, R.id.status_battery, status?.battery, context)
-            reading(view, R.id.status_stress, status?.stress, context)
+            reading(view, R.id.status_hrv, status?.hrv, context)
+            // Garmin's status word, in its rating colour, beside the number.
+            val hrvStatus = status?.hrvStatus.orEmpty().takeIf { status?.hrv?.value != null }.orEmpty()
+            view.setTextViewText(R.id.status_hrv_status, hrvStatus)
+            view.setTextColor(R.id.status_hrv_status, tone(status?.hrv?.tone ?: "neutral"))
+            view.setViewVisibility(R.id.status_hrv_status, if (hrvStatus.isEmpty()) View.GONE else View.VISIBLE)
+            view.setViewVisibility(R.id.status_hrv_unit, if (status?.hrv?.value == null) View.GONE else View.VISIBLE)
             view.setOnClickPendingIntent(android.R.id.background, pending(context, "today"))
             view.setOnClickPendingIntent(R.id.status_tile_sleep, pending(context, "sleep/last"))
-            view.setOnClickPendingIntent(R.id.status_tile_battery, pending(context, "metric/bodyBattery"))
-            view.setOnClickPendingIntent(R.id.status_tile_stress, pending(context, "metric/stress"))
+            view.setOnClickPendingIntent(R.id.status_tile_hrv, pending(context, "metric/hrv"))
         } else {
             view.setTextViewText(R.id.status_focus, status?.focus ?: "")
             view.setOnClickPendingIntent(android.R.id.background, pending(context, status?.target ?: "today"))
