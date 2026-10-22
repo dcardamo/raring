@@ -103,12 +103,27 @@ fn demo_seeds_current_day_and_screen_details() {
     assert_eq!(workout.heart_rate.len(), 210);
     assert_eq!(workout.route.len(), 210);
     assert_eq!(workout.zone_floors.len(), 4);
-    assert_eq!(
-        raring_core::screens::training(&store, &date.to_string())
-            .workouts
-            .len(),
-        3
-    );
+    // The preview's world: a swim and a walk, strength with sets back to
+    // August, gear, thresholds and Garmin's schedule.
+    let training = raring_core::screens::training(&store, &date.to_string());
+    let icons: Vec<_> = training.workouts.iter().map(|w| (w.name.as_str(), w.icon)).collect();
+    assert_eq!(icons.len(), 11);
+    assert!(icons.contains(&("Pool Swim", raring_core::view::Icon::Swim)));
+    assert!(icons.contains(&("Lunch Walk", raring_core::view::Icon::Walk)));
+    let swim = training.workouts.iter().find(|w| w.icon == raring_core::view::Icon::Swim).unwrap();
+    assert_eq!((swim.distance_km, swim.distance_unit), (Some(1.5), raring_core::view::DistanceUnit::M));
+    let pool = raring_core::screens::workout(&store, &swim.id).unwrap();
+    assert!(pool.recorded.iter().flat_map(|g| &g.fields).any(|f| f.key == "poolLength" && f.value == 25.));
+    assert_eq!(training.gear.as_ref().unwrap().items.len(), 3);
+    assert_eq!(training.thresholds.len(), 6);
+    assert_eq!(training.planned.session.as_ref().map(|s| s.name.as_str()), Some("Easy Run"));
+    assert_eq!(training.race.as_ref().map(|r| r.name.as_str()), Some("City 10K"));
+    let week = training.strength.unwrap();
+    assert_eq!((week.strength_activities, week.sessions_with_sets), (3, 2));
+    let strength = raring_core::screens::strength(&store, &date.to_string()).unwrap();
+    let squat = strength.exercises.iter().find(|e| e.key == "SQUAT/BARBELL_BACK_SQUAT").unwrap();
+    assert_eq!(squat.sessions.len(), 11);
+    assert_eq!(squat.sessions[0].top.as_ref().map(|t| (t.weight, t.reps)), Some((Some(100.), Some(5))));
 }
 #[test]
 fn readiness_factor_colours_come_only_from_garmins_rating() {

@@ -135,6 +135,7 @@
         jq
         gnumake
         gitleaks
+        libfaketime
       ];
       buildInputs = linuxDeps;
 

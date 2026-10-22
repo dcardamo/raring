@@ -10,19 +10,61 @@
     },
     {
       "muscle": "back",
-      "sets": 6
-    },
-    {
-      "muscle": "shoulders",
       "sets": 3
     },
     {
-      "muscle": "arms",
+      "muscle": "shoulders",
       "sets": 2
     },
     {
+      "muscle": "arms",
+      "sets": 3
+    },
+    {
       "muscle": "core",
+      "sets": 2
+    },
+    {
+      "muscle": "hips",
+      "sets": 2
+    },
+    {
+      "muscle": "quads",
+      "sets": 6
+    },
+    {
+      "muscle": "hamstrings",
+      "sets": 3
+    },
+    {
+      "muscle": "glutes",
+      "sets": 11
+    },
+    {
+      "muscle": "calves",
       "sets": 0
+    }
+  ],
+  "average4w": [
+    {
+      "muscle": "chest",
+      "sets": 1
+    },
+    {
+      "muscle": "back",
+      "sets": 1
+    },
+    {
+      "muscle": "shoulders",
+      "sets": 1
+    },
+    {
+      "muscle": "arms",
+      "sets": 1
+    },
+    {
+      "muscle": "core",
+      "sets": 1
     },
     {
       "muscle": "hips",
@@ -30,83 +72,41 @@
     },
     {
       "muscle": "quads",
-      "sets": 6
-    },
-    {
-      "muscle": "hamstrings",
-      "sets": 6
-    },
-    {
-      "muscle": "glutes",
-      "sets": 9
-    },
-    {
-      "muscle": "calves",
-      "sets": 3
-    }
-  ],
-  "average4w": [
-    {
-      "muscle": "chest",
-      "sets": 8
-    },
-    {
-      "muscle": "back",
-      "sets": 11
-    },
-    {
-      "muscle": "shoulders",
-      "sets": 7
-    },
-    {
-      "muscle": "arms",
-      "sets": 5
-    },
-    {
-      "muscle": "core",
       "sets": 4
     },
     {
-      "muscle": "hips",
-      "sets": 2
-    },
-    {
-      "muscle": "quads",
-      "sets": 8
-    },
-    {
       "muscle": "hamstrings",
-      "sets": 7
+      "sets": 1
     },
     {
       "muscle": "glutes",
-      "sets": 10
+      "sets": 6
     },
     {
       "muscle": "calves",
-      "sets": 4
+      "sets": 1.5
     }
   ],
   "last4w": [
     {
       "muscle": "chest",
-      "sets": 24
+      "sets": 7
     },
     {
       "muscle": "back",
-      "sets": 39
+      "sets": 7
     },
     {
       "muscle": "shoulders",
-      "sets": 28
+      "sets": 6
     },
     {
       "muscle": "arms",
-      "sets": 20
+      "sets": 7
     },
     {
       "muscle": "core",
-      "sets": 12
+      "sets": 4
     },
     {
       "muscle": "hips",
@@ -114,19 +114,19 @@
     },
     {
       "muscle": "quads",
-      "sets": 26
+      "sets": 18
     },
     {
       "muscle": "hamstrings",
-      "sets": 27
+      "sets": 5
     },
     {
       "muscle": "glutes",
-      "sets": 42
+      "sets": 27
     },
     {
       "muscle": "calves",
-      "sets": 18
+      "sets": 3
     }
   ],
   "weeks": [
@@ -135,23 +135,23 @@
       "muscles": [
         {
           "muscle": "chest",
-          "sets": 8
+          "sets": 0
         },
         {
           "muscle": "back",
-          "sets": 13
+          "sets": 0
         },
         {
           "muscle": "shoulders",
-          "sets": 9
+          "sets": 0
         },
         {
           "muscle": "arms",
-          "sets": 5
+          "sets": 0
         },
         {
           "muscle": "core",
-          "sets": 2
+          "sets": 0
         },
         {
           "muscle": "hips",
@@ -159,19 +159,19 @@
         },
         {
           "muscle": "quads",
-          "sets": 7
+          "sets": 0
         },
         {
           "muscle": "hamstrings",
-          "sets": 9
+          "sets": 0
         },
         {
           "muscle": "glutes",
-          "sets": 12
+          "sets": 0
         },
         {
           "muscle": "calves",
-          "sets": 5
+          "sets": 0
         }
       ]
     },
@@ -180,19 +180,19 @@
       "muscles": [
         {
           "muscle": "chest",
-          "sets": 10
+          "sets": 0
         },
         {
           "muscle": "back",
-          "sets": 13
+          "sets": 0
         },
         {
           "muscle": "shoulders",
-          "sets": 7
+          "sets": 0
         },
         {
           "muscle": "arms",
-          "sets": 3
+          "sets": 0
         },
         {
           "muscle": "core",
@@ -204,19 +204,19 @@
         },
         {
           "muscle": "quads",
-          "sets": 10
+          "sets": 4
         },
         {
           "muscle": "hamstrings",
-          "sets": 9
+          "sets": 2
         },
         {
           "muscle": "glutes",
-          "sets": 10
+          "sets": 8
         },
         {
           "muscle": "calves",
-          "sets": 2
+          "sets": 3
         }
       ]
     },
@@ -225,43 +225,43 @@
       "muscles": [
         {
           "muscle": "chest",
-          "sets": 9
+          "sets": 2
         },
         {
           "muscle": "back",
-          "sets": 10
+          "sets": 2
         },
         {
           "muscle": "shoulders",
-          "sets": 5
+          "sets": 2
         },
         {
           "muscle": "arms",
-          "sets": 3
+          "sets": 2
         },
         {
           "muscle": "core",
-          "sets": 5
+          "sets": 0
         },
         {
           "muscle": "hips",
-          "sets": 4
+          "sets": 0
         },
         {
           "muscle": "quads",
-          "sets": 10
+          "sets": 4
         },
         {
           "muscle": "hamstrings",
-          "sets": 7
+          "sets": 0
         },
         {
           "muscle": "glutes",
-          "sets": 8
+          "sets": 4
         },
         {
           "muscle": "calves",
-          "sets": 2
+          "sets": 0
         }
       ]
     },
@@ -270,35 +270,35 @@
       "muscles": [
         {
           "muscle": "chest",
-          "sets": 6
+          "sets": 0
         },
         {
           "muscle": "back",
-          "sets": 9
+          "sets": 0
         },
         {
           "muscle": "shoulders",
-          "sets": 6
+          "sets": 0
         },
         {
           "muscle": "arms",
-          "sets": 6
+          "sets": 0
         },
         {
           "muscle": "core",
-          "sets": 6
+          "sets": 2
         },
         {
           "muscle": "hips",
-          "sets": 3
+          "sets": 2
         },
         {
           "muscle": "quads",
-          "sets": 7
+          "sets": 4
         },
         {
           "muscle": "hamstrings",
-          "sets": 5
+          "sets": 2
         },
         {
           "muscle": "glutes",
@@ -306,7 +306,7 @@
         },
         {
           "muscle": "calves",
-          "sets": 5
+          "sets": 3
         }
       ]
     },
@@ -315,23 +315,23 @@
       "muscles": [
         {
           "muscle": "chest",
-          "sets": 6
+          "sets": 2
         },
         {
           "muscle": "back",
-          "sets": 11
+          "sets": 2
         },
         {
           "muscle": "shoulders",
-          "sets": 9
+          "sets": 2
         },
         {
           "muscle": "arms",
-          "sets": 7
+          "sets": 2
         },
         {
           "muscle": "core",
-          "sets": 5
+          "sets": 0
         },
         {
           "muscle": "hips",
@@ -339,19 +339,19 @@
         },
         {
           "muscle": "quads",
-          "sets": 6
+          "sets": 4
         },
         {
           "muscle": "hamstrings",
-          "sets": 6
+          "sets": 0
         },
         {
           "muscle": "glutes",
-          "sets": 11
+          "sets": 4
         },
         {
           "muscle": "calves",
-          "sets": 6
+          "sets": 0
         }
       ]
     },
@@ -360,31 +360,31 @@
       "muscles": [
         {
           "muscle": "chest",
-          "sets": 2
+          "sets": 0
         },
         {
           "muscle": "back",
-          "sets": 3
+          "sets": 0
         },
         {
           "muscle": "shoulders",
-          "sets": 2
+          "sets": 0
         },
         {
           "muscle": "arms",
-          "sets": 2
+          "sets": 0
         },
         {
           "muscle": "core",
-          "sets": 1
+          "sets": 2
         },
         {
           "muscle": "hips",
-          "sets": 1
+          "sets": 2
         },
         {
           "muscle": "quads",
-          "sets": 2
+          "sets": 4
         },
         {
           "muscle": "hamstrings",
@@ -392,11 +392,11 @@
         },
         {
           "muscle": "glutes",
-          "sets": 3
+          "sets": 8
         },
         {
           "muscle": "calves",
-          "sets": 1
+          "sets": 3
         }
       ]
     },
@@ -405,43 +405,43 @@
       "muscles": [
         {
           "muscle": "chest",
-          "sets": 10
+          "sets": 2
         },
         {
           "muscle": "back",
-          "sets": 12
+          "sets": 2
         },
         {
           "muscle": "shoulders",
-          "sets": 6
+          "sets": 2
         },
         {
           "muscle": "arms",
-          "sets": 3
+          "sets": 2
         },
         {
           "muscle": "core",
-          "sets": 2
+          "sets": 0
         },
         {
           "muscle": "hips",
-          "sets": 3
+          "sets": 0
         },
         {
           "muscle": "quads",
-          "sets": 10
+          "sets": 4
         },
         {
           "muscle": "hamstrings",
-          "sets": 9
+          "sets": 0
         },
         {
           "muscle": "glutes",
-          "sets": 10
+          "sets": 4
         },
         {
           "muscle": "calves",
-          "sets": 2
+          "sets": 0
         }
       ]
     },
@@ -450,35 +450,35 @@
       "muscles": [
         {
           "muscle": "chest",
-          "sets": 9
+          "sets": 0
         },
         {
           "muscle": "back",
-          "sets": 9
+          "sets": 0
         },
         {
           "muscle": "shoulders",
-          "sets": 5
+          "sets": 0
         },
         {
           "muscle": "arms",
-          "sets": 4
+          "sets": 0
         },
         {
           "muscle": "core",
-          "sets": 5
+          "sets": 2
         },
         {
           "muscle": "hips",
-          "sets": 4
+          "sets": 2
         },
         {
           "muscle": "quads",
-          "sets": 9
+          "sets": 4
         },
         {
           "muscle": "hamstrings",
-          "sets": 6
+          "sets": 2
         },
         {
           "muscle": "glutes",
@@ -486,7 +486,7 @@
         },
         {
           "muscle": "calves",
-          "sets": 2
+          "sets": 3
         }
       ]
     },
@@ -495,43 +495,43 @@
       "muscles": [
         {
           "muscle": "chest",
-          "sets": 6
+          "sets": 2
         },
         {
           "muscle": "back",
-          "sets": 9
+          "sets": 2
         },
         {
           "muscle": "shoulders",
-          "sets": 7
+          "sets": 2
         },
         {
           "muscle": "arms",
-          "sets": 7
+          "sets": 2
         },
         {
           "muscle": "core",
-          "sets": 6
+          "sets": 0
         },
         {
           "muscle": "hips",
-          "sets": 3
+          "sets": 0
         },
         {
           "muscle": "quads",
-          "sets": 6
+          "sets": 4
         },
         {
           "muscle": "hamstrings",
-          "sets": 5
+          "sets": 0
         },
         {
           "muscle": "glutes",
-          "sets": 9
+          "sets": 4
         },
         {
           "muscle": "calves",
-          "sets": 5
+          "sets": 0
         }
       ]
     },
@@ -540,43 +540,43 @@
       "muscles": [
         {
           "muscle": "chest",
-          "sets": 6
-        },
-        {
-          "muscle": "back",
-          "sets": 11
-        },
-        {
-          "muscle": "shoulders",
-          "sets": 9
-        },
-        {
-          "muscle": "arms",
-          "sets": 7
-        },
-        {
-          "muscle": "core",
-          "sets": 4
-        },
-        {
-          "muscle": "hips",
           "sets": 0
         },
         {
+          "muscle": "back",
+          "sets": 0
+        },
+        {
+          "muscle": "shoulders",
+          "sets": 0
+        },
+        {
+          "muscle": "arms",
+          "sets": 0
+        },
+        {
+          "muscle": "core",
+          "sets": 2
+        },
+        {
+          "muscle": "hips",
+          "sets": 2
+        },
+        {
           "muscle": "quads",
-          "sets": 6
+          "sets": 4
         },
         {
           "muscle": "hamstrings",
-          "sets": 7
+          "sets": 2
         },
         {
           "muscle": "glutes",
-          "sets": 12
+          "sets": 8
         },
         {
           "muscle": "calves",
-          "sets": 6
+          "sets": 3
         }
       ]
     },
@@ -585,23 +585,23 @@
       "muscles": [
         {
           "muscle": "chest",
-          "sets": 9
+          "sets": 2
         },
         {
           "muscle": "back",
-          "sets": 13
+          "sets": 2
         },
         {
           "muscle": "shoulders",
-          "sets": 9
+          "sets": 2
         },
         {
           "muscle": "arms",
-          "sets": 4
+          "sets": 2
         },
         {
           "muscle": "core",
-          "sets": 2
+          "sets": 0
         },
         {
           "muscle": "hips",
@@ -609,19 +609,19 @@
         },
         {
           "muscle": "quads",
-          "sets": 8
+          "sets": 4
         },
         {
           "muscle": "hamstrings",
-          "sets": 9
+          "sets": 0
         },
         {
           "muscle": "glutes",
-          "sets": 12
+          "sets": 4
         },
         {
           "muscle": "calves",
-          "sets": 4
+          "sets": 0
         }
       ]
     },
@@ -634,23 +634,23 @@
         },
         {
           "muscle": "back",
-          "sets": 6
-        },
-        {
-          "muscle": "shoulders",
           "sets": 3
         },
         {
-          "muscle": "arms",
+          "muscle": "shoulders",
           "sets": 2
         },
         {
+          "muscle": "arms",
+          "sets": 3
+        },
+        {
           "muscle": "core",
-          "sets": 0
+          "sets": 2
         },
         {
           "muscle": "hips",
-          "sets": 1
+          "sets": 2
         },
         {
           "muscle": "quads",
@@ -658,15 +658,15 @@
         },
         {
           "muscle": "hamstrings",
-          "sets": 6
+          "sets": 3
         },
         {
           "muscle": "glutes",
-          "sets": 9
+          "sets": 11
         },
         {
           "muscle": "calves",
-          "sets": 3
+          "sets": 0
         }
       ]
     }
@@ -682,13 +682,14 @@
       ],
       "sessions": [
         {
-          "activityId": "9000000000111",
+          "activityId": "9000000000002",
           "date": "2025-10-15",
           "top": {
             "weight": 100,
             "reps": 5
           },
           "reps": [
+            8,
             5,
             5,
             5
@@ -703,9 +704,196 @@
             "reps": 5
           },
           "reps": [
+            8,
             5,
             5,
             5
+          ],
+          "record": true
+        },
+        {
+          "activityId": "9000000000109",
+          "date": "2025-10-01",
+          "top": {
+            "weight": 95,
+            "reps": 5
+          },
+          "reps": [
+            8,
+            5,
+            5,
+            5
+          ],
+          "record": true
+        },
+        {
+          "activityId": "9000000000108",
+          "date": "2025-09-24",
+          "top": {
+            "weight": 92.5,
+            "reps": 5
+          },
+          "reps": [
+            8,
+            5,
+            5,
+            5
+          ],
+          "record": true
+        },
+        {
+          "activityId": "9000000000107",
+          "date": "2025-09-17",
+          "top": {
+            "weight": 90,
+            "reps": 5
+          },
+          "reps": [
+            8,
+            5,
+            5,
+            5
+          ],
+          "record": true
+        },
+        {
+          "activityId": "9000000000106",
+          "date": "2025-09-10",
+          "top": {
+            "weight": 87.5,
+            "reps": 5
+          },
+          "reps": [
+            8,
+            5,
+            5,
+            5
+          ],
+          "record": true
+        },
+        {
+          "activityId": "9000000000105",
+          "date": "2025-09-03",
+          "top": {
+            "weight": 85,
+            "reps": 5
+          },
+          "reps": [
+            8,
+            5,
+            5,
+            5
+          ],
+          "record": true
+        },
+        {
+          "activityId": "9000000000104",
+          "date": "2025-08-27",
+          "top": {
+            "weight": 82.5,
+            "reps": 5
+          },
+          "reps": [
+            8,
+            5,
+            5,
+            5
+          ],
+          "record": true
+        },
+        {
+          "activityId": "9000000000103",
+          "date": "2025-08-20",
+          "top": {
+            "weight": 80,
+            "reps": 5
+          },
+          "reps": [
+            8,
+            5,
+            5,
+            5
+          ],
+          "record": true
+        },
+        {
+          "activityId": "9000000000102",
+          "date": "2025-08-13",
+          "top": {
+            "weight": 77.5,
+            "reps": 5
+          },
+          "reps": [
+            8,
+            5,
+            5,
+            5
+          ],
+          "record": true
+        },
+        {
+          "activityId": "9000000000101",
+          "date": "2025-08-06",
+          "top": {
+            "weight": 75,
+            "reps": 5
+          },
+          "reps": [
+            8,
+            5,
+            5,
+            5
+          ],
+          "record": false
+        }
+      ],
+      "bests": [
+        {
+          "reps": 1,
+          "weight": 100,
+          "date": "2025-10-15"
+        },
+        {
+          "reps": 3,
+          "weight": 100,
+          "date": "2025-10-15"
+        },
+        {
+          "reps": 5,
+          "weight": 100,
+          "date": "2025-10-15"
+        },
+        {
+          "reps": 8,
+          "weight": 60,
+          "date": "2025-08-06"
+        },
+        {
+          "reps": 10,
+          "weight": null,
+          "date": null
+        }
+      ],
+      "repsBest": null
+    },
+    {
+      "key": "HIP_RAISE/BARBELL_HIP_THRUST_WITH_BENCH",
+      "name": "Barbell Hip Thrust With Bench",
+      "muscles": [
+        "hips",
+        "glutes"
+      ],
+      "sessions": [
+        {
+          "activityId": "9000000000002",
+          "date": "2025-10-15",
+          "top": {
+            "weight": 60,
+            "reps": 10
+          },
+          "reps": [
+            10,
+            10
           ],
           "record": false
         },
@@ -713,27 +901,12 @@
           "activityId": "9000000000109",
           "date": "2025-10-01",
           "top": {
-            "weight": 97.5,
-            "reps": 5
+            "weight": 60,
+            "reps": 10
           },
           "reps": [
-            5,
-            5,
-            5
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000108",
-          "date": "2025-09-24",
-          "top": {
-            "weight": 95,
-            "reps": 5
-          },
-          "reps": [
-            5,
-            5,
-            5
+            10,
+            10
           ],
           "record": false
         },
@@ -741,27 +914,12 @@
           "activityId": "9000000000107",
           "date": "2025-09-17",
           "top": {
-            "weight": 95,
-            "reps": 5
+            "weight": 60,
+            "reps": 10
           },
           "reps": [
-            5,
-            5,
-            5
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000106",
-          "date": "2025-09-10",
-          "top": {
-            "weight": 92.5,
-            "reps": 5
-          },
-          "reps": [
-            5,
-            5,
-            5
+            10,
+            10
           ],
           "record": false
         },
@@ -769,27 +927,12 @@
           "activityId": "9000000000105",
           "date": "2025-09-03",
           "top": {
-            "weight": 90,
-            "reps": 4
+            "weight": 60,
+            "reps": 10
           },
           "reps": [
-            4,
-            4,
-            4
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000104",
-          "date": "2025-08-27",
-          "top": {
-            "weight": 90,
-            "reps": 5
-          },
-          "reps": [
-            5,
-            5,
-            5
+            10,
+            10
           ],
           "record": false
         },
@@ -797,27 +940,12 @@
           "activityId": "9000000000103",
           "date": "2025-08-20",
           "top": {
-            "weight": 90,
-            "reps": 5
+            "weight": 60,
+            "reps": 10
           },
           "reps": [
-            5,
-            5,
-            5
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000102",
-          "date": "2025-08-13",
-          "top": {
-            "weight": 87.5,
-            "reps": 5
-          },
-          "reps": [
-            5,
-            5,
-            5
+            10,
+            10
           ],
           "record": false
         },
@@ -825,27 +953,109 @@
           "activityId": "9000000000101",
           "date": "2025-08-06",
           "top": {
-            "weight": 87.5,
-            "reps": 5
+            "weight": 60,
+            "reps": 10
           },
           "reps": [
-            5,
-            5,
-            5
+            10,
+            10
+          ],
+          "record": false
+        }
+      ],
+      "bests": [
+        {
+          "reps": 1,
+          "weight": 60,
+          "date": "2025-08-06"
+        },
+        {
+          "reps": 3,
+          "weight": 60,
+          "date": "2025-08-06"
+        },
+        {
+          "reps": 5,
+          "weight": 60,
+          "date": "2025-08-06"
+        },
+        {
+          "reps": 8,
+          "weight": 60,
+          "date": "2025-08-06"
+        },
+        {
+          "reps": 10,
+          "weight": 60,
+          "date": "2025-08-06"
+        }
+      ],
+      "repsBest": null
+    },
+    {
+      "key": "CRUNCH/BICYCLE_CRUNCH",
+      "name": "Bicycle Crunch",
+      "muscles": [
+        "core"
+      ],
+      "sessions": [
+        {
+          "activityId": "9000000000002",
+          "date": "2025-10-15",
+          "top": null,
+          "reps": [
+            26,
+            20
           ],
           "record": false
         },
         {
-          "activityId": "9000000000100",
-          "date": "2025-07-30",
-          "top": {
-            "weight": 85,
-            "reps": 5
-          },
+          "activityId": "9000000000109",
+          "date": "2025-10-01",
+          "top": null,
           "reps": [
-            5,
-            5,
-            5
+            24,
+            20
+          ],
+          "record": false
+        },
+        {
+          "activityId": "9000000000107",
+          "date": "2025-09-17",
+          "top": null,
+          "reps": [
+            22,
+            20
+          ],
+          "record": false
+        },
+        {
+          "activityId": "9000000000105",
+          "date": "2025-09-03",
+          "top": null,
+          "reps": [
+            20,
+            20
+          ],
+          "record": false
+        },
+        {
+          "activityId": "9000000000103",
+          "date": "2025-08-20",
+          "top": null,
+          "reps": [
+            18,
+            20
+          ],
+          "record": false
+        },
+        {
+          "activityId": "9000000000101",
+          "date": "2025-08-06",
+          "top": null,
+          "reps": [
+            16,
+            20
           ],
           "record": false
         }
@@ -858,23 +1068,194 @@
         },
         {
           "reps": 3,
-          "weight": 105,
-          "date": "2025-08-20"
+          "weight": null,
+          "date": null
         },
         {
           "reps": 5,
-          "weight": 100,
+          "weight": null,
+          "date": null
+        },
+        {
+          "reps": 8,
+          "weight": null,
+          "date": null
+        },
+        {
+          "reps": 10,
+          "weight": null,
+          "date": null
+        }
+      ],
+      "repsBest": {
+        "reps": 26,
+        "date": "2025-10-15"
+      }
+    },
+    {
+      "key": "DEADLIFT/ROMANIAN_DEADLIFT",
+      "name": "Romanian Deadlift",
+      "muscles": [
+        "hamstrings",
+        "glutes"
+      ],
+      "sessions": [
+        {
+          "activityId": "9000000000002",
+          "date": "2025-10-15",
+          "top": {
+            "weight": 80,
+            "reps": 8
+          },
+          "reps": [
+            8,
+            8,
+            0
+          ],
+          "record": true
+        },
+        {
+          "activityId": "9000000000109",
+          "date": "2025-10-01",
+          "top": {
+            "weight": 77.5,
+            "reps": 8
+          },
+          "reps": [
+            8,
+            8
+          ],
+          "record": true
+        },
+        {
+          "activityId": "9000000000107",
+          "date": "2025-09-17",
+          "top": {
+            "weight": 75,
+            "reps": 8
+          },
+          "reps": [
+            8,
+            8
+          ],
+          "record": true
+        },
+        {
+          "activityId": "9000000000105",
+          "date": "2025-09-03",
+          "top": {
+            "weight": 72.5,
+            "reps": 8
+          },
+          "reps": [
+            8,
+            8
+          ],
+          "record": true
+        },
+        {
+          "activityId": "9000000000103",
+          "date": "2025-08-20",
+          "top": {
+            "weight": 70,
+            "reps": 8
+          },
+          "reps": [
+            8,
+            8
+          ],
+          "record": true
+        },
+        {
+          "activityId": "9000000000101",
+          "date": "2025-08-06",
+          "top": {
+            "weight": 67.5,
+            "reps": 8
+          },
+          "reps": [
+            8,
+            8
+          ],
+          "record": false
+        }
+      ],
+      "bests": [
+        {
+          "reps": 1,
+          "weight": 80,
+          "date": "2025-10-15"
+        },
+        {
+          "reps": 3,
+          "weight": 80,
+          "date": "2025-10-15"
+        },
+        {
+          "reps": 5,
+          "weight": 80,
           "date": "2025-10-15"
         },
         {
           "reps": 8,
-          "weight": 90,
-          "date": "2025-09-10"
+          "weight": 80,
+          "date": "2025-10-15"
         },
         {
           "reps": 10,
-          "weight": 85,
-          "date": "2025-08-06"
+          "weight": null,
+          "date": null
+        }
+      ],
+      "repsBest": null
+    },
+    {
+      "key": "LUNGE/DUMBBELL_WALKING_LUNGE",
+      "name": "Dumbbell Walking Lunge",
+      "muscles": [
+        "quads",
+        "glutes"
+      ],
+      "sessions": [
+        {
+          "activityId": "9000000000002",
+          "date": "2025-10-15",
+          "top": {
+            "weight": 16,
+            "reps": 12
+          },
+          "reps": [
+            12,
+            24
+          ],
+          "record": false
+        }
+      ],
+      "bests": [
+        {
+          "reps": 1,
+          "weight": 16,
+          "date": "2025-10-15"
+        },
+        {
+          "reps": 3,
+          "weight": 16,
+          "date": "2025-10-15"
+        },
+        {
+          "reps": 5,
+          "weight": 16,
+          "date": "2025-10-15"
+        },
+        {
+          "reps": 8,
+          "weight": 16,
+          "date": "2025-10-15"
+        },
+        {
+          "reps": 10,
+          "weight": 16,
+          "date": "2025-10-15"
         }
       ],
       "repsBest": null
@@ -887,8 +1268,8 @@
       ],
       "sessions": [
         {
-          "activityId": "9000000000111",
-          "date": "2025-10-15",
+          "activityId": "9000000000004",
+          "date": "2025-10-14",
           "top": {
             "weight": 70,
             "reps": 12
@@ -904,359 +1285,64 @@
           "activityId": "9000000000110",
           "date": "2025-10-08",
           "top": {
-            "weight": 70,
-            "reps": 12
-          },
-          "reps": [
-            12,
-            12,
-            12
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000109",
-          "date": "2025-10-01",
-          "top": {
-            "weight": 70,
-            "reps": 12
-          },
-          "reps": [
-            12,
-            12,
-            12
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000108",
-          "date": "2025-09-24",
-          "top": {
-            "weight": 70,
-            "reps": 12
-          },
-          "reps": [
-            12,
-            12,
-            12
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000107",
-          "date": "2025-09-17",
-          "top": {
             "weight": 67.5,
             "reps": 12
           },
           "reps": [
             12,
-            12,
             12
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000106",
-          "date": "2025-09-10",
-          "top": {
-            "weight": 67.5,
-            "reps": 12
-          },
-          "reps": [
-            12,
-            12,
-            12
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000105",
-          "date": "2025-09-03",
-          "top": {
-            "weight": 67.5,
-            "reps": 12
-          },
-          "reps": [
-            12,
-            12,
-            12
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000104",
-          "date": "2025-08-27",
-          "top": {
-            "weight": 65,
-            "reps": 12
-          },
-          "reps": [
-            12,
-            12,
-            12
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000103",
-          "date": "2025-08-20",
-          "top": {
-            "weight": 65,
-            "reps": 12
-          },
-          "reps": [
-            12,
-            12,
-            12
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000102",
-          "date": "2025-08-13",
-          "top": {
-            "weight": 65,
-            "reps": 12
-          },
-          "reps": [
-            12,
-            12,
-            12
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000101",
-          "date": "2025-08-06",
-          "top": {
-            "weight": 62.5,
-            "reps": 12
-          },
-          "reps": [
-            12,
-            12,
-            12
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000100",
-          "date": "2025-07-30",
-          "top": {
-            "weight": 62.5,
-            "reps": 12
-          },
-          "reps": [
-            12,
-            12,
-            12
-          ],
-          "record": false
-        }
-      ],
-      "bests": [
-        {
-          "reps": 1,
-          "weight": 90,
-          "date": "2025-09-02"
-        },
-        {
-          "reps": 3,
-          "weight": 85,
-          "date": "2025-08-12"
-        },
-        {
-          "reps": 5,
-          "weight": 80,
-          "date": "2025-09-23"
-        },
-        {
-          "reps": 8,
-          "weight": 75,
-          "date": "2025-09-30"
-        },
-        {
-          "reps": 10,
-          "weight": 72.5,
-          "date": "2025-10-07"
-        }
-      ],
-      "repsBest": null
-    },
-    {
-      "key": "DEADLIFT/ROMANIAN_DEADLIFT",
-      "name": "Romanian Deadlift",
-      "muscles": [
-        "hamstrings",
-        "glutes"
-      ],
-      "sessions": [
-        {
-          "activityId": "9000000000111",
-          "date": "2025-10-15",
-          "top": {
-            "weight": 80,
-            "reps": 8
-          },
-          "reps": [
-            8,
-            8,
-            8
           ],
           "record": true
         },
         {
-          "activityId": "9000000000110",
-          "date": "2025-10-08",
-          "top": {
-            "weight": 80,
-            "reps": 8
-          },
-          "reps": [
-            8,
-            8,
-            8
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000109",
-          "date": "2025-10-01",
-          "top": {
-            "weight": 80,
-            "reps": 8
-          },
-          "reps": [
-            8,
-            8,
-            8
-          ],
-          "record": false
-        },
-        {
           "activityId": "9000000000108",
           "date": "2025-09-24",
           "top": {
-            "weight": 77.5,
-            "reps": 8
+            "weight": 65,
+            "reps": 12
           },
           "reps": [
-            8,
-            8,
-            8
+            12,
+            12
           ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000107",
-          "date": "2025-09-17",
-          "top": {
-            "weight": 77.5,
-            "reps": 8
-          },
-          "reps": [
-            8,
-            8,
-            8
-          ],
-          "record": false
+          "record": true
         },
         {
           "activityId": "9000000000106",
           "date": "2025-09-10",
           "top": {
-            "weight": 75,
-            "reps": 8
+            "weight": 62.5,
+            "reps": 12
           },
           "reps": [
-            8,
-            8,
-            8
+            12,
+            12
           ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000105",
-          "date": "2025-09-03",
-          "top": {
-            "weight": 75,
-            "reps": 8
-          },
-          "reps": [
-            8,
-            8,
-            8
-          ],
-          "record": false
+          "record": true
         },
         {
           "activityId": "9000000000104",
           "date": "2025-08-27",
           "top": {
-            "weight": 75,
-            "reps": 8
+            "weight": 60,
+            "reps": 12
           },
           "reps": [
-            8,
-            8,
-            8
+            12,
+            12
           ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000103",
-          "date": "2025-08-20",
-          "top": {
-            "weight": 72.5,
-            "reps": 8
-          },
-          "reps": [
-            8,
-            8,
-            8
-          ],
-          "record": false
+          "record": true
         },
         {
           "activityId": "9000000000102",
           "date": "2025-08-13",
           "top": {
-            "weight": 72.5,
-            "reps": 8
+            "weight": 57.5,
+            "reps": 12
           },
           "reps": [
-            8,
-            8,
-            8
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000101",
-          "date": "2025-08-06",
-          "top": {
-            "weight": 70,
-            "reps": 8
-          },
-          "reps": [
-            8,
-            8,
-            8
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000100",
-          "date": "2025-07-30",
-          "top": {
-            "weight": 70,
-            "reps": 8
-          },
-          "reps": [
-            8,
-            8,
-            8
+            12,
+            12
           ],
           "record": false
         }
@@ -1264,28 +1350,28 @@
       "bests": [
         {
           "reps": 1,
-          "weight": null,
-          "date": null
+          "weight": 70,
+          "date": "2025-10-14"
         },
         {
           "reps": 3,
-          "weight": null,
-          "date": null
+          "weight": 70,
+          "date": "2025-10-14"
         },
         {
           "reps": 5,
-          "weight": 90,
-          "date": "2025-09-17"
+          "weight": 70,
+          "date": "2025-10-14"
         },
         {
           "reps": 8,
-          "weight": 80,
-          "date": "2025-10-08"
+          "weight": 70,
+          "date": "2025-10-14"
         },
         {
           "reps": 10,
-          "weight": 75,
-          "date": "2025-08-27"
+          "weight": 70,
+          "date": "2025-10-14"
         }
       ],
       "repsBest": null
@@ -1299,8 +1385,8 @@
       ],
       "sessions": [
         {
-          "activityId": "9000000000111",
-          "date": "2025-10-15",
+          "activityId": "9000000000004",
+          "date": "2025-10-14",
           "top": {
             "weight": 30,
             "reps": 12
@@ -1308,7 +1394,7 @@
           "reps": [
             12,
             12,
-            12
+            10
           ],
           "record": true
         },
@@ -1316,151 +1402,62 @@
           "activityId": "9000000000110",
           "date": "2025-10-08",
           "top": {
-            "weight": 30,
+            "weight": 29,
             "reps": 12
           },
           "reps": [
             12,
-            12,
             12
           ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000109",
-          "date": "2025-10-01",
-          "top": {
-            "weight": 30,
-            "reps": 12
-          },
-          "reps": [
-            12,
-            12,
-            12
-          ],
-          "record": false
+          "record": true
         },
         {
           "activityId": "9000000000108",
           "date": "2025-09-24",
           "top": {
-            "weight": 30,
+            "weight": 28,
             "reps": 12
           },
           "reps": [
             12,
-            12,
             12
           ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000107",
-          "date": "2025-09-17",
-          "top": {
-            "weight": 30,
-            "reps": 12
-          },
-          "reps": [
-            12,
-            12,
-            12
-          ],
-          "record": false
+          "record": true
         },
         {
           "activityId": "9000000000106",
           "date": "2025-09-10",
           "top": {
-            "weight": 28,
+            "weight": 27,
             "reps": 12
           },
           "reps": [
             12,
-            12,
             12
           ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000105",
-          "date": "2025-09-03",
-          "top": {
-            "weight": 28,
-            "reps": 12
-          },
-          "reps": [
-            12,
-            12,
-            12
-          ],
-          "record": false
+          "record": true
         },
         {
           "activityId": "9000000000104",
           "date": "2025-08-27",
           "top": {
-            "weight": 28,
+            "weight": 26,
             "reps": 12
           },
           "reps": [
             12,
-            12,
             12
           ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000103",
-          "date": "2025-08-20",
-          "top": {
-            "weight": 28,
-            "reps": 12
-          },
-          "reps": [
-            12,
-            12,
-            12
-          ],
-          "record": false
+          "record": true
         },
         {
           "activityId": "9000000000102",
           "date": "2025-08-13",
           "top": {
-            "weight": 26,
+            "weight": 25,
             "reps": 12
           },
           "reps": [
-            12,
-            12,
-            12
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000101",
-          "date": "2025-08-06",
-          "top": {
-            "weight": 26,
-            "reps": 12
-          },
-          "reps": [
-            12,
-            12,
-            12
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000100",
-          "date": "2025-07-30",
-          "top": {
-            "weight": 26,
-            "reps": 12
-          },
-          "reps": [
-            12,
             12,
             12
           ],
@@ -1470,28 +1467,143 @@
       "bests": [
         {
           "reps": 1,
-          "weight": null,
-          "date": null
+          "weight": 30,
+          "date": "2025-10-14"
         },
         {
           "reps": 3,
-          "weight": null,
-          "date": null
+          "weight": 30,
+          "date": "2025-10-14"
         },
         {
           "reps": 5,
-          "weight": 34,
-          "date": "2025-09-09"
+          "weight": 30,
+          "date": "2025-10-14"
         },
         {
           "reps": 8,
-          "weight": 32,
-          "date": "2025-09-30"
+          "weight": 30,
+          "date": "2025-10-14"
         },
         {
           "reps": 10,
           "weight": 30,
           "date": "2025-10-14"
+        }
+      ],
+      "repsBest": null
+    },
+    {
+      "key": "SHOULDER_PRESS/OVERHEAD_BARBELL_PRESS",
+      "name": "Overhead Barbell Press",
+      "muscles": [
+        "shoulders"
+      ],
+      "sessions": [
+        {
+          "activityId": "9000000000004",
+          "date": "2025-10-14",
+          "top": {
+            "weight": 37.5,
+            "reps": 8
+          },
+          "reps": [
+            8,
+            8
+          ],
+          "record": true
+        },
+        {
+          "activityId": "9000000000110",
+          "date": "2025-10-08",
+          "top": {
+            "weight": 35,
+            "reps": 8
+          },
+          "reps": [
+            8,
+            8
+          ],
+          "record": false
+        },
+        {
+          "activityId": "9000000000108",
+          "date": "2025-09-24",
+          "top": {
+            "weight": 35,
+            "reps": 8
+          },
+          "reps": [
+            8,
+            8
+          ],
+          "record": false
+        },
+        {
+          "activityId": "9000000000106",
+          "date": "2025-09-10",
+          "top": {
+            "weight": 35,
+            "reps": 8
+          },
+          "reps": [
+            8,
+            8
+          ],
+          "record": false
+        },
+        {
+          "activityId": "9000000000104",
+          "date": "2025-08-27",
+          "top": {
+            "weight": 35,
+            "reps": 8
+          },
+          "reps": [
+            8,
+            8
+          ],
+          "record": false
+        },
+        {
+          "activityId": "9000000000102",
+          "date": "2025-08-13",
+          "top": {
+            "weight": 35,
+            "reps": 8
+          },
+          "reps": [
+            8,
+            8
+          ],
+          "record": false
+        }
+      ],
+      "bests": [
+        {
+          "reps": 1,
+          "weight": 37.5,
+          "date": "2025-10-14"
+        },
+        {
+          "reps": 3,
+          "weight": 37.5,
+          "date": "2025-10-14"
+        },
+        {
+          "reps": 5,
+          "weight": 37.5,
+          "date": "2025-10-14"
+        },
+        {
+          "reps": 8,
+          "weight": 37.5,
+          "date": "2025-10-14"
+        },
+        {
+          "reps": 10,
+          "weight": null,
+          "date": null
         }
       ],
       "repsBest": null
@@ -1504,10 +1616,10 @@
       ],
       "sessions": [
         {
-          "activityId": "9000000000111",
-          "date": "2025-10-15",
+          "activityId": "9000000000109",
+          "date": "2025-10-01",
           "top": {
-            "weight": 40,
+            "weight": 37.5,
             "reps": 15
           },
           "reps": [
@@ -1518,64 +1630,8 @@
           "record": true
         },
         {
-          "activityId": "9000000000110",
-          "date": "2025-10-08",
-          "top": {
-            "weight": 40,
-            "reps": 15
-          },
-          "reps": [
-            15,
-            15,
-            15
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000109",
-          "date": "2025-10-01",
-          "top": {
-            "weight": 40,
-            "reps": 15
-          },
-          "reps": [
-            15,
-            15,
-            15
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000108",
-          "date": "2025-09-24",
-          "top": {
-            "weight": 37.5,
-            "reps": 15
-          },
-          "reps": [
-            15,
-            15,
-            15
-          ],
-          "record": false
-        },
-        {
           "activityId": "9000000000107",
           "date": "2025-09-17",
-          "top": {
-            "weight": 37.5,
-            "reps": 15
-          },
-          "reps": [
-            15,
-            15,
-            15
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000106",
-          "date": "2025-09-10",
           "top": {
             "weight": 35,
             "reps": 15
@@ -1585,13 +1641,13 @@
             15,
             15
           ],
-          "record": false
+          "record": true
         },
         {
           "activityId": "9000000000105",
           "date": "2025-09-03",
           "top": {
-            "weight": 35,
+            "weight": 32.5,
             "reps": 15
           },
           "reps": [
@@ -1599,27 +1655,13 @@
             15,
             15
           ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000104",
-          "date": "2025-08-27",
-          "top": {
-            "weight": 35,
-            "reps": 15
-          },
-          "reps": [
-            15,
-            15,
-            15
-          ],
-          "record": false
+          "record": true
         },
         {
           "activityId": "9000000000103",
           "date": "2025-08-20",
           "top": {
-            "weight": 32.5,
+            "weight": 30,
             "reps": 15
           },
           "reps": [
@@ -1627,41 +1669,13 @@
             15,
             15
           ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000102",
-          "date": "2025-08-13",
-          "top": {
-            "weight": 32.5,
-            "reps": 15
-          },
-          "reps": [
-            15,
-            15,
-            15
-          ],
-          "record": false
+          "record": true
         },
         {
           "activityId": "9000000000101",
           "date": "2025-08-06",
           "top": {
-            "weight": 30,
-            "reps": 15
-          },
-          "reps": [
-            15,
-            15,
-            15
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000100",
-          "date": "2025-07-30",
-          "top": {
-            "weight": 30,
+            "weight": 27.5,
             "reps": 15
           },
           "reps": [
@@ -1675,203 +1689,31 @@
       "bests": [
         {
           "reps": 1,
-          "weight": null,
-          "date": null
+          "weight": 37.5,
+          "date": "2025-10-01"
         },
         {
           "reps": 3,
-          "weight": null,
-          "date": null
+          "weight": 37.5,
+          "date": "2025-10-01"
         },
         {
           "reps": 5,
-          "weight": null,
-          "date": null
+          "weight": 37.5,
+          "date": "2025-10-01"
         },
         {
           "reps": 8,
-          "weight": 45,
-          "date": "2025-09-24"
+          "weight": 37.5,
+          "date": "2025-10-01"
         },
         {
           "reps": 10,
-          "weight": 42.5,
+          "weight": 37.5,
           "date": "2025-10-01"
         }
       ],
       "repsBest": null
-    },
-    {
-      "key": "CORE/BICYCLE_CRUNCH",
-      "name": "Bicycle Crunch",
-      "muscles": [
-        "core"
-      ],
-      "repsBest": {
-        "reps": 26,
-        "date": "2025-09-15"
-      },
-      "sessions": [
-        {
-          "activityId": "9000000000111",
-          "date": "2025-10-15",
-          "top": null,
-          "reps": [
-            26,
-            26,
-            26
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000110",
-          "date": "2025-10-08",
-          "top": null,
-          "reps": [
-            24,
-            24,
-            24
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000109",
-          "date": "2025-10-01",
-          "top": null,
-          "reps": [
-            24,
-            24,
-            24
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000108",
-          "date": "2025-09-24",
-          "top": null,
-          "reps": [
-            24,
-            24,
-            24
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000107",
-          "date": "2025-09-17",
-          "top": null,
-          "reps": [
-            22,
-            22,
-            22
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000106",
-          "date": "2025-09-10",
-          "top": null,
-          "reps": [
-            22,
-            22,
-            22
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000105",
-          "date": "2025-09-03",
-          "top": null,
-          "reps": [
-            22,
-            22,
-            22
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000104",
-          "date": "2025-08-27",
-          "top": null,
-          "reps": [
-            20,
-            20,
-            20
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000103",
-          "date": "2025-08-20",
-          "top": null,
-          "reps": [
-            20,
-            20,
-            20
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000102",
-          "date": "2025-08-13",
-          "top": null,
-          "reps": [
-            20,
-            20,
-            20
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000101",
-          "date": "2025-08-06",
-          "top": null,
-          "reps": [
-            18,
-            18,
-            18
-          ],
-          "record": false
-        },
-        {
-          "activityId": "9000000000100",
-          "date": "2025-07-30",
-          "top": null,
-          "reps": [
-            18,
-            18,
-            18
-          ],
-          "record": false
-        }
-      ],
-      "bests": [
-        {
-          "reps": 1,
-          "weight": null,
-          "date": null
-        },
-        {
-          "reps": 3,
-          "weight": null,
-          "date": null
-        },
-        {
-          "reps": 5,
-          "weight": null,
-          "date": null
-        },
-        {
-          "reps": 8,
-          "weight": null,
-          "date": null
-        },
-        {
-          "reps": 10,
-          "weight": null,
-          "date": null
-        }
-      ]
     }
   ],
   "workouts": [
@@ -1891,14 +1733,14 @@
           180,
           2
         ],
-        "aerobicTe": null,
-        "aerobicLabel": null,
-        "anaerobicTe": null,
-        "anaerobicLabel": null,
-        "benefit": null,
+        "aerobicTe": 3.8,
+        "aerobicLabel": "Improving",
+        "anaerobicTe": 1.2,
+        "anaerobicLabel": "Minor",
+        "benefit": "Tempo",
         "avgHr": 118,
-        "intensityMin": 24,
-        "vigorousMin": 4,
+        "intensityMin": null,
+        "vigorousMin": null,
         "distanceUnit": "km"
       },
       "setsRecorded": true
@@ -1919,12 +1761,12 @@
           200,
           0
         ],
-        "aerobicTe": null,
-        "aerobicLabel": null,
-        "anaerobicTe": null,
-        "anaerobicLabel": null,
-        "benefit": null,
-        "avgHr": null,
+        "aerobicTe": 3.8,
+        "aerobicLabel": "Improving",
+        "anaerobicTe": 1.2,
+        "anaerobicLabel": "Minor",
+        "benefit": "Tempo",
+        "avgHr": 112,
         "intensityMin": null,
         "vigorousMin": null,
         "distanceUnit": "km"
@@ -1947,12 +1789,12 @@
           0,
           0
         ],
-        "aerobicTe": null,
-        "aerobicLabel": null,
-        "anaerobicTe": null,
-        "anaerobicLabel": null,
-        "benefit": null,
-        "avgHr": null,
+        "aerobicTe": 3.8,
+        "aerobicLabel": "Improving",
+        "anaerobicTe": 1.2,
+        "anaerobicLabel": "Minor",
+        "benefit": "Tempo",
+        "avgHr": 104,
         "intensityMin": null,
         "vigorousMin": null,
         "distanceUnit": "km"
@@ -1963,24 +1805,24 @@
       "activity": {
         "id": "9000000000110",
         "icon": "strength",
-        "name": "Lower A",
+        "name": "Full body B",
         "startLocal": "2025-10-08T18:05:00",
         "durationS": 2700,
         "distanceKm": null,
         "load": 60,
         "zoneSeconds": [
-          800,
+          900,
           1300,
-          500,
-          150,
+          400,
+          100,
           0
         ],
-        "aerobicTe": null,
-        "aerobicLabel": null,
-        "anaerobicTe": null,
-        "anaerobicLabel": null,
-        "benefit": null,
-        "avgHr": null,
+        "aerobicTe": 3.8,
+        "aerobicLabel": "Improving",
+        "anaerobicTe": 1.2,
+        "anaerobicLabel": "Minor",
+        "benefit": "Tempo",
+        "avgHr": 110,
         "intensityMin": null,
         "vigorousMin": null,
         "distanceUnit": "km"
@@ -1991,24 +1833,24 @@
       "activity": {
         "id": "9000000000109",
         "icon": "strength",
-        "name": "Upper A",
+        "name": "Full body A",
         "startLocal": "2025-10-01T18:05:00",
         "durationS": 2730,
         "distanceKm": null,
-        "load": 61,
+        "load": 60,
         "zoneSeconds": [
-          800,
+          900,
           1300,
-          500,
-          150,
+          400,
+          100,
           0
         ],
-        "aerobicTe": null,
-        "aerobicLabel": null,
-        "anaerobicTe": null,
-        "anaerobicLabel": null,
-        "benefit": null,
-        "avgHr": null,
+        "aerobicTe": 3.8,
+        "aerobicLabel": "Improving",
+        "anaerobicTe": 1.2,
+        "anaerobicLabel": "Minor",
+        "benefit": "Tempo",
+        "avgHr": 110,
         "intensityMin": null,
         "vigorousMin": null,
         "distanceUnit": "km"
@@ -2019,24 +1861,24 @@
       "activity": {
         "id": "9000000000108",
         "icon": "strength",
-        "name": "Lower A",
+        "name": "Full body B",
         "startLocal": "2025-09-24T18:05:00",
         "durationS": 2760,
         "distanceKm": null,
-        "load": 62,
+        "load": 60,
         "zoneSeconds": [
-          800,
+          900,
           1300,
-          500,
-          150,
+          400,
+          100,
           0
         ],
-        "aerobicTe": null,
-        "aerobicLabel": null,
-        "anaerobicTe": null,
-        "anaerobicLabel": null,
-        "benefit": null,
-        "avgHr": null,
+        "aerobicTe": 3.8,
+        "aerobicLabel": "Improving",
+        "anaerobicTe": 1.2,
+        "anaerobicLabel": "Minor",
+        "benefit": "Tempo",
+        "avgHr": 110,
         "intensityMin": null,
         "vigorousMin": null,
         "distanceUnit": "km"
@@ -2047,24 +1889,24 @@
       "activity": {
         "id": "9000000000107",
         "icon": "strength",
-        "name": "Upper A",
+        "name": "Full body A",
         "startLocal": "2025-09-17T18:05:00",
         "durationS": 2790,
         "distanceKm": null,
-        "load": 63,
+        "load": 60,
         "zoneSeconds": [
-          800,
+          900,
           1300,
-          500,
-          150,
+          400,
+          100,
           0
         ],
-        "aerobicTe": null,
-        "aerobicLabel": null,
-        "anaerobicTe": null,
-        "anaerobicLabel": null,
-        "benefit": null,
-        "avgHr": null,
+        "aerobicTe": 3.8,
+        "aerobicLabel": "Improving",
+        "anaerobicTe": 1.2,
+        "anaerobicLabel": "Minor",
+        "benefit": "Tempo",
+        "avgHr": 110,
         "intensityMin": null,
         "vigorousMin": null,
         "distanceUnit": "km"
@@ -2075,24 +1917,24 @@
       "activity": {
         "id": "9000000000106",
         "icon": "strength",
-        "name": "Lower A",
+        "name": "Full body B",
         "startLocal": "2025-09-10T18:05:00",
         "durationS": 2820,
         "distanceKm": null,
-        "load": 64,
+        "load": 60,
         "zoneSeconds": [
-          800,
+          900,
           1300,
-          500,
-          150,
+          400,
+          100,
           0
         ],
-        "aerobicTe": null,
-        "aerobicLabel": null,
-        "anaerobicTe": null,
-        "anaerobicLabel": null,
-        "benefit": null,
-        "avgHr": null,
+        "aerobicTe": 3.8,
+        "aerobicLabel": "Improving",
+        "anaerobicTe": 1.2,
+        "anaerobicLabel": "Minor",
+        "benefit": "Tempo",
+        "avgHr": 110,
         "intensityMin": null,
         "vigorousMin": null,
         "distanceUnit": "km"
@@ -2103,24 +1945,24 @@
       "activity": {
         "id": "9000000000105",
         "icon": "strength",
-        "name": "Upper A",
+        "name": "Full body A",
         "startLocal": "2025-09-03T18:05:00",
         "durationS": 2850,
         "distanceKm": null,
-        "load": 65,
+        "load": 60,
         "zoneSeconds": [
-          800,
+          900,
           1300,
-          500,
-          150,
+          400,
+          100,
           0
         ],
-        "aerobicTe": null,
-        "aerobicLabel": null,
-        "anaerobicTe": null,
-        "anaerobicLabel": null,
-        "benefit": null,
-        "avgHr": null,
+        "aerobicTe": 3.8,
+        "aerobicLabel": "Improving",
+        "anaerobicTe": 1.2,
+        "anaerobicLabel": "Minor",
+        "benefit": "Tempo",
+        "avgHr": 110,
         "intensityMin": null,
         "vigorousMin": null,
         "distanceUnit": "km"
@@ -2131,24 +1973,24 @@
       "activity": {
         "id": "9000000000104",
         "icon": "strength",
-        "name": "Lower A",
+        "name": "Full body B",
         "startLocal": "2025-08-27T18:05:00",
         "durationS": 2880,
         "distanceKm": null,
-        "load": 66,
+        "load": 60,
         "zoneSeconds": [
-          800,
+          900,
           1300,
-          500,
-          150,
+          400,
+          100,
           0
         ],
-        "aerobicTe": null,
-        "aerobicLabel": null,
-        "anaerobicTe": null,
-        "anaerobicLabel": null,
-        "benefit": null,
-        "avgHr": null,
+        "aerobicTe": 3.8,
+        "aerobicLabel": "Improving",
+        "anaerobicTe": 1.2,
+        "anaerobicLabel": "Minor",
+        "benefit": "Tempo",
+        "avgHr": 110,
         "intensityMin": null,
         "vigorousMin": null,
         "distanceUnit": "km"
@@ -2159,24 +2001,80 @@
       "activity": {
         "id": "9000000000103",
         "icon": "strength",
-        "name": "Upper A",
+        "name": "Full body A",
         "startLocal": "2025-08-20T18:05:00",
         "durationS": 2910,
         "distanceKm": null,
-        "load": 67,
+        "load": 60,
         "zoneSeconds": [
-          800,
+          900,
           1300,
-          500,
-          150,
+          400,
+          100,
           0
         ],
-        "aerobicTe": null,
-        "aerobicLabel": null,
-        "anaerobicTe": null,
-        "anaerobicLabel": null,
-        "benefit": null,
-        "avgHr": null,
+        "aerobicTe": 3.8,
+        "aerobicLabel": "Improving",
+        "anaerobicTe": 1.2,
+        "anaerobicLabel": "Minor",
+        "benefit": "Tempo",
+        "avgHr": 110,
+        "intensityMin": null,
+        "vigorousMin": null,
+        "distanceUnit": "km"
+      },
+      "setsRecorded": true
+    },
+    {
+      "activity": {
+        "id": "9000000000102",
+        "icon": "strength",
+        "name": "Full body B",
+        "startLocal": "2025-08-13T18:05:00",
+        "durationS": 2940,
+        "distanceKm": null,
+        "load": 60,
+        "zoneSeconds": [
+          900,
+          1300,
+          400,
+          100,
+          0
+        ],
+        "aerobicTe": 3.8,
+        "aerobicLabel": "Improving",
+        "anaerobicTe": 1.2,
+        "anaerobicLabel": "Minor",
+        "benefit": "Tempo",
+        "avgHr": 110,
+        "intensityMin": null,
+        "vigorousMin": null,
+        "distanceUnit": "km"
+      },
+      "setsRecorded": true
+    },
+    {
+      "activity": {
+        "id": "9000000000101",
+        "icon": "strength",
+        "name": "Full body A",
+        "startLocal": "2025-08-06T18:05:00",
+        "durationS": 2970,
+        "distanceKm": null,
+        "load": 60,
+        "zoneSeconds": [
+          900,
+          1300,
+          400,
+          100,
+          0
+        ],
+        "aerobicTe": 3.8,
+        "aerobicLabel": "Improving",
+        "anaerobicTe": 1.2,
+        "anaerobicLabel": "Minor",
+        "benefit": "Tempo",
+        "avgHr": 110,
         "intensityMin": null,
         "vigorousMin": null,
         "distanceUnit": "km"

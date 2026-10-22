@@ -249,12 +249,14 @@ async fn main() -> Result<()> {
         // Synthetic QA data for a scratch RARING_HOME; never mixed into a signed-in account's history.
         Some("demo")=>{if core.status().signed_in{bail!("demo needs an empty RARING_HOME, not a signed-in one")}
             let day=match args.windows(2).find(|v|v[0]=="--date"){Some(v)=>chrono::NaiveDate::parse_from_str(&v[1],"%Y-%m-%d").context("--date YYYY-MM-DD")?,None=>now.date_naive()};
-            raring_core::demo::seed(&raring_core::store::Store::open(&db)?,day)?;println!("Demo data through {day}.");},
+            raring_core::demo::seed(&raring_core::store::Store::open(&db)?,day)?;
+            for (at,action) in raring_core::demo::plan_actions(day){core.local_action(&action,Local.from_local_datetime(&at).earliest().context("demo plan time")?)?;}
+            println!("Demo data through {day}.");},
         Some("show")=>{
             // --at YYYY-MM-DDTHH:MM sets the clock, for checking Today's time-of-day phases.
             let now=match args.windows(2).find(|v|v[0]=="--at"){Some(v)=>Local.from_local_datetime(&chrono::NaiveDateTime::parse_from_str(&v[1],"%Y-%m-%dT%H:%M").context("--at YYYY-MM-DDTHH:MM")?).earliest().context("--at: no such local time")?,None=>now};
             let current=core.current_date(now);let date=args.windows(2).find(|v|v[0]=="--date").map(|v|v[1].as_str()).unwrap_or(&current);
-            match args.get(1).map(String::as_str){Some("today")=>show(&if args.iter().any(|a|a=="--date") {core.today_at(date,now)} else {core.today_live_at(date,now)})?,Some("sleep")=>show(&core.sleep(date))?,Some("training")=>show(&if args.iter().any(|a|a=="--date") {core.training(date)} else {core.training_live_at(date,now)})?,Some("activities")=>show(&core.activity_month(Some(date),now)?)?,Some("health")=>show(&core.health(date))?,Some("checkin")=>show(&core.checkin(date))?,Some("plan")=>show(&core.plan(date))?,Some("board")=>show(&core.plan_board(date,now)?)?,Some("strength")=>show(&core.strength(date))?,Some("workout")=>show(&core.workout(args.get(2).context("show workout ID")?))?,_=>bail!("show today|sleep|training|activities|health|checkin|plan|board|strength|workout ID")}},
+            match args.get(1).map(String::as_str){Some("today")=>show(&if args.iter().any(|a|a=="--date") {core.today_at(date,now)} else {core.today_live_at(date,now)})?,Some("sleep")=>show(&core.sleep(date))?,Some("training")=>show(&if args.iter().any(|a|a=="--date") {core.training(date)} else {core.training_live_at(date,now)})?,Some("activities")=>show(&core.activity_month(Some(date),now)?)?,Some("health")=>show(&core.health(date))?,Some("checkin")=>show(&core.checkin(date))?,Some("plan")=>show(&core.plan(date))?,Some("board")=>show(&core.plan_board(date,now)?)?,Some("strength")=>show(&core.strength(date))?,Some("workout")=>show(&core.workout_live(args.get(2).context("show workout ID")?,now))?,_=>bail!("show today|sleep|training|activities|health|checkin|plan|board|strength|workout ID")}},
         Some("set-plan")=>{let update=serde_json::from_str(args.get(1).context("set-plan JSON")?)?;core.set_plan(&core.current_date(now),&update)?;show(&core.plan(&core.current_date(now)))?;},
         Some("notifications")=>show(&core.notifications(now))?,
         Some("trend")=>{let current=core.current_date(now);let arg=|k:&str|args.windows(2).find(|v|v[0]==k).map(|v|v[1].clone());

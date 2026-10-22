@@ -1,9 +1,9 @@
 //! Synthetic QA dataset. No Garmin identity, credentials or network access.
 use crate::store::Store;
-use chrono::{Duration, NaiveDate};
+use chrono::{Datelike, Duration, NaiveDate};
 use serde_json::{json, Value};
 
-pub const WORKOUT_ID: &str = "123456";
+pub const WORKOUT_ID: &str = "9000000000001";
 
 /// A day of three-minute stress readings in Garmin's shape: calm sleep, a
 /// morning workout Garmin cannot rate (-2), a short off-wrist gap (-1) and a
@@ -436,8 +436,9 @@ pub fn seed(store: &Store, day: NaiveDate) -> rusqlite::Result<()> {
     seed_variant(store, day, true)
 }
 
-/// `recorded_today: false` moves the morning run to the day before, so a
-/// planned session can lead today (the debug emulator's Keep / Choose check).
+/// `recorded_today: false` moves the morning run to the day before and adds a
+/// Garmin Coach week, so a planned session can lead today (the debug
+/// emulator's Keep / Choose check).
 pub fn seed_variant(store: &Store, day: NaiveDate, recorded_today: bool) -> rusqlite::Result<()> {
     let fixture: Value = serde_json::from_str(include_str!("../tests/fixtures/day.json"))
         .expect("synthetic fixture must be valid JSON");
@@ -481,55 +482,61 @@ pub fn seed_variant(store: &Store, day: NaiveDate, recorded_today: bool) -> rusq
             "lastUploadTimestamp": day.and_hms_opt(9, 0, 0).unwrap().and_utc().timestamp_millis()
         }),
     )?;
-    for (id, name, kind, when, distance, seconds, load, zones) in [
-        (
-            WORKOUT_ID,
-            "Morning Run",
-            "running",
-            if recorded_today { day } else { day - Duration::days(1) },
-            10200,
-            3134,
-            186,
-            [190, 585, 1100, 1050, 209],
-        ),
-        (
-            "123457",
-            "Strength",
-            "strength_training",
-            day - Duration::days(1),
-            0,
-            2882,
-            74,
-            [840, 1320, 540, 180, 2],
-        ),
-        (
-            "123458",
-            "Evening Ride",
-            "cycling",
-            day - Duration::days(2),
-            38400,
-            5050,
-            246,
-            [480, 1800, 1920, 720, 120],
-        ),
-    ] {
+    // The browser preview's week (app/src/lib/sample is generated from this):
+    // a run today, strength and a ride yesterday, Upper B and a timed session
+    // without sets earlier this week, a pool swim, a walk and weekly strength
+    // with sets back to August.
+    struct Recording {
+        id: &'static str,
+        name: &'static str,
+        kind: &'static str,
+        days_ago: i64,
+        time: &'static str,
+        metres: u32,
+        seconds: u32,
+        load: u32,
+        zones: [u32; 5],
+        hr: u32,
+    }
+    let recording = |id, name, kind, days_ago, time, metres, seconds, load, zones, hr| Recording { id, name, kind, days_ago, time, metres, seconds, load, zones, hr };
+    let mut recordings = vec![
+        recording(WORKOUT_ID, "Morning Run", "running", if recorded_today { 0 } else { 1 }, "06:12", 10200, 3134, 186, [190, 585, 1100, 1050, 209], 152),
+        recording("9000000000002", "Lower A", "strength_training", 1, "17:12", 0, 2882, 74, [840, 1320, 540, 180, 2], 118),
+        recording("9000000000003", "Evening Ride", "cycling", 1, "18:12", 38400, 5050, 246, [480, 1800, 1920, 720, 120], 138),
+        recording("9000000000004", "Upper B", "strength_training", 2, "07:10", 0, 3120, 68, [700, 1500, 600, 200, 0], 112),
+        recording("9000000000005", "Strength", "strength_training", 3, "12:30", 0, 2400, 31, [1500, 800, 100, 0, 0], 104),
+        recording("9000000000007", "Pool Swim", "lap_swimming", 7, "07:05", 1500, 1920, 58, [300, 900, 600, 120, 0], 132),
+        recording("9000000000008", "Lunch Walk", "walking", 9, "12:10", 4100, 2880, 22, [1500, 1200, 180, 0, 0], 104),
+    ];
+    // Ten Wednesday evenings before this week, newest first, back to August.
+    const HISTORY: [&str; 10] = ["9000000000110", "9000000000109", "9000000000108", "9000000000107", "9000000000106", "9000000000105",
+        "9000000000104", "9000000000103", "9000000000102", "9000000000101"];
+    for (week, id) in HISTORY.into_iter().enumerate() {
+        let name = if week % 2 == 0 { "Full body B" } else { "Full body A" };
+        recordings.push(recording(id, name, "strength_training", 8 + 7 * week as i64, "18:05", 0, 2700 + 30 * week as u32, 60, [900, 1300, 400, 100, 0], 110));
+    }
+    for r in &recordings {
+        let when = day - Duration::days(r.days_ago);
         let mut activity = fixture["activity"].clone();
-        activity["activityId"] = json!(id.parse::<u64>().unwrap());
-        activity["activityName"] = json!(name);
-        activity["activityType"]["typeKey"] = json!(kind);
-        activity["startTimeLocal"] = json!(format!("{when}T06:12:00"));
-        activity["startTimeGMT"] = json!(format!("{when}T11:12:00"));
-        activity["distance"] = json!(distance);
-        activity["duration"] = json!(seconds);
-        activity["activityTrainingLoad"] = json!(load);
+        activity["activityId"] = json!(r.id.parse::<u64>().unwrap());
+        activity["activityName"] = json!(r.name);
+        activity["activityType"]["typeKey"] = json!(r.kind);
+        activity["startTimeLocal"] = json!(format!("{when}T{}:00", r.time));
+        // Eastern Daylight Time, as the rest of the demo day.
+        let hour: u32 = r.time[..2].parse().unwrap();
+        activity["startTimeGMT"] = json!(format!("{}T{:02}:{}:00", if hour + 4 >= 24 { when + Duration::days(1) } else { when }, (hour + 4) % 24, &r.time[3..]));
+        activity["distance"] = json!(r.metres);
+        activity["duration"] = json!(r.seconds);
+        activity["activityTrainingLoad"] = json!(r.load);
         activity["recoveryTime"] = json!(64800);
-        activity["averageHR"] = json!(152);
-        activity["maxHR"] = json!(171);
-        activity["calories"] = json!(712);
+        activity["averageHR"] = json!(r.hr);
+        activity["maxHR"] = json!(r.hr + 19);
+        activity["calories"] = json!(r.seconds / 4);
         activity["elevationGain"] = Value::Null;
         activity["anaerobicTrainingEffect"] = json!(1.2);
         activity["anaerobicTrainingEffectMessage"] = json!("MINOR");
-        if id == WORKOUT_ID {
+        if r.id == WORKOUT_ID {
+            activity["calories"] = json!(712);
             activity["moderateIntensityMinutes"] = json!(14);
             activity["vigorousIntensityMinutes"] = json!(24);
             activity["differenceBodyBattery"] = json!(-9);
@@ -537,12 +544,81 @@ pub fn seed_variant(store: &Store, day: NaiveDate, recorded_today: bool) -> rusq
             // The watch's self-evaluation and running form, as Garmin's detail names them.
             for (key, value) in [("directWorkoutFeel", 75.), ("directWorkoutRpe", 60.), ("averageRunCadence", 172.), ("maxRunCadence", 184.),
                 ("strideLength", 113.4), ("groundContactTime", 238.), ("verticalOscillation", 8.4), ("verticalRatio", 7.4),
-                ("averageMovingSpeed", 3.29), ("maxSpeed", 4.2), ("avgGradeAdjustedSpeed", 3.31), ("steps", 9120.), ("waterEstimated", 820.)] {
+                ("averageMovingSpeed", 3.29), ("maxSpeed", 3.984), ("avgGradeAdjustedSpeed", 3.311), ("steps", 8920.), ("waterEstimated", 820.),
+                ("elevationLoss", 41.), ("minElevation", 61.), ("maxElevation", 79.), ("recoveryHeartRate", 31.), ("bmrCalories", 96.),
+                ("beginPotentialStamina", 100.), ("endPotentialStamina", 68.), ("minAvailableStamina", 66.)] {
                 activity[key] = json!(value);
             }
         }
-        store.put("activity", id, &format!("{when}T09:00:00Z"), &activity)?;
-        store.put("zones", id, "synthetic", &json!(zones.iter().enumerate().map(|(i, s)| json!({"zoneNumber":i+1,"secsInZone":s,"minHeartRate":([0,120,138,154,167][i])})).collect::<Vec<_>>()))?;
+        if r.id == "9000000000002" {
+            // An effort rating without a feel.
+            activity["directWorkoutRpe"] = json!(70.);
+        }
+        if r.kind == "lap_swimming" {
+            // Garmin's pool length is in centimetres, with the factor to metres.
+            activity["poolLength"] = json!(2500);
+            activity["unitOfPoolLength"] = json!({"unitKey": "meter", "factor": 100.0});
+            for (key, value) in [("activeLengths", 60.), ("averageSwolf", 38.), ("avgStrokes", 14.), ("averageSwimCadenceInStrokesPerMinute", 28.), ("avgStrokeDistance", 160.), ("strokes", 840.)] {
+                activity[key] = json!(value);
+            }
+        }
+        if r.kind == "walking" {
+            activity["steps"] = json!(5400);
+            activity["movingDuration"] = json!(2830);
+        }
+        store.put("activity", r.id, &format!("{when}T09:00:00Z"), &activity)?;
+        store.put("zones", r.id, "synthetic", &json!(r.zones.iter().enumerate().map(|(i, s)| json!({"zoneNumber":i+1,"secsInZone":s,"minHeartRate":([0,120,138,154,167][i])})).collect::<Vec<_>>()))?;
+    }
+    // Sets for every strength session but the timed one. Weights rise week by
+    // week, so this week's squat is a best; this week's Lower A also has a set
+    // without reps, a doubled count and one Garmin couldn't name.
+    // Garmin's category and exercise name, reps and kilograms.
+    type Set = (String, Option<String>, u32, f64);
+    let set = |category: &str, name: Option<&str>, reps: u32, kg: f64| -> Set { (category.to_owned(), name.map(str::to_owned), reps, kg) };
+    let mut sessions: Vec<(&str, i64, Vec<Set>)> = vec![];
+    // Every session opens with squats, rising 2.5 kg a week to this week's
+    // best; A days add deadlifts, calf raises, hip thrusts and crunches, B days
+    // bench, rows and overhead presses.
+    for (week, id) in std::iter::once("9000000000002").chain(HISTORY).enumerate() {
+        let w = week as f64;
+        let squat = (100. - 2.5 * w).max(75.);
+        let mut sets = vec![set("SQUAT", Some("BARBELL_BACK_SQUAT"), 8, 60.), set("SQUAT", Some("BARBELL_BACK_SQUAT"), 5, squat), set("SQUAT", Some("BARBELL_BACK_SQUAT"), 5, squat), set("SQUAT", Some("BARBELL_BACK_SQUAT"), 5, squat)];
+        if week % 2 == 0 {
+            let (rdl, calf) = (80. - 2.5 * (w / 2.).floor(), 40. - 2.5 * (w / 2.).floor());
+            sets.extend([set("DEADLIFT", Some("ROMANIAN_DEADLIFT"), 8, rdl), set("DEADLIFT", Some("ROMANIAN_DEADLIFT"), 8, rdl),
+                set("CALF_RAISE", Some("STANDING_CALF_RAISE"), 15, calf), set("CALF_RAISE", Some("STANDING_CALF_RAISE"), 15, calf), set("CALF_RAISE", Some("STANDING_CALF_RAISE"), 15, calf),
+                set("HIP_RAISE", Some("BARBELL_HIP_THRUST_WITH_BENCH"), 10, 60.), set("HIP_RAISE", Some("BARBELL_HIP_THRUST_WITH_BENCH"), 10, 60.),
+                set("CRUNCH", Some("BICYCLE_CRUNCH"), 26 - 2 * (week as u32 / 2), 0.), set("CRUNCH", Some("BICYCLE_CRUNCH"), 20, 0.)]);
+        } else {
+            let (bench, row) = (70. - 2.5 * (w / 2.).ceil(), 30. - (w / 2.).ceil());
+            sets.extend([set("BENCH_PRESS", Some("BARBELL_BENCH_PRESS"), 12, bench), set("BENCH_PRESS", Some("BARBELL_BENCH_PRESS"), 12, bench),
+                set("ROW", Some("ONE_ARM_DUMBBELL_ROW"), 12, row), set("ROW", Some("ONE_ARM_DUMBBELL_ROW"), 12, row),
+                set("SHOULDER_PRESS", Some("OVERHEAD_BARBELL_PRESS"), 8, 35.), set("SHOULDER_PRESS", Some("OVERHEAD_BARBELL_PRESS"), 8, 35.)]);
+        }
+        if week == 0 {
+            // No calf raises this week, so the week's muscle list has a gap.
+            sets.retain(|(category, ..)| category != "CALF_RAISE");
+            sets.splice(6..6, [set("DEADLIFT", Some("ROMANIAN_DEADLIFT"), 0, 80.)]);
+            sets.extend([set("LUNGE", Some("DUMBBELL_WALKING_LUNGE"), 12, 16.), set("LUNGE", Some("DUMBBELL_WALKING_LUNGE"), 24, 16.), set("UNKNOWN", None, 12, 40.)]);
+        }
+        sessions.push((id, if week == 0 { 1 } else { 8 + 7 * (week as i64 - 1) }, sets));
+    }
+    // Upper B this week: its own bench and rows.
+    sessions.push(("9000000000004", 2, vec![set("BENCH_PRESS", Some("BARBELL_BENCH_PRESS"), 12, 70.), set("BENCH_PRESS", Some("BARBELL_BENCH_PRESS"), 12, 70.), set("BENCH_PRESS", Some("BARBELL_BENCH_PRESS"), 12, 70.),
+        set("ROW", Some("ONE_ARM_DUMBBELL_ROW"), 12, 30.), set("ROW", Some("ONE_ARM_DUMBBELL_ROW"), 12, 30.), set("ROW", Some("ONE_ARM_DUMBBELL_ROW"), 10, 30.),
+        set("SHOULDER_PRESS", Some("OVERHEAD_BARBELL_PRESS"), 8, 37.5), set("SHOULDER_PRESS", Some("OVERHEAD_BARBELL_PRESS"), 8, 37.5)]));
+    for (id, days_ago, sets) in sessions {
+        let start = recordings.iter().find(|r| r.id == id).map_or("18:05", |r| r.time);
+        let at = (day - Duration::days(days_ago)).and_time(chrono::NaiveTime::parse_from_str(start, "%H:%M").unwrap()) + Duration::hours(4);
+        let rows: Vec<Value> = sets.iter().enumerate().flat_map(|(i, (category, name, reps, kg))| {
+            let active = at + Duration::seconds(i as i64 * 150);
+            [json!({"setType": "ACTIVE", "messageIndex": 2 * i, "repetitionCount": reps, "weight": kg * 1000., "duration": 12. + 3. * *reps as f64,
+                    "startTime": active.format("%Y-%m-%dT%H:%M:%S.0").to_string(), "exercises": [{"category": category, "name": name, "probability": 96.0}]}),
+             json!({"setType": "REST", "messageIndex": 2 * i + 1, "duration": 90.0, "startTime": (active + Duration::seconds(60)).format("%Y-%m-%dT%H:%M:%S.0").to_string()})]
+        }).collect();
+        // Read from Garmin two hours after the session started.
+        let checked = (at + Duration::hours(2)).and_utc().to_rfc3339();
+        store.put("exercise_sets", id, &checked, &json!({"activityId": id.parse::<u64>().unwrap(), "exerciseSets": rows}))?;
     }
     // A synthetic adaptive Garmin Coach week around today, read just now.
     let task = |offset: i64, name: &str, sport: Option<&str>, seconds: u32, label: &str| {
@@ -551,23 +627,50 @@ pub fn seed_variant(store: &Store, day: NaiveDate, recorded_today: bool) -> rusq
             "trainingEffectLabel": label, "sportType": sport.map(|s| json!({"sportTypeKey": s})), "adaptiveCoachingWorkoutStatus": "NOT_COMPLETE"}})
     };
     let fetched = chrono::Utc::now().to_rfc3339();
-    store.put("coach_plans", "current", &fetched, &json!({"trainingPlanList": [{"trainingPlanId": 4242, "trainingPlanCategory": "FBT_ADAPTIVE",
-        "trainingStatus": {"statusKey": "Scheduled"}}]}))?;
-    store.put("coach_adaptive", "current", &fetched, &json!({"trainingPlanId": 4242, "trainingPlanCategory": "FBT_ADAPTIVE", "name": "Sample Coach",
-        "taskList": [task(-1, "Strength", Some("strength_training"), 2400, "UNKNOWN"), task(0, "Base", Some("other"), 1800, "AEROBIC_BASE"),
-            task(1, "Rest", None, 0, "INVALID"), task(2, "Threshold", Some("other"), 2700, "LACTATE_THRESHOLD")]}))?;
+    // Only the planned variant follows a Coach plan, so its session can lead
+    // today; the regular demo (and the browser preview) has none.
+    if !recorded_today {
+        store.put("coach_plans", "current", &fetched, &json!({"trainingPlanList": [{"trainingPlanId": 4242, "trainingPlanCategory": "FBT_ADAPTIVE", "trainingPlanName": "Sample Coach",
+            "trainingStatus": {"statusKey": "Scheduled"}}]}))?;
+        store.put("coach_adaptive", "current", &fetched, &json!({"trainingPlanId": 4242, "trainingPlanCategory": "FBT_ADAPTIVE", "name": "Sample Coach",
+            "taskList": [task(-1, "Strength", Some("strength_training"), 2400, "UNKNOWN"), task(0, "Base", Some("other"), 1800, "AEROBIC_BASE"),
+                task(1, "Rest", None, 0, "INVALID"), task(2, "Threshold", Some("other"), 2700, "LACTATE_THRESHOLD")]}))?;
+    }
     // The synthetic activity list covers the seeded days, so coverage rules apply.
     store.set_cursor("listed:lo", &(day - Duration::days(41)).to_string())?;
     store.set_cursor("listed:hi", &day.to_string())?;
     // Yesterday's strength session has the synthetic sets fixture, so Strength,
     // lifts and muscles have something to show; units and a weigh-in fill Profile.
-    let mut sets: Value = serde_json::from_str(include_str!("../tests/fixtures/exercise_sets.json")).expect("valid synthetic sets fixture");
-    sets["activityId"] = json!(123457);
-    store.put("exercise_sets", "123457", "synthetic", &sets)?;
-    let catalog: Value = serde_json::from_str(include_str!("../tests/fixtures/exercise_catalog.json")).expect("valid synthetic catalog fixture");
+    // Garmin's catalog for the demo's exercises: which muscles each works.
+    let catalog = json!({"categories": {
+        "SQUAT": {"primaryMuscles": ["QUADS", "GLUTES"], "secondaryMuscles": ["HAMSTRINGS"], "exercises": {"BARBELL_BACK_SQUAT": {"primaryMuscles": ["QUADS", "GLUTES"], "secondaryMuscles": ["HAMSTRINGS", "LOWER_BACK"]}}},
+        "DEADLIFT": {"primaryMuscles": ["HAMSTRINGS", "GLUTES"], "secondaryMuscles": ["LOWER_BACK"], "exercises": {"ROMANIAN_DEADLIFT": {"primaryMuscles": ["HAMSTRINGS", "GLUTES"], "secondaryMuscles": ["LOWER_BACK"]}}},
+        "CALF_RAISE": {"primaryMuscles": ["CALVES"], "secondaryMuscles": [], "exercises": {"STANDING_CALF_RAISE": {"primaryMuscles": ["CALVES"], "secondaryMuscles": []}}},
+        "LUNGE": {"primaryMuscles": ["QUADS", "GLUTES"], "secondaryMuscles": ["HAMSTRINGS"], "exercises": {"DUMBBELL_WALKING_LUNGE": {"primaryMuscles": ["QUADS", "GLUTES"], "secondaryMuscles": ["HAMSTRINGS", "CALVES"]}}},
+        "BENCH_PRESS": {"primaryMuscles": ["CHEST"], "secondaryMuscles": ["TRICEPS", "SHOULDERS"], "exercises": {"BARBELL_BENCH_PRESS": {"primaryMuscles": ["CHEST"], "secondaryMuscles": ["TRICEPS", "SHOULDERS"]}}},
+        "ROW": {"primaryMuscles": ["LATS", "TRAPS"], "secondaryMuscles": ["BICEPS"], "exercises": {"ONE_ARM_DUMBBELL_ROW": {"primaryMuscles": ["LATS", "BICEPS"], "secondaryMuscles": ["TRAPS", "SHOULDERS"]}}},
+        "HIP_RAISE": {"primaryMuscles": ["GLUTES"], "secondaryMuscles": ["HAMSTRINGS"], "exercises": {"BARBELL_HIP_THRUST_WITH_BENCH": {"primaryMuscles": ["GLUTES", "HIPS"], "secondaryMuscles": ["HAMSTRINGS"]}}},
+        "SHOULDER_PRESS": {"primaryMuscles": ["SHOULDERS"], "secondaryMuscles": ["TRICEPS"], "exercises": {"OVERHEAD_BARBELL_PRESS": {"primaryMuscles": ["SHOULDERS"], "secondaryMuscles": ["TRICEPS"]}}},
+        "CRUNCH": {"primaryMuscles": ["ABS"], "secondaryMuscles": [], "exercises": {"BICYCLE_CRUNCH": {"primaryMuscles": ["ABS"], "secondaryMuscles": ["OBLIQUES"]}}}}});
     if let Some(reduced) = crate::strength::reduce_catalog(&catalog) {
         store.put("exercise_catalog", "garmin", "synthetic", &reduced)?;
     }
+    // Shoes and a bike from Garmin's gear list, in metres.
+    store.put("gear", "me", &format!("{day}T10:30:00Z"), &json!([
+        {"uuid": "sample-shoes", "name": "Road shoes", "gearType": "SHOES", "status": "ACTIVE", "usageType": "DISTANCE", "distanceUsedMeters": 420000, "maxUsageDistanceMeters": 650000},
+        {"uuid": "sample-bike", "name": "City bike", "gearType": "BIKE", "status": "RETIRED", "usageType": "DISTANCE", "distanceUsedMeters": 1240000, "maxUsageDistanceMeters": 0},
+        {"uuid": "sample-spare", "name": "Spare shoes", "gearType": "SHOES", "status": "ACTIVE", "usageType": "DISTANCE", "distanceUsedMeters": 0, "maxUsageDistanceMeters": 0}]))?;
+    // Garmin's recorded thresholds and acclimation, each on its own day.
+    let date = |n: i64| (day - Duration::days(n)).to_string();
+    store.put("lactate_threshold", "latest", "synthetic", &json!([{"calendarDate": date(3), "hearRate": 164, "speed": 0.264}]))?;
+    store.put("running_power_threshold", "latest", "synthetic", &json!([{"calendarDate": date(4), "sport": "Running", "functionalThresholdPower": 280, "isStale": false}]))?;
+    store.put("cycling_ftp", "latest", "synthetic", &json!({"calendarDate": date(6), "sport": "CYCLING", "functionalThresholdPower": 230, "isStale": false}))?;
+    store.put("acclimation", "latest", "synthetic", &json!({"heatAcclimationDate": date(1), "heatAcclimationPercentage": 0, "altitudeAcclimationDate": date(2), "altitudeAcclimation": 850}))?;
+    // Garmin's schedule for the next two weeks and a race on its calendar.
+    let ahead = |n: i64| (day + Duration::days(n)).to_string();
+    store.put("scheduled_workouts", "current", &fetched, &json!({"startDate": day.to_string(), "endDate": ahead(14),
+        "entries": [{"calendarDate": ahead(1), "workoutName": "Easy Run"}]}))?;
+    store.put("upcoming_events", "current", &fetched, &json!([{"eventType": "RACE", "eventName": "City 10K", "calendarDate": ahead(12)}]))?;
     store.put("profile_settings", "me", "synthetic", &json!({"measurementSystem": "metric"}))?;
     let weighed = day - Duration::days(3);
     store.put("weight", &weighed.to_string(), "synthetic", &json!({"weight": 72400.0,
@@ -582,19 +685,19 @@ pub fn seed_variant(store: &Store, day: NaiveDate, recorded_today: bool) -> rusq
         "endurance",
         &day.to_string(),
         "synthetic",
-        &json!({"overallScore":6400}),
+        &json!({"overallScore":6800}),
     )?;
     store.put(
         "hill",
         &day.to_string(),
         "synthetic",
-        &json!({"overallScore":72}),
+        &json!({"overallScore":74}),
     )?;
     store.put(
         "tolerance",
         &day.to_string(),
         "synthetic",
-        &json!({"runningTolerance":45}),
+        &json!({"runningTolerance":63}),
     )?;
     let points: Vec<Value> = (0..210).map(|i| {
         let t = i as f64 / 209.;
@@ -624,7 +727,46 @@ pub fn seed_variant(store: &Store, day: NaiveDate, recorded_today: bool) -> rusq
             {"key":"directVerticalRatio","metricsIndex":10,"unit":{"key":"dimensionless","factor":1.0}}],
         "activityDetailMetrics":points
     }))?;
+    // The swim's 100 m splits with heart rate and speed on a 15 s axis (the
+    // speed drops out at each turn), and the walk's 1 km splits with heart rate.
+    let swim: Vec<Value> = (0..128).map(|i| {
+        let t = i as f64;
+        let hr = (118. + t.min(40.) * 0.5 + (t / 3.).sin() * 4.).round();
+        let speed = if i % 25 == 24 { Value::Null } else { json!((2.85 + (t / 5.).sin() * 0.12) / 3.6) };
+        json!({"metrics": [t * 15., hr, speed]})
+    }).collect();
+    store.put("details", "9000000000007", "synthetic", &json!({"metricDescriptors": [{"key": "directTimestamp"}, {"key": "directHeartRate"},
+        {"key": "directSpeed", "metricsIndex": 2, "unit": {"key": "mps", "factor": 0.1}}], "activityDetailMetrics": swim}))?;
+    let laps = [124, 126, 125, 128, 127, 129, 126, 130, 128, 131, 129, 132, 130, 127, 124];
+    store.put("splits", "9000000000007", "synthetic", &json!({"lapDTOs": laps.iter().enumerate().map(|(i, t)| json!({"distance": 100, "duration": t, "averageHR": 124 + i})).collect::<Vec<_>>()}))?;
+    let walk: Vec<Value> = (0..192).map(|i| json!({"metrics": [i as f64 * 15., (98. + (i as f64 / 11.).sin() * 6.).round()]})).collect();
+    store.put("details", "9000000000008", "synthetic", &json!({"metricDescriptors": [{"key": "directTimestamp"}, {"key": "directHeartRate"}], "activityDetailMetrics": walk}))?;
+    let laps = [(1000, 690), (1000, 701), (1000, 708), (1000, 712), (100, 69)];
+    store.put("splits", "9000000000008", "synthetic", &json!({"lapDTOs": laps.iter().enumerate().map(|(i, (d, t))| json!({"distance": d, "duration": t, "averageHR": 102 + i})).collect::<Vec<_>>()}))?;
     let times = [321, 308, 302, 298, 305, 295, 301, 297, 310, 318];
     store.put("splits", WORKOUT_ID, "synthetic", &json!({"lapDTOs":times.iter().enumerate().map(|(i, t)| json!({"distance":1000,"duration":t,"averageHR":145+i})).collect::<Vec<_>>()}))?;
     Ok(())
+}
+
+/// The demo's own plan, as a person would set it up through the app: goals
+/// from last Monday, three sessions placed on Sunday evening and a local race.
+/// Applied through `Raring::local_action` at each returned time.
+pub fn plan_actions(day: NaiveDate) -> Vec<(chrono::NaiveDateTime, crate::view::LocalAction)> {
+    use crate::view::{Allocation, GoalTargets, IntentionKind, LocalAction, Sport};
+    let monday = day - Duration::days(day.weekday().num_days_from_monday() as i64);
+    let at = |date: NaiveDate, h: u32| date.and_hms_opt(h, 0, 0).unwrap();
+    let intention = |date: NaiveDate, time: Option<&str>, sport, name: Option<&str>, duration_min, allocation| LocalAction::AddIntention {
+        date: date.to_string(), time: time.map(str::to_owned), sport, type_key: None, name: name.map(str::to_owned),
+        duration_min, allocation, kind: IntentionKind::Workout, garmin_id: None,
+    };
+    let strength = Allocation { strength_sessions: 1, ..Default::default() };
+    vec![
+        (at(monday - Duration::days(7), 8), LocalAction::SetGoals { targets: GoalTargets {
+            strength_sessions: 4, zone2_min: 150, intensity_garmin_goal: true, ..Default::default() } }),
+        (at(monday - Duration::days(1), 19), intention(monday, Some("12:30"), Sport::Strength, None, None, strength.clone())),
+        (at(monday - Duration::days(1), 19), intention(monday + Duration::days(4), None, Sport::Cycling, Some("Easy ride"), Some(60),
+            Allocation { zone2_min: 40, ..Default::default() })),
+        (at(monday - Duration::days(1), 19), intention(monday + Duration::days(5), None, Sport::Strength, None, None, strength)),
+        (at(monday - Duration::days(1), 19), LocalAction::AddEvent { name: "Harbour 10K".into(), date: (day + Duration::days(24)).to_string(), sport: Some(Sport::Running) }),
+    ]
 }

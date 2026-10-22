@@ -4,6 +4,23 @@ Shipped backlog items, newest first, each with its commit and the endpoint
 facts verified while building it. The open backlog is [TODO.md](../TODO.md).
 "Verified" means a read against a real account returned the data.
 
+- **Browser fixtures from the core, with a swim and a walk** (commit
+  "Generate the preview's training pages from the core's demo"). `raring
+  demo` now holds the preview's world: the run, Lower A and an evening ride
+  yesterday, Upper B and a timed session without sets this week, a pool swim
+  (25 m, splits, strokes) and a walk, ten weeks of Wednesday strength with
+  sets (squat rising to this week's best), gear, Garmin's thresholds, its
+  schedule (Easy Run) and a race; `raring demo` (the CLI) also sets goals,
+  three sessions and a local race. The Garmin Coach week moved to the planned
+  variant the emulator's Keep / Choose check uses. `generate.mjs` runs the demo
+  and `raring show` at a frozen clock (libfaketime, now in the dev shell) for
+  Training, Strength, the plan board, the run, Lower A, the swim, the walk and
+  every older strength workout, so strength counts, bests, the sets' check
+  time, load, VO₂ max and overnight heart rate agree across pages. Today's
+  planned session, Progress's October and Profile's gear come from those;
+  the run keeps the street map it was drawn for. UI assertions now read the
+  generated values (lanes, ledgers, counts, how it counted).
+
 - **Desktop notification clicks open the right screen** (commit "Open a
   desktop notification's screen when it is clicked"). Each desktop reminder
   carries its Android twin's target (`notification_targets.rs`, shared with

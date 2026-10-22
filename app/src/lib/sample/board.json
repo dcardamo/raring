@@ -71,9 +71,9 @@
       "target": 150,
       "original": null,
       "revisedOn": null,
-      "recorded": 124,
+      "recorded": 118,
       "planned": 0,
-      "remaining": 26,
+      "remaining": 32,
       "reached": false,
       "review": 0,
       "unavailable": null,
@@ -95,9 +95,9 @@
     },
     {
       "kind": "intensity",
-      "recorded": 124,
+      "recorded": 118,
       "planned": 0,
-      "fill": 0.8266666666666667
+      "fill": 0.7866666666666666
     }
   ],
   "sleepScore": null,
@@ -122,9 +122,9 @@
         },
         {
           "kind": "intensity",
-          "recorded": 20,
+          "recorded": 0,
           "planned": 0,
-          "fill": 1
+          "fill": 0
         }
       ],
       "done": true,
@@ -134,10 +134,10 @@
         "9000000000005"
       ],
       "items": [
-        "i1760380000000"
+        "i1760310000000"
       ],
       "garmin": 0,
-      "sleepScore": 81
+      "sleepScore": 76
     },
     {
       "date": "2025-10-14",
@@ -159,7 +159,7 @@
         },
         {
           "kind": "intensity",
-          "recorded": 28,
+          "recorded": 8,
           "planned": 0,
           "fill": 1
         }
@@ -172,7 +172,7 @@
       ],
       "items": [],
       "garmin": 0,
-      "sleepScore": 76
+      "sleepScore": 89
     },
     {
       "date": "2025-10-15",
@@ -194,7 +194,7 @@
         },
         {
           "kind": "intensity",
-          "recorded": 40,
+          "recorded": 58,
           "planned": 0,
           "fill": 1
         }
@@ -208,7 +208,7 @@
       ],
       "items": [],
       "garmin": 0,
-      "sleepScore": 88
+      "sleepScore": 78
     },
     {
       "date": "2025-10-16",
@@ -230,7 +230,7 @@
         },
         {
           "kind": "intensity",
-          "recorded": 36,
+          "recorded": 52,
           "planned": 0,
           "fill": 1
         }
@@ -275,7 +275,7 @@
       "planned": 1,
       "recordings": [],
       "items": [
-        "i1760380000001"
+        "i1760310000000-1"
       ],
       "garmin": 1,
       "sleepScore": null
@@ -310,7 +310,7 @@
       "planned": 1,
       "recordings": [],
       "items": [
-        "i1760380000002"
+        "i1760310000000-2"
       ],
       "garmin": 0,
       "sleepScore": null
@@ -352,7 +352,7 @@
   "items": [
     {
       "intention": {
-        "id": "i1760380000000",
+        "id": "i1760310000000",
         "date": "2025-10-13",
         "time": "12:30",
         "sport": "strength",
@@ -386,7 +386,7 @@
     },
     {
       "intention": {
-        "id": "i1760380000001",
+        "id": "i1760310000000-1",
         "date": "2025-10-17",
         "time": null,
         "sport": "cycling",
@@ -420,7 +420,7 @@
     },
     {
       "intention": {
-        "id": "i1760380000002",
+        "id": "i1760310000000-2",
         "date": "2025-10-18",
         "time": null,
         "sport": "strength",
@@ -491,7 +491,7 @@
       "durationMin": 48.03333333333333,
       "zone2Min": 22,
       "highIntensityMin": 3,
-      "intensityMin": 24
+      "intensityMin": null
     },
     {
       "id": "9000000000003",
@@ -504,7 +504,7 @@
       "durationMin": 84.16666666666667,
       "zone2Min": 30,
       "highIntensityMin": 14,
-      "intensityMin": 96
+      "intensityMin": null
     },
     {
       "id": "9000000000001",
@@ -526,17 +526,17 @@
       "name": "Easy Run"
     }
   ],
-  "garminState": "available",
+  "garminState": "partial",
   "backlog": [
     {
       "kind": "zone2",
       "amount": 10,
-      "sport": "cycling"
+      "sport": "swimming"
     },
     {
       "kind": "intensity",
-      "amount": 26,
-      "sport": "cycling"
+      "amount": 32,
+      "sport": "swimming"
     }
   ],
   "backlogPaused": false,
@@ -547,7 +547,16 @@
   "prompt": null,
   "events": [
     {
-      "id": "e1760000000000",
+      "id": null,
+      "name": "City 10K",
+      "date": "2025-10-28",
+      "daysUntil": 12,
+      "sport": null,
+      "source": "garmin",
+      "partial": false
+    },
+    {
+      "id": "e1760310000000",
       "name": "Harbour 10K",
       "date": "2025-11-09",
       "daysUntil": 24,
@@ -559,7 +568,7 @@
   "eventWeek": null,
   "coach": null,
   "fitness": {
-    "vigorous": 30,
+    "vigorous": 34,
     "target": 75
   }
 }

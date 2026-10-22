@@ -2178,7 +2178,11 @@ read-only in Health with explicit local consent.
 - Core: unit tests on recorded, scrubbed Garmin responses, and table tests for
   every rule.
 - UI: Playwright screenshots of each screen on fixture data. These are the
-  review screenshots.
+  review screenshots. Training, Strength, the plan board and the workouts'
+  fixtures are the core's synthetic demo (`raring demo`, `raring show`) at a
+  frozen clock (`app/src/lib/sample/generate.mjs`); the other views are
+  transcribed and take their shared numbers from those. UI assertions read
+  the fixtures' values rather than restating them.
 - Chart legibility: a browser check measures the text inside every chart on
   every page at 360, 390, 720 and 1100 px and at 1, 1.3 and 2× text, and fails
   on overlaps, text on a marker, undersized labels, gauge numbers wider than

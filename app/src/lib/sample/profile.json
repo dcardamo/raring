@@ -11,8 +11,6 @@
   },
   "watchLastUpload": "2025-10-16T12:30:00.000Z",
   "gear": {
-    "unit": "km",
-    "fetchedAt": "2025-10-16T10:30:00Z",
     "items": [
       {
         "id": "sample-shoes",
@@ -38,7 +36,9 @@
         "distanceKm": 0,
         "thresholdKm": null
       }
-    ]
+    ],
+    "unit": "km",
+    "fetchedAt": "2025-10-16T10:30:00Z"
   },
   "limits": {
     "excluded": [],

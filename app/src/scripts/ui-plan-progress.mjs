@@ -140,7 +140,8 @@ export async function planProgressChecks({browser,url,errors}){
  // each week against its own target (PP-B8, B10, B11, M8, M9, M13–M16).
  {
   const progress=structuredClone(samples.progress);
-  progress.previous={...progress.totals,activeMin:91,distanceKm:52.9,activities:4};progress.previousFrom='2025-09-01';progress.previousTo='2025-09-16';
+  const totals=progress.totals;
+  progress.previous={...totals,activeMin:totals.activeMin-185,distanceKm:Math.round((totals.distanceKm+4.3)*10)/10,activities:totals.activities-1};progress.previousFrom='2025-09-01';progress.previousTo='2025-09-16';
   progress.historyStart='2024-10-23';
   progress.milestones.push({id:'best:ROW/ONE_ARM_DUMBBELL_ROW:1',kind:'best',title:'One Arm Dumbbell Row',value:'12 kg × 10 · heaviest for 1–10 reps',date:'2024-11-02',route:null,new:false,corrected:false});
   const page=await mocked(browser,errors,{...base,progress});
@@ -148,7 +149,7 @@ export async function planProgressChecks({browser,url,errors}){
   const report=page.locator('.report');
   await report.waitFor();
   const text=await report.textContent();
-  assert.ok(text.includes('4 h 36 min') && text.includes('+3 h 05') && text.includes('−4.3 km'),text);
+  assert.ok(text.includes(`${Math.floor(totals.activeMin/60)} h ${totals.activeMin%60} min`) && text.includes('+3 h 05') && text.includes('−4.3 km'),text);
   assert.equal((text.match(/Compared with/g)??[]).length,1,'one comparison line');
   assert.ok(!text.includes(' vs '),text);
   const chart=report.getByRole('img',{name:/^Activity by day, minutes/});

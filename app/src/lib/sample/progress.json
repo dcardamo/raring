@@ -1180,12 +1180,12 @@
   "current": true,
   "historyStart": "2025-09-01",
   "totals": {
-    "activities": 5,
-    "activeMin": 276,
-    "distanceKm": 48.6,
+    "activities": 9,
+    "activeMin": 447,
+    "distanceKm": 54.2,
     "intensityMin": 124,
     "intensityDays": 4,
-    "activeDays": 4,
+    "activeDays": 8,
     "coveredDays": 16,
     "days": 16
   },
@@ -1197,8 +1197,13 @@
     {
       "from": "2025-10-01",
       "to": "2025-10-01",
-      "minutes": [],
-      "total": 0,
+      "minutes": [
+        {
+          "sport": "strength",
+          "minutes": 45.5
+        }
+      ],
+      "total": 45.5,
       "known": true,
       "future": false
     },
@@ -1245,24 +1250,39 @@
     {
       "from": "2025-10-07",
       "to": "2025-10-07",
-      "minutes": [],
-      "total": 0,
+      "minutes": [
+        {
+          "sport": "walking",
+          "minutes": 48
+        }
+      ],
+      "total": 48,
       "known": true,
       "future": false
     },
     {
       "from": "2025-10-08",
       "to": "2025-10-08",
-      "minutes": [],
-      "total": 0,
+      "minutes": [
+        {
+          "sport": "strength",
+          "minutes": 45
+        }
+      ],
+      "total": 45,
       "known": true,
       "future": false
     },
     {
       "from": "2025-10-09",
       "to": "2025-10-09",
-      "minutes": [],
-      "total": 0,
+      "minutes": [
+        {
+          "sport": "swimming",
+          "minutes": 32
+        }
+      ],
+      "total": 32,
       "known": true,
       "future": false
     },
@@ -1321,12 +1341,12 @@
       "to": "2025-10-15",
       "minutes": [
         {
-          "sport": "strength",
-          "minutes": 48.03333333333333
-        },
-        {
           "sport": "cycling",
           "minutes": 84.16666666666667
+        },
+        {
+          "sport": "strength",
+          "minutes": 48.03333333333333
         }
       ],
       "total": 132.2,
@@ -1470,8 +1490,8 @@
   "calendar": [
     {
       "date": "2025-10-01",
-      "state": "none",
-      "activities": 0,
+      "state": "active",
+      "activities": 1,
       "covered": true
     },
     {
@@ -1506,20 +1526,20 @@
     },
     {
       "date": "2025-10-07",
-      "state": "none",
-      "activities": 0,
+      "state": "active",
+      "activities": 1,
       "covered": true
     },
     {
       "date": "2025-10-08",
-      "state": "none",
-      "activities": 0,
+      "state": "active",
+      "activities": 1,
       "covered": true
     },
     {
       "date": "2025-10-09",
-      "state": "none",
-      "activities": 0,
+      "state": "active",
+      "activities": 1,
       "covered": true
     },
     {
@@ -1735,9 +1755,9 @@
         },
         {
           "kind": "intensity",
-          "recorded": 124,
+          "recorded": 118,
           "planned": 0,
-          "fill": 0.8266666666666667
+          "fill": 0.7866666666666666
         }
       ],
       "current": true,

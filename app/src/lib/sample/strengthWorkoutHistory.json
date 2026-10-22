@@ -1,16 +1,5 @@
 {
   "9000000000004": {
-    "detail": {
-      "missing": [],
-      "unavailable": []
-    },
-    "counted": null,
-    "along": null,
-    "more": [],
-    "recorded": [],
-    "selfEvaluation": null,
-    "effects": [],
-    "vo2maxNew": null,
     "summary": {
       "id": "9000000000004",
       "icon": "strength",
@@ -26,38 +15,61 @@
         200,
         0
       ],
-      "aerobicTe": null,
-      "aerobicLabel": null,
-      "anaerobicTe": null,
-      "anaerobicLabel": null,
-      "benefit": null,
-      "avgHr": null,
+      "aerobicTe": 3.8,
+      "aerobicLabel": "Improving",
+      "anaerobicTe": 1.2,
+      "anaerobicLabel": "Minor",
+      "benefit": "Tempo",
+      "avgHr": 112,
       "intensityMin": null,
       "vigorousMin": null,
       "distanceUnit": "km"
     },
-    "recoveryHours": null,
+    "recoveryHours": 18,
     "stats": [
       {
         "key": "duration",
         "label": "Time",
         "value": 3120,
         "unit": "s"
+      },
+      {
+        "key": "averageHR",
+        "label": "Avg HR",
+        "value": 112,
+        "unit": "bpm"
+      },
+      {
+        "key": "maxHR",
+        "label": "Max HR",
+        "value": 131,
+        "unit": "bpm"
+      },
+      {
+        "key": "calories",
+        "label": "Calories",
+        "value": 780,
+        "unit": "kcal"
       }
     ],
     "route": [],
     "heartRate": [],
-    "zoneFloors": [],
+    "zoneFloors": [
+      120,
+      138,
+      154,
+      167
+    ],
     "splits": [],
     "strength": {
       "unit": "kg",
       "figure": "female",
-      "checkedAt": "2025-10-15T19:30:00Z",
-      "sets": 3,
-      "reps": 36,
+      "checkedAt": "2025-10-14T13:10:00+00:00",
+      "sets": 8,
+      "reps": 86,
       "unknownRepSets": 0,
-      "restS": 0,
-      "records": 0,
+      "restS": 720,
+      "records": 3,
       "setsRecorded": true,
       "zeroRepSets": 0,
       "missingRepSets": 0,
@@ -70,15 +82,15 @@
         },
         {
           "muscle": "back",
-          "sets": 0
+          "sets": 3
         },
         {
           "muscle": "shoulders",
-          "sets": 0
+          "sets": 2
         },
         {
           "muscle": "arms",
-          "sets": 0
+          "sets": 3
         },
         {
           "muscle": "core",
@@ -118,7 +130,7 @@
               "weight": 70,
               "durationS": 48,
               "flags": [],
-              "record": false
+              "record": true
             },
             {
               "reps": 12,
@@ -135,26 +147,161 @@
               "record": false
             }
           ],
-          "lastDate": null,
-          "lastSets": [],
-          "record": null
+          "lastDate": "2025-10-08",
+          "lastSets": [
+            {
+              "weight": 67.5,
+              "reps": 12
+            },
+            {
+              "weight": 67.5,
+              "reps": 12
+            }
+          ],
+          "record": {
+            "weight": 70,
+            "reps": 12
+          }
+        },
+        {
+          "key": "ROW/ONE_ARM_DUMBBELL_ROW",
+          "name": "One Arm Dumbbell Row",
+          "muscles": [
+            "back",
+            "arms"
+          ],
+          "sets": [
+            {
+              "reps": 12,
+              "weight": 30,
+              "durationS": 48,
+              "flags": [],
+              "record": true
+            },
+            {
+              "reps": 12,
+              "weight": 30,
+              "durationS": 48,
+              "flags": [],
+              "record": false
+            },
+            {
+              "reps": 10,
+              "weight": 30,
+              "durationS": 42,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": "2025-10-08",
+          "lastSets": [
+            {
+              "weight": 29,
+              "reps": 12
+            },
+            {
+              "weight": 29,
+              "reps": 12
+            }
+          ],
+          "record": {
+            "weight": 30,
+            "reps": 12
+          }
+        },
+        {
+          "key": "SHOULDER_PRESS/OVERHEAD_BARBELL_PRESS",
+          "name": "Overhead Barbell Press",
+          "muscles": [
+            "shoulders"
+          ],
+          "sets": [
+            {
+              "reps": 8,
+              "weight": 37.5,
+              "durationS": 36,
+              "flags": [],
+              "record": true
+            },
+            {
+              "reps": 8,
+              "weight": 37.5,
+              "durationS": 36,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": "2025-10-08",
+          "lastSets": [
+            {
+              "weight": 35,
+              "reps": 8
+            },
+            {
+              "weight": 35,
+              "reps": 8
+            }
+          ],
+          "record": {
+            "weight": 37.5,
+            "reps": 8
+          }
         }
       ]
     },
-    "map": null
-  },
-  "9000000000005": {
-    "detail": {
-      "missing": [],
-      "unavailable": []
-    },
-    "counted": null,
     "along": null,
     "more": [],
     "recorded": [],
     "selfEvaluation": null,
-    "effects": [],
+    "effects": [
+      {
+        "kind": "aerobic",
+        "value": 3.8,
+        "band": "Improving",
+        "line": "builds your aerobic base",
+        "garminLabel": "Improving"
+      },
+      {
+        "kind": "anaerobic",
+        "value": 1.2,
+        "band": "Minor benefit",
+        "line": "little sprint or hard work",
+        "garminLabel": "Minor"
+      }
+    ],
     "vo2maxNew": null,
+    "counted": {
+      "week": "2025-10-13",
+      "goals": true,
+      "lines": [
+        {
+          "kind": "strength",
+          "amount": 1,
+          "position": 2,
+          "recorded": 3,
+          "target": 4
+        },
+        {
+          "kind": "zone2",
+          "amount": 25,
+          "position": null,
+          "recorded": 100,
+          "target": 150
+        }
+      ],
+      "planItem": null,
+      "bests": [],
+      "fitness": null
+    },
+    "detail": {
+      "missing": [
+        "workout"
+      ],
+      "unavailable": []
+    },
+    "map": null
+  },
+  "9000000000005": {
     "summary": {
       "id": "9000000000005",
       "icon": "strength",
@@ -170,147 +317,175 @@
         0,
         0
       ],
-      "aerobicTe": null,
-      "aerobicLabel": null,
-      "anaerobicTe": null,
-      "anaerobicLabel": null,
-      "benefit": null,
-      "avgHr": null,
+      "aerobicTe": 3.8,
+      "aerobicLabel": "Improving",
+      "anaerobicTe": 1.2,
+      "anaerobicLabel": "Minor",
+      "benefit": "Tempo",
+      "avgHr": 104,
       "intensityMin": null,
       "vigorousMin": null,
       "distanceUnit": "km"
     },
-    "recoveryHours": null,
+    "recoveryHours": 18,
     "stats": [
       {
         "key": "duration",
         "label": "Time",
         "value": 2400,
         "unit": "s"
+      },
+      {
+        "key": "averageHR",
+        "label": "Avg HR",
+        "value": 104,
+        "unit": "bpm"
+      },
+      {
+        "key": "maxHR",
+        "label": "Max HR",
+        "value": 123,
+        "unit": "bpm"
+      },
+      {
+        "key": "calories",
+        "label": "Calories",
+        "value": 600,
+        "unit": "kcal"
       }
     ],
     "route": [],
     "heartRate": [],
-    "zoneFloors": [],
+    "zoneFloors": [
+      120,
+      138,
+      154,
+      167
+    ],
     "splits": [],
-    "strength": {
-      "unit": "kg",
-      "figure": "female",
-      "checkedAt": "2025-10-15T19:30:00Z",
-      "sets": 0,
-      "reps": null,
-      "unknownRepSets": 0,
-      "restS": 0,
-      "records": 0,
-      "setsRecorded": false,
-      "zeroRepSets": 0,
-      "missingRepSets": 0,
-      "doubledSets": 0,
-      "unnamedSets": 0,
-      "muscles": [
-        {
-          "muscle": "chest",
-          "sets": 0
-        },
-        {
-          "muscle": "back",
-          "sets": 0
-        },
-        {
-          "muscle": "shoulders",
-          "sets": 0
-        },
-        {
-          "muscle": "arms",
-          "sets": 0
-        },
-        {
-          "muscle": "core",
-          "sets": 0
-        },
-        {
-          "muscle": "hips",
-          "sets": 0
-        },
-        {
-          "muscle": "quads",
-          "sets": 0
-        },
-        {
-          "muscle": "hamstrings",
-          "sets": 0
-        },
-        {
-          "muscle": "glutes",
-          "sets": 0
-        },
-        {
-          "muscle": "calves",
-          "sets": 0
-        }
-      ],
-      "exercises": []
-    },
-    "map": null
-  },
-  "9000000000110": {
-    "detail": {
-      "missing": [],
-      "unavailable": []
-    },
-    "counted": null,
+    "strength": null,
     "along": null,
     "more": [],
     "recorded": [],
     "selfEvaluation": null,
-    "effects": [],
+    "effects": [
+      {
+        "kind": "aerobic",
+        "value": 3.8,
+        "band": "Improving",
+        "line": "builds your aerobic base",
+        "garminLabel": "Improving"
+      },
+      {
+        "kind": "anaerobic",
+        "value": 1.2,
+        "band": "Minor benefit",
+        "line": "little sprint or hard work",
+        "garminLabel": "Minor"
+      }
+    ],
     "vo2maxNew": null,
+    "counted": {
+      "week": "2025-10-13",
+      "goals": true,
+      "lines": [
+        {
+          "kind": "strength",
+          "amount": 1,
+          "position": 1,
+          "recorded": 3,
+          "target": 4
+        },
+        {
+          "kind": "zone2",
+          "amount": 13,
+          "position": null,
+          "recorded": 100,
+          "target": 150
+        }
+      ],
+      "planItem": "Strength",
+      "bests": [],
+      "fitness": null
+    },
+    "detail": {
+      "missing": [
+        "workout"
+      ],
+      "unavailable": []
+    },
+    "map": null
+  },
+  "9000000000101": {
     "summary": {
-      "id": "9000000000110",
+      "id": "9000000000101",
       "icon": "strength",
-      "name": "Lower A",
-      "startLocal": "2025-10-08T18:05:00",
-      "durationS": 2700,
+      "name": "Full body A",
+      "startLocal": "2025-08-06T18:05:00",
+      "durationS": 2970,
       "distanceKm": null,
       "load": 60,
       "zoneSeconds": [
-        800,
+        900,
         1300,
-        500,
-        150,
+        400,
+        100,
         0
       ],
-      "aerobicTe": null,
-      "aerobicLabel": null,
-      "anaerobicTe": null,
-      "anaerobicLabel": null,
-      "benefit": null,
-      "avgHr": null,
+      "aerobicTe": 3.8,
+      "aerobicLabel": "Improving",
+      "anaerobicTe": 1.2,
+      "anaerobicLabel": "Minor",
+      "benefit": "Tempo",
+      "avgHr": 110,
       "intensityMin": null,
       "vigorousMin": null,
       "distanceUnit": "km"
     },
-    "recoveryHours": null,
+    "recoveryHours": 18,
     "stats": [
       {
         "key": "duration",
         "label": "Time",
-        "value": 2700,
+        "value": 2970,
         "unit": "s"
+      },
+      {
+        "key": "averageHR",
+        "label": "Avg HR",
+        "value": 110,
+        "unit": "bpm"
+      },
+      {
+        "key": "maxHR",
+        "label": "Max HR",
+        "value": 129,
+        "unit": "bpm"
+      },
+      {
+        "key": "calories",
+        "label": "Calories",
+        "value": 742,
+        "unit": "kcal"
       }
     ],
     "route": [],
     "heartRate": [],
-    "zoneFloors": [],
+    "zoneFloors": [
+      120,
+      138,
+      154,
+      167
+    ],
     "splits": [],
     "strength": {
       "unit": "kg",
       "figure": "female",
-      "checkedAt": "2025-10-15T19:30:00Z",
-      "sets": 18,
-      "reps": 228,
+      "checkedAt": "2025-08-07T00:05:00+00:00",
+      "sets": 13,
+      "reps": 140,
       "unknownRepSets": 0,
-      "restS": 0,
+      "restS": 1170,
       "records": 0,
       "setsRecorded": true,
       "zeroRepSets": 0,
@@ -320,11 +495,11 @@
       "muscles": [
         {
           "muscle": "chest",
-          "sets": 3
+          "sets": 0
         },
         {
           "muscle": "back",
-          "sets": 3
+          "sets": 0
         },
         {
           "muscle": "shoulders",
@@ -332,27 +507,27 @@
         },
         {
           "muscle": "arms",
-          "sets": 3
-        },
-        {
-          "muscle": "core",
-          "sets": 3
-        },
-        {
-          "muscle": "hips",
           "sets": 0
         },
         {
+          "muscle": "core",
+          "sets": 2
+        },
+        {
+          "muscle": "hips",
+          "sets": 2
+        },
+        {
           "muscle": "quads",
-          "sets": 3
+          "sets": 4
         },
         {
           "muscle": "hamstrings",
-          "sets": 3
+          "sets": 2
         },
         {
           "muscle": "glutes",
-          "sets": 6
+          "sets": 8
         },
         {
           "muscle": "calves",
@@ -369,88 +544,36 @@
           ],
           "sets": [
             {
+              "reps": 8,
+              "weight": 60,
+              "durationS": 36,
+              "flags": [],
+              "record": false
+            },
+            {
               "reps": 5,
-              "weight": 97.5,
+              "weight": 75,
               "durationS": 27,
               "flags": [],
               "record": false
             },
             {
               "reps": 5,
-              "weight": 97.5,
+              "weight": 75,
               "durationS": 27,
               "flags": [],
               "record": false
             },
             {
               "reps": 5,
-              "weight": 97.5,
+              "weight": 75,
               "durationS": 27,
               "flags": [],
               "record": false
             }
           ],
-          "lastDate": "2025-10-01",
-          "lastSets": [
-            {
-              "weight": 97.5,
-              "reps": 5
-            },
-            {
-              "weight": 97.5,
-              "reps": 5
-            },
-            {
-              "weight": 97.5,
-              "reps": 5
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "BENCH_PRESS/BARBELL_BENCH_PRESS",
-          "name": "Barbell Bench Press",
-          "muscles": [
-            "chest"
-          ],
-          "sets": [
-            {
-              "reps": 12,
-              "weight": 70,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 70,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 70,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-10-01",
-          "lastSets": [
-            {
-              "weight": 70,
-              "reps": 12
-            },
-            {
-              "weight": 70,
-              "reps": 12
-            },
-            {
-              "weight": 70,
-              "reps": 12
-            }
-          ],
+          "lastDate": null,
+          "lastSets": [],
           "record": null
         },
         {
@@ -463,88 +586,21 @@
           "sets": [
             {
               "reps": 8,
-              "weight": 80,
+              "weight": 67.5,
               "durationS": 36,
               "flags": [],
               "record": false
             },
             {
               "reps": 8,
-              "weight": 80,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 8,
-              "weight": 80,
+              "weight": 67.5,
               "durationS": 36,
               "flags": [],
               "record": false
             }
           ],
-          "lastDate": "2025-10-01",
-          "lastSets": [
-            {
-              "weight": 80,
-              "reps": 8
-            },
-            {
-              "weight": 80,
-              "reps": 8
-            },
-            {
-              "weight": 80,
-              "reps": 8
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "ROW/ONE_ARM_DUMBBELL_ROW",
-          "name": "One Arm Dumbbell Row",
-          "muscles": [
-            "back",
-            "arms"
-          ],
-          "sets": [
-            {
-              "reps": 12,
-              "weight": 30,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 30,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 30,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-10-01",
-          "lastSets": [
-            {
-              "weight": 30,
-              "reps": 12
-            },
-            {
-              "weight": 30,
-              "reps": 12
-            },
-            {
-              "weight": 30,
-              "reps": 12
-            }
-          ],
+          "lastDate": null,
+          "lastSets": [],
           "record": null
         },
         {
@@ -556,2876 +612,193 @@
           "sets": [
             {
               "reps": 15,
-              "weight": 40,
+              "weight": 27.5,
               "durationS": 57,
               "flags": [],
               "record": false
             },
             {
               "reps": 15,
-              "weight": 40,
+              "weight": 27.5,
               "durationS": 57,
               "flags": [],
               "record": false
             },
             {
               "reps": 15,
-              "weight": 40,
+              "weight": 27.5,
               "durationS": 57,
               "flags": [],
               "record": false
             }
           ],
-          "lastDate": "2025-10-01",
-          "lastSets": [
-            {
-              "weight": 40,
-              "reps": 15
-            },
-            {
-              "weight": 40,
-              "reps": 15
-            },
-            {
-              "weight": 40,
-              "reps": 15
-            }
-          ],
+          "lastDate": null,
+          "lastSets": [],
           "record": null
         },
         {
-          "key": "CORE/BICYCLE_CRUNCH",
+          "key": "HIP_RAISE/BARBELL_HIP_THRUST_WITH_BENCH",
+          "name": "Barbell Hip Thrust With Bench",
+          "muscles": [
+            "hips",
+            "glutes"
+          ],
+          "sets": [
+            {
+              "reps": 10,
+              "weight": 60,
+              "durationS": 42,
+              "flags": [],
+              "record": false
+            },
+            {
+              "reps": 10,
+              "weight": 60,
+              "durationS": 42,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": null,
+          "lastSets": [],
+          "record": null
+        },
+        {
+          "key": "CRUNCH/BICYCLE_CRUNCH",
           "name": "Bicycle Crunch",
           "muscles": [
             "core"
           ],
           "sets": [
             {
-              "reps": 24,
-              "weight": 0,
-              "durationS": 84,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 24,
-              "weight": 0,
-              "durationS": 84,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 24,
-              "weight": 0,
-              "durationS": 84,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-10-01",
-          "lastSets": [
-            {
-              "weight": 0,
-              "reps": 24
-            },
-            {
-              "weight": 0,
-              "reps": 24
-            },
-            {
-              "weight": 0,
-              "reps": 24
-            }
-          ],
-          "record": null
-        }
-      ]
-    },
-    "map": null
-  },
-  "9000000000109": {
-    "detail": {
-      "missing": [],
-      "unavailable": []
-    },
-    "counted": null,
-    "along": null,
-    "more": [],
-    "recorded": [],
-    "selfEvaluation": null,
-    "effects": [],
-    "vo2maxNew": null,
-    "summary": {
-      "id": "9000000000109",
-      "icon": "strength",
-      "name": "Upper A",
-      "startLocal": "2025-10-01T18:05:00",
-      "durationS": 2730,
-      "distanceKm": null,
-      "load": 61,
-      "zoneSeconds": [
-        800,
-        1300,
-        500,
-        150,
-        0
-      ],
-      "aerobicTe": null,
-      "aerobicLabel": null,
-      "anaerobicTe": null,
-      "anaerobicLabel": null,
-      "benefit": null,
-      "avgHr": null,
-      "intensityMin": null,
-      "vigorousMin": null,
-      "distanceUnit": "km"
-    },
-    "recoveryHours": null,
-    "stats": [
-      {
-        "key": "duration",
-        "label": "Time",
-        "value": 2730,
-        "unit": "s"
-      }
-    ],
-    "route": [],
-    "heartRate": [],
-    "zoneFloors": [],
-    "splits": [],
-    "strength": {
-      "unit": "kg",
-      "figure": "female",
-      "checkedAt": "2025-10-15T19:30:00Z",
-      "sets": 18,
-      "reps": 228,
-      "unknownRepSets": 0,
-      "restS": 0,
-      "records": 0,
-      "setsRecorded": true,
-      "zeroRepSets": 0,
-      "missingRepSets": 0,
-      "doubledSets": 0,
-      "unnamedSets": 0,
-      "muscles": [
-        {
-          "muscle": "chest",
-          "sets": 3
-        },
-        {
-          "muscle": "back",
-          "sets": 3
-        },
-        {
-          "muscle": "shoulders",
-          "sets": 0
-        },
-        {
-          "muscle": "arms",
-          "sets": 3
-        },
-        {
-          "muscle": "core",
-          "sets": 3
-        },
-        {
-          "muscle": "hips",
-          "sets": 0
-        },
-        {
-          "muscle": "quads",
-          "sets": 3
-        },
-        {
-          "muscle": "hamstrings",
-          "sets": 3
-        },
-        {
-          "muscle": "glutes",
-          "sets": 6
-        },
-        {
-          "muscle": "calves",
-          "sets": 3
-        }
-      ],
-      "exercises": [
-        {
-          "key": "SQUAT/BARBELL_BACK_SQUAT",
-          "name": "Barbell Back Squat",
-          "muscles": [
-            "quads",
-            "glutes"
-          ],
-          "sets": [
-            {
-              "reps": 5,
-              "weight": 97.5,
-              "durationS": 27,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 5,
-              "weight": 97.5,
-              "durationS": 27,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 5,
-              "weight": 97.5,
-              "durationS": 27,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-24",
-          "lastSets": [
-            {
-              "weight": 95,
-              "reps": 5
-            },
-            {
-              "weight": 95,
-              "reps": 5
-            },
-            {
-              "weight": 95,
-              "reps": 5
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "BENCH_PRESS/BARBELL_BENCH_PRESS",
-          "name": "Barbell Bench Press",
-          "muscles": [
-            "chest"
-          ],
-          "sets": [
-            {
-              "reps": 12,
-              "weight": 70,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 70,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 70,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-24",
-          "lastSets": [
-            {
-              "weight": 70,
-              "reps": 12
-            },
-            {
-              "weight": 70,
-              "reps": 12
-            },
-            {
-              "weight": 70,
-              "reps": 12
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "DEADLIFT/ROMANIAN_DEADLIFT",
-          "name": "Romanian Deadlift",
-          "muscles": [
-            "hamstrings",
-            "glutes"
-          ],
-          "sets": [
-            {
-              "reps": 8,
-              "weight": 80,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 8,
-              "weight": 80,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 8,
-              "weight": 80,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-24",
-          "lastSets": [
-            {
-              "weight": 77.5,
-              "reps": 8
-            },
-            {
-              "weight": 77.5,
-              "reps": 8
-            },
-            {
-              "weight": 77.5,
-              "reps": 8
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "ROW/ONE_ARM_DUMBBELL_ROW",
-          "name": "One Arm Dumbbell Row",
-          "muscles": [
-            "back",
-            "arms"
-          ],
-          "sets": [
-            {
-              "reps": 12,
-              "weight": 30,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 30,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 30,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-24",
-          "lastSets": [
-            {
-              "weight": 30,
-              "reps": 12
-            },
-            {
-              "weight": 30,
-              "reps": 12
-            },
-            {
-              "weight": 30,
-              "reps": 12
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "CALF_RAISE/STANDING_CALF_RAISE",
-          "name": "Standing Calf Raise",
-          "muscles": [
-            "calves"
-          ],
-          "sets": [
-            {
-              "reps": 15,
-              "weight": 40,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 15,
-              "weight": 40,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 15,
-              "weight": 40,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-24",
-          "lastSets": [
-            {
-              "weight": 37.5,
-              "reps": 15
-            },
-            {
-              "weight": 37.5,
-              "reps": 15
-            },
-            {
-              "weight": 37.5,
-              "reps": 15
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "CORE/BICYCLE_CRUNCH",
-          "name": "Bicycle Crunch",
-          "muscles": [
-            "core"
-          ],
-          "sets": [
-            {
-              "reps": 24,
-              "weight": 0,
-              "durationS": 84,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 24,
-              "weight": 0,
-              "durationS": 84,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 24,
-              "weight": 0,
-              "durationS": 84,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-24",
-          "lastSets": [
-            {
-              "weight": 0,
-              "reps": 24
-            },
-            {
-              "weight": 0,
-              "reps": 24
-            },
-            {
-              "weight": 0,
-              "reps": 24
-            }
-          ],
-          "record": null
-        }
-      ]
-    },
-    "map": null
-  },
-  "9000000000108": {
-    "detail": {
-      "missing": [],
-      "unavailable": []
-    },
-    "counted": null,
-    "along": null,
-    "more": [],
-    "recorded": [],
-    "selfEvaluation": null,
-    "effects": [],
-    "vo2maxNew": null,
-    "summary": {
-      "id": "9000000000108",
-      "icon": "strength",
-      "name": "Lower A",
-      "startLocal": "2025-09-24T18:05:00",
-      "durationS": 2760,
-      "distanceKm": null,
-      "load": 62,
-      "zoneSeconds": [
-        800,
-        1300,
-        500,
-        150,
-        0
-      ],
-      "aerobicTe": null,
-      "aerobicLabel": null,
-      "anaerobicTe": null,
-      "anaerobicLabel": null,
-      "benefit": null,
-      "avgHr": null,
-      "intensityMin": null,
-      "vigorousMin": null,
-      "distanceUnit": "km"
-    },
-    "recoveryHours": null,
-    "stats": [
-      {
-        "key": "duration",
-        "label": "Time",
-        "value": 2760,
-        "unit": "s"
-      }
-    ],
-    "route": [],
-    "heartRate": [],
-    "zoneFloors": [],
-    "splits": [],
-    "strength": {
-      "unit": "kg",
-      "figure": "female",
-      "checkedAt": "2025-10-15T19:30:00Z",
-      "sets": 18,
-      "reps": 228,
-      "unknownRepSets": 0,
-      "restS": 0,
-      "records": 0,
-      "setsRecorded": true,
-      "zeroRepSets": 0,
-      "missingRepSets": 0,
-      "doubledSets": 0,
-      "unnamedSets": 0,
-      "muscles": [
-        {
-          "muscle": "chest",
-          "sets": 3
-        },
-        {
-          "muscle": "back",
-          "sets": 3
-        },
-        {
-          "muscle": "shoulders",
-          "sets": 0
-        },
-        {
-          "muscle": "arms",
-          "sets": 3
-        },
-        {
-          "muscle": "core",
-          "sets": 3
-        },
-        {
-          "muscle": "hips",
-          "sets": 0
-        },
-        {
-          "muscle": "quads",
-          "sets": 3
-        },
-        {
-          "muscle": "hamstrings",
-          "sets": 3
-        },
-        {
-          "muscle": "glutes",
-          "sets": 6
-        },
-        {
-          "muscle": "calves",
-          "sets": 3
-        }
-      ],
-      "exercises": [
-        {
-          "key": "SQUAT/BARBELL_BACK_SQUAT",
-          "name": "Barbell Back Squat",
-          "muscles": [
-            "quads",
-            "glutes"
-          ],
-          "sets": [
-            {
-              "reps": 5,
-              "weight": 95,
-              "durationS": 27,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 5,
-              "weight": 95,
-              "durationS": 27,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 5,
-              "weight": 95,
-              "durationS": 27,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-17",
-          "lastSets": [
-            {
-              "weight": 95,
-              "reps": 5
-            },
-            {
-              "weight": 95,
-              "reps": 5
-            },
-            {
-              "weight": 95,
-              "reps": 5
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "BENCH_PRESS/BARBELL_BENCH_PRESS",
-          "name": "Barbell Bench Press",
-          "muscles": [
-            "chest"
-          ],
-          "sets": [
-            {
-              "reps": 12,
-              "weight": 70,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 70,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 70,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-17",
-          "lastSets": [
-            {
-              "weight": 67.5,
-              "reps": 12
-            },
-            {
-              "weight": 67.5,
-              "reps": 12
-            },
-            {
-              "weight": 67.5,
-              "reps": 12
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "DEADLIFT/ROMANIAN_DEADLIFT",
-          "name": "Romanian Deadlift",
-          "muscles": [
-            "hamstrings",
-            "glutes"
-          ],
-          "sets": [
-            {
-              "reps": 8,
-              "weight": 77.5,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 8,
-              "weight": 77.5,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 8,
-              "weight": 77.5,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-17",
-          "lastSets": [
-            {
-              "weight": 77.5,
-              "reps": 8
-            },
-            {
-              "weight": 77.5,
-              "reps": 8
-            },
-            {
-              "weight": 77.5,
-              "reps": 8
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "ROW/ONE_ARM_DUMBBELL_ROW",
-          "name": "One Arm Dumbbell Row",
-          "muscles": [
-            "back",
-            "arms"
-          ],
-          "sets": [
-            {
-              "reps": 12,
-              "weight": 30,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 30,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 30,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-17",
-          "lastSets": [
-            {
-              "weight": 30,
-              "reps": 12
-            },
-            {
-              "weight": 30,
-              "reps": 12
-            },
-            {
-              "weight": 30,
-              "reps": 12
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "CALF_RAISE/STANDING_CALF_RAISE",
-          "name": "Standing Calf Raise",
-          "muscles": [
-            "calves"
-          ],
-          "sets": [
-            {
-              "reps": 15,
-              "weight": 37.5,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 15,
-              "weight": 37.5,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 15,
-              "weight": 37.5,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-17",
-          "lastSets": [
-            {
-              "weight": 37.5,
-              "reps": 15
-            },
-            {
-              "weight": 37.5,
-              "reps": 15
-            },
-            {
-              "weight": 37.5,
-              "reps": 15
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "CORE/BICYCLE_CRUNCH",
-          "name": "Bicycle Crunch",
-          "muscles": [
-            "core"
-          ],
-          "sets": [
-            {
-              "reps": 24,
-              "weight": 0,
-              "durationS": 84,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 24,
-              "weight": 0,
-              "durationS": 84,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 24,
-              "weight": 0,
-              "durationS": 84,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-17",
-          "lastSets": [
-            {
-              "weight": 0,
-              "reps": 22
-            },
-            {
-              "weight": 0,
-              "reps": 22
-            },
-            {
-              "weight": 0,
-              "reps": 22
-            }
-          ],
-          "record": null
-        }
-      ]
-    },
-    "map": null
-  },
-  "9000000000107": {
-    "detail": {
-      "missing": [],
-      "unavailable": []
-    },
-    "counted": null,
-    "along": null,
-    "more": [],
-    "recorded": [],
-    "selfEvaluation": null,
-    "effects": [],
-    "vo2maxNew": null,
-    "summary": {
-      "id": "9000000000107",
-      "icon": "strength",
-      "name": "Upper A",
-      "startLocal": "2025-09-17T18:05:00",
-      "durationS": 2790,
-      "distanceKm": null,
-      "load": 63,
-      "zoneSeconds": [
-        800,
-        1300,
-        500,
-        150,
-        0
-      ],
-      "aerobicTe": null,
-      "aerobicLabel": null,
-      "anaerobicTe": null,
-      "anaerobicLabel": null,
-      "benefit": null,
-      "avgHr": null,
-      "intensityMin": null,
-      "vigorousMin": null,
-      "distanceUnit": "km"
-    },
-    "recoveryHours": null,
-    "stats": [
-      {
-        "key": "duration",
-        "label": "Time",
-        "value": 2790,
-        "unit": "s"
-      }
-    ],
-    "route": [],
-    "heartRate": [],
-    "zoneFloors": [],
-    "splits": [],
-    "strength": {
-      "unit": "kg",
-      "figure": "female",
-      "checkedAt": "2025-10-15T19:30:00Z",
-      "sets": 18,
-      "reps": 222,
-      "unknownRepSets": 0,
-      "restS": 0,
-      "records": 0,
-      "setsRecorded": true,
-      "zeroRepSets": 0,
-      "missingRepSets": 0,
-      "doubledSets": 0,
-      "unnamedSets": 0,
-      "muscles": [
-        {
-          "muscle": "chest",
-          "sets": 3
-        },
-        {
-          "muscle": "back",
-          "sets": 3
-        },
-        {
-          "muscle": "shoulders",
-          "sets": 0
-        },
-        {
-          "muscle": "arms",
-          "sets": 3
-        },
-        {
-          "muscle": "core",
-          "sets": 3
-        },
-        {
-          "muscle": "hips",
-          "sets": 0
-        },
-        {
-          "muscle": "quads",
-          "sets": 3
-        },
-        {
-          "muscle": "hamstrings",
-          "sets": 3
-        },
-        {
-          "muscle": "glutes",
-          "sets": 6
-        },
-        {
-          "muscle": "calves",
-          "sets": 3
-        }
-      ],
-      "exercises": [
-        {
-          "key": "SQUAT/BARBELL_BACK_SQUAT",
-          "name": "Barbell Back Squat",
-          "muscles": [
-            "quads",
-            "glutes"
-          ],
-          "sets": [
-            {
-              "reps": 5,
-              "weight": 95,
-              "durationS": 27,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 5,
-              "weight": 95,
-              "durationS": 27,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 5,
-              "weight": 95,
-              "durationS": 27,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-10",
-          "lastSets": [
-            {
-              "weight": 92.5,
-              "reps": 5
-            },
-            {
-              "weight": 92.5,
-              "reps": 5
-            },
-            {
-              "weight": 92.5,
-              "reps": 5
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "BENCH_PRESS/BARBELL_BENCH_PRESS",
-          "name": "Barbell Bench Press",
-          "muscles": [
-            "chest"
-          ],
-          "sets": [
-            {
-              "reps": 12,
-              "weight": 67.5,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 67.5,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 67.5,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-10",
-          "lastSets": [
-            {
-              "weight": 67.5,
-              "reps": 12
-            },
-            {
-              "weight": 67.5,
-              "reps": 12
-            },
-            {
-              "weight": 67.5,
-              "reps": 12
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "DEADLIFT/ROMANIAN_DEADLIFT",
-          "name": "Romanian Deadlift",
-          "muscles": [
-            "hamstrings",
-            "glutes"
-          ],
-          "sets": [
-            {
-              "reps": 8,
-              "weight": 77.5,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 8,
-              "weight": 77.5,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 8,
-              "weight": 77.5,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-10",
-          "lastSets": [
-            {
-              "weight": 75,
-              "reps": 8
-            },
-            {
-              "weight": 75,
-              "reps": 8
-            },
-            {
-              "weight": 75,
-              "reps": 8
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "ROW/ONE_ARM_DUMBBELL_ROW",
-          "name": "One Arm Dumbbell Row",
-          "muscles": [
-            "back",
-            "arms"
-          ],
-          "sets": [
-            {
-              "reps": 12,
-              "weight": 30,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 30,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 30,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-10",
-          "lastSets": [
-            {
-              "weight": 28,
-              "reps": 12
-            },
-            {
-              "weight": 28,
-              "reps": 12
-            },
-            {
-              "weight": 28,
-              "reps": 12
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "CALF_RAISE/STANDING_CALF_RAISE",
-          "name": "Standing Calf Raise",
-          "muscles": [
-            "calves"
-          ],
-          "sets": [
-            {
-              "reps": 15,
-              "weight": 37.5,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 15,
-              "weight": 37.5,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 15,
-              "weight": 37.5,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-10",
-          "lastSets": [
-            {
-              "weight": 35,
-              "reps": 15
-            },
-            {
-              "weight": 35,
-              "reps": 15
-            },
-            {
-              "weight": 35,
-              "reps": 15
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "CORE/BICYCLE_CRUNCH",
-          "name": "Bicycle Crunch",
-          "muscles": [
-            "core"
-          ],
-          "sets": [
-            {
-              "reps": 22,
-              "weight": 0,
-              "durationS": 78,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 22,
-              "weight": 0,
-              "durationS": 78,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 22,
-              "weight": 0,
-              "durationS": 78,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-10",
-          "lastSets": [
-            {
-              "weight": 0,
-              "reps": 22
-            },
-            {
-              "weight": 0,
-              "reps": 22
-            },
-            {
-              "weight": 0,
-              "reps": 22
-            }
-          ],
-          "record": null
-        }
-      ]
-    },
-    "map": null
-  },
-  "9000000000106": {
-    "detail": {
-      "missing": [],
-      "unavailable": []
-    },
-    "counted": null,
-    "along": null,
-    "more": [],
-    "recorded": [],
-    "selfEvaluation": null,
-    "effects": [],
-    "vo2maxNew": null,
-    "summary": {
-      "id": "9000000000106",
-      "icon": "strength",
-      "name": "Lower A",
-      "startLocal": "2025-09-10T18:05:00",
-      "durationS": 2820,
-      "distanceKm": null,
-      "load": 64,
-      "zoneSeconds": [
-        800,
-        1300,
-        500,
-        150,
-        0
-      ],
-      "aerobicTe": null,
-      "aerobicLabel": null,
-      "anaerobicTe": null,
-      "anaerobicLabel": null,
-      "benefit": null,
-      "avgHr": null,
-      "intensityMin": null,
-      "vigorousMin": null,
-      "distanceUnit": "km"
-    },
-    "recoveryHours": null,
-    "stats": [
-      {
-        "key": "duration",
-        "label": "Time",
-        "value": 2820,
-        "unit": "s"
-      }
-    ],
-    "route": [],
-    "heartRate": [],
-    "zoneFloors": [],
-    "splits": [],
-    "strength": {
-      "unit": "kg",
-      "figure": "female",
-      "checkedAt": "2025-10-15T19:30:00Z",
-      "sets": 18,
-      "reps": 222,
-      "unknownRepSets": 0,
-      "restS": 0,
-      "records": 0,
-      "setsRecorded": true,
-      "zeroRepSets": 0,
-      "missingRepSets": 0,
-      "doubledSets": 0,
-      "unnamedSets": 0,
-      "muscles": [
-        {
-          "muscle": "chest",
-          "sets": 3
-        },
-        {
-          "muscle": "back",
-          "sets": 3
-        },
-        {
-          "muscle": "shoulders",
-          "sets": 0
-        },
-        {
-          "muscle": "arms",
-          "sets": 3
-        },
-        {
-          "muscle": "core",
-          "sets": 3
-        },
-        {
-          "muscle": "hips",
-          "sets": 0
-        },
-        {
-          "muscle": "quads",
-          "sets": 3
-        },
-        {
-          "muscle": "hamstrings",
-          "sets": 3
-        },
-        {
-          "muscle": "glutes",
-          "sets": 6
-        },
-        {
-          "muscle": "calves",
-          "sets": 3
-        }
-      ],
-      "exercises": [
-        {
-          "key": "SQUAT/BARBELL_BACK_SQUAT",
-          "name": "Barbell Back Squat",
-          "muscles": [
-            "quads",
-            "glutes"
-          ],
-          "sets": [
-            {
-              "reps": 5,
-              "weight": 92.5,
-              "durationS": 27,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 5,
-              "weight": 92.5,
-              "durationS": 27,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 5,
-              "weight": 92.5,
-              "durationS": 27,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-03",
-          "lastSets": [
-            {
-              "weight": 90,
-              "reps": 4
-            },
-            {
-              "weight": 90,
-              "reps": 4
-            },
-            {
-              "weight": 90,
-              "reps": 4
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "BENCH_PRESS/BARBELL_BENCH_PRESS",
-          "name": "Barbell Bench Press",
-          "muscles": [
-            "chest"
-          ],
-          "sets": [
-            {
-              "reps": 12,
-              "weight": 67.5,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 67.5,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 67.5,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-03",
-          "lastSets": [
-            {
-              "weight": 67.5,
-              "reps": 12
-            },
-            {
-              "weight": 67.5,
-              "reps": 12
-            },
-            {
-              "weight": 67.5,
-              "reps": 12
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "DEADLIFT/ROMANIAN_DEADLIFT",
-          "name": "Romanian Deadlift",
-          "muscles": [
-            "hamstrings",
-            "glutes"
-          ],
-          "sets": [
-            {
-              "reps": 8,
-              "weight": 75,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 8,
-              "weight": 75,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 8,
-              "weight": 75,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-03",
-          "lastSets": [
-            {
-              "weight": 75,
-              "reps": 8
-            },
-            {
-              "weight": 75,
-              "reps": 8
-            },
-            {
-              "weight": 75,
-              "reps": 8
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "ROW/ONE_ARM_DUMBBELL_ROW",
-          "name": "One Arm Dumbbell Row",
-          "muscles": [
-            "back",
-            "arms"
-          ],
-          "sets": [
-            {
-              "reps": 12,
-              "weight": 28,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 28,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 28,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-03",
-          "lastSets": [
-            {
-              "weight": 28,
-              "reps": 12
-            },
-            {
-              "weight": 28,
-              "reps": 12
-            },
-            {
-              "weight": 28,
-              "reps": 12
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "CALF_RAISE/STANDING_CALF_RAISE",
-          "name": "Standing Calf Raise",
-          "muscles": [
-            "calves"
-          ],
-          "sets": [
-            {
-              "reps": 15,
-              "weight": 35,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 15,
-              "weight": 35,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 15,
-              "weight": 35,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-03",
-          "lastSets": [
-            {
-              "weight": 35,
-              "reps": 15
-            },
-            {
-              "weight": 35,
-              "reps": 15
-            },
-            {
-              "weight": 35,
-              "reps": 15
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "CORE/BICYCLE_CRUNCH",
-          "name": "Bicycle Crunch",
-          "muscles": [
-            "core"
-          ],
-          "sets": [
-            {
-              "reps": 22,
-              "weight": 0,
-              "durationS": 78,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 22,
-              "weight": 0,
-              "durationS": 78,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 22,
-              "weight": 0,
-              "durationS": 78,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-09-03",
-          "lastSets": [
-            {
-              "weight": 0,
-              "reps": 22
-            },
-            {
-              "weight": 0,
-              "reps": 22
-            },
-            {
-              "weight": 0,
-              "reps": 22
-            }
-          ],
-          "record": null
-        }
-      ]
-    },
-    "map": null
-  },
-  "9000000000105": {
-    "detail": {
-      "missing": [],
-      "unavailable": []
-    },
-    "counted": null,
-    "along": null,
-    "more": [],
-    "recorded": [],
-    "selfEvaluation": null,
-    "effects": [],
-    "vo2maxNew": null,
-    "summary": {
-      "id": "9000000000105",
-      "icon": "strength",
-      "name": "Upper A",
-      "startLocal": "2025-09-03T18:05:00",
-      "durationS": 2850,
-      "distanceKm": null,
-      "load": 65,
-      "zoneSeconds": [
-        800,
-        1300,
-        500,
-        150,
-        0
-      ],
-      "aerobicTe": null,
-      "aerobicLabel": null,
-      "anaerobicTe": null,
-      "anaerobicLabel": null,
-      "benefit": null,
-      "avgHr": null,
-      "intensityMin": null,
-      "vigorousMin": null,
-      "distanceUnit": "km"
-    },
-    "recoveryHours": null,
-    "stats": [
-      {
-        "key": "duration",
-        "label": "Time",
-        "value": 2850,
-        "unit": "s"
-      }
-    ],
-    "route": [],
-    "heartRate": [],
-    "zoneFloors": [],
-    "splits": [],
-    "strength": {
-      "unit": "kg",
-      "figure": "female",
-      "checkedAt": "2025-10-15T19:30:00Z",
-      "sets": 18,
-      "reps": 219,
-      "unknownRepSets": 0,
-      "restS": 0,
-      "records": 0,
-      "setsRecorded": true,
-      "zeroRepSets": 0,
-      "missingRepSets": 0,
-      "doubledSets": 0,
-      "unnamedSets": 0,
-      "muscles": [
-        {
-          "muscle": "chest",
-          "sets": 3
-        },
-        {
-          "muscle": "back",
-          "sets": 3
-        },
-        {
-          "muscle": "shoulders",
-          "sets": 0
-        },
-        {
-          "muscle": "arms",
-          "sets": 3
-        },
-        {
-          "muscle": "core",
-          "sets": 3
-        },
-        {
-          "muscle": "hips",
-          "sets": 0
-        },
-        {
-          "muscle": "quads",
-          "sets": 3
-        },
-        {
-          "muscle": "hamstrings",
-          "sets": 3
-        },
-        {
-          "muscle": "glutes",
-          "sets": 6
-        },
-        {
-          "muscle": "calves",
-          "sets": 3
-        }
-      ],
-      "exercises": [
-        {
-          "key": "SQUAT/BARBELL_BACK_SQUAT",
-          "name": "Barbell Back Squat",
-          "muscles": [
-            "quads",
-            "glutes"
-          ],
-          "sets": [
-            {
-              "reps": 4,
-              "weight": 90,
-              "durationS": 24,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 4,
-              "weight": 90,
-              "durationS": 24,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 4,
-              "weight": 90,
-              "durationS": 24,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-08-27",
-          "lastSets": [
-            {
-              "weight": 90,
-              "reps": 5
-            },
-            {
-              "weight": 90,
-              "reps": 5
-            },
-            {
-              "weight": 90,
-              "reps": 5
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "BENCH_PRESS/BARBELL_BENCH_PRESS",
-          "name": "Barbell Bench Press",
-          "muscles": [
-            "chest"
-          ],
-          "sets": [
-            {
-              "reps": 12,
-              "weight": 67.5,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 67.5,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 67.5,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-08-27",
-          "lastSets": [
-            {
-              "weight": 65,
-              "reps": 12
-            },
-            {
-              "weight": 65,
-              "reps": 12
-            },
-            {
-              "weight": 65,
-              "reps": 12
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "DEADLIFT/ROMANIAN_DEADLIFT",
-          "name": "Romanian Deadlift",
-          "muscles": [
-            "hamstrings",
-            "glutes"
-          ],
-          "sets": [
-            {
-              "reps": 8,
-              "weight": 75,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 8,
-              "weight": 75,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 8,
-              "weight": 75,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-08-27",
-          "lastSets": [
-            {
-              "weight": 75,
-              "reps": 8
-            },
-            {
-              "weight": 75,
-              "reps": 8
-            },
-            {
-              "weight": 75,
-              "reps": 8
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "ROW/ONE_ARM_DUMBBELL_ROW",
-          "name": "One Arm Dumbbell Row",
-          "muscles": [
-            "back",
-            "arms"
-          ],
-          "sets": [
-            {
-              "reps": 12,
-              "weight": 28,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 28,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 28,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-08-27",
-          "lastSets": [
-            {
-              "weight": 28,
-              "reps": 12
-            },
-            {
-              "weight": 28,
-              "reps": 12
-            },
-            {
-              "weight": 28,
-              "reps": 12
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "CALF_RAISE/STANDING_CALF_RAISE",
-          "name": "Standing Calf Raise",
-          "muscles": [
-            "calves"
-          ],
-          "sets": [
-            {
-              "reps": 15,
-              "weight": 35,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 15,
-              "weight": 35,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 15,
-              "weight": 35,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-08-27",
-          "lastSets": [
-            {
-              "weight": 35,
-              "reps": 15
-            },
-            {
-              "weight": 35,
-              "reps": 15
-            },
-            {
-              "weight": 35,
-              "reps": 15
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "CORE/BICYCLE_CRUNCH",
-          "name": "Bicycle Crunch",
-          "muscles": [
-            "core"
-          ],
-          "sets": [
-            {
-              "reps": 22,
-              "weight": 0,
-              "durationS": 78,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 22,
-              "weight": 0,
-              "durationS": 78,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 22,
-              "weight": 0,
-              "durationS": 78,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-08-27",
-          "lastSets": [
-            {
-              "weight": 0,
-              "reps": 20
-            },
-            {
-              "weight": 0,
-              "reps": 20
-            },
-            {
-              "weight": 0,
-              "reps": 20
-            }
-          ],
-          "record": null
-        }
-      ]
-    },
-    "map": null
-  },
-  "9000000000104": {
-    "detail": {
-      "missing": [],
-      "unavailable": []
-    },
-    "counted": null,
-    "along": null,
-    "more": [],
-    "recorded": [],
-    "selfEvaluation": null,
-    "effects": [],
-    "vo2maxNew": null,
-    "summary": {
-      "id": "9000000000104",
-      "icon": "strength",
-      "name": "Lower A",
-      "startLocal": "2025-08-27T18:05:00",
-      "durationS": 2880,
-      "distanceKm": null,
-      "load": 66,
-      "zoneSeconds": [
-        800,
-        1300,
-        500,
-        150,
-        0
-      ],
-      "aerobicTe": null,
-      "aerobicLabel": null,
-      "anaerobicTe": null,
-      "anaerobicLabel": null,
-      "benefit": null,
-      "avgHr": null,
-      "intensityMin": null,
-      "vigorousMin": null,
-      "distanceUnit": "km"
-    },
-    "recoveryHours": null,
-    "stats": [
-      {
-        "key": "duration",
-        "label": "Time",
-        "value": 2880,
-        "unit": "s"
-      }
-    ],
-    "route": [],
-    "heartRate": [],
-    "zoneFloors": [],
-    "splits": [],
-    "strength": {
-      "unit": "kg",
-      "figure": "female",
-      "checkedAt": "2025-10-15T19:30:00Z",
-      "sets": 18,
-      "reps": 216,
-      "unknownRepSets": 0,
-      "restS": 0,
-      "records": 0,
-      "setsRecorded": true,
-      "zeroRepSets": 0,
-      "missingRepSets": 0,
-      "doubledSets": 0,
-      "unnamedSets": 0,
-      "muscles": [
-        {
-          "muscle": "chest",
-          "sets": 3
-        },
-        {
-          "muscle": "back",
-          "sets": 3
-        },
-        {
-          "muscle": "shoulders",
-          "sets": 0
-        },
-        {
-          "muscle": "arms",
-          "sets": 3
-        },
-        {
-          "muscle": "core",
-          "sets": 3
-        },
-        {
-          "muscle": "hips",
-          "sets": 0
-        },
-        {
-          "muscle": "quads",
-          "sets": 3
-        },
-        {
-          "muscle": "hamstrings",
-          "sets": 3
-        },
-        {
-          "muscle": "glutes",
-          "sets": 6
-        },
-        {
-          "muscle": "calves",
-          "sets": 3
-        }
-      ],
-      "exercises": [
-        {
-          "key": "SQUAT/BARBELL_BACK_SQUAT",
-          "name": "Barbell Back Squat",
-          "muscles": [
-            "quads",
-            "glutes"
-          ],
-          "sets": [
-            {
-              "reps": 5,
-              "weight": 90,
-              "durationS": 27,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 5,
-              "weight": 90,
-              "durationS": 27,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 5,
-              "weight": 90,
-              "durationS": 27,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-08-20",
-          "lastSets": [
-            {
-              "weight": 90,
-              "reps": 5
-            },
-            {
-              "weight": 90,
-              "reps": 5
-            },
-            {
-              "weight": 90,
-              "reps": 5
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "BENCH_PRESS/BARBELL_BENCH_PRESS",
-          "name": "Barbell Bench Press",
-          "muscles": [
-            "chest"
-          ],
-          "sets": [
-            {
-              "reps": 12,
-              "weight": 65,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 65,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 65,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-08-20",
-          "lastSets": [
-            {
-              "weight": 65,
-              "reps": 12
-            },
-            {
-              "weight": 65,
-              "reps": 12
-            },
-            {
-              "weight": 65,
-              "reps": 12
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "DEADLIFT/ROMANIAN_DEADLIFT",
-          "name": "Romanian Deadlift",
-          "muscles": [
-            "hamstrings",
-            "glutes"
-          ],
-          "sets": [
-            {
-              "reps": 8,
-              "weight": 75,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 8,
-              "weight": 75,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 8,
-              "weight": 75,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-08-20",
-          "lastSets": [
-            {
-              "weight": 72.5,
-              "reps": 8
-            },
-            {
-              "weight": 72.5,
-              "reps": 8
-            },
-            {
-              "weight": 72.5,
-              "reps": 8
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "ROW/ONE_ARM_DUMBBELL_ROW",
-          "name": "One Arm Dumbbell Row",
-          "muscles": [
-            "back",
-            "arms"
-          ],
-          "sets": [
-            {
-              "reps": 12,
-              "weight": 28,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 28,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 28,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-08-20",
-          "lastSets": [
-            {
-              "weight": 28,
-              "reps": 12
-            },
-            {
-              "weight": 28,
-              "reps": 12
-            },
-            {
-              "weight": 28,
-              "reps": 12
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "CALF_RAISE/STANDING_CALF_RAISE",
-          "name": "Standing Calf Raise",
-          "muscles": [
-            "calves"
-          ],
-          "sets": [
-            {
-              "reps": 15,
-              "weight": 35,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 15,
-              "weight": 35,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 15,
-              "weight": 35,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-08-20",
-          "lastSets": [
-            {
-              "weight": 32.5,
-              "reps": 15
-            },
-            {
-              "weight": 32.5,
-              "reps": 15
-            },
-            {
-              "weight": 32.5,
-              "reps": 15
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "CORE/BICYCLE_CRUNCH",
-          "name": "Bicycle Crunch",
-          "muscles": [
-            "core"
-          ],
-          "sets": [
-            {
-              "reps": 20,
-              "weight": 0,
-              "durationS": 72,
+              "reps": 16,
+              "weight": null,
+              "durationS": 60,
               "flags": [],
               "record": false
             },
             {
               "reps": 20,
-              "weight": 0,
-              "durationS": 72,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 20,
-              "weight": 0,
+              "weight": null,
               "durationS": 72,
               "flags": [],
               "record": false
             }
           ],
-          "lastDate": "2025-08-20",
-          "lastSets": [
-            {
-              "weight": 0,
-              "reps": 20
-            },
-            {
-              "weight": 0,
-              "reps": 20
-            },
-            {
-              "weight": 0,
-              "reps": 20
-            }
-          ],
+          "lastDate": null,
+          "lastSets": [],
           "record": null
         }
       ]
     },
-    "map": null
-  },
-  "9000000000103": {
-    "detail": {
-      "missing": [],
-      "unavailable": []
-    },
-    "counted": null,
     "along": null,
     "more": [],
     "recorded": [],
     "selfEvaluation": null,
-    "effects": [],
-    "vo2maxNew": null,
-    "summary": {
-      "id": "9000000000103",
-      "icon": "strength",
-      "name": "Upper A",
-      "startLocal": "2025-08-20T18:05:00",
-      "durationS": 2910,
-      "distanceKm": null,
-      "load": 67,
-      "zoneSeconds": [
-        800,
-        1300,
-        500,
-        150,
-        0
-      ],
-      "aerobicTe": null,
-      "aerobicLabel": null,
-      "anaerobicTe": null,
-      "anaerobicLabel": null,
-      "benefit": null,
-      "avgHr": null,
-      "intensityMin": null,
-      "vigorousMin": null,
-      "distanceUnit": "km"
-    },
-    "recoveryHours": null,
-    "stats": [
+    "effects": [
       {
-        "key": "duration",
-        "label": "Time",
-        "value": 2910,
-        "unit": "s"
+        "kind": "aerobic",
+        "value": 3.8,
+        "band": "Improving",
+        "line": "builds your aerobic base",
+        "garminLabel": "Improving"
+      },
+      {
+        "kind": "anaerobic",
+        "value": 1.2,
+        "band": "Minor benefit",
+        "line": "little sprint or hard work",
+        "garminLabel": "Minor"
       }
     ],
-    "route": [],
-    "heartRate": [],
-    "zoneFloors": [],
-    "splits": [],
-    "strength": {
-      "unit": "kg",
-      "figure": "female",
-      "checkedAt": "2025-10-15T19:30:00Z",
-      "sets": 18,
-      "reps": 216,
-      "unknownRepSets": 0,
-      "restS": 0,
-      "records": 0,
-      "setsRecorded": true,
-      "zeroRepSets": 0,
-      "missingRepSets": 0,
-      "doubledSets": 0,
-      "unnamedSets": 0,
-      "muscles": [
-        {
-          "muscle": "chest",
-          "sets": 3
-        },
-        {
-          "muscle": "back",
-          "sets": 3
-        },
-        {
-          "muscle": "shoulders",
-          "sets": 0
-        },
-        {
-          "muscle": "arms",
-          "sets": 3
-        },
-        {
-          "muscle": "core",
-          "sets": 3
-        },
-        {
-          "muscle": "hips",
-          "sets": 0
-        },
-        {
-          "muscle": "quads",
-          "sets": 3
-        },
-        {
-          "muscle": "hamstrings",
-          "sets": 3
-        },
-        {
-          "muscle": "glutes",
-          "sets": 6
-        },
-        {
-          "muscle": "calves",
-          "sets": 3
-        }
+    "vo2maxNew": null,
+    "counted": {
+      "week": "2025-08-04",
+      "goals": false,
+      "lines": [],
+      "planItem": null,
+      "bests": [],
+      "fitness": null
+    },
+    "detail": {
+      "missing": [
+        "workout"
       ],
-      "exercises": [
-        {
-          "key": "SQUAT/BARBELL_BACK_SQUAT",
-          "name": "Barbell Back Squat",
-          "muscles": [
-            "quads",
-            "glutes"
-          ],
-          "sets": [
-            {
-              "reps": 5,
-              "weight": 90,
-              "durationS": 27,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 5,
-              "weight": 90,
-              "durationS": 27,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 5,
-              "weight": 90,
-              "durationS": 27,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-08-13",
-          "lastSets": [
-            {
-              "weight": 87.5,
-              "reps": 5
-            },
-            {
-              "weight": 87.5,
-              "reps": 5
-            },
-            {
-              "weight": 87.5,
-              "reps": 5
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "BENCH_PRESS/BARBELL_BENCH_PRESS",
-          "name": "Barbell Bench Press",
-          "muscles": [
-            "chest"
-          ],
-          "sets": [
-            {
-              "reps": 12,
-              "weight": 65,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 65,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 65,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-08-13",
-          "lastSets": [
-            {
-              "weight": 65,
-              "reps": 12
-            },
-            {
-              "weight": 65,
-              "reps": 12
-            },
-            {
-              "weight": 65,
-              "reps": 12
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "DEADLIFT/ROMANIAN_DEADLIFT",
-          "name": "Romanian Deadlift",
-          "muscles": [
-            "hamstrings",
-            "glutes"
-          ],
-          "sets": [
-            {
-              "reps": 8,
-              "weight": 72.5,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 8,
-              "weight": 72.5,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 8,
-              "weight": 72.5,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-08-13",
-          "lastSets": [
-            {
-              "weight": 72.5,
-              "reps": 8
-            },
-            {
-              "weight": 72.5,
-              "reps": 8
-            },
-            {
-              "weight": 72.5,
-              "reps": 8
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "ROW/ONE_ARM_DUMBBELL_ROW",
-          "name": "One Arm Dumbbell Row",
-          "muscles": [
-            "back",
-            "arms"
-          ],
-          "sets": [
-            {
-              "reps": 12,
-              "weight": 28,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 28,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 28,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-08-13",
-          "lastSets": [
-            {
-              "weight": 26,
-              "reps": 12
-            },
-            {
-              "weight": 26,
-              "reps": 12
-            },
-            {
-              "weight": 26,
-              "reps": 12
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "CALF_RAISE/STANDING_CALF_RAISE",
-          "name": "Standing Calf Raise",
-          "muscles": [
-            "calves"
-          ],
-          "sets": [
-            {
-              "reps": 15,
-              "weight": 32.5,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 15,
-              "weight": 32.5,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 15,
-              "weight": 32.5,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-08-13",
-          "lastSets": [
-            {
-              "weight": 32.5,
-              "reps": 15
-            },
-            {
-              "weight": 32.5,
-              "reps": 15
-            },
-            {
-              "weight": 32.5,
-              "reps": 15
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "CORE/BICYCLE_CRUNCH",
-          "name": "Bicycle Crunch",
-          "muscles": [
-            "core"
-          ],
-          "sets": [
-            {
-              "reps": 20,
-              "weight": 0,
-              "durationS": 72,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 20,
-              "weight": 0,
-              "durationS": 72,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 20,
-              "weight": 0,
-              "durationS": 72,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-08-13",
-          "lastSets": [
-            {
-              "weight": 0,
-              "reps": 20
-            },
-            {
-              "weight": 0,
-              "reps": 20
-            },
-            {
-              "weight": 0,
-              "reps": 20
-            }
-          ],
-          "record": null
-        }
-      ]
+      "unavailable": []
     },
     "map": null
   },
-  "9000000000111": {
-    "detail": {
-      "missing": [],
-      "unavailable": []
-    },
-    "counted": null,
-    "along": null,
-    "more": [],
-    "recorded": [],
-    "selfEvaluation": null,
-    "effects": [],
-    "vo2maxNew": null,
+  "9000000000102": {
     "summary": {
-      "id": "9000000000111",
+      "id": "9000000000102",
       "icon": "strength",
-      "name": "Strength session",
-      "startLocal": "2025-10-15T18:05:00",
-      "durationS": 2700,
+      "name": "Full body B",
+      "startLocal": "2025-08-13T18:05:00",
+      "durationS": 2940,
       "distanceKm": null,
       "load": 60,
-      "zoneSeconds": [],
-      "aerobicTe": null,
-      "aerobicLabel": null,
-      "anaerobicTe": null,
-      "anaerobicLabel": null,
-      "benefit": null,
-      "avgHr": null,
+      "zoneSeconds": [
+        900,
+        1300,
+        400,
+        100,
+        0
+      ],
+      "aerobicTe": 3.8,
+      "aerobicLabel": "Improving",
+      "anaerobicTe": 1.2,
+      "anaerobicLabel": "Minor",
+      "benefit": "Tempo",
+      "avgHr": 110,
       "intensityMin": null,
       "vigorousMin": null,
       "distanceUnit": "km"
     },
-    "recoveryHours": null,
+    "recoveryHours": 18,
     "stats": [
       {
         "key": "duration",
         "label": "Time",
-        "value": 2700,
+        "value": 2940,
         "unit": "s"
+      },
+      {
+        "key": "averageHR",
+        "label": "Avg HR",
+        "value": 110,
+        "unit": "bpm"
+      },
+      {
+        "key": "maxHR",
+        "label": "Max HR",
+        "value": 129,
+        "unit": "bpm"
+      },
+      {
+        "key": "calories",
+        "label": "Calories",
+        "value": 735,
+        "unit": "kcal"
       }
     ],
     "route": [],
     "heartRate": [],
-    "zoneFloors": [],
+    "zoneFloors": [
+      120,
+      138,
+      154,
+      167
+    ],
     "splits": [],
     "strength": {
       "unit": "kg",
       "figure": "female",
-      "checkedAt": "2025-10-15T19:30:00Z",
-      "sets": 18,
-      "reps": 234,
+      "checkedAt": "2025-08-14T00:05:00+00:00",
+      "sets": 10,
+      "reps": 87,
       "unknownRepSets": 0,
-      "restS": 0,
-      "records": 5,
+      "restS": 900,
+      "records": 1,
       "setsRecorded": true,
       "zeroRepSets": 0,
       "missingRepSets": 0,
@@ -3434,23 +807,23 @@
       "muscles": [
         {
           "muscle": "chest",
-          "sets": 3
+          "sets": 2
         },
         {
           "muscle": "back",
-          "sets": 3
+          "sets": 2
         },
         {
           "muscle": "shoulders",
-          "sets": 0
+          "sets": 2
         },
         {
           "muscle": "arms",
-          "sets": 3
+          "sets": 2
         },
         {
           "muscle": "core",
-          "sets": 3
+          "sets": 0
         },
         {
           "muscle": "hips",
@@ -3458,19 +831,19 @@
         },
         {
           "muscle": "quads",
-          "sets": 3
+          "sets": 4
         },
         {
           "muscle": "hamstrings",
-          "sets": 3
+          "sets": 0
         },
         {
           "muscle": "glutes",
-          "sets": 6
+          "sets": 4
         },
         {
           "muscle": "calves",
-          "sets": 3
+          "sets": 0
         }
       ],
       "exercises": [
@@ -3483,44 +856,55 @@
           ],
           "sets": [
             {
+              "reps": 8,
+              "weight": 60,
+              "durationS": 36,
+              "flags": [],
+              "record": false
+            },
+            {
               "reps": 5,
-              "weight": 100,
+              "weight": 77.5,
               "durationS": 27,
               "flags": [],
               "record": true
             },
             {
               "reps": 5,
-              "weight": 100,
+              "weight": 77.5,
               "durationS": 27,
               "flags": [],
               "record": false
             },
             {
               "reps": 5,
-              "weight": 100,
+              "weight": 77.5,
               "durationS": 27,
               "flags": [],
               "record": false
             }
           ],
-          "lastDate": "2025-10-08",
+          "lastDate": "2025-08-06",
           "lastSets": [
             {
-              "weight": 97.5,
+              "weight": 60,
+              "reps": 8
+            },
+            {
+              "weight": 75,
               "reps": 5
             },
             {
-              "weight": 97.5,
+              "weight": 75,
               "reps": 5
             },
             {
-              "weight": 97.5,
+              "weight": 75,
               "reps": 5
             }
           ],
           "record": {
-            "weight": 100,
+            "weight": 77.5,
             "reps": 5
           }
         },
@@ -3533,144 +917,1041 @@
           "sets": [
             {
               "reps": 12,
-              "weight": 70,
-              "durationS": 48,
-              "flags": [],
-              "record": true
-            },
-            {
-              "reps": 12,
-              "weight": 70,
+              "weight": 57.5,
               "durationS": 48,
               "flags": [],
               "record": false
             },
             {
               "reps": 12,
-              "weight": 70,
+              "weight": 57.5,
               "durationS": 48,
               "flags": [],
               "record": false
             }
           ],
-          "lastDate": "2025-10-08",
-          "lastSets": [
-            {
-              "weight": 70,
-              "reps": 12
-            },
-            {
-              "weight": 70,
-              "reps": 12
-            },
-            {
-              "weight": 70,
-              "reps": 12
-            }
-          ],
-          "record": {
-            "weight": 70,
-            "reps": 12
-          }
+          "lastDate": null,
+          "lastSets": [],
+          "record": null
         },
         {
-          "key": "DEADLIFT/ROMANIAN_DEADLIFT",
-          "name": "Romanian Deadlift",
+          "key": "ROW/ONE_ARM_DUMBBELL_ROW",
+          "name": "One Arm Dumbbell Row",
           "muscles": [
-            "hamstrings",
+            "back",
+            "arms"
+          ],
+          "sets": [
+            {
+              "reps": 12,
+              "weight": 25,
+              "durationS": 48,
+              "flags": [],
+              "record": false
+            },
+            {
+              "reps": 12,
+              "weight": 25,
+              "durationS": 48,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": null,
+          "lastSets": [],
+          "record": null
+        },
+        {
+          "key": "SHOULDER_PRESS/OVERHEAD_BARBELL_PRESS",
+          "name": "Overhead Barbell Press",
+          "muscles": [
+            "shoulders"
+          ],
+          "sets": [
+            {
+              "reps": 8,
+              "weight": 35,
+              "durationS": 36,
+              "flags": [],
+              "record": false
+            },
+            {
+              "reps": 8,
+              "weight": 35,
+              "durationS": 36,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": null,
+          "lastSets": [],
+          "record": null
+        }
+      ]
+    },
+    "along": null,
+    "more": [],
+    "recorded": [],
+    "selfEvaluation": null,
+    "effects": [
+      {
+        "kind": "aerobic",
+        "value": 3.8,
+        "band": "Improving",
+        "line": "builds your aerobic base",
+        "garminLabel": "Improving"
+      },
+      {
+        "kind": "anaerobic",
+        "value": 1.2,
+        "band": "Minor benefit",
+        "line": "little sprint or hard work",
+        "garminLabel": "Minor"
+      }
+    ],
+    "vo2maxNew": null,
+    "counted": {
+      "week": "2025-08-11",
+      "goals": false,
+      "lines": [],
+      "planItem": null,
+      "bests": [],
+      "fitness": null
+    },
+    "detail": {
+      "missing": [
+        "workout"
+      ],
+      "unavailable": []
+    },
+    "map": null
+  },
+  "9000000000103": {
+    "summary": {
+      "id": "9000000000103",
+      "icon": "strength",
+      "name": "Full body A",
+      "startLocal": "2025-08-20T18:05:00",
+      "durationS": 2910,
+      "distanceKm": null,
+      "load": 60,
+      "zoneSeconds": [
+        900,
+        1300,
+        400,
+        100,
+        0
+      ],
+      "aerobicTe": 3.8,
+      "aerobicLabel": "Improving",
+      "anaerobicTe": 1.2,
+      "anaerobicLabel": "Minor",
+      "benefit": "Tempo",
+      "avgHr": 110,
+      "intensityMin": null,
+      "vigorousMin": null,
+      "distanceUnit": "km"
+    },
+    "recoveryHours": 18,
+    "stats": [
+      {
+        "key": "duration",
+        "label": "Time",
+        "value": 2910,
+        "unit": "s"
+      },
+      {
+        "key": "averageHR",
+        "label": "Avg HR",
+        "value": 110,
+        "unit": "bpm"
+      },
+      {
+        "key": "maxHR",
+        "label": "Max HR",
+        "value": 129,
+        "unit": "bpm"
+      },
+      {
+        "key": "calories",
+        "label": "Calories",
+        "value": 727,
+        "unit": "kcal"
+      }
+    ],
+    "route": [],
+    "heartRate": [],
+    "zoneFloors": [
+      120,
+      138,
+      154,
+      167
+    ],
+    "splits": [],
+    "strength": {
+      "unit": "kg",
+      "figure": "female",
+      "checkedAt": "2025-08-21T00:05:00+00:00",
+      "sets": 13,
+      "reps": 142,
+      "unknownRepSets": 0,
+      "restS": 1170,
+      "records": 3,
+      "setsRecorded": true,
+      "zeroRepSets": 0,
+      "missingRepSets": 0,
+      "doubledSets": 0,
+      "unnamedSets": 0,
+      "muscles": [
+        {
+          "muscle": "chest",
+          "sets": 0
+        },
+        {
+          "muscle": "back",
+          "sets": 0
+        },
+        {
+          "muscle": "shoulders",
+          "sets": 0
+        },
+        {
+          "muscle": "arms",
+          "sets": 0
+        },
+        {
+          "muscle": "core",
+          "sets": 2
+        },
+        {
+          "muscle": "hips",
+          "sets": 2
+        },
+        {
+          "muscle": "quads",
+          "sets": 4
+        },
+        {
+          "muscle": "hamstrings",
+          "sets": 2
+        },
+        {
+          "muscle": "glutes",
+          "sets": 8
+        },
+        {
+          "muscle": "calves",
+          "sets": 3
+        }
+      ],
+      "exercises": [
+        {
+          "key": "SQUAT/BARBELL_BACK_SQUAT",
+          "name": "Barbell Back Squat",
+          "muscles": [
+            "quads",
             "glutes"
           ],
           "sets": [
             {
               "reps": 8,
-              "weight": 80,
+              "weight": 60,
               "durationS": 36,
+              "flags": [],
+              "record": false
+            },
+            {
+              "reps": 5,
+              "weight": 80,
+              "durationS": 27,
               "flags": [],
               "record": true
             },
             {
-              "reps": 8,
+              "reps": 5,
               "weight": 80,
-              "durationS": 36,
+              "durationS": 27,
               "flags": [],
               "record": false
             },
             {
-              "reps": 8,
+              "reps": 5,
               "weight": 80,
-              "durationS": 36,
+              "durationS": 27,
               "flags": [],
               "record": false
             }
           ],
-          "lastDate": "2025-10-08",
+          "lastDate": "2025-08-13",
           "lastSets": [
             {
-              "weight": 80,
+              "weight": 60,
               "reps": 8
             },
             {
-              "weight": 80,
-              "reps": 8
+              "weight": 77.5,
+              "reps": 5
             },
             {
-              "weight": 80,
-              "reps": 8
+              "weight": 77.5,
+              "reps": 5
+            },
+            {
+              "weight": 77.5,
+              "reps": 5
             }
           ],
           "record": {
             "weight": 80,
+            "reps": 5
+          }
+        },
+        {
+          "key": "DEADLIFT/ROMANIAN_DEADLIFT",
+          "name": "Romanian Deadlift",
+          "muscles": [
+            "hamstrings",
+            "glutes"
+          ],
+          "sets": [
+            {
+              "reps": 8,
+              "weight": 70,
+              "durationS": 36,
+              "flags": [],
+              "record": true
+            },
+            {
+              "reps": 8,
+              "weight": 70,
+              "durationS": 36,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": "2025-08-06",
+          "lastSets": [
+            {
+              "weight": 67.5,
+              "reps": 8
+            },
+            {
+              "weight": 67.5,
+              "reps": 8
+            }
+          ],
+          "record": {
+            "weight": 70,
             "reps": 8
           }
         },
         {
-          "key": "ROW/ONE_ARM_DUMBBELL_ROW",
-          "name": "One Arm Dumbbell Row",
+          "key": "CALF_RAISE/STANDING_CALF_RAISE",
+          "name": "Standing Calf Raise",
           "muscles": [
-            "back",
-            "arms"
+            "calves"
           ],
           "sets": [
             {
-              "reps": 12,
+              "reps": 15,
               "weight": 30,
-              "durationS": 48,
+              "durationS": 57,
               "flags": [],
               "record": true
             },
             {
-              "reps": 12,
+              "reps": 15,
               "weight": 30,
-              "durationS": 48,
+              "durationS": 57,
               "flags": [],
               "record": false
             },
             {
-              "reps": 12,
+              "reps": 15,
               "weight": 30,
-              "durationS": 48,
+              "durationS": 57,
               "flags": [],
               "record": false
             }
           ],
-          "lastDate": "2025-10-08",
+          "lastDate": "2025-08-06",
           "lastSets": [
             {
-              "weight": 30,
-              "reps": 12
+              "weight": 27.5,
+              "reps": 15
             },
             {
-              "weight": 30,
-              "reps": 12
+              "weight": 27.5,
+              "reps": 15
             },
             {
-              "weight": 30,
-              "reps": 12
+              "weight": 27.5,
+              "reps": 15
             }
           ],
           "record": {
             "weight": 30,
+            "reps": 15
+          }
+        },
+        {
+          "key": "HIP_RAISE/BARBELL_HIP_THRUST_WITH_BENCH",
+          "name": "Barbell Hip Thrust With Bench",
+          "muscles": [
+            "hips",
+            "glutes"
+          ],
+          "sets": [
+            {
+              "reps": 10,
+              "weight": 60,
+              "durationS": 42,
+              "flags": [],
+              "record": false
+            },
+            {
+              "reps": 10,
+              "weight": 60,
+              "durationS": 42,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": "2025-08-06",
+          "lastSets": [
+            {
+              "weight": 60,
+              "reps": 10
+            },
+            {
+              "weight": 60,
+              "reps": 10
+            }
+          ],
+          "record": null
+        },
+        {
+          "key": "CRUNCH/BICYCLE_CRUNCH",
+          "name": "Bicycle Crunch",
+          "muscles": [
+            "core"
+          ],
+          "sets": [
+            {
+              "reps": 18,
+              "weight": null,
+              "durationS": 66,
+              "flags": [],
+              "record": false
+            },
+            {
+              "reps": 20,
+              "weight": null,
+              "durationS": 72,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": "2025-08-06",
+          "lastSets": [
+            {
+              "weight": null,
+              "reps": 16
+            },
+            {
+              "weight": null,
+              "reps": 20
+            }
+          ],
+          "record": null
+        }
+      ]
+    },
+    "along": null,
+    "more": [],
+    "recorded": [],
+    "selfEvaluation": null,
+    "effects": [
+      {
+        "kind": "aerobic",
+        "value": 3.8,
+        "band": "Improving",
+        "line": "builds your aerobic base",
+        "garminLabel": "Improving"
+      },
+      {
+        "kind": "anaerobic",
+        "value": 1.2,
+        "band": "Minor benefit",
+        "line": "little sprint or hard work",
+        "garminLabel": "Minor"
+      }
+    ],
+    "vo2maxNew": null,
+    "counted": {
+      "week": "2025-08-18",
+      "goals": false,
+      "lines": [],
+      "planItem": null,
+      "bests": [],
+      "fitness": null
+    },
+    "detail": {
+      "missing": [
+        "workout"
+      ],
+      "unavailable": []
+    },
+    "map": null
+  },
+  "9000000000104": {
+    "summary": {
+      "id": "9000000000104",
+      "icon": "strength",
+      "name": "Full body B",
+      "startLocal": "2025-08-27T18:05:00",
+      "durationS": 2880,
+      "distanceKm": null,
+      "load": 60,
+      "zoneSeconds": [
+        900,
+        1300,
+        400,
+        100,
+        0
+      ],
+      "aerobicTe": 3.8,
+      "aerobicLabel": "Improving",
+      "anaerobicTe": 1.2,
+      "anaerobicLabel": "Minor",
+      "benefit": "Tempo",
+      "avgHr": 110,
+      "intensityMin": null,
+      "vigorousMin": null,
+      "distanceUnit": "km"
+    },
+    "recoveryHours": 18,
+    "stats": [
+      {
+        "key": "duration",
+        "label": "Time",
+        "value": 2880,
+        "unit": "s"
+      },
+      {
+        "key": "averageHR",
+        "label": "Avg HR",
+        "value": 110,
+        "unit": "bpm"
+      },
+      {
+        "key": "maxHR",
+        "label": "Max HR",
+        "value": 129,
+        "unit": "bpm"
+      },
+      {
+        "key": "calories",
+        "label": "Calories",
+        "value": 720,
+        "unit": "kcal"
+      }
+    ],
+    "route": [],
+    "heartRate": [],
+    "zoneFloors": [
+      120,
+      138,
+      154,
+      167
+    ],
+    "splits": [],
+    "strength": {
+      "unit": "kg",
+      "figure": "female",
+      "checkedAt": "2025-08-28T00:05:00+00:00",
+      "sets": 10,
+      "reps": 87,
+      "unknownRepSets": 0,
+      "restS": 900,
+      "records": 3,
+      "setsRecorded": true,
+      "zeroRepSets": 0,
+      "missingRepSets": 0,
+      "doubledSets": 0,
+      "unnamedSets": 0,
+      "muscles": [
+        {
+          "muscle": "chest",
+          "sets": 2
+        },
+        {
+          "muscle": "back",
+          "sets": 2
+        },
+        {
+          "muscle": "shoulders",
+          "sets": 2
+        },
+        {
+          "muscle": "arms",
+          "sets": 2
+        },
+        {
+          "muscle": "core",
+          "sets": 0
+        },
+        {
+          "muscle": "hips",
+          "sets": 0
+        },
+        {
+          "muscle": "quads",
+          "sets": 4
+        },
+        {
+          "muscle": "hamstrings",
+          "sets": 0
+        },
+        {
+          "muscle": "glutes",
+          "sets": 4
+        },
+        {
+          "muscle": "calves",
+          "sets": 0
+        }
+      ],
+      "exercises": [
+        {
+          "key": "SQUAT/BARBELL_BACK_SQUAT",
+          "name": "Barbell Back Squat",
+          "muscles": [
+            "quads",
+            "glutes"
+          ],
+          "sets": [
+            {
+              "reps": 8,
+              "weight": 60,
+              "durationS": 36,
+              "flags": [],
+              "record": false
+            },
+            {
+              "reps": 5,
+              "weight": 82.5,
+              "durationS": 27,
+              "flags": [],
+              "record": true
+            },
+            {
+              "reps": 5,
+              "weight": 82.5,
+              "durationS": 27,
+              "flags": [],
+              "record": false
+            },
+            {
+              "reps": 5,
+              "weight": 82.5,
+              "durationS": 27,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": "2025-08-20",
+          "lastSets": [
+            {
+              "weight": 60,
+              "reps": 8
+            },
+            {
+              "weight": 80,
+              "reps": 5
+            },
+            {
+              "weight": 80,
+              "reps": 5
+            },
+            {
+              "weight": 80,
+              "reps": 5
+            }
+          ],
+          "record": {
+            "weight": 82.5,
+            "reps": 5
+          }
+        },
+        {
+          "key": "BENCH_PRESS/BARBELL_BENCH_PRESS",
+          "name": "Barbell Bench Press",
+          "muscles": [
+            "chest"
+          ],
+          "sets": [
+            {
+              "reps": 12,
+              "weight": 60,
+              "durationS": 48,
+              "flags": [],
+              "record": true
+            },
+            {
+              "reps": 12,
+              "weight": 60,
+              "durationS": 48,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": "2025-08-13",
+          "lastSets": [
+            {
+              "weight": 57.5,
+              "reps": 12
+            },
+            {
+              "weight": 57.5,
+              "reps": 12
+            }
+          ],
+          "record": {
+            "weight": 60,
             "reps": 12
+          }
+        },
+        {
+          "key": "ROW/ONE_ARM_DUMBBELL_ROW",
+          "name": "One Arm Dumbbell Row",
+          "muscles": [
+            "back",
+            "arms"
+          ],
+          "sets": [
+            {
+              "reps": 12,
+              "weight": 26,
+              "durationS": 48,
+              "flags": [],
+              "record": true
+            },
+            {
+              "reps": 12,
+              "weight": 26,
+              "durationS": 48,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": "2025-08-13",
+          "lastSets": [
+            {
+              "weight": 25,
+              "reps": 12
+            },
+            {
+              "weight": 25,
+              "reps": 12
+            }
+          ],
+          "record": {
+            "weight": 26,
+            "reps": 12
+          }
+        },
+        {
+          "key": "SHOULDER_PRESS/OVERHEAD_BARBELL_PRESS",
+          "name": "Overhead Barbell Press",
+          "muscles": [
+            "shoulders"
+          ],
+          "sets": [
+            {
+              "reps": 8,
+              "weight": 35,
+              "durationS": 36,
+              "flags": [],
+              "record": false
+            },
+            {
+              "reps": 8,
+              "weight": 35,
+              "durationS": 36,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": "2025-08-13",
+          "lastSets": [
+            {
+              "weight": 35,
+              "reps": 8
+            },
+            {
+              "weight": 35,
+              "reps": 8
+            }
+          ],
+          "record": null
+        }
+      ]
+    },
+    "along": null,
+    "more": [],
+    "recorded": [],
+    "selfEvaluation": null,
+    "effects": [
+      {
+        "kind": "aerobic",
+        "value": 3.8,
+        "band": "Improving",
+        "line": "builds your aerobic base",
+        "garminLabel": "Improving"
+      },
+      {
+        "kind": "anaerobic",
+        "value": 1.2,
+        "band": "Minor benefit",
+        "line": "little sprint or hard work",
+        "garminLabel": "Minor"
+      }
+    ],
+    "vo2maxNew": null,
+    "counted": {
+      "week": "2025-08-25",
+      "goals": false,
+      "lines": [],
+      "planItem": null,
+      "bests": [],
+      "fitness": null
+    },
+    "detail": {
+      "missing": [
+        "workout"
+      ],
+      "unavailable": []
+    },
+    "map": null
+  },
+  "9000000000105": {
+    "summary": {
+      "id": "9000000000105",
+      "icon": "strength",
+      "name": "Full body A",
+      "startLocal": "2025-09-03T18:05:00",
+      "durationS": 2850,
+      "distanceKm": null,
+      "load": 60,
+      "zoneSeconds": [
+        900,
+        1300,
+        400,
+        100,
+        0
+      ],
+      "aerobicTe": 3.8,
+      "aerobicLabel": "Improving",
+      "anaerobicTe": 1.2,
+      "anaerobicLabel": "Minor",
+      "benefit": "Tempo",
+      "avgHr": 110,
+      "intensityMin": null,
+      "vigorousMin": null,
+      "distanceUnit": "km"
+    },
+    "recoveryHours": 18,
+    "stats": [
+      {
+        "key": "duration",
+        "label": "Time",
+        "value": 2850,
+        "unit": "s"
+      },
+      {
+        "key": "averageHR",
+        "label": "Avg HR",
+        "value": 110,
+        "unit": "bpm"
+      },
+      {
+        "key": "maxHR",
+        "label": "Max HR",
+        "value": 129,
+        "unit": "bpm"
+      },
+      {
+        "key": "calories",
+        "label": "Calories",
+        "value": 712,
+        "unit": "kcal"
+      }
+    ],
+    "route": [],
+    "heartRate": [],
+    "zoneFloors": [
+      120,
+      138,
+      154,
+      167
+    ],
+    "splits": [],
+    "strength": {
+      "unit": "kg",
+      "figure": "female",
+      "checkedAt": "2025-09-04T00:05:00+00:00",
+      "sets": 13,
+      "reps": 144,
+      "unknownRepSets": 0,
+      "restS": 1170,
+      "records": 3,
+      "setsRecorded": true,
+      "zeroRepSets": 0,
+      "missingRepSets": 0,
+      "doubledSets": 0,
+      "unnamedSets": 0,
+      "muscles": [
+        {
+          "muscle": "chest",
+          "sets": 0
+        },
+        {
+          "muscle": "back",
+          "sets": 0
+        },
+        {
+          "muscle": "shoulders",
+          "sets": 0
+        },
+        {
+          "muscle": "arms",
+          "sets": 0
+        },
+        {
+          "muscle": "core",
+          "sets": 2
+        },
+        {
+          "muscle": "hips",
+          "sets": 2
+        },
+        {
+          "muscle": "quads",
+          "sets": 4
+        },
+        {
+          "muscle": "hamstrings",
+          "sets": 2
+        },
+        {
+          "muscle": "glutes",
+          "sets": 8
+        },
+        {
+          "muscle": "calves",
+          "sets": 3
+        }
+      ],
+      "exercises": [
+        {
+          "key": "SQUAT/BARBELL_BACK_SQUAT",
+          "name": "Barbell Back Squat",
+          "muscles": [
+            "quads",
+            "glutes"
+          ],
+          "sets": [
+            {
+              "reps": 8,
+              "weight": 60,
+              "durationS": 36,
+              "flags": [],
+              "record": false
+            },
+            {
+              "reps": 5,
+              "weight": 85,
+              "durationS": 27,
+              "flags": [],
+              "record": true
+            },
+            {
+              "reps": 5,
+              "weight": 85,
+              "durationS": 27,
+              "flags": [],
+              "record": false
+            },
+            {
+              "reps": 5,
+              "weight": 85,
+              "durationS": 27,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": "2025-08-27",
+          "lastSets": [
+            {
+              "weight": 60,
+              "reps": 8
+            },
+            {
+              "weight": 82.5,
+              "reps": 5
+            },
+            {
+              "weight": 82.5,
+              "reps": 5
+            },
+            {
+              "weight": 82.5,
+              "reps": 5
+            }
+          ],
+          "record": {
+            "weight": 85,
+            "reps": 5
+          }
+        },
+        {
+          "key": "DEADLIFT/ROMANIAN_DEADLIFT",
+          "name": "Romanian Deadlift",
+          "muscles": [
+            "hamstrings",
+            "glutes"
+          ],
+          "sets": [
+            {
+              "reps": 8,
+              "weight": 72.5,
+              "durationS": 36,
+              "flags": [],
+              "record": true
+            },
+            {
+              "reps": 8,
+              "weight": 72.5,
+              "durationS": 36,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": "2025-08-20",
+          "lastSets": [
+            {
+              "weight": 70,
+              "reps": 8
+            },
+            {
+              "weight": 70,
+              "reps": 8
+            }
+          ],
+          "record": {
+            "weight": 72.5,
+            "reps": 8
           }
         },
         {
@@ -3682,149 +1963,227 @@
           "sets": [
             {
               "reps": 15,
-              "weight": 40,
+              "weight": 32.5,
               "durationS": 57,
               "flags": [],
               "record": true
             },
             {
               "reps": 15,
-              "weight": 40,
+              "weight": 32.5,
               "durationS": 57,
               "flags": [],
               "record": false
             },
             {
               "reps": 15,
-              "weight": 40,
+              "weight": 32.5,
               "durationS": 57,
               "flags": [],
               "record": false
             }
           ],
-          "lastDate": "2025-10-08",
+          "lastDate": "2025-08-20",
           "lastSets": [
             {
-              "weight": 40,
+              "weight": 30,
               "reps": 15
             },
             {
-              "weight": 40,
+              "weight": 30,
               "reps": 15
             },
             {
-              "weight": 40,
+              "weight": 30,
               "reps": 15
             }
           ],
           "record": {
-            "weight": 40,
+            "weight": 32.5,
             "reps": 15
           }
         },
         {
-          "key": "CORE/BICYCLE_CRUNCH",
+          "key": "HIP_RAISE/BARBELL_HIP_THRUST_WITH_BENCH",
+          "name": "Barbell Hip Thrust With Bench",
+          "muscles": [
+            "hips",
+            "glutes"
+          ],
+          "sets": [
+            {
+              "reps": 10,
+              "weight": 60,
+              "durationS": 42,
+              "flags": [],
+              "record": false
+            },
+            {
+              "reps": 10,
+              "weight": 60,
+              "durationS": 42,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": "2025-08-20",
+          "lastSets": [
+            {
+              "weight": 60,
+              "reps": 10
+            },
+            {
+              "weight": 60,
+              "reps": 10
+            }
+          ],
+          "record": null
+        },
+        {
+          "key": "CRUNCH/BICYCLE_CRUNCH",
           "name": "Bicycle Crunch",
           "muscles": [
             "core"
           ],
           "sets": [
             {
-              "reps": 26,
-              "weight": 0,
-              "durationS": 90,
+              "reps": 20,
+              "weight": null,
+              "durationS": 72,
               "flags": [],
               "record": false
             },
             {
-              "reps": 26,
-              "weight": 0,
-              "durationS": 90,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 26,
-              "weight": 0,
-              "durationS": 90,
+              "reps": 20,
+              "weight": null,
+              "durationS": 72,
               "flags": [],
               "record": false
             }
           ],
-          "lastDate": "2025-10-08",
+          "lastDate": "2025-08-20",
           "lastSets": [
             {
-              "weight": 0,
-              "reps": 24
+              "weight": null,
+              "reps": 18
             },
             {
-              "weight": 0,
-              "reps": 24
-            },
-            {
-              "weight": 0,
-              "reps": 24
+              "weight": null,
+              "reps": 20
             }
           ],
           "record": null
         }
       ]
     },
-    "map": null
-  },
-  "9000000000102": {
-    "detail": {
-      "missing": [],
-      "unavailable": []
-    },
-    "counted": null,
     "along": null,
     "more": [],
     "recorded": [],
     "selfEvaluation": null,
-    "effects": [],
+    "effects": [
+      {
+        "kind": "aerobic",
+        "value": 3.8,
+        "band": "Improving",
+        "line": "builds your aerobic base",
+        "garminLabel": "Improving"
+      },
+      {
+        "kind": "anaerobic",
+        "value": 1.2,
+        "band": "Minor benefit",
+        "line": "little sprint or hard work",
+        "garminLabel": "Minor"
+      }
+    ],
     "vo2maxNew": null,
+    "counted": {
+      "week": "2025-09-01",
+      "goals": false,
+      "lines": [],
+      "planItem": null,
+      "bests": [],
+      "fitness": null
+    },
+    "detail": {
+      "missing": [
+        "workout"
+      ],
+      "unavailable": []
+    },
+    "map": null
+  },
+  "9000000000106": {
     "summary": {
-      "id": "9000000000102",
+      "id": "9000000000106",
       "icon": "strength",
-      "name": "Strength session",
-      "startLocal": "2025-08-13T18:05:00",
-      "durationS": 2700,
+      "name": "Full body B",
+      "startLocal": "2025-09-10T18:05:00",
+      "durationS": 2820,
       "distanceKm": null,
       "load": 60,
-      "zoneSeconds": [],
-      "aerobicTe": null,
-      "aerobicLabel": null,
-      "anaerobicTe": null,
-      "anaerobicLabel": null,
-      "benefit": null,
-      "avgHr": null,
+      "zoneSeconds": [
+        900,
+        1300,
+        400,
+        100,
+        0
+      ],
+      "aerobicTe": 3.8,
+      "aerobicLabel": "Improving",
+      "anaerobicTe": 1.2,
+      "anaerobicLabel": "Minor",
+      "benefit": "Tempo",
+      "avgHr": 110,
       "intensityMin": null,
       "vigorousMin": null,
       "distanceUnit": "km"
     },
-    "recoveryHours": null,
+    "recoveryHours": 18,
     "stats": [
       {
         "key": "duration",
         "label": "Time",
-        "value": 2700,
+        "value": 2820,
         "unit": "s"
+      },
+      {
+        "key": "averageHR",
+        "label": "Avg HR",
+        "value": 110,
+        "unit": "bpm"
+      },
+      {
+        "key": "maxHR",
+        "label": "Max HR",
+        "value": 129,
+        "unit": "bpm"
+      },
+      {
+        "key": "calories",
+        "label": "Calories",
+        "value": 705,
+        "unit": "kcal"
       }
     ],
     "route": [],
     "heartRate": [],
-    "zoneFloors": [],
+    "zoneFloors": [
+      120,
+      138,
+      154,
+      167
+    ],
     "splits": [],
     "strength": {
       "unit": "kg",
       "figure": "female",
-      "checkedAt": "2025-10-15T19:30:00Z",
-      "sets": 18,
-      "reps": 216,
+      "checkedAt": "2025-09-11T00:05:00+00:00",
+      "sets": 10,
+      "reps": 87,
       "unknownRepSets": 0,
-      "restS": 0,
-      "records": 0,
+      "restS": 900,
+      "records": 3,
       "setsRecorded": true,
       "zeroRepSets": 0,
       "missingRepSets": 0,
@@ -3833,23 +2192,23 @@
       "muscles": [
         {
           "muscle": "chest",
-          "sets": 3
+          "sets": 2
         },
         {
           "muscle": "back",
-          "sets": 3
+          "sets": 2
         },
         {
           "muscle": "shoulders",
-          "sets": 0
+          "sets": 2
         },
         {
           "muscle": "arms",
-          "sets": 3
+          "sets": 2
         },
         {
           "muscle": "core",
-          "sets": 3
+          "sets": 0
         },
         {
           "muscle": "hips",
@@ -3857,15 +2216,346 @@
         },
         {
           "muscle": "quads",
-          "sets": 3
+          "sets": 4
         },
         {
           "muscle": "hamstrings",
-          "sets": 3
+          "sets": 0
         },
         {
           "muscle": "glutes",
-          "sets": 6
+          "sets": 4
+        },
+        {
+          "muscle": "calves",
+          "sets": 0
+        }
+      ],
+      "exercises": [
+        {
+          "key": "SQUAT/BARBELL_BACK_SQUAT",
+          "name": "Barbell Back Squat",
+          "muscles": [
+            "quads",
+            "glutes"
+          ],
+          "sets": [
+            {
+              "reps": 8,
+              "weight": 60,
+              "durationS": 36,
+              "flags": [],
+              "record": false
+            },
+            {
+              "reps": 5,
+              "weight": 87.5,
+              "durationS": 27,
+              "flags": [],
+              "record": true
+            },
+            {
+              "reps": 5,
+              "weight": 87.5,
+              "durationS": 27,
+              "flags": [],
+              "record": false
+            },
+            {
+              "reps": 5,
+              "weight": 87.5,
+              "durationS": 27,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": "2025-09-03",
+          "lastSets": [
+            {
+              "weight": 60,
+              "reps": 8
+            },
+            {
+              "weight": 85,
+              "reps": 5
+            },
+            {
+              "weight": 85,
+              "reps": 5
+            },
+            {
+              "weight": 85,
+              "reps": 5
+            }
+          ],
+          "record": {
+            "weight": 87.5,
+            "reps": 5
+          }
+        },
+        {
+          "key": "BENCH_PRESS/BARBELL_BENCH_PRESS",
+          "name": "Barbell Bench Press",
+          "muscles": [
+            "chest"
+          ],
+          "sets": [
+            {
+              "reps": 12,
+              "weight": 62.5,
+              "durationS": 48,
+              "flags": [],
+              "record": true
+            },
+            {
+              "reps": 12,
+              "weight": 62.5,
+              "durationS": 48,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": "2025-08-27",
+          "lastSets": [
+            {
+              "weight": 60,
+              "reps": 12
+            },
+            {
+              "weight": 60,
+              "reps": 12
+            }
+          ],
+          "record": {
+            "weight": 62.5,
+            "reps": 12
+          }
+        },
+        {
+          "key": "ROW/ONE_ARM_DUMBBELL_ROW",
+          "name": "One Arm Dumbbell Row",
+          "muscles": [
+            "back",
+            "arms"
+          ],
+          "sets": [
+            {
+              "reps": 12,
+              "weight": 27,
+              "durationS": 48,
+              "flags": [],
+              "record": true
+            },
+            {
+              "reps": 12,
+              "weight": 27,
+              "durationS": 48,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": "2025-08-27",
+          "lastSets": [
+            {
+              "weight": 26,
+              "reps": 12
+            },
+            {
+              "weight": 26,
+              "reps": 12
+            }
+          ],
+          "record": {
+            "weight": 27,
+            "reps": 12
+          }
+        },
+        {
+          "key": "SHOULDER_PRESS/OVERHEAD_BARBELL_PRESS",
+          "name": "Overhead Barbell Press",
+          "muscles": [
+            "shoulders"
+          ],
+          "sets": [
+            {
+              "reps": 8,
+              "weight": 35,
+              "durationS": 36,
+              "flags": [],
+              "record": false
+            },
+            {
+              "reps": 8,
+              "weight": 35,
+              "durationS": 36,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": "2025-08-27",
+          "lastSets": [
+            {
+              "weight": 35,
+              "reps": 8
+            },
+            {
+              "weight": 35,
+              "reps": 8
+            }
+          ],
+          "record": null
+        }
+      ]
+    },
+    "along": null,
+    "more": [],
+    "recorded": [],
+    "selfEvaluation": null,
+    "effects": [
+      {
+        "kind": "aerobic",
+        "value": 3.8,
+        "band": "Improving",
+        "line": "builds your aerobic base",
+        "garminLabel": "Improving"
+      },
+      {
+        "kind": "anaerobic",
+        "value": 1.2,
+        "band": "Minor benefit",
+        "line": "little sprint or hard work",
+        "garminLabel": "Minor"
+      }
+    ],
+    "vo2maxNew": 49.2,
+    "counted": {
+      "week": "2025-09-08",
+      "goals": false,
+      "lines": [],
+      "planItem": null,
+      "bests": [],
+      "fitness": null
+    },
+    "detail": {
+      "missing": [
+        "workout"
+      ],
+      "unavailable": []
+    },
+    "map": null
+  },
+  "9000000000107": {
+    "summary": {
+      "id": "9000000000107",
+      "icon": "strength",
+      "name": "Full body A",
+      "startLocal": "2025-09-17T18:05:00",
+      "durationS": 2790,
+      "distanceKm": null,
+      "load": 60,
+      "zoneSeconds": [
+        900,
+        1300,
+        400,
+        100,
+        0
+      ],
+      "aerobicTe": 3.8,
+      "aerobicLabel": "Improving",
+      "anaerobicTe": 1.2,
+      "anaerobicLabel": "Minor",
+      "benefit": "Tempo",
+      "avgHr": 110,
+      "intensityMin": null,
+      "vigorousMin": null,
+      "distanceUnit": "km"
+    },
+    "recoveryHours": 18,
+    "stats": [
+      {
+        "key": "duration",
+        "label": "Time",
+        "value": 2790,
+        "unit": "s"
+      },
+      {
+        "key": "averageHR",
+        "label": "Avg HR",
+        "value": 110,
+        "unit": "bpm"
+      },
+      {
+        "key": "maxHR",
+        "label": "Max HR",
+        "value": 129,
+        "unit": "bpm"
+      },
+      {
+        "key": "calories",
+        "label": "Calories",
+        "value": 697,
+        "unit": "kcal"
+      }
+    ],
+    "route": [],
+    "heartRate": [],
+    "zoneFloors": [
+      120,
+      138,
+      154,
+      167
+    ],
+    "splits": [],
+    "strength": {
+      "unit": "kg",
+      "figure": "female",
+      "checkedAt": "2025-09-18T00:05:00+00:00",
+      "sets": 13,
+      "reps": 146,
+      "unknownRepSets": 0,
+      "restS": 1170,
+      "records": 3,
+      "setsRecorded": true,
+      "zeroRepSets": 0,
+      "missingRepSets": 0,
+      "doubledSets": 0,
+      "unnamedSets": 0,
+      "muscles": [
+        {
+          "muscle": "chest",
+          "sets": 0
+        },
+        {
+          "muscle": "back",
+          "sets": 0
+        },
+        {
+          "muscle": "shoulders",
+          "sets": 0
+        },
+        {
+          "muscle": "arms",
+          "sets": 0
+        },
+        {
+          "muscle": "core",
+          "sets": 2
+        },
+        {
+          "muscle": "hips",
+          "sets": 2
+        },
+        {
+          "muscle": "quads",
+          "sets": 4
+        },
+        {
+          "muscle": "hamstrings",
+          "sets": 2
+        },
+        {
+          "muscle": "glutes",
+          "sets": 8
         },
         {
           "muscle": "calves",
@@ -3882,32 +2572,39 @@
           ],
           "sets": [
             {
+              "reps": 8,
+              "weight": 60,
+              "durationS": 36,
+              "flags": [],
+              "record": false
+            },
+            {
               "reps": 5,
-              "weight": 87.5,
+              "weight": 90,
+              "durationS": 27,
+              "flags": [],
+              "record": true
+            },
+            {
+              "reps": 5,
+              "weight": 90,
               "durationS": 27,
               "flags": [],
               "record": false
             },
             {
               "reps": 5,
-              "weight": 87.5,
-              "durationS": 27,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 5,
-              "weight": 87.5,
+              "weight": 90,
               "durationS": 27,
               "flags": [],
               "record": false
             }
           ],
-          "lastDate": "2025-08-06",
+          "lastDate": "2025-09-10",
           "lastSets": [
             {
-              "weight": 87.5,
-              "reps": 5
+              "weight": 60,
+              "reps": 8
             },
             {
               "weight": 87.5,
@@ -3916,9 +2613,394 @@
             {
               "weight": 87.5,
               "reps": 5
+            },
+            {
+              "weight": 87.5,
+              "reps": 5
+            }
+          ],
+          "record": {
+            "weight": 90,
+            "reps": 5
+          }
+        },
+        {
+          "key": "DEADLIFT/ROMANIAN_DEADLIFT",
+          "name": "Romanian Deadlift",
+          "muscles": [
+            "hamstrings",
+            "glutes"
+          ],
+          "sets": [
+            {
+              "reps": 8,
+              "weight": 75,
+              "durationS": 36,
+              "flags": [],
+              "record": true
+            },
+            {
+              "reps": 8,
+              "weight": 75,
+              "durationS": 36,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": "2025-09-03",
+          "lastSets": [
+            {
+              "weight": 72.5,
+              "reps": 8
+            },
+            {
+              "weight": 72.5,
+              "reps": 8
+            }
+          ],
+          "record": {
+            "weight": 75,
+            "reps": 8
+          }
+        },
+        {
+          "key": "CALF_RAISE/STANDING_CALF_RAISE",
+          "name": "Standing Calf Raise",
+          "muscles": [
+            "calves"
+          ],
+          "sets": [
+            {
+              "reps": 15,
+              "weight": 35,
+              "durationS": 57,
+              "flags": [],
+              "record": true
+            },
+            {
+              "reps": 15,
+              "weight": 35,
+              "durationS": 57,
+              "flags": [],
+              "record": false
+            },
+            {
+              "reps": 15,
+              "weight": 35,
+              "durationS": 57,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": "2025-09-03",
+          "lastSets": [
+            {
+              "weight": 32.5,
+              "reps": 15
+            },
+            {
+              "weight": 32.5,
+              "reps": 15
+            },
+            {
+              "weight": 32.5,
+              "reps": 15
+            }
+          ],
+          "record": {
+            "weight": 35,
+            "reps": 15
+          }
+        },
+        {
+          "key": "HIP_RAISE/BARBELL_HIP_THRUST_WITH_BENCH",
+          "name": "Barbell Hip Thrust With Bench",
+          "muscles": [
+            "hips",
+            "glutes"
+          ],
+          "sets": [
+            {
+              "reps": 10,
+              "weight": 60,
+              "durationS": 42,
+              "flags": [],
+              "record": false
+            },
+            {
+              "reps": 10,
+              "weight": 60,
+              "durationS": 42,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": "2025-09-03",
+          "lastSets": [
+            {
+              "weight": 60,
+              "reps": 10
+            },
+            {
+              "weight": 60,
+              "reps": 10
             }
           ],
           "record": null
+        },
+        {
+          "key": "CRUNCH/BICYCLE_CRUNCH",
+          "name": "Bicycle Crunch",
+          "muscles": [
+            "core"
+          ],
+          "sets": [
+            {
+              "reps": 22,
+              "weight": null,
+              "durationS": 78,
+              "flags": [],
+              "record": false
+            },
+            {
+              "reps": 20,
+              "weight": null,
+              "durationS": 72,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": "2025-09-03",
+          "lastSets": [
+            {
+              "weight": null,
+              "reps": 20
+            },
+            {
+              "weight": null,
+              "reps": 20
+            }
+          ],
+          "record": null
+        }
+      ]
+    },
+    "along": null,
+    "more": [],
+    "recorded": [],
+    "selfEvaluation": null,
+    "effects": [
+      {
+        "kind": "aerobic",
+        "value": 3.8,
+        "band": "Improving",
+        "line": "builds your aerobic base",
+        "garminLabel": "Improving"
+      },
+      {
+        "kind": "anaerobic",
+        "value": 1.2,
+        "band": "Minor benefit",
+        "line": "little sprint or hard work",
+        "garminLabel": "Minor"
+      }
+    ],
+    "vo2maxNew": 49.43333333333333,
+    "counted": {
+      "week": "2025-09-15",
+      "goals": false,
+      "lines": [],
+      "planItem": null,
+      "bests": [],
+      "fitness": null
+    },
+    "detail": {
+      "missing": [
+        "workout"
+      ],
+      "unavailable": []
+    },
+    "map": null
+  },
+  "9000000000108": {
+    "summary": {
+      "id": "9000000000108",
+      "icon": "strength",
+      "name": "Full body B",
+      "startLocal": "2025-09-24T18:05:00",
+      "durationS": 2760,
+      "distanceKm": null,
+      "load": 60,
+      "zoneSeconds": [
+        900,
+        1300,
+        400,
+        100,
+        0
+      ],
+      "aerobicTe": 3.8,
+      "aerobicLabel": "Improving",
+      "anaerobicTe": 1.2,
+      "anaerobicLabel": "Minor",
+      "benefit": "Tempo",
+      "avgHr": 110,
+      "intensityMin": null,
+      "vigorousMin": null,
+      "distanceUnit": "km"
+    },
+    "recoveryHours": 18,
+    "stats": [
+      {
+        "key": "duration",
+        "label": "Time",
+        "value": 2760,
+        "unit": "s"
+      },
+      {
+        "key": "averageHR",
+        "label": "Avg HR",
+        "value": 110,
+        "unit": "bpm"
+      },
+      {
+        "key": "maxHR",
+        "label": "Max HR",
+        "value": 129,
+        "unit": "bpm"
+      },
+      {
+        "key": "calories",
+        "label": "Calories",
+        "value": 690,
+        "unit": "kcal"
+      }
+    ],
+    "route": [],
+    "heartRate": [],
+    "zoneFloors": [
+      120,
+      138,
+      154,
+      167
+    ],
+    "splits": [],
+    "strength": {
+      "unit": "kg",
+      "figure": "female",
+      "checkedAt": "2025-09-25T00:05:00+00:00",
+      "sets": 10,
+      "reps": 87,
+      "unknownRepSets": 0,
+      "restS": 900,
+      "records": 3,
+      "setsRecorded": true,
+      "zeroRepSets": 0,
+      "missingRepSets": 0,
+      "doubledSets": 0,
+      "unnamedSets": 0,
+      "muscles": [
+        {
+          "muscle": "chest",
+          "sets": 2
+        },
+        {
+          "muscle": "back",
+          "sets": 2
+        },
+        {
+          "muscle": "shoulders",
+          "sets": 2
+        },
+        {
+          "muscle": "arms",
+          "sets": 2
+        },
+        {
+          "muscle": "core",
+          "sets": 0
+        },
+        {
+          "muscle": "hips",
+          "sets": 0
+        },
+        {
+          "muscle": "quads",
+          "sets": 4
+        },
+        {
+          "muscle": "hamstrings",
+          "sets": 0
+        },
+        {
+          "muscle": "glutes",
+          "sets": 4
+        },
+        {
+          "muscle": "calves",
+          "sets": 0
+        }
+      ],
+      "exercises": [
+        {
+          "key": "SQUAT/BARBELL_BACK_SQUAT",
+          "name": "Barbell Back Squat",
+          "muscles": [
+            "quads",
+            "glutes"
+          ],
+          "sets": [
+            {
+              "reps": 8,
+              "weight": 60,
+              "durationS": 36,
+              "flags": [],
+              "record": false
+            },
+            {
+              "reps": 5,
+              "weight": 92.5,
+              "durationS": 27,
+              "flags": [],
+              "record": true
+            },
+            {
+              "reps": 5,
+              "weight": 92.5,
+              "durationS": 27,
+              "flags": [],
+              "record": false
+            },
+            {
+              "reps": 5,
+              "weight": 92.5,
+              "durationS": 27,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": "2025-09-17",
+          "lastSets": [
+            {
+              "weight": 60,
+              "reps": 8
+            },
+            {
+              "weight": 90,
+              "reps": 5
+            },
+            {
+              "weight": 90,
+              "reps": 5
+            },
+            {
+              "weight": 90,
+              "reps": 5
+            }
+          ],
+          "record": {
+            "weight": 92.5,
+            "reps": 5
+          }
         },
         {
           "key": "BENCH_PRESS/BARBELL_BENCH_PRESS",
@@ -3932,14 +3014,7 @@
               "weight": 65,
               "durationS": 48,
               "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 65,
-              "durationS": 48,
-              "flags": [],
-              "record": false
+              "record": true
             },
             {
               "reps": 12,
@@ -3949,7 +3024,7 @@
               "record": false
             }
           ],
-          "lastDate": "2025-08-06",
+          "lastDate": "2025-09-10",
           "lastSets": [
             {
               "weight": 62.5,
@@ -3958,60 +3033,12 @@
             {
               "weight": 62.5,
               "reps": 12
-            },
-            {
-              "weight": 62.5,
-              "reps": 12
             }
           ],
-          "record": null
-        },
-        {
-          "key": "DEADLIFT/ROMANIAN_DEADLIFT",
-          "name": "Romanian Deadlift",
-          "muscles": [
-            "hamstrings",
-            "glutes"
-          ],
-          "sets": [
-            {
-              "reps": 8,
-              "weight": 72.5,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 8,
-              "weight": 72.5,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 8,
-              "weight": 72.5,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-08-06",
-          "lastSets": [
-            {
-              "weight": 70,
-              "reps": 8
-            },
-            {
-              "weight": 70,
-              "reps": 8
-            },
-            {
-              "weight": 70,
-              "reps": 8
-            }
-          ],
-          "record": null
+          "record": {
+            "weight": 65,
+            "reps": 12
+          }
         },
         {
           "key": "ROW/ONE_ARM_DUMBBELL_ROW",
@@ -4023,192 +3050,180 @@
           "sets": [
             {
               "reps": 12,
-              "weight": 26,
+              "weight": 28,
               "durationS": 48,
               "flags": [],
-              "record": false
+              "record": true
             },
             {
               "reps": 12,
-              "weight": 26,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 26,
+              "weight": 28,
               "durationS": 48,
               "flags": [],
               "record": false
             }
           ],
-          "lastDate": "2025-08-06",
+          "lastDate": "2025-09-10",
           "lastSets": [
             {
-              "weight": 26,
+              "weight": 27,
               "reps": 12
             },
             {
-              "weight": 26,
-              "reps": 12
-            },
-            {
-              "weight": 26,
+              "weight": 27,
               "reps": 12
             }
           ],
-          "record": null
+          "record": {
+            "weight": 28,
+            "reps": 12
+          }
         },
         {
-          "key": "CALF_RAISE/STANDING_CALF_RAISE",
-          "name": "Standing Calf Raise",
+          "key": "SHOULDER_PRESS/OVERHEAD_BARBELL_PRESS",
+          "name": "Overhead Barbell Press",
           "muscles": [
-            "calves"
+            "shoulders"
           ],
           "sets": [
             {
-              "reps": 15,
-              "weight": 32.5,
-              "durationS": 57,
+              "reps": 8,
+              "weight": 35,
+              "durationS": 36,
               "flags": [],
               "record": false
             },
             {
-              "reps": 15,
-              "weight": 32.5,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 15,
-              "weight": 32.5,
-              "durationS": 57,
+              "reps": 8,
+              "weight": 35,
+              "durationS": 36,
               "flags": [],
               "record": false
             }
           ],
-          "lastDate": "2025-08-06",
+          "lastDate": "2025-09-10",
           "lastSets": [
             {
-              "weight": 30,
-              "reps": 15
+              "weight": 35,
+              "reps": 8
             },
             {
-              "weight": 30,
-              "reps": 15
-            },
-            {
-              "weight": 30,
-              "reps": 15
-            }
-          ],
-          "record": null
-        },
-        {
-          "key": "CORE/BICYCLE_CRUNCH",
-          "name": "Bicycle Crunch",
-          "muscles": [
-            "core"
-          ],
-          "sets": [
-            {
-              "reps": 20,
-              "weight": 0,
-              "durationS": 72,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 20,
-              "weight": 0,
-              "durationS": 72,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 20,
-              "weight": 0,
-              "durationS": 72,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-08-06",
-          "lastSets": [
-            {
-              "weight": 0,
-              "reps": 18
-            },
-            {
-              "weight": 0,
-              "reps": 18
-            },
-            {
-              "weight": 0,
-              "reps": 18
+              "weight": 35,
+              "reps": 8
             }
           ],
           "record": null
         }
       ]
     },
-    "map": null
-  },
-  "9000000000101": {
-    "detail": {
-      "missing": [],
-      "unavailable": []
-    },
-    "counted": null,
     "along": null,
     "more": [],
     "recorded": [],
     "selfEvaluation": null,
-    "effects": [],
-    "vo2maxNew": null,
+    "effects": [
+      {
+        "kind": "aerobic",
+        "value": 3.8,
+        "band": "Improving",
+        "line": "builds your aerobic base",
+        "garminLabel": "Improving"
+      },
+      {
+        "kind": "anaerobic",
+        "value": 1.2,
+        "band": "Minor benefit",
+        "line": "little sprint or hard work",
+        "garminLabel": "Minor"
+      }
+    ],
+    "vo2maxNew": 49.666666666666664,
+    "counted": {
+      "week": "2025-09-22",
+      "goals": false,
+      "lines": [],
+      "planItem": null,
+      "bests": [],
+      "fitness": null
+    },
+    "detail": {
+      "missing": [
+        "workout"
+      ],
+      "unavailable": []
+    },
+    "map": null
+  },
+  "9000000000109": {
     "summary": {
-      "id": "9000000000101",
+      "id": "9000000000109",
       "icon": "strength",
-      "name": "Strength session",
-      "startLocal": "2025-08-06T18:05:00",
-      "durationS": 2700,
+      "name": "Full body A",
+      "startLocal": "2025-10-01T18:05:00",
+      "durationS": 2730,
       "distanceKm": null,
       "load": 60,
-      "zoneSeconds": [],
-      "aerobicTe": null,
-      "aerobicLabel": null,
-      "anaerobicTe": null,
-      "anaerobicLabel": null,
-      "benefit": null,
-      "avgHr": null,
+      "zoneSeconds": [
+        900,
+        1300,
+        400,
+        100,
+        0
+      ],
+      "aerobicTe": 3.8,
+      "aerobicLabel": "Improving",
+      "anaerobicTe": 1.2,
+      "anaerobicLabel": "Minor",
+      "benefit": "Tempo",
+      "avgHr": 110,
       "intensityMin": null,
       "vigorousMin": null,
       "distanceUnit": "km"
     },
-    "recoveryHours": null,
+    "recoveryHours": 18,
     "stats": [
       {
         "key": "duration",
         "label": "Time",
-        "value": 2700,
+        "value": 2730,
         "unit": "s"
+      },
+      {
+        "key": "averageHR",
+        "label": "Avg HR",
+        "value": 110,
+        "unit": "bpm"
+      },
+      {
+        "key": "maxHR",
+        "label": "Max HR",
+        "value": 129,
+        "unit": "bpm"
+      },
+      {
+        "key": "calories",
+        "label": "Calories",
+        "value": 682,
+        "unit": "kcal"
       }
     ],
     "route": [],
     "heartRate": [],
-    "zoneFloors": [],
+    "zoneFloors": [
+      120,
+      138,
+      154,
+      167
+    ],
     "splits": [],
     "strength": {
       "unit": "kg",
       "figure": "female",
-      "checkedAt": "2025-10-15T19:30:00Z",
-      "sets": 18,
-      "reps": 210,
+      "checkedAt": "2025-10-02T00:05:00+00:00",
+      "sets": 13,
+      "reps": 148,
       "unknownRepSets": 0,
-      "restS": 0,
-      "records": 0,
+      "restS": 1170,
+      "records": 3,
       "setsRecorded": true,
       "zeroRepSets": 0,
       "missingRepSets": 0,
@@ -4217,11 +3232,11 @@
       "muscles": [
         {
           "muscle": "chest",
-          "sets": 3
+          "sets": 0
         },
         {
           "muscle": "back",
-          "sets": 3
+          "sets": 0
         },
         {
           "muscle": "shoulders",
@@ -4229,27 +3244,27 @@
         },
         {
           "muscle": "arms",
-          "sets": 3
-        },
-        {
-          "muscle": "core",
-          "sets": 3
-        },
-        {
-          "muscle": "hips",
           "sets": 0
         },
         {
+          "muscle": "core",
+          "sets": 2
+        },
+        {
+          "muscle": "hips",
+          "sets": 2
+        },
+        {
           "muscle": "quads",
-          "sets": 3
+          "sets": 4
         },
         {
           "muscle": "hamstrings",
-          "sets": 3
+          "sets": 2
         },
         {
           "muscle": "glutes",
-          "sets": 6
+          "sets": 8
         },
         {
           "muscle": "calves",
@@ -4266,89 +3281,57 @@
           ],
           "sets": [
             {
+              "reps": 8,
+              "weight": 60,
+              "durationS": 36,
+              "flags": [],
+              "record": false
+            },
+            {
               "reps": 5,
-              "weight": 87.5,
+              "weight": 95,
+              "durationS": 27,
+              "flags": [],
+              "record": true
+            },
+            {
+              "reps": 5,
+              "weight": 95,
               "durationS": 27,
               "flags": [],
               "record": false
             },
             {
               "reps": 5,
-              "weight": 87.5,
-              "durationS": 27,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 5,
-              "weight": 87.5,
+              "weight": 95,
               "durationS": 27,
               "flags": [],
               "record": false
             }
           ],
-          "lastDate": "2025-07-30",
+          "lastDate": "2025-09-24",
           "lastSets": [
             {
-              "weight": 85,
+              "weight": 60,
+              "reps": 8
+            },
+            {
+              "weight": 92.5,
               "reps": 5
             },
             {
-              "weight": 85,
+              "weight": 92.5,
               "reps": 5
             },
             {
-              "weight": 85,
+              "weight": 92.5,
               "reps": 5
             }
           ],
-          "record": null
-        },
-        {
-          "key": "BENCH_PRESS/BARBELL_BENCH_PRESS",
-          "name": "Barbell Bench Press",
-          "muscles": [
-            "chest"
-          ],
-          "sets": [
-            {
-              "reps": 12,
-              "weight": 62.5,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 62.5,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 62.5,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-07-30",
-          "lastSets": [
-            {
-              "weight": 62.5,
-              "reps": 12
-            },
-            {
-              "weight": 62.5,
-              "reps": 12
-            },
-            {
-              "weight": 62.5,
-              "reps": 12
-            }
-          ],
-          "record": null
+          "record": {
+            "weight": 95,
+            "reps": 5
+          }
         },
         {
           "key": "DEADLIFT/ROMANIAN_DEADLIFT",
@@ -4360,89 +3343,34 @@
           "sets": [
             {
               "reps": 8,
-              "weight": 70,
+              "weight": 77.5,
               "durationS": 36,
               "flags": [],
-              "record": false
+              "record": true
             },
             {
               "reps": 8,
-              "weight": 70,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 8,
-              "weight": 70,
+              "weight": 77.5,
               "durationS": 36,
               "flags": [],
               "record": false
             }
           ],
-          "lastDate": "2025-07-30",
+          "lastDate": "2025-09-17",
           "lastSets": [
             {
-              "weight": 70,
+              "weight": 75,
               "reps": 8
             },
             {
-              "weight": 70,
-              "reps": 8
-            },
-            {
-              "weight": 70,
+              "weight": 75,
               "reps": 8
             }
           ],
-          "record": null
-        },
-        {
-          "key": "ROW/ONE_ARM_DUMBBELL_ROW",
-          "name": "One Arm Dumbbell Row",
-          "muscles": [
-            "back",
-            "arms"
-          ],
-          "sets": [
-            {
-              "reps": 12,
-              "weight": 26,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 26,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 26,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            }
-          ],
-          "lastDate": "2025-07-30",
-          "lastSets": [
-            {
-              "weight": 26,
-              "reps": 12
-            },
-            {
-              "weight": 26,
-              "reps": 12
-            },
-            {
-              "weight": 26,
-              "reps": 12
-            }
-          ],
-          "record": null
+          "record": {
+            "weight": 77.5,
+            "reps": 8
+          }
         },
         {
           "key": "CALF_RAISE/STANDING_CALF_RAISE",
@@ -4453,146 +3381,227 @@
           "sets": [
             {
               "reps": 15,
-              "weight": 30,
+              "weight": 37.5,
+              "durationS": 57,
+              "flags": [],
+              "record": true
+            },
+            {
+              "reps": 15,
+              "weight": 37.5,
               "durationS": 57,
               "flags": [],
               "record": false
             },
             {
               "reps": 15,
-              "weight": 30,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 15,
-              "weight": 30,
+              "weight": 37.5,
               "durationS": 57,
               "flags": [],
               "record": false
             }
           ],
-          "lastDate": "2025-07-30",
+          "lastDate": "2025-09-17",
           "lastSets": [
             {
-              "weight": 30,
+              "weight": 35,
               "reps": 15
             },
             {
-              "weight": 30,
+              "weight": 35,
               "reps": 15
             },
             {
-              "weight": 30,
+              "weight": 35,
               "reps": 15
+            }
+          ],
+          "record": {
+            "weight": 37.5,
+            "reps": 15
+          }
+        },
+        {
+          "key": "HIP_RAISE/BARBELL_HIP_THRUST_WITH_BENCH",
+          "name": "Barbell Hip Thrust With Bench",
+          "muscles": [
+            "hips",
+            "glutes"
+          ],
+          "sets": [
+            {
+              "reps": 10,
+              "weight": 60,
+              "durationS": 42,
+              "flags": [],
+              "record": false
+            },
+            {
+              "reps": 10,
+              "weight": 60,
+              "durationS": 42,
+              "flags": [],
+              "record": false
+            }
+          ],
+          "lastDate": "2025-09-17",
+          "lastSets": [
+            {
+              "weight": 60,
+              "reps": 10
+            },
+            {
+              "weight": 60,
+              "reps": 10
             }
           ],
           "record": null
         },
         {
-          "key": "CORE/BICYCLE_CRUNCH",
+          "key": "CRUNCH/BICYCLE_CRUNCH",
           "name": "Bicycle Crunch",
           "muscles": [
             "core"
           ],
           "sets": [
             {
-              "reps": 18,
-              "weight": 0,
-              "durationS": 66,
+              "reps": 24,
+              "weight": null,
+              "durationS": 84,
               "flags": [],
               "record": false
             },
             {
-              "reps": 18,
-              "weight": 0,
-              "durationS": 66,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 18,
-              "weight": 0,
-              "durationS": 66,
+              "reps": 20,
+              "weight": null,
+              "durationS": 72,
               "flags": [],
               "record": false
             }
           ],
-          "lastDate": "2025-07-30",
+          "lastDate": "2025-09-17",
           "lastSets": [
             {
-              "weight": 0,
-              "reps": 18
+              "weight": null,
+              "reps": 22
             },
             {
-              "weight": 0,
-              "reps": 18
-            },
-            {
-              "weight": 0,
-              "reps": 18
+              "weight": null,
+              "reps": 20
             }
           ],
           "record": null
         }
       ]
     },
-    "map": null
-  },
-  "9000000000100": {
-    "detail": {
-      "missing": [],
-      "unavailable": []
-    },
-    "counted": null,
     "along": null,
     "more": [],
     "recorded": [],
     "selfEvaluation": null,
-    "effects": [],
-    "vo2maxNew": null,
+    "effects": [
+      {
+        "kind": "aerobic",
+        "value": 3.8,
+        "band": "Improving",
+        "line": "builds your aerobic base",
+        "garminLabel": "Improving"
+      },
+      {
+        "kind": "anaerobic",
+        "value": 1.2,
+        "band": "Minor benefit",
+        "line": "little sprint or hard work",
+        "garminLabel": "Minor"
+      }
+    ],
+    "vo2maxNew": 49.9,
+    "counted": {
+      "week": "2025-09-29",
+      "goals": false,
+      "lines": [],
+      "planItem": null,
+      "bests": [],
+      "fitness": null
+    },
+    "detail": {
+      "missing": [
+        "workout"
+      ],
+      "unavailable": []
+    },
+    "map": null
+  },
+  "9000000000110": {
     "summary": {
-      "id": "9000000000100",
+      "id": "9000000000110",
       "icon": "strength",
-      "name": "Strength session",
-      "startLocal": "2025-07-30T18:05:00",
+      "name": "Full body B",
+      "startLocal": "2025-10-08T18:05:00",
       "durationS": 2700,
       "distanceKm": null,
       "load": 60,
-      "zoneSeconds": [],
-      "aerobicTe": null,
-      "aerobicLabel": null,
-      "anaerobicTe": null,
-      "anaerobicLabel": null,
-      "benefit": null,
-      "avgHr": null,
+      "zoneSeconds": [
+        900,
+        1300,
+        400,
+        100,
+        0
+      ],
+      "aerobicTe": 3.8,
+      "aerobicLabel": "Improving",
+      "anaerobicTe": 1.2,
+      "anaerobicLabel": "Minor",
+      "benefit": "Tempo",
+      "avgHr": 110,
       "intensityMin": null,
       "vigorousMin": null,
       "distanceUnit": "km"
     },
-    "recoveryHours": null,
+    "recoveryHours": 18,
     "stats": [
       {
         "key": "duration",
         "label": "Time",
         "value": 2700,
         "unit": "s"
+      },
+      {
+        "key": "averageHR",
+        "label": "Avg HR",
+        "value": 110,
+        "unit": "bpm"
+      },
+      {
+        "key": "maxHR",
+        "label": "Max HR",
+        "value": 129,
+        "unit": "bpm"
+      },
+      {
+        "key": "calories",
+        "label": "Calories",
+        "value": 675,
+        "unit": "kcal"
       }
     ],
     "route": [],
     "heartRate": [],
-    "zoneFloors": [],
+    "zoneFloors": [
+      120,
+      138,
+      154,
+      167
+    ],
     "splits": [],
     "strength": {
       "unit": "kg",
       "figure": "female",
-      "checkedAt": "2025-10-15T19:30:00Z",
-      "sets": 18,
-      "reps": 210,
+      "checkedAt": "2025-10-09T00:05:00+00:00",
+      "sets": 10,
+      "reps": 87,
       "unknownRepSets": 0,
-      "restS": 0,
-      "records": 0,
+      "restS": 900,
+      "records": 3,
       "setsRecorded": true,
       "zeroRepSets": 0,
       "missingRepSets": 0,
@@ -4601,23 +3610,23 @@
       "muscles": [
         {
           "muscle": "chest",
-          "sets": 3
+          "sets": 2
         },
         {
           "muscle": "back",
-          "sets": 3
+          "sets": 2
         },
         {
           "muscle": "shoulders",
-          "sets": 0
+          "sets": 2
         },
         {
           "muscle": "arms",
-          "sets": 3
+          "sets": 2
         },
         {
           "muscle": "core",
-          "sets": 3
+          "sets": 0
         },
         {
           "muscle": "hips",
@@ -4625,19 +3634,19 @@
         },
         {
           "muscle": "quads",
-          "sets": 3
+          "sets": 4
         },
         {
           "muscle": "hamstrings",
-          "sets": 3
+          "sets": 0
         },
         {
           "muscle": "glutes",
-          "sets": 6
+          "sets": 4
         },
         {
           "muscle": "calves",
-          "sets": 3
+          "sets": 0
         }
       ],
       "exercises": [
@@ -4650,30 +3659,57 @@
           ],
           "sets": [
             {
+              "reps": 8,
+              "weight": 60,
+              "durationS": 36,
+              "flags": [],
+              "record": false
+            },
+            {
               "reps": 5,
-              "weight": 85,
+              "weight": 97.5,
+              "durationS": 27,
+              "flags": [],
+              "record": true
+            },
+            {
+              "reps": 5,
+              "weight": 97.5,
               "durationS": 27,
               "flags": [],
               "record": false
             },
             {
               "reps": 5,
-              "weight": 85,
-              "durationS": 27,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 5,
-              "weight": 85,
+              "weight": 97.5,
               "durationS": 27,
               "flags": [],
               "record": false
             }
           ],
-          "lastDate": null,
-          "lastSets": [],
-          "record": null
+          "lastDate": "2025-10-01",
+          "lastSets": [
+            {
+              "weight": 60,
+              "reps": 8
+            },
+            {
+              "weight": 95,
+              "reps": 5
+            },
+            {
+              "weight": 95,
+              "reps": 5
+            },
+            {
+              "weight": 95,
+              "reps": 5
+            }
+          ],
+          "record": {
+            "weight": 97.5,
+            "reps": 5
+          }
         },
         {
           "key": "BENCH_PRESS/BARBELL_BENCH_PRESS",
@@ -4684,63 +3720,34 @@
           "sets": [
             {
               "reps": 12,
-              "weight": 62.5,
+              "weight": 67.5,
               "durationS": 48,
               "flags": [],
-              "record": false
+              "record": true
             },
             {
               "reps": 12,
-              "weight": 62.5,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 62.5,
+              "weight": 67.5,
               "durationS": 48,
               "flags": [],
               "record": false
             }
           ],
-          "lastDate": null,
-          "lastSets": [],
-          "record": null
-        },
-        {
-          "key": "DEADLIFT/ROMANIAN_DEADLIFT",
-          "name": "Romanian Deadlift",
-          "muscles": [
-            "hamstrings",
-            "glutes"
-          ],
-          "sets": [
+          "lastDate": "2025-09-24",
+          "lastSets": [
             {
-              "reps": 8,
-              "weight": 70,
-              "durationS": 36,
-              "flags": [],
-              "record": false
+              "weight": 65,
+              "reps": 12
             },
             {
-              "reps": 8,
-              "weight": 70,
-              "durationS": 36,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 8,
-              "weight": 70,
-              "durationS": 36,
-              "flags": [],
-              "record": false
+              "weight": 65,
+              "reps": 12
             }
           ],
-          "lastDate": null,
-          "lastSets": [],
-          "record": null
+          "record": {
+            "weight": 67.5,
+            "reps": 12
+          }
         },
         {
           "key": "ROW/ONE_ARM_DUMBBELL_ROW",
@@ -4752,97 +3759,121 @@
           "sets": [
             {
               "reps": 12,
-              "weight": 26,
+              "weight": 29,
               "durationS": 48,
               "flags": [],
-              "record": false
+              "record": true
             },
             {
               "reps": 12,
-              "weight": 26,
-              "durationS": 48,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 12,
-              "weight": 26,
+              "weight": 29,
               "durationS": 48,
               "flags": [],
               "record": false
             }
           ],
-          "lastDate": null,
-          "lastSets": [],
-          "record": null
+          "lastDate": "2025-09-24",
+          "lastSets": [
+            {
+              "weight": 28,
+              "reps": 12
+            },
+            {
+              "weight": 28,
+              "reps": 12
+            }
+          ],
+          "record": {
+            "weight": 29,
+            "reps": 12
+          }
         },
         {
-          "key": "CALF_RAISE/STANDING_CALF_RAISE",
-          "name": "Standing Calf Raise",
+          "key": "SHOULDER_PRESS/OVERHEAD_BARBELL_PRESS",
+          "name": "Overhead Barbell Press",
           "muscles": [
-            "calves"
+            "shoulders"
           ],
           "sets": [
             {
-              "reps": 15,
-              "weight": 30,
-              "durationS": 57,
+              "reps": 8,
+              "weight": 35,
+              "durationS": 36,
               "flags": [],
               "record": false
             },
             {
-              "reps": 15,
-              "weight": 30,
-              "durationS": 57,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 15,
-              "weight": 30,
-              "durationS": 57,
+              "reps": 8,
+              "weight": 35,
+              "durationS": 36,
               "flags": [],
               "record": false
             }
           ],
-          "lastDate": null,
-          "lastSets": [],
-          "record": null
-        },
-        {
-          "key": "CORE/BICYCLE_CRUNCH",
-          "name": "Bicycle Crunch",
-          "muscles": [
-            "core"
-          ],
-          "sets": [
+          "lastDate": "2025-09-24",
+          "lastSets": [
             {
-              "reps": 18,
-              "weight": 0,
-              "durationS": 66,
-              "flags": [],
-              "record": false
+              "weight": 35,
+              "reps": 8
             },
             {
-              "reps": 18,
-              "weight": 0,
-              "durationS": 66,
-              "flags": [],
-              "record": false
-            },
-            {
-              "reps": 18,
-              "weight": 0,
-              "durationS": 66,
-              "flags": [],
-              "record": false
+              "weight": 35,
+              "reps": 8
             }
           ],
-          "lastDate": null,
-          "lastSets": [],
           "record": null
         }
       ]
+    },
+    "along": null,
+    "more": [],
+    "recorded": [],
+    "selfEvaluation": null,
+    "effects": [
+      {
+        "kind": "aerobic",
+        "value": 3.8,
+        "band": "Improving",
+        "line": "builds your aerobic base",
+        "garminLabel": "Improving"
+      },
+      {
+        "kind": "anaerobic",
+        "value": 1.2,
+        "band": "Minor benefit",
+        "line": "little sprint or hard work",
+        "garminLabel": "Minor"
+      }
+    ],
+    "vo2maxNew": null,
+    "counted": {
+      "week": "2025-10-06",
+      "goals": true,
+      "lines": [
+        {
+          "kind": "strength",
+          "amount": 1,
+          "position": 1,
+          "recorded": 1,
+          "target": 4
+        },
+        {
+          "kind": "zone2",
+          "amount": 21,
+          "position": null,
+          "recorded": 56,
+          "target": 150
+        }
+      ],
+      "planItem": null,
+      "bests": [],
+      "fitness": null
+    },
+    "detail": {
+      "missing": [
+        "workout"
+      ],
+      "unavailable": []
     },
     "map": null
   }

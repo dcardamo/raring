@@ -13,33 +13,32 @@
   "statusTone": "good",
   "statusWhy": {
     "title": "Why Productive",
-    "summary": "Your load is building fitness. Load focus shows an anaerobic shortage.",
+    "summary": "Your load is building fitness.",
     "feedback": null,
-    "source": "From Garmin's training status inputs.",
     "inputs": [
       {
-        "key": "loadFocus",
-        "name": "Load focus",
+        "key": "hrvStatus",
+        "name": "HRV status",
         "value": null,
-        "rating": "Anaerobic shortage",
-        "tone": "fair",
-        "detail": "How your last 4 weeks split across low aerobic, high aerobic and anaerobic."
+        "rating": "Balanced",
+        "tone": "good",
+        "detail": "Your 7-day HRV average against your baseline."
       },
       {
         "key": "acuteLoad",
         "name": "Acute load",
         "value": "612 · 1.1× your 4-week load",
-        "rating": "Optimal",
-        "tone": "good",
+        "rating": null,
+        "tone": "neutral",
         "detail": "Your last 7 days of load against your 4-week load."
       },
       {
-        "key": "hrvStatus",
-        "name": "HRV status",
-        "value": "53 ms",
-        "rating": "Balanced",
-        "tone": "good",
-        "detail": "Your 7-day HRV average against your baseline."
+        "key": "loadFocus",
+        "name": "Load focus",
+        "value": null,
+        "rating": null,
+        "tone": "neutral",
+        "detail": "How your last 4 weeks split across low aerobic, high aerobic and anaerobic."
       },
       {
         "key": "vo2max",
@@ -47,9 +46,10 @@
         "value": "52",
         "rating": null,
         "tone": "neutral",
-        "detail": "Garmin's fitness estimate. +1 in 30 days."
+        "detail": "Garmin's fitness estimate. +3 in 30 days."
       }
-    ]
+    ],
+    "source": "From Garmin's training status inputs."
   },
   "headline": "In your optimal range",
   "chips": [
@@ -129,15 +129,12 @@
     }
   ],
   "vo2max": 52,
-  "vo2maxChange30d": 1,
+  "vo2maxChange30d": 2.5333333333333314,
   "vo2maxTrend": [
-    49,
-    49,
-    50,
-    50,
-    50,
-    51,
-    51,
+    49.46666666666667,
+    49.7,
+    50.5,
+    52,
     52
   ],
   "races": [
@@ -161,6 +158,7 @@
   "enduranceScore": 6800,
   "hillScore": 74,
   "runningToleranceKm": 63,
+  "distanceUnit": "km",
   "thresholds": [
     {
       "kind": "runningHr",
@@ -246,14 +244,14 @@
         720,
         120
       ],
-      "aerobicTe": 2.9,
+      "aerobicTe": 3.8,
       "aerobicLabel": "Improving",
       "anaerobicTe": 1.2,
       "anaerobicLabel": "Minor",
-      "benefit": "Base",
+      "benefit": "Tempo",
       "avgHr": 138,
-      "intensityMin": 96,
-      "vigorousMin": 28,
+      "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     {
@@ -271,14 +269,14 @@
         180,
         2
       ],
-      "aerobicTe": null,
-      "aerobicLabel": null,
-      "anaerobicTe": null,
-      "anaerobicLabel": null,
-      "benefit": null,
+      "aerobicTe": 3.8,
+      "aerobicLabel": "Improving",
+      "anaerobicTe": 1.2,
+      "anaerobicLabel": "Minor",
+      "benefit": "Tempo",
       "avgHr": 118,
-      "intensityMin": 24,
-      "vigorousMin": 4,
+      "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "km"
     },
     {
@@ -296,12 +294,12 @@
         200,
         0
       ],
-      "aerobicTe": null,
-      "aerobicLabel": null,
-      "anaerobicTe": null,
-      "anaerobicLabel": null,
-      "benefit": null,
-      "avgHr": null,
+      "aerobicTe": 3.8,
+      "aerobicLabel": "Improving",
+      "anaerobicTe": 1.2,
+      "anaerobicLabel": "Minor",
+      "benefit": "Tempo",
+      "avgHr": 112,
       "intensityMin": null,
       "vigorousMin": null,
       "distanceUnit": "km"
@@ -321,12 +319,12 @@
         0,
         0
       ],
-      "aerobicTe": null,
-      "aerobicLabel": null,
-      "anaerobicTe": null,
-      "anaerobicLabel": null,
-      "benefit": null,
-      "avgHr": null,
+      "aerobicTe": 3.8,
+      "aerobicLabel": "Improving",
+      "anaerobicTe": 1.2,
+      "anaerobicLabel": "Minor",
+      "benefit": "Tempo",
+      "avgHr": 104,
       "intensityMin": null,
       "vigorousMin": null,
       "distanceUnit": "km"
@@ -346,37 +344,37 @@
         120,
         0
       ],
-      "aerobicTe": 2.4,
+      "aerobicTe": 3.8,
       "aerobicLabel": "Improving",
       "anaerobicTe": 1.2,
       "anaerobicLabel": "Minor",
-      "benefit": "Base",
+      "benefit": "Tempo",
       "avgHr": 132,
-      "intensityMin": 30,
-      "vigorousMin": 5,
+      "intensityMin": null,
+      "vigorousMin": null,
       "distanceUnit": "m"
     },
     {
       "id": "9000000000110",
       "icon": "strength",
-      "name": "Lower A",
+      "name": "Full body B",
       "startLocal": "2025-10-08T18:05:00",
       "durationS": 2700,
       "distanceKm": null,
       "load": 60,
       "zoneSeconds": [
-        800,
+        900,
         1300,
-        500,
-        150,
+        400,
+        100,
         0
       ],
-      "aerobicTe": null,
-      "aerobicLabel": null,
-      "anaerobicTe": null,
-      "anaerobicLabel": null,
-      "benefit": null,
-      "avgHr": null,
+      "aerobicTe": 3.8,
+      "aerobicLabel": "Improving",
+      "anaerobicTe": 1.2,
+      "anaerobicLabel": "Minor",
+      "benefit": "Tempo",
+      "avgHr": 110,
       "intensityMin": null,
       "vigorousMin": null,
       "distanceUnit": "km"
@@ -396,11 +394,11 @@
         0,
         0
       ],
-      "aerobicTe": 1.1,
+      "aerobicTe": 3.8,
       "aerobicLabel": "Improving",
       "anaerobicTe": 1.2,
       "anaerobicLabel": "Minor",
-      "benefit": "Recovery",
+      "benefit": "Tempo",
       "avgHr": 104,
       "intensityMin": null,
       "vigorousMin": null,
@@ -409,24 +407,24 @@
     {
       "id": "9000000000109",
       "icon": "strength",
-      "name": "Upper A",
+      "name": "Full body A",
       "startLocal": "2025-10-01T18:05:00",
       "durationS": 2730,
       "distanceKm": null,
-      "load": 61,
+      "load": 60,
       "zoneSeconds": [
-        800,
+        900,
         1300,
-        500,
-        150,
+        400,
+        100,
         0
       ],
-      "aerobicTe": null,
-      "aerobicLabel": null,
-      "anaerobicTe": null,
-      "anaerobicLabel": null,
-      "benefit": null,
-      "avgHr": null,
+      "aerobicTe": 3.8,
+      "aerobicLabel": "Improving",
+      "anaerobicTe": 1.2,
+      "anaerobicLabel": "Minor",
+      "benefit": "Tempo",
+      "avgHr": 110,
       "intensityMin": null,
       "vigorousMin": null,
       "distanceUnit": "km"
@@ -434,24 +432,24 @@
     {
       "id": "9000000000108",
       "icon": "strength",
-      "name": "Lower A",
+      "name": "Full body B",
       "startLocal": "2025-09-24T18:05:00",
       "durationS": 2760,
       "distanceKm": null,
-      "load": 62,
+      "load": 60,
       "zoneSeconds": [
-        800,
+        900,
         1300,
-        500,
-        150,
+        400,
+        100,
         0
       ],
-      "aerobicTe": null,
-      "aerobicLabel": null,
-      "anaerobicTe": null,
-      "anaerobicLabel": null,
-      "benefit": null,
-      "avgHr": null,
+      "aerobicTe": 3.8,
+      "aerobicLabel": "Improving",
+      "anaerobicTe": 1.2,
+      "anaerobicLabel": "Minor",
+      "benefit": "Tempo",
+      "avgHr": 110,
       "intensityMin": null,
       "vigorousMin": null,
       "distanceUnit": "km"
@@ -459,49 +457,30 @@
     {
       "id": "9000000000107",
       "icon": "strength",
-      "name": "Upper A",
+      "name": "Full body A",
       "startLocal": "2025-09-17T18:05:00",
       "durationS": 2790,
       "distanceKm": null,
-      "load": 63,
+      "load": 60,
       "zoneSeconds": [
-        800,
+        900,
         1300,
-        500,
-        150,
+        400,
+        100,
         0
       ],
-      "aerobicTe": null,
-      "aerobicLabel": null,
-      "anaerobicTe": null,
-      "anaerobicLabel": null,
-      "benefit": null,
-      "avgHr": null,
+      "aerobicTe": 3.8,
+      "aerobicLabel": "Improving",
+      "anaerobicTe": 1.2,
+      "anaerobicLabel": "Minor",
+      "benefit": "Tempo",
+      "avgHr": 110,
       "intensityMin": null,
       "vigorousMin": null,
       "distanceUnit": "km"
     }
   ],
-  "planned": {
-    "state": "available",
-    "session": {
-      "name": "Easy Run",
-      "date": "2025-10-17"
-    },
-    "coach": "Garmin Coach 10K",
-    "coverageStart": "2025-10-16",
-    "coverageEnd": "2025-10-30"
-  },
-  "race": {
-    "name": "City 10K",
-    "date": "2025-10-28",
-    "daysUntil": 12
-  },
-  "raceState": "available",
-  "distanceUnit": "km",
   "gear": {
-    "unit": "km",
-    "fetchedAt": "2025-10-16T10:30:00Z",
     "items": [
       {
         "id": "sample-shoes",
@@ -527,15 +506,33 @@
         "distanceKm": 0,
         "thresholdKm": null
       }
-    ]
+    ],
+    "unit": "km",
+    "fetchedAt": "2025-10-16T10:30:00Z"
   },
+  "planned": {
+    "state": "available",
+    "session": {
+      "name": "Easy Run",
+      "date": "2025-10-17"
+    },
+    "coach": null,
+    "coverageStart": "2025-10-16",
+    "coverageEnd": "2025-10-30"
+  },
+  "race": {
+    "name": "City 10K",
+    "date": "2025-10-28",
+    "daysUntil": 12
+  },
+  "raceState": "available",
   "strength": {
     "figure": "female",
     "weekStart": "2025-10-13",
-    "sets": 29,
+    "sets": 22,
     "sessionsWithSets": 2,
     "strengthActivities": 3,
-    "records": 1,
+    "records": 5,
     "muscles": [
       {
         "muscle": "chest",
@@ -543,23 +540,23 @@
       },
       {
         "muscle": "back",
-        "sets": 6
-      },
-      {
-        "muscle": "shoulders",
         "sets": 3
       },
       {
-        "muscle": "arms",
+        "muscle": "shoulders",
         "sets": 2
       },
       {
+        "muscle": "arms",
+        "sets": 3
+      },
+      {
         "muscle": "core",
-        "sets": 0
+        "sets": 2
       },
       {
         "muscle": "hips",
-        "sets": 1
+        "sets": 2
       },
       {
         "muscle": "quads",
@@ -567,15 +564,15 @@
       },
       {
         "muscle": "hamstrings",
-        "sets": 6
+        "sets": 3
       },
       {
         "muscle": "glutes",
-        "sets": 9
+        "sets": 11
       },
       {
         "muscle": "calves",
-        "sets": 3
+        "sets": 0
       }
     ]
   },
@@ -587,10 +584,10 @@
         "kind": "zone2",
         "goal": 150,
         "cumulative": [
-          0,
-          30,
-          82,
-          100,
+          13,
+          38,
+          90,
+          99,
           null,
           null,
           null
@@ -598,42 +595,85 @@
         "usual": {
           "low": [
             0,
-            15,
-            30,
-            45,
-            60,
-            80,
-            100
+            0,
+            21,
+            21,
+            21,
+            21,
+            21
           ],
           "median": [
             0,
-            25,
-            45,
-            65,
-            85,
-            110,
-            130
+            0,
+            21,
+            21,
+            21,
+            21,
+            21
           ],
           "high": [
-            10,
-            40,
-            65,
-            90,
-            115,
-            140,
-            160
+            0,
+            0,
+            21,
+            21,
+            21,
+            21,
+            21
           ]
         },
-        "weeks": 8
+        "weeks": 5
+      },
+      {
+        "kind": "intensity",
+        "goal": 150,
+        "cumulative": [
+          0,
+          8,
+          66,
+          118,
+          null,
+          null,
+          null
+        ],
+        "usual": {
+          "low": [
+            0,
+            8,
+            66,
+            118,
+            118,
+            148,
+            217
+          ],
+          "median": [
+            0,
+            8,
+            66,
+            118,
+            118,
+            148,
+            217
+          ],
+          "high": [
+            0,
+            8,
+            66,
+            118,
+            118,
+            148,
+            217
+          ]
+        },
+        "weeks": 5
       },
       {
         "kind": "strength",
         "goal": 4,
         "cumulative": [
           1,
-          1,
           2,
-          2,
+          3,
+          3,
           null,
           null,
           null
@@ -641,47 +681,47 @@
         "usual": {
           "low": [
             0,
+            0,
             1,
             1,
             1,
-            2,
-            2,
-            3
+            1,
+            1
           ],
           "median": [
+            0,
+            0,
             1,
             1,
-            2,
-            2,
-            2,
-            3,
-            3
+            1,
+            1,
+            1
           ],
           "high": [
+            0,
+            0,
             1,
-            2,
-            2,
-            3,
-            3,
-            3,
-            4
+            1,
+            1,
+            1,
+            1
           ]
         },
-        "weeks": 8
+        "weeks": 5
       }
     ],
     "bySport": [
       {
         "sport": "strength",
-        "minutes": 96
+        "minutes": 140.03333333333333
       },
       {
         "sport": "cycling",
-        "minutes": 84
+        "minutes": 84.16666666666667
       },
       {
         "sport": "running",
-        "minutes": 52
+        "minutes": 52.233333333333334
       }
     ]
   }

@@ -384,7 +384,10 @@ try {
  const week=await page.locator('.wk').textContent();
  assert.ok(week.includes('Strength 3 of 4 sessions · 1 placed'),week);
  assert.ok(week.includes('Zone 2 100 of 150 min · 40 placed · 10 left'),week);
- assert.ok(week.includes('Intensity 124 of 150 min · 26 left'),week);
+ // The week's numbers are the generated board's: one world on every page.
+ const boardSample=JSON.parse(await readFile(resolve('src/lib/sample/board.json'),'utf8'));
+ const intensity=boardSample.ledger.find(l=>l.kind==='intensity');
+ assert.ok(week.includes(`Intensity ${intensity.recorded} of ${intensity.target} min · ${intensity.target-intensity.recorded} left`),week);
  assert.equal(await page.locator('.day-cells .dc').count(),7);
  await page.getByRole('button',{name:/^Friday 17 Oct/}).click();
  await page.getByText('Garmin schedule · read-only',{exact:true}).waitFor();
@@ -408,7 +411,7 @@ try {
  assert.equal(await add.getByRole('group',{name:'Day'}).getByRole('button',{name:'Today'}).getAttribute('aria-pressed'),'true');
  assert.deepEqual(await contrastFailures(page),[],'add sheet contrast');
  await page.keyboard.press('Escape');
- assert.ok((await page.locator('.event').first().textContent()).includes('Harbour 10K'));
+ assert.ok((await page.locator('.event').allTextContents()).some(t=>t.includes('Harbour 10K')));
  await page.getByRole('button',{name:'Add a race or event'}).click();
  await page.getByRole('dialog',{name:'Add a race or event'}).getByRole('button',{name:'Add event'}).waitFor();
  assert.equal(await page.getByRole('dialog',{name:'Add a race or event'}).getByRole('button',{name:'Add event'}).isDisabled(),true,'a name and date are needed');
@@ -458,7 +461,7 @@ try {
    name:card.querySelector('.ex-h b').textContent,
    sets:[...card.querySelectorAll('.sbar[role=listitem]')].map(set=>[set.querySelector('b').textContent,set.querySelector('span').firstChild.textContent])
   })));
-  assert.deepEqual(rendered,expected.strength.exercises.map(e=>({name:e.name,sets:e.sets.map(s=>[String(s.reps),String(s.weight)])})));
+  assert.deepEqual(rendered,expected.strength.exercises.map(e=>({name:e.name,sets:e.sets.map(s=>[String(s.reps),s.weight==null?'—':String(s.weight)])})));
   // M8: the weight change against the same set last time sits under the weight.
   const deltas=await page.locator('.strength-cols .sbar .delta').allTextContents();
   const expectedDeltas=expected.strength.exercises.flatMap(e=>e.sets.map((s,i)=>{const b=e.lastSets[i]?.weight,d=s.weight!=null&&b!=null?Math.round((s.weight-b)*10)/10:0;return d?`${d>0?'+':'−'}${Math.abs(d)}`:null}).filter(Boolean));
@@ -468,10 +471,11 @@ try {
   await page.locator('.scroll').evaluate(el=>el.scrollTop=0);
   await page.screenshot({path:resolve(output,`strength-older-${id}.png`),fullPage:false});
  };
- assert.ok(strengthSample.exercises[0].sessions.length>=7 && strengthSample.workouts.length>=9);
+ const squatSessions=strengthSample.exercises[0].sessions.length;
+ assert.ok(squatSessions>=7 && strengthSample.workouts.length>=9);
  assert.equal(await page.locator('.ses').count(),6);
- await page.getByRole('button',{name:'Show all 12 sessions',exact:true}).click();
- assert.equal(await page.locator('.ses').count(),12);
+ await page.getByRole('button',{name:`Show all ${squatSessions} sessions`,exact:true}).click();
+ assert.equal(await page.locator('.ses').count(),squatSessions);
  const oldSession=strengthSample.exercises[0].sessions[6];
  await page.locator('.ses').nth(6).click();await waitRoute('workout/'+oldSession.activityId);
  await assertStrengthWorkout(oldSession.activityId,oldSession.date);
@@ -479,8 +483,8 @@ try {
  await page.getByText('Refreshing sets needs the Raring app').waitFor();
  await back('strength');
  assert.equal(await page.locator('.strength-history .workout-item').count(),8);
- await page.getByRole('button',{name:'Show all 11 workouts',exact:true}).click();
- assert.equal(await page.locator('.strength-history .workout-item').count(),11);
+ await page.getByRole('button',{name:`Show all ${strengthSample.workouts.length} workouts`,exact:true}).click();
+ assert.equal(await page.locator('.strength-history .workout-item').count(),strengthSample.workouts.length);
  await page.getByText('No sets recorded',{exact:true}).waitFor();
  const oldWorkout=strengthSample.workouts[9].activity;
  assert.notEqual(oldWorkout.id,oldSession.activityId,'exercise and workout links cover different older IDs');
@@ -505,7 +509,7 @@ try {
  assert.equal(await figureChoice.getByRole('button',{name:'Profile',exact:true}).getAttribute('aria-pressed'),'true','the figure follows the profile by default');
  await figureChoice.getByRole('button',{name:'Male',exact:true}).click();
  assert.equal(await figureChoice.getByRole('button',{name:'Male',exact:true}).getAttribute('aria-pressed'),'true','the Strength picker overrides the profile');
- await page.getByRole('button',{name:/^Wed 15 Oct/}).click();await waitRoute('workout/9000000000111');
+ await page.getByRole('button',{name:/^Wed 15 Oct/}).click();await waitRoute('workout/'+strengthSample.exercises.find(e=>e.name==='Bicycle Crunch').sessions[0].activityId);
  await back('strength');
  // B4: Back keeps the chosen exercise, lift range and muscle range; Training shares the muscle range.
  assert.equal(await page.getByRole('group',{name:'Exercise'}).getByRole('button',{name:'Bicycle Crunch',exact:true}).getAttribute('aria-pressed'),'true');
@@ -525,7 +529,8 @@ try {
  await page.getByRole('button',{name:/^Lower A Wed 15 Oct/}).click();await waitRoute('workout/9000000000002');
  await page.getByText('3 things look off',{exact:true}).waitFor();
  await page.getByText('A 0-rep set, a doubled set and an unnamed exercise',{exact:true}).waitFor();
- assert.equal(await page.locator('.sbar.flag').count(),5,'one 0-rep, one doubled and three unnamed sets are flagged');
+ const flagged=JSON.parse(await readFile(resolve('src/lib/sample/strengthWorkout.json'),'utf8')).strength.exercises.flatMap(e=>e.sets).filter(set=>set.flags.length).length;
+ assert.equal(await page.locator('.sbar.flag').count(),flagged,'the 0-rep, doubled and unnamed sets are flagged');
  assert.equal(await page.getByText('Training load',{exact:true}).count(),0,'strength workouts show sets instead of the effect gauges');
  await page.getByRole('button',{name:'3 things look off'}).click();
  await page.getByRole('dialog').getByText('How sets are counted').waitFor();
@@ -1076,12 +1081,16 @@ try {
   await tp.goto(`${url}/#training`);
   const card=tp.locator('.week-lanes');
   await card.waitFor();
+  // The lanes read the generated Training week (Thursday is its fourth day).
+  const lanes=JSON.parse(await readFile(resolve('src/lib/sample/training.json'),'utf8')).lanes;
+  const lane=kind=>lanes.lanes.find(l=>l.kind===kind);
   const zone=card.getByRole('img',{name:/^Zone 2:/});
-  assert.equal(await zone.getAttribute('aria-label'),'Zone 2: 100 min so far of a 150 goal; usual week by now 65');
-  assert.equal(await card.getByRole('img',{name:/^Strength: 2 sessions so far of a 4 goal/}).count(),1);
-  assert.ok((await card.locator('.key').getAttribute('aria-label')).includes('middle half of 8 recent complete weeks'));
-  assert.ok((await card.locator('.key').textContent()).includes('usual week (8 weeks)'),'a one-line graphical key, not a legend paragraph');
-  assert.equal(await card.locator('svg path[opacity=".13"]').count(),2,'a usual-week band per lane');
+  assert.equal(await zone.getAttribute('aria-label'),`Zone 2: ${lane('zone2').cumulative[3]} min so far of a ${lane('zone2').goal} goal; usual week by now ${lane('zone2').usual.median[3]}`);
+  assert.equal(await card.getByRole('img',{name:new RegExp(`^Strength: ${lane('strength').cumulative[3]} sessions so far of a ${lane('strength').goal} goal`)}).count(),1);
+  const weeks=lane('zone2').weeks;
+  assert.ok((await card.locator('.key').getAttribute('aria-label')).includes(`middle half of ${weeks} recent complete weeks`));
+  assert.ok((await card.locator('.key').textContent()).includes(`usual week (${weeks} weeks)`),'a one-line graphical key, not a legend paragraph');
+  assert.equal(await card.locator('svg path[opacity=".13"]').count(),lanes.lanes.length,'a usual-week band per lane');
   assert.equal((await zone.locator('text.xt').allTextContents()).join(''),'MTWTFSS');
   for(const width of [320,700]){await tp.setViewportSize({width,height:900});assert.equal(await tp.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`lanes fit ${width}px`)}
   assert.deepEqual(await contrastFailures(tp),[],'Lanes contrast');
@@ -1436,9 +1445,11 @@ try {
   for(const want of ['Moving time','Best pace4:11/km','Grade-adjusted pace5:02/km','Descent41 m','Highest79 m','Recovery heart rate31 bpm','Estimated sweat loss820 ml'])assert.ok(rec.includes(want),`${want} in ${rec}`);
   assert.equal(await wp.getByText(/new VO₂ max estimate/).count(),0,'no VO₂ max link without a new estimate');
   const hic=await wp.getByRole('region',{name:'How it counted'}).textContent();
-  assert.ok(hic.includes('18 min Zone 2') && hic.includes('100 of 150 this week') && hic.includes('Best in available history'),'U15: '+hic);
+  const counted=JSON.parse(await readFile(resolve('src/lib/sample/workout.json'),'utf8')).counted;
+  const zone2=counted.lines.find(l=>l.kind==='zone2');
+  assert.ok(hic.includes(`${zone2.amount} min Zone 2`) && hic.includes(`${zone2.recorded} of ${zone2.target} this week`),'U15: '+hic);
   assert.ok(!/Fitness Age will|younger/.test(hic));
-  assert.ok(hic.includes('24 vigorous min toward Fitness Age · 30 of Garmin’s 75 this week') && hic.includes('Counts in Garmin’s six-week average through Wed 26 Nov'),'Fitness Age line: '+hic);
+  assert.ok(hic.includes(`${counted.fitness.minutes} vigorous min toward Fitness Age · ${counted.fitness.week} of Garmin’s ${counted.fitness.target} this week`) && hic.includes('Counts in Garmin’s six-week average through Wed 26 Nov'),'Fitness Age line: '+hic);
   // M1: heart rate is drawn once, with a bpm axis and labelled zone floors, at the top of Along the way.
   assert.equal(await wp.getByRole('heading',{name:'Heart rate',exact:true,level:3}).count(),0,'no second heart-rate chart beside Along the way');
   const hrAlong=wp.getByRole('region',{name:'Along the way'}).getByRole('img',{name:/^Heart rate over/});
@@ -1514,7 +1525,8 @@ try {
   const liftFelt=wp.getByRole('region',{name:'How it felt'});
   assert.equal(await liftFelt.getByRole('img',{name:'Perceived effort: 7 of 10'}).count(),1,'a strength session keeps its effort');
   assert.equal(await liftFelt.getByRole('img',{name:/^Feel/}).count(),0,'a skipped feel is left out');
-  assert.ok((await wp.getByRole('region',{name:'How it counted'}).textContent()).includes('2 of 4 strength sessions'),'U15 strength');
+  const lift=JSON.parse(await readFile(resolve('src/lib/sample/strengthWorkout.json'),'utf8')).counted.lines.find(l=>l.kind==='strength');
+  assert.ok((await wp.getByRole('region',{name:'How it counted'}).textContent()).includes(`${lift.position} of ${lift.target} strength sessions`),'U15 strength');
   await wp.close();
  }
  console.log('Workout detail: aligned streams, self-evaluation, effects in plain words, grouped recorded fields only: passed');
@@ -1525,7 +1537,7 @@ try {
   const board=JSON.parse(await readFile(resolve('src/lib/sample/board.json'),'utf8'));
   const run={...board.items[1],state:'planned',intention:{...board.items[1].intention,id:'i-run',date:'2025-10-18',sport:'running',name:'Tempo run'}};
   board.items.push(run);
-  board.eventWeek={event:board.events[0],sport:'running',items:['i-run'],recordedMin:52};
+  board.eventWeek={event:board.events.find(e=>e.name==='Harbour 10K'),sport:'running',items:['i-run'],recordedMin:52};
   await ep.route(u=>u.pathname==='/src/lib/sample/board.json',route=>route.fulfill({contentType:'text/javascript',body:`export default ${JSON.stringify(board)}`}));
   await ep.goto(`${url}/#plan`);
   const card=ep.locator('.event',{hasText:'Harbour 10K'});
@@ -1588,7 +1600,8 @@ try {
   const plan=await open('plan');
   const line=plan.locator('.fa-plan');
   const words=await line.textContent();
-  assert.ok(words.includes('Fitness Age · vigorous 30 of 75 min this week') && words.includes('Garmin’s target · read-only'),words);
+  const vigorous=JSON.parse(await readFile(resolve('src/lib/sample/board.json'),'utf8')).fitness;
+  assert.ok(words.includes(`Fitness Age · vigorous ${vigorous.vigorous} of ${vigorous.target} min this week`) && words.includes('Garmin’s target · read-only'),words);
   await line.click();await plan.waitForURL('**/#health');
   await plan.close();
  }
@@ -1840,7 +1853,7 @@ try {
   },samples);
   await progressPage.goto(`${url}/?fixture=progress#progress`);
   await progressPage.getByRole('heading',{name:'October 2025',exact:true}).waitFor();
-  assert.ok((await progressPage.locator('.report').textContent()).includes('Active on 4 of 16 days'));
+  assert.ok((await progressPage.locator('.report').textContent()).includes(`Active on ${samples.progress.totals.activeDays} of ${samples.progress.totals.coveredDays} days`));
   assert.ok((await progressPage.locator('.report').textContent()).includes('Intensity: known total from 4 of 16 days'));
   assert.equal(await progressPage.locator('.ring-cal .dc.future').count(),17,'the month’s whole weeks, future days empty');
   assert.equal(await progressPage.locator('.ring-cal .dc.outside').count(),4,'days outside October are faint');
@@ -2011,7 +2024,7 @@ try {
   await form.getByRole('button',{name:'Save'}).click();
   await ep.waitForFunction(()=>window.actions.some(a=>a.action==='editIntention'));
   const edit=(await ep.evaluate(()=>window.actions)).find(a=>a.action==='editIntention');
-  assert.equal(edit.id,'i1760380000001');
+  assert.equal(edit.id,board.items[1].intention.id);
   assert.equal(edit.time,'07:15');assert.equal(edit.durationMin,50);assert.equal(edit.name,'Easy ride');
   assert.ok(edit.allocation.zone2Min>board.items[1].intention.allocation.zone2Min,'the Zone 2 share went up');
   await ep.goto(`${url}/#sleep/tonight`);

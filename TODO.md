@@ -21,10 +21,6 @@ availability on every account or watch.
 
 ## Build next
 
-In progress on branch `feat-five-followups` (worktree
-`~/.paseo/worktrees/1c8zm467/feat-five-followups`): core-generated fixtures
-with a swim and a walk (8). Move it to `docs/done.md` when it merges.
-
 ### 1. Garmin writes, starting with weight
 
 The write rules (item 21) shipped in `crates/core/src/writes.rs`, but nothing
@@ -115,13 +111,15 @@ Progress's activity chart (143, 72). Decide with it whether the missing-day
 dots under bar charts stay; line charts keep them under a dashed join across
 each gap.
 
-### 8. Fixtures from the core
+### 8. The rest of the fixtures from the core
 
-The browser preview's training, strength and workout fixtures are hand-made
-and disagree (lane vs board strength counts, squat bests, the sets check time
-before the workout, latest load/VO₂ and overnight HR across pages). Generate
-them from `raring demo` as `raring show` does, and add a swim and a walk to
-`raring demo`.
+Training, Strength, the plan board and the workouts are generated from
+`raring demo` (see docs/done.md). Today, Sleep, Health, Plan, Progress, the
+reviews and Profile are still transcribed from the mockup and only take their
+shared numbers from the generated views. Generating them needs the demo to
+grow the goal history, past reviews (with an ill week), naps, the journal and
+the Fitness Age window, plus `raring show` views for progress, reviews and
+profile. Then progress buckets, review rows and Today's lead can't drift.
 
 ### 9. Garmin's estimates as dated points
 
@@ -366,6 +364,12 @@ Read-only unless noted, serialized, within the budget, notes in `.data/`.
 
 ## Decide
 
+- **Fitness Age to one decimal**: Garmin's estimate is a decimal (45.4), but
+  it reads as a whole number, so a coral estimate can read "45" beside "Age
+  then 45". Show one decimal when it is within a year of the age it is
+  compared with, or always?
+- **Miles to one decimal**: distances in miles read like workouts, to two
+  decimals (39.15 mi); one would read more easily everywhere at once.
 - **Trends with unequal coverage**: suppress previous-period changes, or keep
   showing both recorded-day counts (current) without a significance claim.
 - **Weekly trend buckets**: Monday–Sunday now; align with Garmin's
