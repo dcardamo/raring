@@ -1,7 +1,7 @@
 <script lang="ts">
  import Card from './Card.svelte';
  import Icon from './Icon.svelte';
- import SleepClock from './SleepClock.svelte';
+ import SleepEvening from './SleepEvening.svelte';
  import RecentNights from './RecentNights.svelte';
  import SleepPlanEvidence from './SleepPlanEvidence.svelte';
  import type {SleepView} from '../generated/SleepView';
@@ -20,6 +20,8 @@
  let why = $state(false);
  // Only tonight's window can have passed; an older plan is labelled stale by the core.
  let passed = $derived.by(() => { const t = plan?.bedtimeAt ? new Date(plan.bedtimeAt).getTime() : NaN; return now.getTime() > t && now.getTime() - t < 12 * 3600_000; });
+ // From the plan’s own wind-down on, the card asks for the window instead of the time to be in bed.
+ let windDownStarted = $derived.by(() => { const t = plan?.windDownAt ? new Date(plan.windDownAt).getTime() : NaN; return Number.isFinite(t) && now.getTime() >= t; });
  let goals = $derived(board?.goals?.targets ?? null);
  let timing = $derived(board?.ledger.find(l => l.kind === 'sleepTiming') ?? null);
  // Tonight's evening, the day before the morning the night ends on.
@@ -38,15 +40,14 @@
  <Card title="Tonight" extra="tonight-plan" help="sleep-tonight">
   {#snippet aside()}<span class="pill"><Icon name="moon" size={13}/> {dateLabel(plan.night)} · {garmin ? 'Garmin plan' : 'Raring estimate'}</span>{/snippet}
   <div class="tn">
-   <SleepClock {plan} {now}/>
+   <SleepEvening {plan} {now} live={windDownStarted}/>
    <dl class="facts">
-    <div><dt><i style:background="var(--fair)"></i>Wind down</dt><dd class="n">{ownTime && goals?.sleepKind === 'windDown' ? ownTime : plan.windDown}<small>{ownTime && goals?.sleepKind === 'windDown' ? 'your goal' : `Raring · ${plan.windDownLeadMin} min before ${plan.bedtimeStart && plan.bedtimeStartAt && plan.bedtimeStartAt < plan.inBedAt ? 'Garmin’s window' : 'in bed'}`}</small></dd></div>
-    <div><dt><i style:background="var(--text)"></i>{garmin ? 'Bedtime window' : 'Asleep by'}</dt><dd class="n">{ownTime && goals?.sleepKind === 'asleepBy' ? ownTime : plan.bedtimeStart ? `${plan.bedtimeStart}–${plan.bedtime}` : plan.bedtime}<small>{ownTime && goals?.sleepKind === 'asleepBy' ? 'your goal' : garmin ? 'Garmin' : 'Raring estimate · need before wake'}</small></dd></div>
     <div><dt><i style:background="var(--light)"></i>Need</dt><dd class="n">{duration(plan.needMin)} asleep<small>Garmin{plan.needReadAt ? ` · read ${readAt(plan.needReadAt, now)}` : ''}</small><small>so about {duration(plan.inBedMin || plan.needMin)} in bed with {plan.fallAsleepMin} min to fall asleep (Raring)</small></dd></div>
     {#if plan.wakeTime && plan.wakeTime !== up}<div><dt>Usual wake</dt><dd class="n">{plan.wakeTime}<small>{wakeLabel(plan.wakeNights)}</small></dd></div>{/if}
    </dl>
    <label class="setting fall"><span>Time to fall asleep<small>Raring’s; in bed this long before asleep-by</small></span><select value={fallAsleep} onchange={e => setFallAsleep(Number(e.currentTarget.value))}>{#each Array.from({length: 13}, (_, i) => i * 5) as m}<option value={m}>{m} min</option>{/each}</select></label>
   </div>
+  <p class="small">Wind down is Raring’s: {plan.windDownLeadMin} min before {plan.bedtimeStart && plan.bedtimeStartAt && plan.bedtimeStartAt < plan.inBedAt ? 'Garmin’s window' : 'in bed'}{ownTime ? ` · your goal ${ownTime}` : ''}.</p>
   <p class="small">{plan.stale ? 'No sleep has synced today; this estimate uses older nights.' : passed ? 'The window has passed. Rest when you’re ready.' : plan.reason ?? (garmin ? 'Garmin’s bedtime window and sleep need for tonight.' : 'Your usual wake minus Garmin’s sleep need.')}</p>
   <div class="btns">
    <button class="secondary" aria-pressed={sleep.woundDown} disabled={sleep.woundDown || !sleep.windDownOpen} onclick={() => act({action: 'reportWindDown'})}>{#if sleep.woundDown}<Icon name="check" size={16}/>Wound down · self-reported{:else if sleep.windDownOpen}I wound down{:else}I wound down · from the evening{/if}</button>

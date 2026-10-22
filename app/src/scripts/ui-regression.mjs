@@ -272,9 +272,9 @@ try {
  assert.equal(await page.getByRole('tab',{name:'Tonight'}).getAttribute('aria-selected'),'true','the tonight line opens the Tonight tab');
  const plan=page.locator('.tonight-plan');
  assert.ok((await plan.textContent()).includes('22:30–23:06'));
- assert.equal(await plan.getByRole('img',{name:/^Tonight on a 24-hour clock: in bed 22:51, asleep by 23:06, up 06:56/}).count(),1,'a 24-hour clock from in bed to the expected wake');
+ assert.equal(await plan.getByRole('img',{name:/^Tonight’s evening: Wind down 22:00, (Garmin window 22:30–23:06|in bed 22:51), up 06:56; now/}).count(),1,'the evening runs from wind-down to the expected wake');
  assert.ok((await plan.textContent()).includes('so about 8:05 in bed with 15 min to fall asleep'),'the time in bed sits beside the need');
- assert.ok((await plan.textContent()).includes('Wind down22:00'),'the plan leads with the wind-down time');
+ assert.ok((await plan.textContent()).includes('Wind down 22:00'),'the plan states the wind-down time once');
  assert.ok((await plan.textContent()).includes('Garmin plan'));
  assert.ok((await plan.textContent()).includes("Garmin added 20 min for today's activity and load."));
  await plan.getByRole('button',{name:'Why this plan'}).click();
@@ -1782,7 +1782,14 @@ try {
   const advice=await phasePage.locator('.dashboard > :not(.week-card)').allTextContents();
   assert.equal(await phasePage.locator('.week-card').count(),['winddown','late'].includes(name)?0:1,`${name}: no goal remainders during sleep phases`);
   assert.ok(!/\bin \d+ ?(min|h)\b|left\b/i.test(advice.join(' ')),`${name}: no countdown`);
-  if(name==='evening')assert.equal(await phasePage.locator('.sleep-plan [data-mark="now"]').count(),1,'the clock marks now against the window');
+  if(name==='evening'){
+   // The evening strip: wind-down and the minutes to fall asleep, Garmin's window bracketed, now a rule.
+   const strip=phasePage.locator('.sleep-plan [data-chart="sleep evening"]');
+   assert.equal(await strip.locator('.track i').count(),2,'the strip draws wind-down and the minutes to fall asleep');
+   assert.equal(await strip.locator('.win i').count(),1,"Garmin's window is bracketed under the bed edge");
+   assert.equal(await strip.locator('[data-mark="now"]').count(),1,'the strip marks now against the window');
+   assert.equal((await phasePage.locator('.sleep-plan').textContent()).match(/22:30–23:06/g)?.length,1,'the window is written once, not on the strip as well');
+  }
   // m2: the card opens Tonight, so its footer says so.
   if(name==='evening')assert.ok((await phasePage.locator('.sleep-plan .foot').textContent()).includes('Tonight’s plan'));
   if(name==='late')assert.ok(text.includes("Tonight's window was"));

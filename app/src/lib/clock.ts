@@ -5,34 +5,31 @@ import type {NightWindow} from './generated/NightWindow';
 const local=(iso:string|null|undefined)=>iso?new Date(iso).getTime():NaN;
 const hours=(t:number)=>{const d=new Date(t);return d.getHours()+d.getMinutes()/60};
 
-/** Degrees clockwise from midnight at the top of a 24-hour ring. */
-export const clockAngle=(t:number)=>hours(t)/24*360;
+export type Span={left:number,width:number};
+export type SleepEvening={from:number,to:number,windDown:Span|null,fallAsleep:Span|null,window:Span|null,now:number,ticks:{h:number,at:number}[]};
 
-export type Arc={from:number,to:number};
-export type SleepClock={windDown:Arc|null,fallAsleep:Arc|null,sleep:Arc,window:Arc|null,now:number};
-
-/** Tonight's plan on a 24-hour ring: wind-down, the minutes to fall asleep,
- * the planned sleep to the expected wake, Garmin's window and now. Arcs run
- * clockwise; `to` may pass 360 when an arc crosses midnight. */
-export function sleepClock(plan:SleepPlan, now:Date):SleepClock|null{
- const windDown=local(plan.windDownAt),inBed=local(plan.inBedAt||plan.bedtimeAt),asleep=local(plan.bedtimeAt),wake=local(plan.wakeAt);
- if(![windDown,inBed,asleep,wake].every(Number.isFinite)||wake<=asleep)return null;
- const arc=(a:number,b:number):Arc=>{const from=clockAngle(a);let to=from+(b-a)/3600_000*15;if(to-from>=360)to=from+359.9;return {from,to}};
- const start=local(plan.bedtimeStartAt);
+const HALF=30*60_000;
+/** Tonight's evening as one left-to-right axis, in percentages of its width:
+ * from half an hour before now or wind-down, whichever is earlier, to half an
+ * hour past the asleep-by time. The night's length is text, not scale, so the
+ * evening keeps the room its decisions need; a position, never a countdown. */
+export function sleepEvening(plan:SleepPlan, now:Date):SleepEvening|null{
+ const windDown=local(plan.windDownAt),inBed=local(plan.inBedAt||plan.bedtimeAt),asleep=local(plan.bedtimeAt),nowAt=now.getTime();
+ if(![windDown,inBed,asleep,nowAt].every(Number.isFinite)||asleep<inBed)return null;
+ const start=Math.floor((Math.min(nowAt,windDown)-HALF)/HALF)*HALF,end=Math.ceil((asleep+HALF)/HALF)*HALF;
+ if(end-start<HALF)return null;
+ const at=(t:number)=>Math.max(0,Math.min(100,(t-start)/(end-start)*100));
+ const span=(a:number,b:number):Span|null=>b>a?{left:at(a),width:at(b)-at(a)}:null;
+ const win=local(plan.bedtimeStartAt),ticks:{h:number,at:number}[]=[];
+ for(let t=Math.ceil(start/3_600_000)*3_600_000;t<=end;t+=3_600_000)ticks.push({h:new Date(t).getHours(),at:at(t)});
  return {
-  windDown:inBed>windDown?arc(windDown,inBed):null,
-  fallAsleep:asleep>inBed?arc(inBed,asleep):null,
-  sleep:arc(asleep,wake),
-  window:Number.isFinite(start)&&asleep>start?arc(start,asleep):null,
-  now:clockAngle(now.getTime()),
+  from:hours(start),to:hours(end),
+  windDown:span(windDown,inBed),
+  fallAsleep:span(inBed,asleep),
+  window:Number.isFinite(win)?span(win,asleep):null,
+  now:at(nowAt),
+  ticks,
  };
-}
-
-/** An SVG arc path on a ring of radius r around (c,c), angles in degrees from the top. */
-export function arcPath(c:number,r:number,a:Arc):string{
- const p=(deg:number)=>{const rad=(deg-90)*Math.PI/180;return `${(c+r*Math.cos(rad)).toFixed(2)} ${(c+r*Math.sin(rad)).toFixed(2)}`};
- const large=a.to-a.from>180?1:0;
- return `M${p(a.from)}A${r} ${r} 0 ${large} 1 ${p(a.to)}`;
 }
 
 /** Evening-relative hours: after noon stays, before noon is the next morning (+24). */

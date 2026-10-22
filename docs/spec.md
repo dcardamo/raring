@@ -225,8 +225,7 @@ In this order:
   Garmin's optimal-range bar, as on Training, opening its history. Garmin
   sets no daily load target; its target is that range for the 7-day load.
   Evening, wind-down and late night lead with tonight's sleep (the evening
-  and wind-down cards carry the same sleep clock, compact, beside the
-  wind-down, in-bed and window times) and keep any
+  and wind-down cards carry the same evening strip as Sleep · Tonight) and keep any
   session still planned as a quiet line; beside tonight's plan card the hero
   keeps only the headline, since the card carries the window and opens
   Tonight.
@@ -350,19 +349,27 @@ Last night:
 
 Tonight:
 
-- A 24-hour sleep clock as the hero, midnight at the top: the planned
-  sleep from the asleep-by time to the expected wake (asleep-by plus the
-  need) as a thick arc, led by a lighter segment for the minutes to fall
-  asleep from in bed; the wind-down as a softer arc before in bed; Garmin's
-  window as a short emphasised segment just outside the ring; and a now dot.
-  Inside, only the need and two lines ("In bed 22:51", "Up 06:56"); hour
-  ticks 00, 06, 12 and 18 sit outside. Below it the facts once: the
-  wind-down (Raring's, with its lead), Garmin's bedtime window or Raring's
-  asleep-by estimate, Garmin's need with when it was read and "so about
-  8:05 in bed with 15 min to fall asleep (Raring)", and the usual wake (from
-  four recorded wakes in 14 nights, with the count until there are 14,
-  otherwise a "reference") when it differs from the expected wake; the
-  sleep goal when one is set; and the time-to-fall-asleep setting. "Why
+- **Tonight's evening** as the hero, on one left-to-right axis: from half
+  an hour before now or wind-down (whichever is earlier) to half an hour
+  past the asleep-by time, both rounded out to the half hour. The wind-down
+  runs as a soft segment to in bed, the minutes to fall asleep as a lighter
+  one, and Garmin's window as a short bracket under the bed edge, so the two
+  can be read against each other. A rule marks now, a position and never a
+  countdown. Hourly ticks sit under it; a tick that would touch another
+  label gives way.
+  Above it one statement: "In bed by 22:51" (or Garmin's window from the
+  wind-down on, or the asleep-by estimate without a window), then one line
+  carrying every time once — wind-down, the window or asleep-by, and the
+  expected wake. The night's length is that line, not the scale. An
+  hour-by-hour axis would squeeze a forty-minute wind-down into ten pixels;
+  the evening is what the reader is deciding.
+  Below it the facts once: Garmin's need with when it was read and "so
+  about 8:05 in bed with 15 min to fall asleep (Raring)", the usual wake
+  (from four recorded wakes in 14 nights, with the count until there are 14,
+  otherwise a "reference") when it differs from the expected wake, the
+  wind-down's lead (Raring's) and the sleep goal when one is set; and the
+  time-to-fall-asleep setting. From the wind-down on the window leads, and
+  late night says the window has passed and draws nothing to catch up. "Why
   this plan" lists the evidence:
   who set the bedtime, Garmin's need, baseline and adjustments, the
   wind-down lead and one tip toward steadier timing. A suggestion, never an

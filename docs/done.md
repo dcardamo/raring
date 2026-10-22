@@ -4,6 +4,20 @@ Shipped backlog items, newest first, each with its commit and the endpoint
 facts verified while building it. The open backlog is [TODO.md](../TODO.md).
 "Verified" means a read against a real account returned the data.
 
+- **Tonight's chart: the evening, zoomed** (commit "Tonight's chart: the
+  evening, zoomed"). Sleep · Tonight and Today's evening card draw the evening
+  on one left-to-right axis — half an hour before now or wind-down, to half an
+  hour past the asleep-by time — with the wind-down as a soft segment, the
+  minutes to fall asleep as a lighter one, Garmin's window as a bracket under
+  the bed edge and a rule for now: a position, never a countdown. The 24-hour
+  ring and `SleepClock` are gone. The night's length is one line of text above
+  the axis, not its scale, so a forty-minute wind-down keeps sixty pixels
+  instead of ten. Every time is written once, in text that wraps; the axis
+  carries hours and now only, and a tick gives way to another label or a
+  larger system font (chart-legibility passes at 360–1100px and 1/1.3/2×
+  text). The four options that led here — the ring, no chart, the scoped ring
+  and this one — are the "Tonight's chart" group in `design/mockup`.
+
 - **Browser fixtures from the core, with a swim and a walk** (commit
   "Generate the preview's training pages from the core's demo"). `raring
   demo` now holds the preview's world: the run, Lower A and an evening ride

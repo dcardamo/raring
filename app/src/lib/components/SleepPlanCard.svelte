@@ -2,9 +2,8 @@
  import type {SleepPlan} from '../generated/SleepPlan';
  import {duration} from '../format';
  import {wakeLabel} from '../tonight';
- import SleepClock from './SleepClock.svelte';
+ import SleepEvening from './SleepEvening.svelte';
  import Card from './Card.svelte';
- import type {Snippet} from 'svelte';
  import Icon from './Icon.svelte';
  import SleepPlanEvidence from './SleepPlanEvidence.svelte';
  // `evidence` adds the "Why this plan" sheet; Today opens Sleep instead. Today's `mode` follows
@@ -19,23 +18,12 @@
  let wakes=$derived(`median of ${plan.wakeNights} recorded wake ${plan.wakeNights===1?'time':'times'}`);
 </script>
 
-{#snippet clockRow(times:Snippet)}
- <!-- The same clock as Sleep · Tonight, compact, with its times beside it. -->
- <div class="clock-row"><SleepClock {plan} {now} compact/>{@render times()}</div>
-{/snippet}
 {#snippet calm()}
+ <!-- Late night only: the window has passed, so nothing is drawn to catch up tonight. -->
  <div class="calm">
-  <span>{mode==='lateNight'?(garmin?'Tonight\'s window was':'Tonight\'s asleep-by was'):(garmin?'Bedtime window':'Asleep by')}</span>
+  <span>{garmin?'Tonight\'s window was':'Tonight\'s asleep-by was'}</span>
   <b class="n">{bedWindow}</b>
-  {#if mode==='windDown'}<small>In bed by <b class="n">{plan.inBed||plan.bedtime}</b></small>{/if}
  </div>
-{/snippet}
-{#snippet times()}
- <dl class="times">
-  <div><dt>Wind down</dt><dd class="n">{plan.windDown}</dd></div>
-  <div><dt>In bed by</dt><dd class="n">{plan.inBed||plan.bedtime}</dd></div>
-  <div><dt>{plan.bedtimeStart?'Garmin window':'Asleep by'}</dt><dd class="n">{bedWindow}</dd></div>
- </dl>
 {/snippet}
 
 {#if mode==='line'}
@@ -47,14 +35,13 @@
 {:else if mode==='windDown' || mode==='lateNight'}
  <Card title={mode==='windDown'?'Wind down':'Tonight'} onclick={open} extra="sleep-plan{lead?' lead':''}">
   {#snippet aside()}<span class="pill"><Icon name="moon" size={13}/> {garmin?'Garmin plan':'Raring estimate'}</span>{/snippet}
-  {#if mode==='windDown'}{@render clockRow(calm)}{:else}{@render calm()}{/if}
-  {#if mode!=='windDown'}<p>Tomorrow's plan follows your next sleep.</p>{/if}
+  {#if mode==='windDown'}<SleepEvening {plan} {now} live/>{:else}{@render calm()}<p>Tomorrow's plan follows your next sleep.</p>{/if}
   <div class="foot"><span>Tonight’s plan</span><Icon name="arrow-right" size={16}/></div>
  </Card>
 {:else}
 <Card title="Tonight's sleep" onclick={open} extra="sleep-plan{lead?' lead':''}">
  {#snippet aside()}<span class="pill"><Icon name="moon" size={13}/> {garmin?'Garmin plan':'Raring estimate'}</span>{/snippet}
- {#if mode==='evening'}{@render clockRow(times)}{:else}
+ {#if mode==='evening'}<SleepEvening {plan} {now}/>{:else}
  <div class="plan-row">
   <div><span>Wind down</span><b class="n">{plan.windDown}</b></div>
   {#if plan.bedtimeStart}
@@ -102,13 +89,9 @@
  .line-main>b span{font-weight:500;color:var(--text2)}
  .line-main>span{font-size:12px;color:var(--text2)}
  .line-main>span b{font:600 13px Outfit;color:var(--text)}
- .clock-row{display:flex;flex-wrap:wrap;align-items:center;gap:14px 18px;margin-top:4px}.clock-row>:last-child{flex:1 1 8em;min-width:0}
- .times{display:grid;gap:8px;margin:0}.times>div{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 10px}.times dt{font-size:12px;color:var(--text2)}.times dd{margin:0 0 0 auto;font-size:20px;font-weight:500;white-space:nowrap}
  .calm{display:grid;gap:6px;justify-items:start}
  .calm span{font-size:12px;color:var(--text2)}
  .calm>b{font-size:34px;font-weight:500;line-height:1}
- .calm small{font-size:12px;color:var(--text2)}
- .calm small b{font:600 13px Outfit;color:var(--text)}
  .foot{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--ink)}
  @container (max-width:310px){.plan-row{gap:8px}.plan-row b{font-size:21px}}
 </style>
