@@ -120,6 +120,10 @@ shared numbers from the generated views. Generating them needs the demo to
 grow the goal history, past reviews (with an ill week), naps, the journal and
 the Fitness Age window, plus `raring show` views for progress, reviews and
 profile. Then progress buckets, review rows and Today's lead can't drift.
+The demo's weeks are also too alike: Training's usual-week bands collapse to
+a line (five weeks, the same daily intensity every week, Zone 2 only from
+Wednesday strength). Vary earlier weeks' runs, rides and daily intensity
+before republishing pictures from the preview.
 
 ### 9. Garmin's estimates as dated points
 
