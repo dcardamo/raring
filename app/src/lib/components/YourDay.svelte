@@ -8,7 +8,9 @@
  // Sleep, Body Battery, stress, heart rate and recorded events share one
  // midnight-to-midnight axis, so a moment lines up across rows. Values come
  // from the core; nothing is drawn after the watch's last upload.
- // `compact` follows tonight's plan from the evening on: sleep, Body Battery and recordings only.
+ // `compact` follows tonight's plan from the evening on: sleep, Body Battery, stress and
+ // recordings. Stress stays: the day's stress is what makes tonight's plan make sense.
+ // Heart rate waits for the full timeline.
  let {day,navigate,compact=false}:{day:DayTimeline,navigate:(route:string)=>void,compact?:boolean}=$props();
  const pct=(m:number)=>Math.max(0,Math.min(100,m/1440*100));
  const STAGE:Record<string,string>={deep:'var(--deep)',light:'var(--light)',rem:'var(--rem)',awake:'var(--ink)'};
@@ -42,12 +44,12 @@
   <span class="track chart">{#if bb}<svg viewBox="0 0 1440 50" preserveAspectRatio="none" aria-hidden="true">{#each naps as n}<rect x={n.startMin} y="0" width={n.endMin!-n.startMin!} height="50" fill="rgba(169,200,255,.22)"/>{/each}<path d={bb} fill="none" stroke="var(--good)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>{#if now!=null}<u data-mark="now" style:left={pct(now)+'%'}></u>{/if}{:else}<em class="none">{day.clockChange?'Clock change today · open the detail':bbNow!=null?'Latest level only':'Awaiting upload'}</em>{/if}</span>
   <span class="val n">{bbNow??'—'}{#if napChange!=null}<small>nap {napChange>=0?'+':''}{napChange}</small>{/if}</span>
  </button>
- {#if !compact}
  <button class="row" onclick={()=>navigate('metric/stress')} aria-label={`Stress, average ${day.stressAverage??'not recorded'}`}>
   <span class="lab"><Icon name="pulse" size={15}/><b>Stress</b></span>
   <span class="track chart">{#if bars.length}<svg viewBox="0 0 1440 50" preserveAspectRatio="none" aria-hidden="true">{#each bars as b}<rect x={b.m+1} y={50-Math.max(2,b.v/100*48)} width="13" height={Math.max(2,b.v/100*48)} fill={stressColors[level(b.v)]}/>{/each}</svg>{#if now!=null}<u data-mark="now" style:left={pct(now)+'%'}></u>{/if}{:else}<em class="none">{day.clockChange?'Clock change today · open the detail':'Awaiting upload'}</em>{/if}</span>
   <span class="val n">{day.stressAverage??'—'}<small>avg</small></span>
  </button>
+ {#if !compact}
  <button class="row" onclick={()=>navigate('metric/heartRate')} aria-label={day.heartRate.length?`Heart rate through the day, resting ${day.restingHr??'not recorded'} bpm${hrRange?`, readings ${hrRange[0]}–${hrRange[1]}`:''}`:'Heart rate: see the heart-rate detail'}>
   <span class="lab"><Icon name="heart" size={15}/><b>Heart rate</b></span>
   <span class="track chart">{#if hr}<svg viewBox="0 0 1440 50" preserveAspectRatio="none" aria-hidden="true"><path d={hr} fill="none" stroke="var(--ink)" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>{#if now!=null}<u data-mark="now" style:left={pct(now)+'%'}></u>{/if}{:else}<em class="none">{day.clockChange?'Clock change today · open the detail':'Awaiting upload'}</em>{/if}</span>

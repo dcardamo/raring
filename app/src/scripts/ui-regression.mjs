@@ -977,6 +977,11 @@ try {
   // From the evening on, tonight leads: only last night's sleep and readiness stay.
   const evening=await open({...sample,nightVitals:null,focus:{...sample.focus,phase:'evening',effort:false,planOpen:true,cards:['sleepPlan','day','focus']}});
   assert.equal(await evening.locator('.morning .stat').count(),2);
+  // The evening's compact day keeps stress: it is the context tonight's plan rests on.
+  const eveningDay=evening.getByRole('region',{name:'Your day on one timeline'});
+  await eveningDay.waitFor();
+  assert.equal(await eveningDay.getByRole('button',{name:/^Stress, average/}).count(),1,'the evening keeps stress');
+  assert.equal(await eveningDay.getByRole('button',{name:/^Heart rate through the day/}).count(),0,'heart rate waits for the full timeline');
   await evening.close();
  }
  console.log('Today’s stats: Sleep, Readiness, resting HR and HRV in one row, each opening its detail; neutral wait and evening: passed');

@@ -237,7 +237,9 @@ In this order:
   nap's Body Battery change under it; heart rate is drawn against the day's own lowest and highest readings
   and never clipped, with no scale on the plot.
   Each row opens its detail. From the evening on it follows tonight's plan,
-  compact: sleep, Body Battery and recordings. A calendar day with nothing
+  compact: sleep, Body Battery, stress and recordings; heart rate stays in
+  the full timeline. Stress is kept at night because the day's stress is the
+  context tonight's plan rests on. A calendar day with nothing
   recorded yet (after midnight, or before the night syncs) hides it. The
   upload time is said once, in the header, never repeated in a card.
 - **Recorded today**: one list of everything the calendar day (Your day's)
