@@ -54,7 +54,7 @@
   {#if passed}<button class="opt" onclick={() => run({action: 'setIntentionStatus', id: i.id, status: 'missed'})}><Icon name="alert" size={18}/><span><b>Mark as missed</b><small>Record that it didn’t happen</small></span></button>{/if}
   {#if !passed}<button class="opt" onclick={() => run({action: 'removeIntention', id: i.id})}><Icon name="close" size={18}/><span><b>Remove</b><small>Delete it from your plan</small></span></button>{/if}
  {:else if !open && !item.coach}<button class="opt" onclick={() => run({action: 'setIntentionStatus', id: i.id, status: 'open'})}><Icon name="arrow-left" size={18}/><span><b>Reopen</b><small>Back in your plan</small></span></button>{/if}
- {#if !item.coach}<button class="opt" disabled aria-describedby="garmin-na"><Icon name="arrow-right" size={18}/><span><b>Send to Garmin</b><small id="garmin-na">Not yet available: Raring doesn’t write to Garmin</small></span></button>{/if}
+ {#if !item.coach}<button class="opt" disabled aria-describedby="garmin-na"><Icon name="arrow-right" size={18}/><span><b>Send to Garmin</b><small id="garmin-na">Not yet available: Raring sends only weigh-ins to Garmin so far</small></span></button>{/if}
  {#if i.history.length}<ol class="hist">{#each i.history as h}<li>{history(h)}</li>{/each}</ol>{/if}
 </div>
 <style>

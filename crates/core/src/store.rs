@@ -126,15 +126,6 @@ impl Store {
         }
         Ok(())
     }
-    /// Drops one stored row (and an activity's place in the date index).
-    pub(crate) fn remove(&self, endpoint: &str, key: &str) -> rusqlite::Result<()> {
-        let db = self.db.lock().unwrap();
-        db.execute("DELETE FROM raw WHERE endpoint=?1 AND key=?2", params![endpoint, key])?;
-        if endpoint == "activity" {
-            db.execute("DELETE FROM activities WHERE id=?1", params![key])?;
-        }
-        Ok(())
-    }
     /// The consent check and journal write are one SQLite statement. Another
     /// Store connection changing settings serializes with this write lock;
     /// a response arriving after opt-out cannot repopulate the cache.
@@ -526,6 +517,16 @@ impl Store {
             .optional()
             .ok()
             .flatten()
+    }
+    /// Drops one stored response, such as a day's weigh-in Garmin no longer
+    /// has (and a removed activity's place in the date index).
+    pub(crate) fn remove(&self, endpoint: &str, key: &str) -> rusqlite::Result<()> {
+        let db = self.db.lock().unwrap();
+        db.execute("DELETE FROM raw WHERE endpoint=?1 AND key=?2", params![endpoint, key])?;
+        if endpoint == "activity" {
+            db.execute("DELETE FROM activities WHERE id=?1", params![key])?;
+        }
+        Ok(())
     }
     pub fn set_cursor(&self, key: &str, value: &str) -> rusqlite::Result<()> {
         self.db.lock().unwrap().execute("INSERT INTO cursors VALUES (?1,?2) ON CONFLICT(key) DO UPDATE SET value=excluded.value",params![key,value])?;

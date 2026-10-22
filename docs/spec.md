@@ -599,7 +599,10 @@ says so on its chart (Rules: Reading freshness).
   Garmin's recorded BMI/body fat as labelled values. Scale weigh-ins are dots
   on a faint line, the trend a solid line, axes name the unit.
   Help ("?") explains smoothing. Adding a weight lives on Profile only (Profile and
-  Settings). Weight follows Garmin's
+  Settings). The detail's Last weigh-in (value, Garmin's body fat if any, date, time, entered by hand
+  or from Garmin) can be deleted from Garmin after an in-place confirmation
+  (Rules: Garmin writes); a deleted weigh-in leaves the card, which names
+  what was deleted. Weight follows Garmin's
   measurement system (kg/lb), not activity-set units in isolation. Missing
   measurements stay gaps, never zero; no notifications or unsolicited weight
   targets. Until the account units sync, the card waits rather than guessing.
@@ -788,8 +791,18 @@ page, never the overnight Sleep HR detail.
 - **Profile** (the header's profile button): what Garmin knows (age, latest
   weigh-in with its date, units, the watch's last upload, history on the
   phone), limitations and injuries (opening Adapt's limits), gear, Settings
-  and Help (Rules: Profile). Add a weight is disabled: it would write to
-  Garmin.
+  and Help (Rules: Profile). Add a weight opens a form under the facts:
+  the weight and a time that defaults to now, saved to
+  Garmin (Rules: Garmin writes), with an optional body fat in percent to
+  0.1. A kg/lb switch beside the weight starts in the unit of the last
+  weigh-in submitted (kept as the setting `weightEntryUnit`), else Garmin's
+  unit, else kg; Profile and Health still show Garmin's unit. A saved
+  weigh-in is named under the button. The time stays fixed while the form is open,
+  so trying again after "sent, not confirmed" repeats the same weigh-in;
+  when Garmin accepted it but its list doesn't show it yet, Raring says to
+  wait or check Connect instead. A saved weight closes the form with
+  Garmin's answer; any other answer stays in the form, and "sign in again"
+  also rereads the status so sign-in shows.
 - **Adapt** (every root header): Rest today, I'm ill, Pause training,
   Lighter week, Limits and My routines; Resume shows the goals first (Rules:
   Adapt, My routines).
@@ -974,8 +987,8 @@ Raring has exited.
   date only prompts. A dismissal lasts its local day (kept 30 days). A wind-down
   reported before noon belongs to the evening before.
 - **Garmin writes**: every change to Garmin follows one path in the core,
-  and nothing ships a write until it has passed on a real watch (TODO item
-  20). A write runs only from the person's explicit action, never from sync
+  and a write ships only once it has passed against a real account (a watch
+  setting on a real watch). A write runs only from the person's explicit action, never from sync
   or another background job; a delete also needs an explicit confirmation.
   It starts from a fresh read of the resource and applies a typed change to
   the fields the person touched. Each change carries the value the person
@@ -986,19 +999,63 @@ Raring has exited.
   (and the resource's id) are sent, so a stale whole object is never
   written. The write uses the same session, pacing, one token refresh on 401,
   and 429 backoff (`backoff_until`) as sync; during a backoff nothing is
-  sent. After Garmin accepts it, the resource is read back and every sent
+  sent. The one resend is after a 401: Garmin saved nothing, so the same
+  request goes once more with a refreshed token. A token refresh that fails
+  first, or a connection that never opens, means nothing was sent. After Garmin accepts it, the resource is read back and every sent
   value compared, with string lists as sets and numbers by value. The
   outcome is one of: saved; saved but read back differently (with what
   differs); sent but unconfirmed (the read-back failed, or the server or
   connection failed after sending); not sent because it changed in Garmin;
   refused, with Garmin's message (any 4xx but 401/429, at most 200
   characters, never an HTML page); not saved (rate limit, not found,
-  network); or sign in again. Invalid changes are refused before any
-  request. Writes are serialized, so two saves never interleave.
-  The first resource is a watch's alarms
+  network); not sent because Garmin already has it; or sign in again.
+  Invalid changes are refused before any request. Writes are serialized, so
+  two saves never interleave. A watch's alarms
   (`/device-service/deviceservice/device-info/settings/{deviceId}`: time in
-  minutes after midnight, `alarmMode` ON/OFF, `alarmDays`, removal), proven
-  against a local mock only; nothing in the app sends it yet.
+  minutes after midnight, `alarmMode` ON/OFF, `alarmDays`, removal) are
+  proven against a local mock only; nothing in the app sends them yet.
+  - **Weigh-ins** are created and deleted, never edited. Adding one sends the
+    weight and, if the person gives it, the scale's body fat:
+    `POST /weight-service/user-weight` with the local `date`,
+    `dateTimestamp` (local) and `gmtTimestamp` (UTC), both
+    `YYYY-MM-DDTHH:MM:SS.mmm` without an offset, `unitKey` `kg`,
+    `sourceType` `MANUAL`, `value` and optionally `bodyFat` (percent).
+    The person types kg or lb whatever Garmin's setting; a pound value is
+    converted at 0.45359237 kg and sent in kilograms to the gram. It must
+    be 20–300 kg, body fat 3–75 % kept to 0.1, and the time, kept to the
+    second, no later than a minute from now. No other composition field is
+    sent. Garmin answers 204 with no
+    body, so no id. Before sending, one `weight/dateRange` request reads the
+    day before to the day after, because Garmin may file a weigh-in under
+    another calendar date when the profile's time zone differs from the
+    phone's; a 404 or 204 is an empty range. A `MANUAL` weigh-in on any of
+    those days at the same `timestampGMT` with the same value and body fat
+    is an earlier attempt Garmin saved, so the add counts as saved and
+    nothing is sent; another weigh-in at that timestamp is a conflict; the
+    same value (to 0.1 in the person's unit) at another time on the local
+    day, with the same body fat when one was given, is "already in Garmin"
+    and nothing is sent. A
+    create is never resent automatically (only after a 401, which saved
+    nothing): after a server failure or a connection lost once sent it is
+    sent but unconfirmed, and trying again with the same time
+    finds it first. The read-back, the same three days, finds the new
+    weigh-in by `MANUAL` and a `timestampGMT` equal to the sent
+    `gmtTimestamp` (Garmin keeps it to the
+    millisecond and lists the weight in grams and `bodyFat` as sent);
+    missing is unconfirmed, and a different value or body fat (to 0.1, or
+    body fat missing) reads back differently. The change log names the
+    reading in the person's unit with its body fat.
+  - **Deleting a weigh-in** names the one the person saw by its date,
+    `timestampGMT` and stored `samplePk`, and needs a confirmation. The fresh
+    read of the same three days finds it (already gone: nothing is sent),
+    then
+    `DELETE /weight-service/weight/{calendarDate}/byversion/{samplePk}`
+    (204, no body, logged with that path), and the read-back checks it is
+    gone.
+  - Each of the three days Garmin answers for is stored as sync stores it:
+    its last weigh-in by `timestampGMT`, with its `samplePk`, or no row, so
+    Health and Profile follow without a sync. A stored latest weigh-in that was deleted
+    is dropped and read again at the next sync.
 - **Recent Garmin changes**: every attempt that passes validation is logged
   in a versioned settings row (`garmin:changes`, `schema` 1), newest first,
   at most 50, with its time, what was written, each field's old and new value
@@ -1394,7 +1451,7 @@ Raring has exited.
   after 7 days), the primary watch's last upload, history on the phone, gear,
   and your limitations (edited in Adapt's limits). The watch's model name is
   not shown until its device-list field is verified. Adding a weight is a
-  Garmin write and stays disabled.
+  Garmin write (Rules: Garmin writes) and the only one on Profile.
 - **Sleep tabs**: Sleep has Last night and Tonight (`sleep/last`,
   `sleep/tonight`; switching replaces the page, never stacks). A plain `sleep`
   link opens Tonight when Today's phase is evening, wind-down or late night,
@@ -2039,7 +2096,11 @@ Raring has exited.
   Android generation changes and profile verification/promotion hold that same
   gate, so the generation cannot change during the profile request. Auth failure and a new
   sign-in suspend presentation immediately, clear notifications/widgets and
-  stop reminders without erasing history. Before saving candidate credentials,
+  stop reminders without erasing history. A Garmin write the person asks for
+  (`garminWrite`) holds `SyncGate` like an on-demand read, saves refreshed
+  tokens and suspends the session when Garmin needs a new sign-in; without
+  stored credentials (the demo) nothing is sent. Desktop writes hold the
+  desktop credential gate. Before saving candidate credentials,
   Rust reads `/userprofile-service/socialProfile` fresh with that candidate and
   binds its numeric `profileId` (the user-profile identifier, not the separate
   social `id`, display name or full name). This field's meaning is supported by

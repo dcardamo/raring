@@ -52,7 +52,8 @@ Raring reads your Garmin account, not your watch. Keep Garmin Connect installed
 and syncing so your watch data reaches Garmin first.
 
 The Android app talks directly to Garmin and keeps its downloaded data, goals
-and plans on your phone. It only reads from Garmin. Nothing is sent to us: no
+and plans on your phone. It reads from Garmin and writes only what you ask it
+to: today, a weigh-in you add or delete. Nothing is sent to us: no
 analytics, telemetry, ads or remote crash reporting. Street maps under workout
 routes are downloaded once per area from OpenFreeMap, which sees your IP
 address and the area, never your route; Settings turns them off. Sign-in uses

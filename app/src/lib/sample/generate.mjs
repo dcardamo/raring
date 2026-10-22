@@ -297,7 +297,7 @@ training.lanes={start:'2025-10-13',today:'2025-10-16',lanes:[
 // Harbour 10K is a run; no run is planned this week, so it only counts down.
 board.eventWeek=null;board.coach=null;board.fitness={vigorous:30,target:75};
 // Profile: Garmin's facts as stored, the gear Training lists, and your limits.
-const profile={age:46,units:'metric',weight:72.4,weightUnit:'kg',weightFreshness:{recordedOn:'2025-10-14',ageDays:2,stale:false,thresholdDays:7},watchLastUpload:'2025-10-16T12:30:00.000Z',gear:training.gear,limits:{excluded:[],note:''}};
+const profile={age:46,units:'metric',weight:72.4,weightUnit:'kg',entryUnit:'kg',weightFreshness:{recordedOn:'2025-10-14',ageDays:2,stale:false,thresholdDays:7},watchLastUpload:'2025-10-16T12:30:00.000Z',gear:training.gear,limits:{excluded:[],note:''}};
 // The generated views replace their transcriptions, and the views still
 // transcribed take what they share from them. The run keeps the street map in
 // workoutMap.json and the route it was drawn for: redrawing needs map tiles.

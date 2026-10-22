@@ -21,7 +21,9 @@ fn main() {
                 "synthetic",
                 &json!({
                     "weight": kg * 1000., "bmi": 23.8, "bodyFat": 21.0,
-                    "timestampGMT": date.and_hms_opt(7, 0, 0).unwrap().and_utc().timestamp_millis()
+                    "timestampGMT": date.and_hms_opt(7, 0, 0).unwrap().and_utc().timestamp_millis(),
+                    "date": date.and_hms_opt(8, 0, 0).unwrap().and_utc().timestamp_millis(),
+                    "samplePk": 1_000 + i, "sourceType": "MANUAL"
                 }),
             )
             .unwrap();

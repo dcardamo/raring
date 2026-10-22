@@ -243,6 +243,9 @@
   const next:ProgressPage={progress};
   views.set('progress',next);data=next;pendingSwap=null;loading=false;
  }
+ // A Garmin write stored Garmin's answer locally; every view rereads it, and the
+ // status too, so a write that needs sign-in again shows sign-in.
+ function garminWritten(){clearViews();void refresh(true,true)}
  function clearSessionViews(){progressQuery={period:'month'};progressRevision++;progressDomains={...FIRST_DOMAINS};weightRange='days30';clearViews()}
  function navigate(to:string){navigation.navigate(to)}
  function back(){return closeSheet() || navigation.back()}
@@ -601,11 +604,11 @@
 {:else if progressData}
  {#snippet progressHeader()}<Header title="Progress" eyebrow="Trends and reviews" {...rootControls}/>{/snippet}<ProgressTab initial={progressData.progress} {navigate} header={progressHeader} onChange={saveProgress} bind:section={progressSection} bind:domainQuery={progressDomains}/>
 {:else if profilePage && route==='profile'}
- {#snippet profileHeader()}<Header title="Profile" eyebrow="RARING" back={back} backLabel={parentLabel}/>{/snippet}<ProfileScreen {status} profile={profilePage} {navigate} limits={()=>{adaptLimits=true;adaptOpen=true}} header={profileHeader}/>
+ {#snippet profileHeader()}<Header title="Profile" eyebrow="RARING" back={back} backLabel={parentLabel}/>{/snippet}<ProfileScreen {status} profile={profilePage} {navigate} limits={()=>{adaptLimits=true;adaptOpen=true}} header={profileHeader} onwrite={garminWritten}/>
 {:else if profileData && route==='gear'}
  <Header title="Gear" eyebrow="Garmin" back={back} backLabel={parentLabel}/>{#if profileData.gear}<GearCard gear={profileData.gear}/>{:else}<p class="small">No gear list from Garmin yet.</p>{/if}
 {:else if route==='health/weight'}
- <Header title="Weight" eyebrow="Garmin weigh-ins · Raring trend" back={back} backLabel={parentLabel}/><WeightCard initial={data as WeightView} bind:range={weightRange}/>
+ <Header title="Weight" eyebrow="Garmin weigh-ins · Raring trend" back={back} backLabel={parentLabel}/><WeightCard initial={data as WeightView} bind:range={weightRange} onwrite={garminWritten}/>
 {:else if route.startsWith('metric/')}
  <Header title={route.split('/')[1]==='restingHr' && (data as HealthView).vitals?.readings.some(isSleepHr) ? 'Sleep HR' : metricNames[route.split('/')[1]]} eyebrow={openedDay?dateLabel(openedDay.date):'GARMIN METRIC'} back={back} backLabel={parentLabel}/><MetricDetail metric={route.split('/')[1]} data={data as TodayView|HealthView|TrainingView} dayDate={openedDay?.page==='heartRate'||openedDay?.page==='stress'?openedDay.date:null} {navigate}/>
 {:else if checkinData}

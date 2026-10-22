@@ -515,6 +515,46 @@ async fn refresh_strength(
     }
 }
 
+/// A Garmin write the person asked for (Rules: Garmin writes), under the same
+/// credential gate as sync, saving refreshed tokens. Without stored Garmin
+/// credentials (the demo) nothing is sent.
+#[tauri::command]
+async fn garmin_write(app: tauri::AppHandle, request: GarminWrite) -> Result<GarminChange, String> {
+    #[cfg(target_os = "android")]
+    {
+        #[derive(Deserialize)]
+        struct Response {
+            change: GarminChange,
+        }
+        if !session_ready(&app)? {
+            return Err("Account verification required".into());
+        }
+        let expected = core(&app)?.session_identity().ok_or("Account verification required")?;
+        let request = serde_json::to_string(&request).map_err(|e| e.to_string())?;
+        let response = vault(&app)
+            .0
+            .run_mobile_plugin_async::<Response>("garminWrite", serde_json::json!({"request": request}))
+            .await
+            .map_err(|e| e.to_string())?;
+        // Sign in again suspends this same session, so it isn't another account.
+        if response.change.outcome != WriteOutcome::NeedsSignIn && core(&app)?.session_identity().as_ref() != Some(&expected) {
+            return Err("Account changed while writing to Garmin".into());
+        }
+        return Ok(response.change);
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let core = core(&app)?;
+        with_desktop_tokens(&app, |tokens| async move {
+            let client = raring_core::garmin::Client::new(tokens).map_err(|e| e.to_string())?;
+            let change = core.write_garmin(&client, &request, chrono::Utc::now()).await.map_err(|e| e.to_string())?;
+            Ok((change, client.tokens().await))
+        })
+        .await?
+        .ok_or_else(|| "Not connected to Garmin; nothing was sent".into())
+    }
+}
+
 #[tauri::command]
 async fn checkin(app: tauri::AppHandle, week_start: Option<String>) -> Result<CheckinView, String> {
     read_view(app, move |core| {
@@ -1288,6 +1328,7 @@ pub fn run() {
                     patch_settings,
                     heart_rate_day,
                     refresh_strength,
+                    garmin_write,
                     fetch_day_detail,
                     fetch_workout_detail,
                     route_map,
@@ -1337,6 +1378,7 @@ pub fn run() {
                     patch_settings,
                     heart_rate_day,
                     refresh_strength,
+                    garmin_write,
                     fetch_day_detail,
                     fetch_workout_detail,
                     route_map,

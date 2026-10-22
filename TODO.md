@@ -21,42 +21,29 @@ availability on every account or watch.
 
 ## Build next
 
-### 1. Garmin writes, starting with weight
+### 1. Garmin writes: hydration and blood pressure
 
-The write rules (item 21) shipped in `crates/core/src/writes.rs`, but nothing
-in the app writes yet. They cover editing an existing resource. A weigh-in is
-created rather than edited, so the first write also extends the rules to
-create and delete. Weight goes first because the Add a weight button
-already exists on Profile (disabled) and Connect shows a weigh-in without
-waiting for a watch sync.
+Weigh-ins shipped (docs/done.md): Profile adds one, the weight detail deletes
+the last one, through the write rules' create and delete. Next, on the same
+rules and each with an approved real-account spike first:
 
-1. **Weight write spike** (approved 2026-10-21). On the maintainer's account,
-   from the CLI and one request at a time: add one weigh-in with
-   `POST /weight-service/user-weight` (unverified), read it back through
-   `weight/dateRange`, check it in Garmin Connect, then delete it with the
-   client's delete-weigh-in endpoint (unverified). Record the request body,
-   units, timestamp and time zone handling, whether the reply carries the new
-   `samplePk`, and how the delete addresses the entry.
-2. **Create and delete in the write rules.** Never retry a create
-   automatically: a sent but unconfirmed create could otherwise save twice.
-   Before sending, read the day's weigh-ins; if the same value is already
-   there, say so instead of sending. A delete still needs the person's
-   confirmation. Keep the change log and the existing outcomes, and add the
-   rules to the spec's Rules: Garmin writes.
-3. **24a. Add a weight** on Profile: the weight only (Garmin's measurement
-   system sets kg or lb), time defaulting to now. Hold Android's `SyncGate` or
-   the desktop credential gate around the write as sync does, and save
-   refreshed tokens. Store the read-back weigh-in so Health shows it without
-   a sync. In the same change, rewrite the website's privacy page and the
-   README, which say Raring only reads from Garmin, and update the spec's
-   Profile entry.
-4. **Delete a weigh-in** from the weight detail, with confirmation.
-5. **24b. Hydration** (`/usersummary-service/usersummary/hydration/log`),
-   then **24c. blood pressure** (`/bloodpressure-service/bloodpressure`; it
-   can't be edited, only deleted and added again). Both unverified.
+1. **24b. Hydration** (`/usersummary-service/usersummary/hydration/log`).
+2. **24c. Blood pressure** (`/bloodpressure-service/bloodpressure`; it can't
+   be edited, only deleted and added again).
 
-Body fat, BMI and other composition fields are out of scope for the first
-weight write.
+Both unverified. BMI and composition fields other than body fat stay out of
+the weight write.
+
+Weigh-in follow-ups from the branch review:
+- **Tokens after a panic**: if the Android JNI write (`background.rs`,
+  `Java_app_raring_NativeBridge_garminWrite`) panics after the request was
+  sent, its refreshed tokens are lost and the change isn't returned; the
+  reply now says Garmin may or may not have it. Return the tokens (and log
+  the attempt) from a panic-safe path.
+- **A delete without `samplePk`**: a stored weigh-in from Garmin's latest
+  endpoint has no `samplePk`, so the delete finds it by `timestampGMT`
+  alone. Two weigh-ins at the same millisecond are unlikely but would be
+  ambiguous; require a unique match or the `samplePk` from the fresh read.
 
 ### 2. Stress timeline on clock-change days (before 1 Nov)
 
@@ -151,6 +138,8 @@ each day's Training Status `minTrainingLoadChronic`/`maxTrainingLoadChronic`.
 
 ### 11. Smaller items
 
+- **Delete an older weigh-in**: the weight detail deletes only the last one;
+  the chart's tap-to-read weigh-in could offer the same confirmed delete.
 - **Sign-in error wording**: map the native sign-in failures (no network,
   cancelled, Garmin refused) to one plain line each once their messages are
   known; Raring now only drops the "Error:" prefix.
@@ -168,6 +157,10 @@ each day's Training Status `minTrainingLoadChronic`/`maxTrainingLoadChronic`.
 - **Chart legibility check**: it compares text with other text and with
   `data-mark` markers, not bars, points or bands; mark more shapes as charts
   change.
+- **Flaky Long-term overflow check**: `adaptive-layout.mjs` sometimes reports
+  Progress's Long-term chart overflowing (seen at 390 px with 2× text and at
+  840 px) and passes on rerun. Find the timing it depends on rather than
+  retrying.
 
 ## Check on a phone or desktop
 
@@ -234,6 +227,14 @@ TalkBack or Doze.
 - History backfill: the first background run (budget 1400) takes about
   7 minutes at real pacing, close to WorkManager's 10-minute stop. If phones
   stop it, use shorter chained runs.
+
+### Garmin writes on a phone
+
+- **Add and delete a weigh-in on a signed-in phone** (approved writes only):
+  `garminWrite` under `SyncGate`, refreshed tokens saved to the vault, the
+  weigh-in on Health and Profile at once, and Connect showing the same entry.
+  The emulator checked only the demo's refusal; the credentialed JNI write
+  is unrun on a device.
 
 ### Notifications, widgets and background sync
 
@@ -314,6 +315,21 @@ TalkBack or Doze.
 ## Probe a real account
 
 Read-only unless noted, serialized, within the budget, notes in `.data/`.
+
+- **A weigh-in's calendar date across time zones** (one approved write and
+  delete). Settled on 2026-10-21 with the phone and profile in the same
+  zone: a weigh-in sent at 20:34 local, when its `gmtTimestamp` was already
+  the next UTC day, was filed under the local `date` sent (2026-10-21), not
+  the UTC date. Still open: with the phone's time zone different from the
+  Garmin profile's, add one near midnight and see whether Garmin files it
+  under the sent `date` or the profile's. Raring reads the day before to the
+  day after, so either is found, but Health shows it on Garmin's date.
+- **Weigh-in writes beyond the spike** (writes; ask first): a weigh-in in
+  pounds converts to grams that aren't whole tenths of a kilogram (162.7 lb
+  is sent as 73.799 kg); whether Garmin keeps those grams exactly is
+  unverified (the body-fat spike sent 73.8) (the read-back compares to
+  0.1 lb, so rounding would read back differently, not fail). Deleting a
+  scale's (non-`MANUAL`) weigh-in with the same endpoint is unverified.
 
 - **Garmin Coach status and week boundary**: after a completed and a skipped
   Coach session, one `fbt-adaptive` read to see which

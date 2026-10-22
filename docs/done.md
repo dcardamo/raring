@@ -76,6 +76,70 @@ facts verified while building it. The open backlog is [TODO.md](../TODO.md).
   point's readout says so; the hero and "N years younger" keep the latest
   estimate's own age. Synthetic tests only; no Garmin requests.
 
+- **Body fat with a weigh-in, and kg or lb in the form** (commit "Add body
+  fat and a kg/lb switch to Add a weight"), at the maintainer's request.
+  Spike on his account (approved 2026-10-21), one request at a time: the
+  verified `POST /weight-service/user-weight` body plus `"bodyFat": 20.4`
+  (value 73.8 kg) answered 204; the three-day range read back one `MANUAL`
+  entry with `weight` 73800 g and `bodyFat` 20.4, `timestampGMT` equal to
+  the sent one; the delete by `samplePk` answered 204 and the range was
+  empty again, the latest weigh-in unchanged. Sent at 20:34 local with the
+  `gmtTimestamp` already on the next UTC day, it was filed under the local
+  date. The FIT upload route wasn't needed or sent. The form takes an
+  optional body fat (3–75 %, to 0.1) and a kg/lb switch that starts in the
+  last submitted unit (`weightEntryUnit`, set by the core once a weigh-in
+  passes validation); body fat counts in the earlier-attempt, duplicate and
+  read-back checks and is in the change log; the saved line names the
+  reading; the weight detail's last weigh-in shows Garmin's body fat.
+
+- **24a. Add a weight and delete a weigh-in** (commit "Add a weight on
+  Profile and delete a weigh-in from the weight detail"; TODO 1, steps 3–4).
+  Profile's Add a weight opens a form: the weight in Garmin's unit (20–300 kg
+  or the same in lb) and a time defaulting to now, fixed while the form is
+  open so a retry after "sent, not confirmed" repeats the same weigh-in. The
+  weight detail shows the last weigh-in and deletes it after an in-place
+  confirmation. One `garmin_write` command: desktop holds the credential gate
+  and saves refreshed tokens; Android's `garminWrite` plugin command holds
+  `SyncGate`, refuses without stored tokens (the demo) before any request,
+  saves refreshed tokens and suspends the session on sign-in again. Both
+  views reread after a write; the core stored Garmin's answer. The README,
+  the website's privacy page and Profile's help no longer say Raring only
+  reads from Garmin. UI tests: the preview's refusal, an unconfirmed save
+  kept with its time then confirmed on retry, cancel and confirm of a
+  delete, widths and contrast. On the emulator (debug build, project
+  signer) with the synthetic demo, which has no Garmin tokens: Add a weight
+  and the confirmed delete each showed "Not connected to Garmin; nothing was
+  sent", with no request, no log entry, no crash and the session still
+  signed in. The credentialed write on a phone is still to check (Check on
+  a phone: Garmin writes on a phone).
+
+- **Weigh-ins in the write rules** (commit "Add weigh-in create and delete
+  to the Garmin write rules"; TODO 1, steps 1–2). Spike on the maintainer's
+  account (approved 2026-10-21), one request at a time: one weigh-in created
+  with the latest real value, read back, deleted and read back again.
+  Verified: `POST /weight-service/user-weight` with `{date, dateTimestamp,
+  gmtTimestamp, unitKey: "kg", sourceType: "MANUAL", value}` (both
+  timestamps `YYYY-MM-DDTHH:MM:SS.mmm`, local and UTC, no offset) answers
+  204 with no body, so no id. `weight/dateRange` for the day then lists it
+  with `sourceType` `MANUAL`, `weight` in grams (exact), `timestampGMT`
+  equal to the sent `gmtTimestamp` to the millisecond, `date` the local wall
+  time encoded as UTC milliseconds, and a `samplePk` near the server's
+  receive time. `DELETE /weight-service/weight/{calendarDate}/byversion/{samplePk}`
+  answers 204 with no body; the day is empty again and the earlier latest
+  weigh-in is unchanged. The core (`writes.rs`) now creates and deletes
+  weigh-ins: a fresh day read first (an earlier attempt at the same time
+  counts as saved, the same value that day is "already in Garmin", a new
+  `duplicate` outcome), one POST never resent automatically, a read-back by
+  `MANUAL` + `timestampGMT`, and the read-back day stored as sync stores it
+  (with `samplePk`). Deletes need a confirmation and a fresh read; a deleted
+  stored latest is dropped and reread at the next sync. Client writes take
+  any method (`Client::send`). Mock tests: saved, pounds, read back
+  differently, duplicate, same-moment conflict, sent but unconfirmed then
+  confirmed by the next attempt's read, read-back failure, 400 with message,
+  401 refresh, 429 backoff, confirmed delete, already gone, delete
+  unconfirmed. `raring add-weight` and `raring delete-weigh-in` run the same
+  path; no real write was sent beyond the spike.
+
 - **Medium widget shows HRV** (commit "Show last night's HRV on the medium
   widget"). Body Battery and stress change through the day but reach Raring
   only with a Connect sync, so the widget showed them late. The medium widget

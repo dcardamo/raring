@@ -369,6 +369,7 @@ impl Raring {
             units: self.store.get("profile_settings", "me").and_then(|s| s["measurementSystem"].as_str().map(str::to_owned)),
             weight: weight.as_ref().and_then(|w| w.scale),
             weight_unit: weight.as_ref().and_then(|w| w.unit),
+            entry_unit: self.store.settings().weight_entry_unit.or(weight.as_ref().and_then(|w| w.unit)).unwrap_or(view::WeightUnit::Kg),
             weight_freshness: weight.map(|w| w.freshness).unwrap_or(view::ReadingFreshness { recorded_on: None, age_days: None, stale: false, threshold_days: 7 }),
             watch_last_upload: uploaded.map(|t| t.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)),
             gear: gear::view(&self.store),
@@ -457,16 +458,47 @@ impl Raring {
         let expected = self.session_identity().ok_or(Error::InvalidLocal("not signed in"))?;
         let (resource, edits) = writes::alarms(device_id, edits, confirm_delete)?;
         let entry = writes::write(&self.store, client, resource, edits, now).await;
-        {
-            let _write = status::WRITE_LOCK.lock().unwrap();
-            // A write that outlived its account is not logged for the next one.
-            if self.session_identity().as_deref() == Some(expected.as_str()) {
-                // The outcome matters more than its log entry; a failed log save
-                // still returns what Garmin did.
-                let _ = writes::record(&self.store, &entry);
+        Ok(self.keep_write(&expected, &entry, None, now))
+    }
+    /// Add or delete a weigh-in, only from the person's explicit action (Rules:
+    /// Garmin writes), with the same gate and token handling as
+    /// `change_watch_alarms`. The day Garmin reads back is stored, so Health
+    /// shows it without a sync.
+    pub async fn write_garmin(
+        &self,
+        client: &garmin::Client,
+        request: &view::GarminWrite,
+        now: DateTime<Utc>,
+    ) -> Result<view::GarminChange> {
+        let expected = self.session_identity().ok_or(Error::InvalidLocal("not signed in"))?;
+        let (entry, weighed) = match request {
+            view::GarminWrite::AddWeight { value, unit, at, body_fat } => {
+                let new = writes::new_weigh_in(*value, *unit, *body_fat, at, now)?;
+                // The submitted unit is the next form's default, whatever Garmin answers.
+                if self.store.settings().weight_entry_unit != Some(*unit) {
+                    let _ = self.save_settings(Some(Some(expected.clone())), |s| Ok(view::Settings { weight_entry_unit: Some(*unit), ..s.clone() }));
+                }
+                writes::create_weigh_in(&self.store, client, new, now).await
+            }
+            view::GarminWrite::DeleteWeighIn { date, timestamp_gmt, sample_pk, confirm } => {
+                let old = writes::old_weigh_in(date, *timestamp_gmt, sample_pk.as_deref(), *confirm)?;
+                writes::delete_weigh_in(&self.store, client, old, now).await
+            }
+        };
+        Ok(self.keep_write(&expected, &entry, weighed.as_ref(), now))
+    }
+    fn keep_write(&self, expected: &str, entry: &writes::Entry, weighed: Option<&writes::Weighed>, now: DateTime<Utc>) -> view::GarminChange {
+        let _write = status::WRITE_LOCK.lock().unwrap();
+        // A write that outlived its account is not logged or stored for the next one.
+        if self.session_identity().as_deref() == Some(expected) {
+            // The outcome matters more than its log entry or local copy; a
+            // failed save still returns what Garmin did.
+            let _ = writes::record(&self.store, entry);
+            if let Some(weighed) = weighed {
+                let _ = writes::keep_day(&self.store, weighed, &now.to_rfc3339());
             }
         }
-        Ok(writes::shown(&self.store, &entry))
+        writes::shown(&self.store, entry)
     }
     /// Recent Garmin writes, newest first, from local data only.
     pub fn garmin_changes(&self) -> Vec<view::GarminChange> {
