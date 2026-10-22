@@ -3,6 +3,7 @@
   "units": "metric",
   "weight": 72.4,
   "weightUnit": "kg",
+  "entryUnit": "kg",
   "weightFreshness": {
     "recordedOn": "2025-10-14",
     "ageDays": 2,

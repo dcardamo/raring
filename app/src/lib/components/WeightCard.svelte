@@ -12,16 +12,20 @@
  import HelpButton from './HelpButton.svelte';
  import Card from './Card.svelte';
  import Icon from './Icon.svelte';
+ import DeleteWeighIn from './DeleteWeighIn.svelte';
  // Garmin scale weight and Raring's labelled trend, laid out like every other history card in the neutral blue.
  // All metric math and freshness come from Rust. On Health (`navigate` given) it is the compact card that opens
  // the detail; the detail adds every range, each change and body composition.
  // `endDate` anchors the card to an opened past day; otherwise it ends today.
- let {range=$bindable('days30'),initial,navigate,endDate}:{range?:TrendRange,initial?:WeightView,navigate?:(route:string)=>void,endDate?:string}=$props();
+ // The detail can delete its last weigh-in from Garmin; `onwrite` lets the app reread its views.
+ let {range=$bindable('days30'),initial,navigate,endDate,onwrite}:{range?:TrendRange,initial?:WeightView,navigate?:(route:string)=>void,endDate?:string,onwrite?:()=>void}=$props();
  let compact=$derived(!!navigate);
  // Health offers four of the detail's ranges; one chosen only on the detail (14D, Max) shows here as 30D.
  const COMPACT:TrendRange[]=['days7','days30','days90','year'];
  let wanted=$derived<TrendRange>(compact && !COMPACT.includes(range)?'days30':range);
  let view=$state<WeightView|null>(untrack(()=>initial??null)),busy=$state(false),error=$state('');
+ // The weigh-in just deleted from Garmin, hidden even before the reread drops it.
+ let deleted=$state<{at:number,text:string}|null>(null);
  const generation=getContext<()=>number>('trend-generation')??(()=>0);
  const color=colors.neutral;
  $effect(()=>{
@@ -71,6 +75,14 @@
    <div class="picker"><RangePicker value={range} onchange={r=>range=r} label="Weight range"/></div>
    {@render history()}
   </section>
+  {#if ready && view?.unit && !endDate && (view.lastWeighIn || deleted)}
+   <Card title="Last weigh-in">
+    {#if deleted}<p class="small deleted" role="status">{deleted.text}</p>{/if}
+    {#if view.lastWeighIn && view.lastWeighIn.timestampGmt!==deleted?.at}
+     {#key view.lastWeighIn.timestampGmt}<DeleteWeighIn weighIn={view.lastWeighIn} unit={view.unit} {onwrite} ondeleted={text=>{deleted={at:view!.lastWeighIn!.timestampGmt,text};onwrite?.()}}/>{/key}
+    {/if}
+   </Card>
+  {/if}
   {#if ready && view?.changes.length}
    <Card title={`Trend change · ending ${dateLabel(view.to!)}`} extra="weight-changes">
     <!-- Under a week, a sparkline's own scale turns a steady 0.1 into a steep line. -->
@@ -84,6 +96,7 @@
 {/if}
 <style>
  .picker{display:flex;min-width:0}
+ .deleted{margin:0 0 10px}
  .period-summary{margin:16px 0}
  .period-source{font:400 12px/1.5 Inter;color:var(--text2);margin:0 0 10px;overflow-wrap:anywhere}
  .fresh{display:flex;align-items:center;gap:5px;margin:8px 0 0;font-size:12px;color:var(--text2)}.fresh.stale{color:var(--fair);font-weight:600}

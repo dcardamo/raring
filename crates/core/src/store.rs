@@ -518,6 +518,11 @@ impl Store {
             .ok()
             .flatten()
     }
+    /// Drops one stored response, such as a day's weigh-in Garmin no longer has.
+    pub(crate) fn remove(&self, endpoint: &str, key: &str) -> rusqlite::Result<()> {
+        self.db.lock().unwrap().execute("DELETE FROM raw WHERE endpoint=?1 AND key=?2", params![endpoint, key])?;
+        Ok(())
+    }
     pub fn set_cursor(&self, key: &str, value: &str) -> rusqlite::Result<()> {
         self.db.lock().unwrap().execute("INSERT INTO cursors VALUES (?1,?2) ON CONFLICT(key) DO UPDATE SET value=excluded.value",params![key,value])?;
         Ok(())

@@ -3,4 +3,4 @@
 /**
  * How a Garmin write ended (Rules: Garmin writes).
  */
-export type WriteOutcome = "applied" | "differs" | "unconfirmed" | "conflict" | "rejected" | "failed" | "needsSignIn";
+export type WriteOutcome = "applied" | "differs" | "unconfirmed" | "conflict" | "rejected" | "failed" | "needsSignIn" | "duplicate";
