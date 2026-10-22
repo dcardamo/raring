@@ -25,7 +25,7 @@
   <dt>Watch</dt><dd>Last upload<small>{upload}</small></dd>
   <dt>History</dt><dd>{status?.historyFrom ? `Since ${monthLabel(status.historyFrom)}` : '—'}<small>{status?.historyComplete ? 'All of it is on this phone' : 'Downloading older history'}</small></dd>
  </dl>
- <AddWeight unit={profile.weightUnit} {onwrite}/>
+ <AddWeight unit={profile.entryUnit} {onwrite}/>
 </section>
 <section class="card" aria-labelledby="limits-h">
  <h3 id="limits-h">Limitations and injuries</h3>

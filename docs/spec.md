@@ -593,7 +593,7 @@ says so on its chart (Rules: Reading freshness).
   Garmin's recorded BMI/body fat as labelled values. Scale weigh-ins are dots
   on a faint line, the trend a solid line, axes name the unit.
   Help ("?") explains smoothing. Adding a weight lives on Profile only (Profile and
-  Settings). The detail's Last weigh-in (value, date, time, entered by hand
+  Settings). The detail's Last weigh-in (value, Garmin's body fat if any, date, time, entered by hand
   or from Garmin) can be deleted from Garmin after an in-place confirmation
   (Rules: Garmin writes); a deleted weigh-in leaves the card, which names
   what was deleted. Weight follows Garmin's
@@ -782,14 +782,17 @@ page, never the overnight Sleep HR detail.
   weigh-in with its date, units, the watch's last upload, history on the
   phone), limitations and injuries (opening Adapt's limits), gear, Settings
   and Help (Rules: Profile). Add a weight opens a form under the facts:
-  the weight in Garmin's unit and a time that defaults to now, saved to
-  Garmin (Rules: Garmin writes). The time stays fixed while the form is open,
+  the weight and a time that defaults to now, saved to
+  Garmin (Rules: Garmin writes), with an optional body fat in percent to
+  0.1. A kg/lb switch beside the weight starts in the unit of the last
+  weigh-in submitted (kept as the setting `weightEntryUnit`), else Garmin's
+  unit, else kg; Profile and Health still show Garmin's unit. A saved
+  weigh-in is named under the button. The time stays fixed while the form is open,
   so trying again after "sent, not confirmed" repeats the same weigh-in;
   when Garmin accepted it but its list doesn't show it yet, Raring says to
   wait or check Connect instead. A saved weight closes the form with
   Garmin's answer; any other answer stays in the form, and "sign in again"
-  also rereads the status so sign-in shows. Until Garmin's units sync, the
-  button waits.
+  also rereads the status so sign-in shows.
 - **Adapt** (every root header): Rest today, I'm ill, Pause training,
   Lighter week, Limits and My routines; Resume shows the goals first (Rules:
   Adapt, My routines).
@@ -993,29 +996,36 @@ next pending wind-down while signed in.
   minutes after midnight, `alarmMode` ON/OFF, `alarmDays`, removal) are
   proven against a local mock only; nothing in the app sends them yet.
   - **Weigh-ins** are created and deleted, never edited. Adding one sends the
-    weight only: `POST /weight-service/user-weight` with the local `date`,
+    weight and, if the person gives it, the scale's body fat:
+    `POST /weight-service/user-weight` with the local `date`,
     `dateTimestamp` (local) and `gmtTimestamp` (UTC), both
     `YYYY-MM-DDTHH:MM:SS.mmm` without an offset, `unitKey` `kg`,
-    `sourceType` `MANUAL` and `value`. A pound value is converted at
-    0.45359237 kg and sent in kilograms to the gram; it must be 20–300 kg,
-    and the time, kept to the second, no later than a minute from now. Garmin answers 204 with no
+    `sourceType` `MANUAL`, `value` and optionally `bodyFat` (percent).
+    The person types kg or lb whatever Garmin's setting; a pound value is
+    converted at 0.45359237 kg and sent in kilograms to the gram. It must
+    be 20–300 kg, body fat 3–75 % kept to 0.1, and the time, kept to the
+    second, no later than a minute from now. No other composition field is
+    sent. Garmin answers 204 with no
     body, so no id. Before sending, one `weight/dateRange` request reads the
     day before to the day after, because Garmin may file a weigh-in under
     another calendar date when the profile's time zone differs from the
     phone's; a 404 or 204 is an empty range. A `MANUAL` weigh-in on any of
-    those days at the same `timestampGMT` with the same value is an earlier
-    attempt Garmin saved, so the add counts as saved and nothing is sent;
-    another weigh-in at that timestamp is a conflict; the same value (to 0.1
-    in the person's unit) at another time on the local day is "already in
-    Garmin" and nothing is sent. A
+    those days at the same `timestampGMT` with the same value and body fat
+    is an earlier attempt Garmin saved, so the add counts as saved and
+    nothing is sent; another weigh-in at that timestamp is a conflict; the
+    same value (to 0.1 in the person's unit) at another time on the local
+    day, with the same body fat when one was given, is "already in Garmin"
+    and nothing is sent. A
     create is never resent automatically (only after a 401, which saved
     nothing): after a server failure or a connection lost once sent it is
     sent but unconfirmed, and trying again with the same time
     finds it first. The read-back, the same three days, finds the new
     weigh-in by `MANUAL` and a `timestampGMT` equal to the sent
     `gmtTimestamp` (Garmin keeps it to the
-    millisecond and lists the weight in grams); missing is unconfirmed, a
-    different value (to 0.1) reads back differently.
+    millisecond and lists the weight in grams and `bodyFat` as sent);
+    missing is unconfirmed, and a different value or body fat (to 0.1, or
+    body fat missing) reads back differently. The change log names the
+    reading in the person's unit with its body fat.
   - **Deleting a weigh-in** names the one the person saw by its date,
     `timestampGMT` and stored `samplePk`, and needs a confirmation. The fresh
     read of the same three days finds it (already gone: nothing is sent),

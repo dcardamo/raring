@@ -9,7 +9,7 @@
  // weigh-in is handed to the parent, which drops it; other answers stay here.
  let {weighIn,unit,onwrite,ondeleted}:{weighIn:WeighIn,unit:WeightUnit,onwrite?:()=>void,ondeleted?:(text:string)=>void}=$props();
  let confirming=$state(false),busy=$state(false),status=$state('');
- let label=$derived(`${num(weighIn.value,1)} ${unit} · ${dateLabel(weighIn.date)}${weighIn.time?` · ${weighIn.time}`:''}`);
+ let label=$derived(`${num(weighIn.value,1)} ${unit}${weighIn.bodyFat!=null?` · ${num(weighIn.bodyFat,1)} % body fat`:''} · ${dateLabel(weighIn.date)}${weighIn.time?` · ${weighIn.time}`:''}`);
  async function remove(){
   busy=true;status='';
   try{

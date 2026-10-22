@@ -37,8 +37,8 @@ rules and each with an approved real-account spike first:
 2. **24c. Blood pressure** (`/bloodpressure-service/bloodpressure`; it can't
    be edited, only deleted and added again).
 
-Both unverified. Body fat, BMI and other composition fields stay out of the
-weight write.
+Both unverified. BMI and composition fields other than body fat stay out of
+the weight write.
 
 Weigh-in follow-ups from the branch review:
 - **Tokens after a panic**: if the Android JNI write (`background.rs`,
@@ -310,13 +310,17 @@ TalkBack or Doze.
 Read-only unless noted, serialized, within the budget, notes in `.data/`.
 
 - **A weigh-in's calendar date across time zones** (one approved write and
-  delete): with the phone's time zone different from the Garmin profile's,
-  add a weigh-in near midnight and see which `calendarDate` Garmin files it
-  under. Raring reads the day before to the day after, so either is found,
-  but Health shows it on Garmin's date.
+  delete). Settled on 2026-10-21 with the phone and profile in the same
+  zone: a weigh-in sent at 20:34 local, when its `gmtTimestamp` was already
+  the next UTC day, was filed under the local `date` sent (2026-10-21), not
+  the UTC date. Still open: with the phone's time zone different from the
+  Garmin profile's, add one near midnight and see whether Garmin files it
+  under the sent `date` or the profile's. Raring reads the day before to the
+  day after, so either is found, but Health shows it on Garmin's date.
 - **Weigh-in writes beyond the spike** (writes; ask first): a weigh-in in
-  pounds converts to grams that aren't whole tenths of a kilogram; whether
-  Garmin keeps those grams exactly is unverified (the read-back compares to
+  pounds converts to grams that aren't whole tenths of a kilogram (162.7 lb
+  is sent as 73.799 kg); whether Garmin keeps those grams exactly is
+  unverified (the body-fat spike sent 73.8) (the read-back compares to
   0.1 lb, so rounding would read back differently, not fail). Deleting a
   scale's (non-`MANUAL`) weigh-in with the same endpoint is unverified.
 

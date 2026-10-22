@@ -263,10 +263,11 @@ async fn main() -> Result<()> {
         Some("stress-month")=>{let current=core.current_date(now);let month=args.get(1).cloned().unwrap_or_else(||current.clone());
             show(&core.stress_month(&month,&current).map_err(anyhow::Error::msg)?)?},
         // Garmin writes through the core's rules (Rules: Garmin writes), for real-account checks only when approved.
-        Some("add-weight")=>{let value:f64=args.get(1).context("add-weight VALUE kg|lb [--at RFC3339]")?.parse()?;
+        Some("add-weight")=>{let value:f64=args.get(1).context("add-weight VALUE kg|lb [--body-fat PERCENT] [--at RFC3339]")?.parse()?;
+            let body_fat=args.windows(2).find(|v|v[0]=="--body-fat").map(|v|v[1].parse::<f64>()).transpose()?;
             let unit=enum_arg(args.get(2).context("add-weight VALUE kg|lb")?.clone())?;
             let at=args.windows(2).find(|v|v[0]=="--at").map(|v|v[1].clone()).unwrap_or_else(||now.to_rfc3339_opts(chrono::SecondsFormat::Secs,false));
-            let client=garmin::Client::new(read_tokens()?)?;let change=core.write_garmin(&client,&raring_core::view::GarminWrite::AddWeight{value,unit,at},now.to_utc()).await;
+            let client=garmin::Client::new(read_tokens()?)?;let change=core.write_garmin(&client,&raring_core::view::GarminWrite::AddWeight{value,unit,at,body_fat},now.to_utc()).await;
             save_tokens(&client.tokens().await)?;show(&change?)?;},
         Some("delete-weigh-in")=>{let usage="delete-weigh-in DATE TIMESTAMP_GMT [SAMPLE_PK] --confirm";
             let date=args.get(1).context(usage)?.clone();let timestamp_gmt:i64=args.get(2).context(usage)?.parse()?;
@@ -323,7 +324,7 @@ async fn main() -> Result<()> {
             save_tokens(&client.tokens().await)?;
             println!("Scrubbed capture at {}. Review it manually before sharing.",out.display());
         },
-        _=>bail!("usage: raring login [--import FILE] | sync [--budget N] | status | add-weight VALUE kg|lb [--at RFC3339] | delete-weigh-in DATE TIMESTAMP_GMT [SAMPLE_PK] --confirm | demo [--date YYYY-MM-DD] | show SCREEN [--date YYYY-MM-DD] [--at YYYY-MM-DDTHH:MM] | set-plan JSON | notifications | trend METRIC [--range days7|days30|days90|year|all|custom] [--start DATE] [--date DATE] [--overlay METRIC] [--previous] [--comparison-start DATE] | stress-month [YYYY-MM] | day-detail YYYY-MM-DD | workout-detail ACTIVITY_ID | route-map ACTIVITY_ID|--route FILE | fetch KIND [KEY] | capture --out DIR")
+        _=>bail!("usage: raring login [--import FILE] | sync [--budget N] | status | add-weight VALUE kg|lb [--body-fat PERCENT] [--at RFC3339] | delete-weigh-in DATE TIMESTAMP_GMT [SAMPLE_PK] --confirm | demo [--date YYYY-MM-DD] | show SCREEN [--date YYYY-MM-DD] [--at YYYY-MM-DDTHH:MM] | set-plan JSON | notifications | trend METRIC [--range days7|days30|days90|year|all|custom] [--start DATE] [--date DATE] [--overlay METRIC] [--previous] [--comparison-start DATE] | stress-month [YYYY-MM] | day-detail YYYY-MM-DD | workout-detail ACTIVITY_ID | route-map ACTIVITY_ID|--route FILE | fetch KIND [KEY] | capture --out DIR")
     }
     Ok(())
 }

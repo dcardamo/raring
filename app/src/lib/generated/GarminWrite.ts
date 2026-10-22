@@ -5,4 +5,4 @@ import type { WeightUnit } from "./WeightUnit";
  * A write the person asked for (Rules: Garmin writes). Weigh-ins are
  * created and deleted, never edited.
  */
-export type GarminWrite = { "kind": "addWeight", value: number, unit: WeightUnit, at: string, } | { "kind": "deleteWeighIn", date: string, timestampGmt: number, samplePk: string | null, confirm: boolean, };
+export type GarminWrite = { "kind": "addWeight", value: number, unit: WeightUnit, at: string, bodyFat: number | null, } | { "kind": "deleteWeighIn", date: string, timestampGmt: number, samplePk: string | null, confirm: boolean, };

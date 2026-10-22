@@ -19,4 +19,8 @@ timestampGmt: number, samplePk: string | null,
 /**
  * Garmin's `sourceType`, such as `MANUAL`.
  */
-source: string | null, };
+source: string | null, 
+/**
+ * Garmin's body fat in percent, when the weigh-in has one.
+ */
+bodyFat: number | null, };

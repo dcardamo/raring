@@ -55,6 +55,7 @@ import sampleProgress from './sample/progress.json';
 import type { GarminChange } from './generated/GarminChange';
 import type { GarminWrite } from './generated/GarminWrite';
 import type { WriteOutcome } from './generated/WriteOutcome';
+import type { WeightUnit } from './generated/WeightUnit';
 import { sampleGarminChanges } from './sample/garminChanges';
 import type { ImportPreview } from './generated/ImportPreview';
 export const previewOnly = !isTauri();
@@ -66,7 +67,7 @@ export const supportsStatusSurfaces = isTauri() && /Android/.test(navigator.user
 // Desktop delivers reminders itself while the app runs; Android schedules them natively.
 export const desktopReminders = isTauri() && !/Android/.test(navigator.userAgent);
 export type ReminderStatus = {supported:boolean;granted:boolean;error:string|null;nextAt:string|null};
-export const defaultSettings = {notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,bedtimeLeadMin:30,fallAsleepMin:15,adaptiveToday:true,journalEnabled:false,planPrompt:true,bodyFigure:'profile',streetMaps:true} satisfies Settings;
+export const defaultSettings = {notifyMorningReadiness:true,notifyWeeklyCheckin:true,notifyMetricChanges:true,notifyVitals:true,notifyTrainingStatus:false,notifyBedtime:false,bedtimeLeadMin:30,fallAsleepMin:15,adaptiveToday:true,journalEnabled:false,planPrompt:true,bodyFigure:'profile',streetMaps:true,weightEntryUnit:null} satisfies Settings;
 let previewSettings:Settings = {...defaultSettings};
 const copy = <T>(value:T):T => structuredClone(value);
 const call = <T>(name:string,args:Record<string,unknown>|undefined,fallback:T):Promise<T> => isTauri()?invoke<T>(name,args):Promise.resolve(copy(fallback));
@@ -113,7 +114,12 @@ export const lift_series = (key:string,range:TrendRange):Promise<LiftSeries|null
 };
 export const milestone_archive = ():Promise<Milestone[]> => call('milestone_archive',undefined,(sampleProgress as unknown as {milestones:Milestone[]}).milestones);
 export const progress_domains = (query:DomainQuery):Promise<ProgressDomains> => call('progress_domains',{query},sampleDomains as unknown as ProgressDomains);
-export const profile = ():Promise<ProfileView> => call('profile',undefined,sampleProfile as unknown as ProfileView);
+// The weight-write fixture remembers the last submitted unit, as the core does.
+let previewEntryUnit:WeightUnit|null=null;
+export const profile = ():Promise<ProfileView> => {
+ const sample=sampleProfile as unknown as ProfileView;
+ return call('profile',undefined,previewEntryUnit?{...sample,entryUnit:previewEntryUnit}:sample);
+};
 export const training = (date?:string):Promise<TrainingView> => call('training',{date},sampleTraining as unknown as TrainingView);
 export const workout = (id:string):Promise<WorkoutView> => {
  if(isTauri())return invoke<WorkoutView>('workout',{id});
@@ -176,11 +182,12 @@ export const garmin_write = (request:GarminWrite):Promise<GarminChange> => {
  if(isTauri())return invoke<GarminChange>('garmin_write',{request});
  const query=new URLSearchParams(location.search);
  if(query.get('fixture')!=='weight-write')return Promise.reject(new Error('Writing to Garmin needs the Raring app; nothing was sent'));
+ if(request.kind==='addWeight')previewEntryUnit=request.unit;
  const first=previewWrites++===0,wanted=(query.get('outcome')??'applied') as WriteOutcome;
  const outcome:WriteOutcome=first?wanted:'applied';
  const message=outcome==='unconfirmed'?'Couldn’t reach Garmin; Garmin may or may not have saved it':!first&&wanted==='unconfirmed'?'Already in Garmin from an earlier attempt; not sent again':outcome==='duplicate'?'Garmin already has that weight that day':null;
  const field=request.kind==='addWeight'
-  ?{field:`weighIn:${request.at}`,label:'Weigh-in added',before:null,after:`${request.value.toFixed(1)} ${request.unit} at ${request.at.slice(11,16)}`}
+  ?{field:`weighIn:${request.at}`,label:'Weigh-in added',before:null,after:`${request.value.toFixed(1)} ${request.unit}${request.bodyFat==null?'':`, ${request.bodyFat.toFixed(1)} % body fat`} at ${request.at.slice(11,16)}`}
   :{field:`weighIn:${request.timestampGmt}`,label:'Weigh-in deleted',before:'sample weigh-in',after:null};
  return Promise.resolve({at:new Date().toISOString(),resource:'Weight',fields:[field],outcome,message,mismatches:[],waitingForWatch:false});
 };

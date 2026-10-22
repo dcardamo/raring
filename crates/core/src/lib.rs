@@ -369,6 +369,7 @@ impl Raring {
             units: self.store.get("profile_settings", "me").and_then(|s| s["measurementSystem"].as_str().map(str::to_owned)),
             weight: weight.as_ref().and_then(|w| w.scale),
             weight_unit: weight.as_ref().and_then(|w| w.unit),
+            entry_unit: self.store.settings().weight_entry_unit.or(weight.as_ref().and_then(|w| w.unit)).unwrap_or(view::WeightUnit::Kg),
             weight_freshness: weight.map(|w| w.freshness).unwrap_or(view::ReadingFreshness { recorded_on: None, age_days: None, stale: false, threshold_days: 7 }),
             watch_last_upload: uploaded.map(|t| t.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)),
             gear: gear::view(&self.store),
@@ -471,8 +472,12 @@ impl Raring {
     ) -> Result<view::GarminChange> {
         let expected = self.session_identity().ok_or(Error::InvalidLocal("not signed in"))?;
         let (entry, weighed) = match request {
-            view::GarminWrite::AddWeight { value, unit, at } => {
-                let new = writes::new_weigh_in(*value, *unit, at, now)?;
+            view::GarminWrite::AddWeight { value, unit, at, body_fat } => {
+                let new = writes::new_weigh_in(*value, *unit, *body_fat, at, now)?;
+                // The submitted unit is the next form's default, whatever Garmin answers.
+                if self.store.settings().weight_entry_unit != Some(*unit) {
+                    let _ = self.save_settings(Some(Some(expected.clone())), |s| Ok(view::Settings { weight_entry_unit: Some(*unit), ..s.clone() }));
+                }
                 writes::create_weigh_in(&self.store, client, new, now).await
             }
             view::GarminWrite::DeleteWeighIn { date, timestamp_gmt, sample_pk, confirm } => {

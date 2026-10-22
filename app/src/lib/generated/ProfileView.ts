@@ -16,7 +16,12 @@ units: string | null,
 /**
  * The latest weigh-in in the display unit, with its date and age.
  */
-weight: number | null, weightUnit: WeightUnit | null, weightFreshness: ReadingFreshness, 
+weight: number | null, weightUnit: WeightUnit | null, 
+/**
+ * Add a weight's starting unit: the last one submitted, else Garmin's,
+ * else kilograms. The form can switch it.
+ */
+entryUnit: WeightUnit, weightFreshness: ReadingFreshness, 
 /**
  * The primary watch's last upload.
  */

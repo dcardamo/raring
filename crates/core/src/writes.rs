@@ -434,10 +434,15 @@ pub(crate) struct NewWeighIn {
     shown: f64,
     unit: WeightUnit,
     grams: f64,
+    /// The scale's body fat, percent to 0.1.
+    body_fat: Option<f64>,
     at: DateTime<FixedOffset>,
 }
 
-pub(crate) fn new_weigh_in(value: f64, unit: WeightUnit, at: &str, now: DateTime<Utc>) -> Result<NewWeighIn> {
+/// Body fat a bathroom scale can report; outside this it's a typo.
+const BODY_FAT: std::ops::RangeInclusive<f64> = 3. ..=75.;
+
+pub(crate) fn new_weigh_in(value: f64, unit: WeightUnit, body_fat: Option<f64>, at: &str, now: DateTime<Utc>) -> Result<NewWeighIn> {
     let at = DateTime::parse_from_rfc3339(at)
         .ok()
         .and_then(|t| t.with_nanosecond(0))
@@ -451,7 +456,11 @@ pub(crate) fn new_weigh_in(value: f64, unit: WeightUnit, at: &str, now: DateTime
     if !value.is_finite() || !(20. ..=300.).contains(&kg) {
         return Err(Error::InvalidLocal("weight"));
     }
-    Ok(NewWeighIn { shown, unit, grams: (kg * 1000.).round(), at })
+    let body_fat = body_fat.map(|f| (f * 10.).round() / 10.);
+    if body_fat.is_some_and(|f| !f.is_finite() || !BODY_FAT.contains(&f)) {
+        return Err(Error::InvalidLocal("body fat"));
+    }
+    Ok(NewWeighIn { shown, unit, grams: (kg * 1000.).round(), body_fat, at })
 }
 
 /// Which weigh-in to delete: the one the person saw.
@@ -510,8 +519,21 @@ fn reading(grams: f64, unit: WeightUnit) -> String {
 fn local_time(v: &Value) -> Option<NaiveDateTime> {
     v["date"].as_i64().and_then(DateTime::from_timestamp_millis).map(|t| t.naive_utc())
 }
+fn body_fat(v: &Value) -> Option<f64> {
+    v["bodyFat"].as_f64().filter(|f| f.is_finite())
+}
+/// Body fat as shown, to 0.1 percent; no value on either side is the same.
+fn same_fat(a: Option<f64>, b: Option<f64>) -> bool {
+    a.map(|f| (f * 10.).round()) == b.map(|f| (f * 10.).round())
+}
+fn fat_text(f: f64) -> String {
+    format!("{f:.1} % body fat")
+}
 fn weigh_in_text(v: &Value, unit: WeightUnit) -> String {
-    let value = grams(v).map(|g| reading(g, unit)).unwrap_or_else(|| "unknown".into());
+    let mut value = grams(v).map(|g| reading(g, unit)).unwrap_or_else(|| "unknown".into());
+    if let Some(f) = body_fat(v) {
+        value = format!("{value}, {}", fat_text(f));
+    }
     match local_time(v) {
         Some(t) => format!("{value} at {}", t.format("%H:%M on %-d %b")),
         None => value,
@@ -581,7 +603,7 @@ pub(crate) async fn create_weigh_in(store: &Store, client: &Client, w: NewWeighI
     let day = w.at.date_naive();
     let date = day.to_string();
     let sent_at = w.at.timestamp_millis();
-    let body = serde_json::json!({
+    let mut body = serde_json::json!({
         "date": date,
         "dateTimestamp": timestamp(w.at.naive_local()),
         "gmtTimestamp": timestamp(w.at.naive_utc()),
@@ -589,7 +611,11 @@ pub(crate) async fn create_weigh_in(store: &Store, client: &Client, w: NewWeighI
         "sourceType": MANUAL,
         "value": w.grams / 1000.,
     });
-    let shown = format!("{:.1} {} at {}", w.shown, unit_label(w.unit), w.at.naive_local().format("%H:%M on %-d %b"));
+    if let Some(f) = w.body_fat {
+        body["bodyFat"] = f.into();
+    }
+    let fat = w.body_fat.map(|f| format!(", {}", fat_text(f))).unwrap_or_default();
+    let shown = format!("{:.1} {}{fat} at {}", w.shown, unit_label(w.unit), w.at.naive_local().format("%H:%M on %-d %b"));
     let field = ChangedField { field: format!("weighIn:{sent_at}"), label: "Weigh-in added".into(), before: None, after: Some(shown) };
     let mut entry = weight_entry(now, ADD_WEIGH_IN, field, Some(body.clone()));
     if backing_off(store, now) {
@@ -609,10 +635,13 @@ pub(crate) async fn create_weigh_in(store: &Store, client: &Client, w: NewWeighI
     };
     let same_time = fresh.iter().find(|e| e["timestampGMT"].as_i64() == Some(sent_at));
     // An earlier attempt is found on any of the three days; a duplicate only on the local day.
-    let same_value = fresh.iter().find(|e| on_day(e, &date) && grams(e).is_some_and(|g| same_reading(g, w.grams, w.unit)));
+    // Without body fat, the same weight is a duplicate whatever body fat Garmin has.
+    let same_value = fresh.iter().find(|e| {
+        on_day(e, &date) && grams(e).is_some_and(|g| same_reading(g, w.grams, w.unit)) && (w.body_fat.is_none() || same_fat(body_fat(e), w.body_fat))
+    });
     let weighed = |list: Vec<Value>| Some(Weighed { day, list, deleted: None });
     match (same_time, same_value) {
-        (Some(e), _) if e["sourceType"] == MANUAL && grams(e).is_some_and(|g| same_reading(g, w.grams, w.unit)) => {
+        (Some(e), _) if e["sourceType"] == MANUAL && grams(e).is_some_and(|g| same_reading(g, w.grams, w.unit)) && same_fat(body_fat(e), w.body_fat) => {
             entry.outcome = WriteOutcome::Applied;
             entry.message = Some("Already in Garmin from an earlier attempt; not sent again".into());
             return (entry, weighed(fresh));
@@ -659,10 +688,7 @@ pub(crate) async fn create_weigh_in(store: &Store, client: &Client, w: NewWeighI
     match created.as_slice() {
         [one] => {
             let got = grams(one).unwrap_or_default();
-            if same_reading(got, w.grams, w.unit) {
-                entry.outcome = WriteOutcome::Applied;
-            } else {
-                entry.outcome = WriteOutcome::Differs;
+            if !same_reading(got, w.grams, w.unit) {
                 entry.mismatches.push(ChangedField {
                     field: "weight".into(),
                     label: "Weight".into(),
@@ -670,6 +696,16 @@ pub(crate) async fn create_weigh_in(store: &Store, client: &Client, w: NewWeighI
                     after: Some(reading(got, w.unit)),
                 });
             }
+            // Only body fat that was sent is compared; Garmin adds none of its own.
+            if w.body_fat.is_some() && !same_fat(body_fat(one), w.body_fat) {
+                entry.mismatches.push(ChangedField {
+                    field: "bodyFat".into(),
+                    label: "Body fat".into(),
+                    before: w.body_fat.map(fat_text),
+                    after: body_fat(one).map(fat_text),
+                });
+            }
+            entry.outcome = if entry.mismatches.is_empty() { WriteOutcome::Applied } else { WriteOutcome::Differs };
         }
         _ => {
             entry.outcome = WriteOutcome::Unconfirmed;

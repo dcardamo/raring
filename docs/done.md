@@ -4,6 +4,22 @@ Shipped backlog items, newest first, each with its commit and the endpoint
 facts verified while building it. The open backlog is [TODO.md](../TODO.md).
 "Verified" means a read against a real account returned the data.
 
+- **Body fat with a weigh-in, and kg or lb in the form** (commit "Add body
+  fat and a kg/lb switch to Add a weight"), at the maintainer's request.
+  Spike on his account (approved 2026-10-21), one request at a time: the
+  verified `POST /weight-service/user-weight` body plus `"bodyFat": 20.4`
+  (value 73.8 kg) answered 204; the three-day range read back one `MANUAL`
+  entry with `weight` 73800 g and `bodyFat` 20.4, `timestampGMT` equal to
+  the sent one; the delete by `samplePk` answered 204 and the range was
+  empty again, the latest weigh-in unchanged. Sent at 20:34 local with the
+  `gmtTimestamp` already on the next UTC day, it was filed under the local
+  date. The FIT upload route wasn't needed or sent. The form takes an
+  optional body fat (3–75 %, to 0.1) and a kg/lb switch that starts in the
+  last submitted unit (`weightEntryUnit`, set by the core once a weigh-in
+  passes validation); body fat counts in the earlier-attempt, duplicate and
+  read-back checks and is in the change log; the saved line names the
+  reading; the weight detail's last weigh-in shows Garmin's body fat.
+
 - **24a. Add a weight and delete a weigh-in** (commit "Add a weight on
   Profile and delete a weigh-in from the weight detail"; TODO 1, steps 3–4).
   Profile's Add a weight opens a form: the weight in Garmin's unit (20–300 kg

@@ -439,7 +439,7 @@ fn day(entries: Vec<Value>) -> String {
     json!({"startDate":"2026-10-21","endDate":"2026-10-21","dateWeightList":entries,"totalAverage":{}}).to_string()
 }
 fn add(value: f64, unit: WeightUnit) -> GarminWrite {
-    GarminWrite::AddWeight { value, unit, at: MORNING.into() }
+    GarminWrite::AddWeight { value, unit, at: MORNING.into(), body_fat: None }
 }
 
 #[tokio::test]
@@ -584,8 +584,11 @@ async fn invalid_weigh_ins_are_refused_before_any_request() {
         add(f64::NAN, WeightUnit::Kg),
         add(12., WeightUnit::Kg),
         add(700., WeightUnit::Lb),
-        GarminWrite::AddWeight { value: 81.3, unit: WeightUnit::Kg, at: "2026-10-21T07:58".into() },
-        GarminWrite::AddWeight { value: 81.3, unit: WeightUnit::Kg, at: "2026-10-21T13:58:00-04:00".into() },
+        GarminWrite::AddWeight { value: 81.3, unit: WeightUnit::Kg, at: "2026-10-21T07:58".into(), body_fat: None },
+        GarminWrite::AddWeight { value: 81.3, unit: WeightUnit::Kg, at: "2026-10-21T13:58:00-04:00".into(), body_fat: None },
+        with_fat(81.3, 2.9),
+        with_fat(81.3, 75.1),
+        with_fat(81.3, f64::INFINITY),
         GarminWrite::DeleteWeighIn { date: "2026-10-21".into(), timestamp_gmt: morning_ms(), sample_pk: None, confirm: false },
         GarminWrite::DeleteWeighIn { date: "2026-10-21".into(), timestamp_gmt: morning_ms(), sample_pk: Some("../1".into()), confirm: true },
     ] {
@@ -705,4 +708,93 @@ async fn a_connection_lost_after_the_post_is_unconfirmed_but_a_failed_refresh_se
     let change = core.write_garmin(&client(&mock.url), &add(81.3, WeightUnit::Kg), noon()).await.unwrap();
     assert_eq!((change.outcome, change.message.as_deref()), (WriteOutcome::Failed, Some("Couldn't reach Garmin")));
     assert_eq!(mock.seen().iter().map(|s| s.method.as_str()).collect::<Vec<_>>(), ["GET", "POST", "POST"]);
+}
+
+fn with_fat(value: f64, fat: f64) -> GarminWrite {
+    GarminWrite::AddWeight { value, unit: WeightUnit::Lb, at: MORNING.into(), body_fat: Some(fat) }
+}
+fn fat_in(mut entry: Value, fat: f64) -> Value {
+    entry["bodyFat"] = fat.into();
+    entry
+}
+
+#[tokio::test]
+async fn body_fat_goes_with_the_weigh_in_and_is_read_back_and_logged() {
+    let (_dir, store, core) = weigh_fixture("weigh-fat", "metric");
+    // 162.7 lb is 73 799.5 g, sent as 73.799 kg; Garmin's 73.8 kg still reads 162.7 lb.
+    let created = fat_in(weigh_in(9_001, morning_ms(), 73_800., "MANUAL"), 16.7);
+    let mock = Mock::new(vec![(200, "", day(vec![])), (204, "", String::new()), (200, "", day(vec![created]))]);
+    let change = core.write_garmin(&client(&mock.url), &with_fat(162.7, 16.7), noon()).await.unwrap();
+    assert_eq!(change.outcome, WriteOutcome::Applied, "{:?}", change.mismatches);
+    assert_eq!(mock.seen()[1].body.as_ref().unwrap()["bodyFat"], json!(16.7));
+    assert_eq!(mock.seen()[1].body.as_ref().unwrap()["value"], json!(73.799));
+    assert_eq!(change.fields[0].after.as_deref(), Some("162.7 lb, 16.7 % body fat at 07:58 on 21 Oct"));
+    let log: Value = serde_json::from_str(&store.setting("garmin:changes").unwrap()).unwrap();
+    assert_eq!(log["entries"][0]["fields"][0]["afterValue"]["bodyFat"], json!(16.7));
+    let today = chrono::Local.from_utc_datetime(&noon().naive_utc());
+    assert_eq!(core.weight_trend(TrendRange::Days30, "2026-10-21", today).unwrap().last_weigh_in.unwrap().body_fat, Some(16.7));
+    drop(mock);
+
+    // Without body fat, nothing about it is sent.
+    let mock = Mock::new(vec![(200, "", day(vec![])), (204, "", String::new()), (200, "", day(vec![weigh_in(1, morning_ms(), 81_300., "MANUAL")]))]);
+    core.write_garmin(&client(&mock.url), &add(81.3, WeightUnit::Kg), noon()).await.unwrap();
+    assert!(mock.seen()[1].body.as_ref().unwrap().get("bodyFat").is_none());
+}
+
+#[tokio::test]
+async fn body_fat_that_reads_back_differently_or_not_at_all_differs() {
+    let (_dir, _store, core) = weigh_fixture("weigh-fat-differs", "metric");
+    for (back, after) in [(Some(18.2), Some("18.2 % body fat")), (None, None)] {
+        let mut created = weigh_in(9_001, morning_ms(), 73_800., "MANUAL");
+        if let Some(f) = back {
+            created = fat_in(created, f);
+        }
+        let mock = Mock::new(vec![(200, "", day(vec![])), (204, "", String::new()), (200, "", day(vec![created]))]);
+        let change = core.write_garmin(&client(&mock.url), &with_fat(162.7, 20.4), noon()).await.unwrap();
+        assert_eq!(change.outcome, WriteOutcome::Differs);
+        assert_eq!(change.mismatches, vec![field("Body fat", Some("20.4 % body fat"), after, "bodyFat")]);
+    }
+}
+
+#[tokio::test]
+async fn body_fat_decides_duplicates_and_earlier_attempts() {
+    let (_dir, _store, core) = weigh_fixture("weigh-fat-dup", "metric");
+    let earlier = fat_in(weigh_in(5, morning_ms() - 3_600_000, 73_800., "INDEX_SCALE"), 20.4);
+    // The same weight and body fat that day: not sent.
+    let mock = Mock::new(vec![(200, "", day(vec![earlier.clone()]))]);
+    let change = core.write_garmin(&client(&mock.url), &with_fat(162.7, 20.4), noon()).await.unwrap();
+    assert_eq!(change.outcome, WriteOutcome::Duplicate);
+    assert_eq!(change.message.as_deref(), Some("Garmin already has 162.7 lb, 20.4 % body fat at 06:58 on 21 Oct that day"));
+    drop(mock);
+
+    // The same weight with other body fat is a new reading.
+    let mock = Mock::new(vec![(200, "", day(vec![earlier.clone()])), (204, "", String::new()), (200, "", day(vec![earlier, fat_in(weigh_in(6, morning_ms(), 73_800., "MANUAL"), 19.9)]))]);
+    let change = core.write_garmin(&client(&mock.url), &with_fat(162.7, 19.9), noon()).await.unwrap();
+    assert_eq!(change.outcome, WriteOutcome::Applied);
+    drop(mock);
+
+    // An earlier attempt at the same time with other body fat isn't this one.
+    let mock = Mock::new(vec![(200, "", day(vec![fat_in(weigh_in(6, morning_ms(), 73_800., "MANUAL"), 19.9)]))]);
+    let change = core.write_garmin(&client(&mock.url), &with_fat(162.7, 20.4), noon()).await.unwrap();
+    assert_eq!(change.outcome, WriteOutcome::Conflict);
+    assert_eq!(mock.calls().len(), 1);
+}
+
+#[tokio::test]
+async fn the_submitted_unit_is_the_next_forms_default() {
+    let (_dir, store, core) = weigh_fixture("weigh-unit", "metric");
+    let today = chrono::Local.from_utc_datetime(&noon().naive_utc());
+    assert_eq!(core.profile(today).entry_unit, WeightUnit::Kg, "Garmin's unit first");
+    // A submitted weigh-in in pounds sets it, whatever Garmin answers.
+    let mock = Mock::new(vec![(503, "", String::new())]);
+    core.write_garmin(&client(&mock.url), &add(162.7, WeightUnit::Lb), noon()).await.unwrap();
+    assert_eq!(core.profile(today).entry_unit, WeightUnit::Lb);
+    assert_eq!(store.settings().weight_entry_unit, Some(WeightUnit::Lb));
+    // An invalid one, refused before any request, doesn't.
+    assert!(core.write_garmin(&client(&mock.url), &add(5., WeightUnit::Kg), noon()).await.is_err());
+    assert_eq!(core.profile(today).entry_unit, WeightUnit::Lb);
+    drop(mock);
+    let mock = Mock::new(vec![(503, "", String::new())]);
+    core.write_garmin(&client(&mock.url), &add(81.3, WeightUnit::Kg), noon()).await.unwrap();
+    assert_eq!(core.profile(today).entry_unit, WeightUnit::Kg);
 }

@@ -7,6 +7,8 @@ export const RESULT:Record<WriteOutcome,string>={applied:'Saved in Garmin',diffe
 
 // The core's accepted range, 20–300 kg, in the person's unit.
 export const WEIGHT_BOUNDS:Record<WeightUnit,[number,number]>={kg:[20,300],lb:[44.1,661.3]};
+// Body fat in percent, to 0.1 as the scale shows it; the core refuses anything outside.
+export const BODY_FAT_BOUNDS:[number,number]=[3,75];
 
 const pad=(n:number)=>String(n).padStart(2,'0');
 /** A local time as a datetime-local input holds it, `YYYY-MM-DDTHH:MM`. */

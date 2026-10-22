@@ -187,6 +187,7 @@ pub fn view(
         timestamp_gmt,
         sample_pk: row["samplePk"].as_u64().map(|n| n.to_string()),
         source: row["sourceType"].as_str().map(str::to_owned),
+        body_fat: row["bodyFat"].as_f64().filter(|v| v.is_finite() && (0. ..=100.).contains(v)),
     });
     view.bmi = row["bmi"].as_f64().filter(|v| v.is_finite() && *v > 0.);
     view.body_fat = row["bodyFat"]

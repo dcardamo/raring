@@ -1744,6 +1744,10 @@ pub struct Settings {
     /// Draw streets under workout routes, downloading each area's map once.
     #[serde(default = "default_street_maps")]
     pub street_maps: bool,
+    /// The unit of the last weigh-in the person submitted; Add a weight
+    /// starts there. Set only by the core when a weigh-in is submitted.
+    #[serde(default)]
+    pub weight_entry_unit: Option<WeightUnit>,
 }
 
 /// How a Garmin write ended (Rules: Garmin writes).
@@ -1776,10 +1780,17 @@ pub enum WriteOutcome {
 #[ts(export)]
 pub enum GarminWrite {
     /// A weigh-in in the unit the person typed it in, at a local time with
-    /// its UTC offset (RFC 3339). A retry with the same time finds the first
-    /// attempt instead of adding it twice.
+    /// its UTC offset (RFC 3339), and optionally the scale's body fat in
+    /// percent. A retry with the same time finds the first attempt instead of
+    /// adding it twice.
     #[serde(rename_all = "camelCase")]
-    AddWeight { value: f64, unit: WeightUnit, at: String },
+    AddWeight {
+        value: f64,
+        unit: WeightUnit,
+        at: String,
+        #[serde(default)]
+        body_fat: Option<f64>,
+    },
     /// The weigh-in the person saw, found again by Garmin's timestamp and,
     /// when stored, its `samplePk`. Refused unless `confirm` is set.
     #[serde(rename_all = "camelCase")]
@@ -1858,6 +1869,7 @@ impl Default for Settings {
             plan_prompt: default_plan_prompt(),
             body_figure: FigureChoice::Profile,
             street_maps: default_street_maps(),
+            weight_entry_unit: None,
         }
     }
 }
@@ -3348,6 +3360,8 @@ pub struct WeighIn {
     pub sample_pk: Option<String>,
     /// Garmin's `sourceType`, such as `MANUAL`.
     pub source: Option<String>,
+    /// Garmin's body fat in percent, when the weigh-in has one.
+    pub body_fat: Option<f64>,
 }
 
 // ---------------------------------------------------------------------------
@@ -3435,6 +3449,9 @@ pub struct ProfileView {
     /// The latest weigh-in in the display unit, with its date and age.
     pub weight: Option<f64>,
     pub weight_unit: Option<WeightUnit>,
+    /// Add a weight's starting unit: the last one submitted, else Garmin's,
+    /// else kilograms. The form can switch it.
+    pub entry_unit: WeightUnit,
     pub weight_freshness: ReadingFreshness,
     /// The primary watch's last upload.
     pub watch_last_upload: Option<String>,
