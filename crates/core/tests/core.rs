@@ -122,6 +122,13 @@ fn demo_seeds_current_day_and_screen_details() {
     assert_eq!((week.strength_activities, week.sessions_with_sets), (3, 2));
     let strength = raring_core::screens::strength(&store, &date.to_string()).unwrap();
     let squat = strength.exercises.iter().find(|e| e.key == "SQUAT/BARBELL_BACK_SQUAT").unwrap();
+    // Reseeding the other variant leaves no Coach week or earlier ids behind.
+    raring_core::demo::seed_variant(&store, date, false).unwrap();
+    assert!(store.get("coach_adaptive", "current").is_some());
+    store.put("activity", "123457", "synthetic", &json!({"activityId": 123457, "startTimeLocal": "2026-10-15T06:12:00"})).unwrap();
+    raring_core::demo::seed(&store, date).unwrap();
+    assert!(store.get("coach_adaptive", "current").is_none() && store.get("activity", "123457").is_none());
+    assert_eq!(raring_core::screens::training(&store, &date.to_string()).workouts.len(), 11);
     assert_eq!(squat.sessions.len(), 11);
     assert_eq!(squat.sessions[0].top.as_ref().map(|t| (t.weight, t.reps)), Some((Some(100.), Some(5))));
 }

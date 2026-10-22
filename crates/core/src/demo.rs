@@ -626,6 +626,16 @@ pub fn seed_variant(store: &Store, day: NaiveDate, recorded_today: bool) -> rusq
             "workoutName": name, "workoutId": null, "estimatedDurationInSecs": seconds, "restDay": sport.is_none(),
             "trainingEffectLabel": label, "sportType": sport.map(|s| json!({"sportTypeKey": s})), "adaptiveCoachingWorkoutStatus": "NOT_COMPLETE"}})
     };
+    // Reseeding the debug app's demo must not keep rows the new seed lacks:
+    // the other variant's Coach week, and activities under earlier demo ids.
+    for id in ["123456", "123457", "123458"] {
+        for endpoint in ["activity", "zones", "exercise_sets", "details", "splits"] {
+            store.remove(endpoint, id)?;
+        }
+    }
+    for endpoint in ["coach_plans", "coach_adaptive"] {
+        store.remove(endpoint, "current")?;
+    }
     let fetched = chrono::Utc::now().to_rfc3339();
     // Only the planned variant follows a Coach plan, so its session can lead
     // today; the regular demo (and the browser preview) has none.

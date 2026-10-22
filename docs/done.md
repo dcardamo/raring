@@ -19,7 +19,16 @@ facts verified while building it. The open backlog is [TODO.md](../TODO.md).
   time, load, VO₂ max and overnight heart rate agree across pages. Today's
   planned session, Progress's October and Profile's gear come from those;
   the run keeps the street map it was drawn for. UI assertions now read the
-  generated values (lanes, ledgers, counts, how it counted).
+  generated values (lanes, ledgers, counts, how it counted). Reseeding the
+  debug app's demo drops the other variant's Coach week and activities under
+  the earlier demo ids (commit "Reseed the debug demo without stale rows").
+  Checked on emulator-5560 (in-place debug install, signer `0d59d1bf…7a63`,
+  synthetic demo session): the planned variant keeps its Coach week, the
+  default has none, and Training lists the swim, walk and strength history.
+  `scripts/android-navigation-test.mjs` stopped at its Your day check (no
+  Stress or Heart rate row at 21:00, with the demo watch upload at 05:00);
+  these changes don't touch that path, but it wasn't rerun on main. Its Keep
+  / Choose step also needs a daytime run.
 
 - **Desktop notification clicks open the right screen** (commit "Open a
   desktop notification's screen when it is clicked"). Each desktop reminder
