@@ -14,6 +14,22 @@ Tauri 2 app with a Svelte + TypeScript UI. Android first; web and iOS later.
 - The UI contract is `crates/core/src/view.rs`. Its TypeScript twins in
   `app/src/lib/generated/` are generated; never edit them by hand.
 
+## Talking to me
+
+Dan reads these replies in Paseo, not a terminal. Write for that timeline.
+
+- Refer to files as links, not as things to open: `crates/core/src/view.rs:42`
+  (or `path:startLine-endLine`). Paseo makes a bare or backticked `path:line`
+  clickable in the workspace. Don't say "look at the file".
+- Show visual work inline with `![what it shows](path/to/shot.png)`, using a
+  workspace-relative path. Prefer that to describing a screen or screenshot.
+- Give reachable URLs as labelled links, `[open the mockup](http://neptune:5173/...)`.
+  Never leave a bare `http(s)://host:port/...` in a reply: Paseo 0.12's markdown
+  parser truncates a bare link at the host when a port follows
+  (getpaseo/paseo#7440). Labelled links and `<url>` autolinks keep the whole
+  URL. This is a client bug, so it applies even though the daemon here is
+  0.11.4.
+
 ## Layout
 
 - `crates/core`: Garmin client, SQLite storage, sync, rules, view models.
