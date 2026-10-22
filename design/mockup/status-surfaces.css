@@ -34,6 +34,6 @@
 .sf-home .sf-home-pair{display:grid;grid-template-columns:164px 1fr;gap:12px;align-items:start}
 .sf-home .sf-medium{grid-column:span 2}
 .sf-home-apps{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;justify-items:center;align-content:center}
-.sf-home-apps .happ i,.sf-home-apps .happ img{width:42px;height:42px}
+.sf-home-apps .happ i,.sf-home-apps .happ img,.sf-home-apps .happ svg{width:42px;height:42px}
 .sf-home-apps .happ span{font-size:10px}
 @media(max-width:600px){.sf-page{padding-top:4px}.sf-section{margin-bottom:14px}.sf-home{padding-top:16px}}

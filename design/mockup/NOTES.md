@@ -221,3 +221,51 @@ vitals, stress, Body Battery, sleep, acute load and VO₂ max.
 - **Layout:** the mockup spans the chart card across unfolded and desktop
   screens. The app keeps the card in its masonry column and draws the chart
   at the card's width, so cards don't leave holes around it.
+
+# Tonight's chart: notes
+
+Screens `tn-now`, `tn-plain`, `tn-evening`, `tn-ring`, `tn-sleep`, `tn-wind`
+and `tn-rules` (`tonight-chart.js`, `tonight-chart.css`): one synthetic night
+drawn four ways, on Today and, for the one worth building, on Sleep ·
+Tonight. Now 21:40, wind down 22:40, Garmin's window 23:10–23:30, in bed
+23:20, 15 min to fall asleep, asleep 23:35, need 7h 00m, up 06:35.
+
+Why the shipped 24-hour ring fails at the times the card is read:
+
+- The three evening moments — wind down, in bed, Garmin's window — land 10°
+  to 17° apart, so the circle cannot separate them and the list under it
+  does all the work. That is the ring repeating itself.
+- The centre shows the sleep need, which is the same every night, not the
+  time tonight turns on.
+- Garmin's window is a 2.5pt arc outside the ring, and in bed 23:20 sits
+  inside the window with nothing reconciling a Raring time and a Garmin one.
+- 00/06/12/18 with 12 at the bottom is dead weight at 22:00.
+
+- **A (plain):** the three times and a sentence, no chart. Nothing to
+  misread, nothing to read either: no sense of how long the night is or
+  where now sits. This is the current full mode with the note trimmed.
+- **B (recommended):** the evening, zoomed. The axis runs from an hour
+  before wind-down to half an hour past the window, so a 40-minute wind-down
+  gets 60px instead of 10 and now sits a third of the way across. Wind-down
+  is a soft segment, the 15 minutes to fall asleep a lighter one, Garmin's
+  window a bracket under the bed edge, now a rule with its time — a
+  position, never a countdown. The night's length is one line of text above:
+  asleep 23:35, up 06:35, need 7h 00m. The window's own label sits left of
+  its bracket so it cannot be read as the sleep.
+- **B at wind-down** (`tn-wind`): the axis starts at the half hour before
+  wind-down, the label there reads "Wind down now" instead of a time, and the
+  window takes the top of the card. The chart keeps its shape through the
+  change of phase rather than needing a second one.
+- **C (the ring, scoped to the night):** midnight still at the top, but the
+  circle is 22:10–07:05 over 300°, so every segment is as wide as its
+  minutes and the day is the gap at the bottom. It keeps Raring's clock and
+  reads as a clock face (22 at ten o'clock, 02 at two). It still crowds the
+  evening cluster, still needs the times listed under it, and it cannot
+  scale with the evening, so it is a sideways move rather than a fix.
+
+B is built: it replaced `SleepClock` on both Sleep · Tonight and Today's
+evening card, the ring is gone from the app, and the axis rule (half an hour
+before now or wind-down to half an hour past the asleep-by time, both rounded
+out) is in the spec's Tonight section. The app's strip keeps the times in
+text that wraps and only the hours on the axis, so a tick can give way to a
+larger system font without anything overlapping.

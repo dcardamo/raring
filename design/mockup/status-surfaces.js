@@ -41,7 +41,7 @@ function statusWidgetHome() {
   const icon = c => `<div class="happ"><i style="background:${c}"></i><span></span></div>`;
   return `${statusBar()}<div class="home sf-home"><div class="hclock"><b class="n">14:20</b><span>Thursday 16 October</span></div>
     <div class="sf-home-pair">${statusMedium(SURFACE.day)}${statusSmall(SURFACE.day)}
-      <div class="sf-home-apps">${icon('#2A3350')}${icon('#33304A')}<div class="happ"><img src="../../site/assets/icon.svg" width="54" height="54" alt=""><span>Raring</span></div>${icon('#283A44')}</div>
+      <div class="sf-home-apps">${icon('#2A3350')}${icon('#33304A')}<div class="happ">${appIcon(54, "Raring")}<span>Raring</span></div>${icon('#283A44')}</div>
     </div><div class="dock"><div class="dk">${['#2B3350', '#33304A', '#283A44', '#3A2F3A'].map(c => `<i style="background:${c}"></i>`).join('')}</div><div class="hsearch">${ico.search}</div></div>
   </div>`;
 }

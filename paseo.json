@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "mockup": {
+      "type": "service",
+      "command": "python3 -m http.server \"$PASEO_PORT\" --bind \"$(tailscale ip -4)\" --directory design/mockup"
+    }
+  }
+}

@@ -19,6 +19,7 @@ const screens = {
   builder: ['phone', 'fold', 'desktop'], catalog: ['phone'], help: ['phone', 'desktop'], 'help-sheet': ['phone'], widget: ['phone'], 'status-surfaces': ['phone'],
   'tod-rules': ['phone'], 'tod-wake': ['phone'], 'tod-day': ['phone', 'desktop'], 'tod-evening': ['phone', 'fold'], 'tod-winddown': ['phone'],
   'tod-late': ['phone'], 'tod-missing': ['phone'], 'tod-overview': ['phone'],
+  'tn-now': ['phone'], 'tn-plain': ['phone'], 'tn-evening': ['phone', 'fold'], 'tn-ring': ['phone'], 'tn-sleep': ['phone'], 'tn-wind': ['phone'], 'tn-rules': ['phone'],
   reconcile: ['phone'], 'reconcile-closed': ['phone'], 'why-readiness': ['phone', 'desktop'], 'why-battery': ['phone'], 'why-training': ['phone'],
   'trend-year': ['phone', 'fold', 'desktop'], 'trend-overlay': ['phone', 'fold', 'desktop'], 'trend-compare': ['phone', 'fold', 'desktop'], 'trend-all': ['phone'],
 };
