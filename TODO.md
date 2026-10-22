@@ -162,6 +162,10 @@ each day's Training Status `minTrainingLoadChronic`/`maxTrainingLoadChronic`.
 - **Chart legibility check**: it compares text with other text and with
   `data-mark` markers, not bars, points or bands; mark more shapes as charts
   change.
+- **Flaky Long-term overflow check**: `adaptive-layout.mjs` sometimes reports
+  Progress's Long-term chart overflowing (seen at 390 px with 2× text and at
+  840 px) and passes on rerun. Find the timing it depends on rather than
+  retrying.
 
 ## Check on a phone or desktop
 
