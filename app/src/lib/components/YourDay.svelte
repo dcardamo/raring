@@ -2,6 +2,7 @@
  import Icon from './Icon.svelte';
  import HelpButton from './HelpButton.svelte';
  import type {DayTimeline} from '../generated/DayTimeline';
+ import type {DayEvent} from '../generated/DayEvent';
  import {stressColors,stressNames} from '../charts';
  import {duration,minuteClock as hm} from '../format';
  import {declutter} from '../declutter';
@@ -11,7 +12,7 @@
  // `compact` follows tonight's plan from the evening on: sleep, Body Battery, stress and
  // recordings. Stress stays: the day's stress is what makes tonight's plan make sense.
  // Heart rate waits for the full timeline.
- let {day,navigate,compact=false}:{day:DayTimeline,navigate:(route:string)=>void,compact?:boolean}=$props();
+ let {day,navigate,openNap=()=>{},compact=false}:{day:DayTimeline,navigate:(route:string)=>void,openNap?:(nap:DayEvent)=>void,compact?:boolean}=$props();
  const pct=(m:number)=>Math.max(0,Math.min(100,m/1440*100));
  const STAGE:Record<string,string>={deep:'var(--deep)',light:'var(--light)',rem:'var(--rem)',awake:'var(--ink)'};
  // The core already blanks slots past the upload or now; this only places the last reading.
@@ -58,7 +59,7 @@
  {/if}
  <div class="row ev" role="group" aria-label="Recorded activities and naps">
   <span class="lab"><Icon name="run" size={15}/><b>Recorded</b></span>
-  <span class="track events">{#each placed as e}<button class="evb" class:nap={e.kind==='nap'} style:left={pct(e.startMin!)+'%'} style:width={`max(26px, ${pct(e.endMin??e.startMin!)-pct(e.startMin!)}%)`} aria-label={`${e.name} ${hm(e.startMin!)}${e.durationMin!=null?`, ${Math.round(e.durationMin)} min`:''}${e.bodyBatteryChange!=null?`, Body Battery ${e.bodyBatteryChange>=0?'+':''}${e.bodyBatteryChange}`:''}`} onclick={()=>navigate(e.id?'workout/'+e.id:'sleep')}><Icon name={e.icon} size={12}/></button>{/each}{#if !placed.length}<em class="none">Nothing recorded yet</em>{:else if now!=null}<u data-mark="now" style:left={pct(now)+'%'}></u>{/if}</span>
+  <span class="track events">{#each placed as e}<button class="evb" class:nap={e.kind==='nap'} style:left={pct(e.startMin!)+'%'} style:width={`max(26px, ${pct(e.endMin??e.startMin!)-pct(e.startMin!)}%)`} aria-label={`${e.name} ${hm(e.startMin!)}${e.durationMin!=null?`, ${Math.round(e.durationMin)} min`:''}${e.bodyBatteryChange!=null?`, Body Battery ${e.bodyBatteryChange>=0?'+':''}${e.bodyBatteryChange}`:''}`} onclick={()=>e.id?navigate('workout/'+e.id):openNap(e)}><Icon name={e.icon} size={12}/></button>{/each}{#if !placed.length}<em class="none">Nothing recorded yet</em>{:else if now!=null}<u data-mark="now" style:left={pct(now)+'%'}></u>{/if}</span>
   <span class="val"></span>
  </div>
  <div class="row axis" aria-hidden="true"><span></span><span class="track ticks">{#each [0,6,12,18,24] as h}<i data-thin style:left={h/24*100+'%'}>{String(h).padStart(2,'0')}</i>{/each}{#if now!=null}<b style:left={pct(now)+'%'} style:translate={pct(now)<12?'0':pct(now)>88?'-100%':'-50%'}>Now {hm(now)}</b>{/if}</span><span></span></div>

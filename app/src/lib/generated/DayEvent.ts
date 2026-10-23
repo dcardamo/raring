@@ -15,4 +15,8 @@ startMin: number | null, endMin: number | null, durationMin: number | null,
  * Naps: Garmin's level after the nap minus before it, from the intraday
  * curve, when both sides were measured.
  */
-bodyBatteryChange: number | null, };
+bodyBatteryChange: number | null, 
+/**
+ * Naps: Garmin's feedback enum, uninterpreted.
+ */
+feedback: string | null, };

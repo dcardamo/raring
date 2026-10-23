@@ -4,6 +4,17 @@ Shipped backlog items, newest first, each with its commit and the endpoint
 facts verified while building it. The open backlog is [TODO.md](../TODO.md).
 "Verified" means a read against a real account returned the data.
 
+- **Naps at the right local time, with their own detail** (commit "Place naps
+  at the right local time and give them a detail"). The nap endpoint's
+  `napStartTimeOffset`/`napEndTimeOffset` are minutes, not seconds: this
+  account sent -240 for UTC−4, which Raring read as four minutes and placed a
+  midday nap at 16:46–17:50, where Body Battery was falling (it showed −4).
+  Offsets are now decoded by magnitude (the exported sleep summary writes the
+  same zone in seconds), verified against a real read of 12:46–13:50 with a
+  measured +2 change. Tapping a nap in Recorded today or Your day opens a nap
+  detail with its start, end, duration, Body Battery change and Garmin
+  feedback instead of Last night's sleep; the UI test covers both openings.
+
 - **Tonight's chart: the evening, zoomed** (commit "Tonight's chart: the
   evening, zoomed"). Sleep · Tonight and Today's evening card draw the evening
   on one left-to-right axis — half an hour before now or wind-down, to half an
@@ -989,7 +1000,8 @@ facts verified while building it. The open backlog is [TODO.md](../TODO.md).
   an explicit open action. GET `/sleep-service/sleep/naps/{d}` returned an
   array (both empty and populated responses were seen): populated rows have
   `napStartTimestampGMT`/`napEndTimestampGMT` (UTC wall strings),
-  `napStartTimeOffset`/`napEndTimeOffset` (seconds), `napTimeSec` (seconds),
+  `napStartTimeOffset`/`napEndTimeOffset` (minutes; an exported sleep
+  summary writes the same zone in seconds), `napTimeSec` (seconds),
   `napFeedback` and `napSource`. GET
   `/lifestylelogging-service/dailyLog/{d}` returned `calendarDate`,
   `completionStats` and null `dailyLogsReport` in checked responses; null is

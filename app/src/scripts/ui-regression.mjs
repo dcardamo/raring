@@ -810,6 +810,18 @@ try {
   assert.equal(await dayPage.locator('.dashboard').getByRole('button',{name:/^Body Battery/}).count(),0,'Your day replaces the separate Body Battery card');
   const recorded=dayPage.locator('.card.recorded');
   assert.ok((await recorded.textContent()).includes('Body Battery +6'),'the nap row shows its Body Battery change');
+  // A nap is its own event: its row opens the nap's detail, not last night's sleep.
+  await recorded.getByRole('button',{name:/^Nap/}).click();
+  const napSheet=dayPage.getByRole('dialog',{name:'Nap'});
+  await napSheet.waitFor();
+  assert.ok((await napSheet.textContent()).includes('13:10')&&(await napSheet.textContent()).includes('13:35')&&(await napSheet.textContent()).includes('Body Battery'),'the nap detail names its own times and change');
+  assert.equal(dayPage.url().endsWith('#today'),true,'a nap detail stays on Today instead of opening Last night');
+  await dayPage.keyboard.press('Escape');
+  assert.equal(await napSheet.count(),0,'Escape closes the nap detail');
+  await yd.getByRole('button',{name:'Nap 13:10, 25 min, Body Battery +6'}).click();
+  await napSheet.waitFor();
+  assert.ok((await napSheet.textContent()).includes('Garmin records naps separately'),'the nap detail says it is not main sleep');
+  await dayPage.keyboard.press('Escape');
   const card=dayPage.getByRole('region',{name:/^Hill run/});
   assert.equal(await card.getByRole('button',{name:'Keep',exact:true}).count(),1,'Keep sits inside the session card');
   assert.equal(await card.getByRole('button',{name:'Choose another'}).count(),1);

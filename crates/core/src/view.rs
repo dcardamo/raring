@@ -3424,6 +3424,8 @@ pub struct DayEvent {
     /// Naps: Garmin's level after the nap minus before it, from the intraday
     /// curve, when both sides were measured.
     pub body_battery_change: Option<f64>,
+    /// Naps: Garmin's feedback enum, uninterpreted.
+    pub feedback: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]

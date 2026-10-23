@@ -19,17 +19,26 @@ fn state(store: &Store, kind: &str, day: &str, populated: bool, empty: bool) -> 
     if populated { ReadState::Available } else if empty { ReadState::Empty } else { ReadState::Unavailable }
 }
 
+/// Garmin's raw nap endpoint writes each zone offset in minutes (this account
+/// sent -240 for UTC−4); its exported sleep summary writes the same zone in
+/// seconds. Decide by magnitude: no real zone is more than 14 hours out, so a
+/// raw value within that many minutes is minutes and anything larger is seconds.
+fn offset_seconds(raw: i64) -> Option<i64> {
+    let seconds = if raw.abs() <= 14 * 60 { raw * 60 } else { raw };
+    (seconds.abs() <= 14 * 3600).then_some(seconds)
+}
+
 pub fn naps(store: &Store, day: &str) -> (Vec<Nap>, ReadState) {
     let raw = store.get("naps", day).unwrap_or(Value::Null);
     let Some(rows) = raw.as_array() else { return (vec![], state(store, "naps", day, false, false)) };
-    // GMT wall-clock strings plus Garmin's per-endpoint offsets, in seconds.
-    // Never infer nap duration from the main sleep DTO's napTimeSeconds total.
+    // GMT wall-clock strings plus Garmin's offsets. Never infer nap duration
+    // from the main sleep DTO's napTimeSeconds total.
     let naps: Vec<Nap> = rows.iter().filter_map(|row| {
         if !row.is_object() { return None }
         let wall = |stamp: &str, offset: &str| -> Option<String> {
             let utc = NaiveDateTime::parse_from_str(row[stamp].as_str()?, "%Y-%m-%dT%H:%M:%S").ok()?;
-            let seconds = row[offset].as_i64()?;
-            (seconds.abs() <= 86400).then(|| (utc + chrono::Duration::seconds(seconds)).format("%Y-%m-%dT%H:%M:%S").to_string())
+            let seconds = offset_seconds(row[offset].as_i64()?)?;
+            Some((utc + chrono::Duration::seconds(seconds)).format("%Y-%m-%dT%H:%M:%S").to_string())
         };
         let start_local = wall("napStartTimestampGMT", "napStartTimeOffset");
         let end_local = wall("napEndTimestampGMT", "napEndTimeOffset");
@@ -83,8 +92,8 @@ mod tests {
         db.put("naps", day, &Utc::now().to_rfc3339(), &serde_json::json!([])).unwrap();
         assert_eq!(naps(&db, day).1, ReadState::Empty);
         db.put("naps", day, &Utc::now().to_rfc3339(), &serde_json::json!([
-            {"napStartTimestampGMT":"2025-02-05T01:45:00","napStartTimeOffset":-7200,"napEndTimestampGMT":"2025-02-05T02:15:00","napEndTimeOffset":-7200,"napTimeSec":1800,"napFeedback":"SYNTHETIC_FEEDBACK"},
-            {"napStartTimestampGMT":"2025-02-05T16:00:00","napStartTimeOffset":-7200,"napTimeSec":0}
+            {"napStartTimestampGMT":"2025-02-05T01:45:00","napStartTimeOffset":-120,"napEndTimestampGMT":"2025-02-05T02:15:00","napEndTimeOffset":-120,"napTimeSec":1800,"napFeedback":"SYNTHETIC_FEEDBACK"},
+            {"napStartTimestampGMT":"2025-02-05T02:15:00","napStartTimeOffset":-7200,"napTimeSec":0}
         ])).unwrap();
         let (rows, state) = naps(&db, day);
         assert_eq!(state, ReadState::Available);
@@ -92,7 +101,11 @@ mod tests {
         assert_eq!(rows[0].duration_min, Some(30.));
         assert_eq!(rows[0].feedback.as_deref(), Some("SYNTHETIC_FEEDBACK"));
         assert_eq!(rows[1].duration_min, Some(0.));
+        // Garmin's raw endpoint sends minutes; an exported-summary seconds
+        // value for the same UTC−2 zone lands at the same local clock.
+        assert_eq!(rows[0].start_local.as_deref(), Some("2025-02-04T23:45:00"));
         assert_eq!(rows[0].end_local.as_deref(), Some("2025-02-05T00:15:00"));
+        assert_eq!(rows[1].start_local.as_deref(), Some("2025-02-05T00:15:00"));
         db.put("journal", day, &Utc::now().to_rfc3339(), &serde_json::json!({"dailyLogsReport":null,"completionStats":[]})).unwrap();
         let days = journal(&db, day);
         assert_eq!(days[0].state, ReadState::Unavailable);

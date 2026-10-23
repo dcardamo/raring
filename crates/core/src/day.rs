@@ -91,6 +91,7 @@ pub fn timeline(store: &Store, view: &TodayView, today: NaiveDate, now: DateTime
                 start_min,
                 duration_min: Some(card.duration_s / 60.),
                 body_battery_change: None,
+                feedback: None,
             })
         })
         .collect();
@@ -111,6 +112,7 @@ pub fn timeline(store: &Store, view: &TodayView, today: NaiveDate, now: DateTime
             start_min,
             end_min: end_min.map(|e| e.min(1440.)),
             duration_min: nap.duration_min,
+            feedback: nap.feedback,
         });
     }
     events.sort_by(|a, b| a.start_min.unwrap_or(f64::MAX).total_cmp(&b.start_min.unwrap_or(f64::MAX)));

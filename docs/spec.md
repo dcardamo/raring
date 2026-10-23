@@ -248,9 +248,10 @@ In this order:
   zones, Garmin's benefit and training effect stay in the workout detail.
   While Garmin's Fitness Age has a vigorous target, workouts also keep their
   green Garmin vigorous-minute chip ("+24 vigorous min").
-  Naps carry their Body Battery change. Up to four rows, then a link to all
-  of today's activities. The headline never repeats a workout from this
-  list. Under a "Done today" headline the list goes untitled. From evening
+  Naps carry their Body Battery change and open their own detail: start,
+  end, duration, that change and Garmin's feedback. Up to four rows, then a
+  link to all of today's activities. The headline never repeats a workout
+  from this list. Under a "Done today" headline the list goes untitled. From evening
   on, the list follows tonight's plan and the compact timeline.
 - **This week**: the week's rings and one line per goal beside **Left this
   week** with Do it today (not from the evening on: a weekly gap is context,
@@ -321,10 +322,12 @@ Last night:
   the night's start and end times and its low and high, opening the metric's
   detail.
 - **Recorded naps** from Garmin's nap endpoint: dated local start/end from
-  GMT timestamps plus per-end offsets (seconds), `napTimeSec` in seconds,
-  and optional Garmin `napFeedback` without interpreting its enum. Display
-  both local dates with the clocks, including when a nap crosses midnight;
-  label missing start/end without reconstructing them from duration.
+  GMT timestamps plus each end's zone offset (the raw endpoint writes it in
+  minutes; the exported sleep summary writes the same zone in seconds),
+  `napTimeSec` in seconds, and optional Garmin `napFeedback` without
+  interpreting its enum. Display both local dates with the clocks, including
+  when a nap crosses midnight; label missing start/end without reconstructing
+  them from duration.
   Show duration separately from main overnight sleep; never add it to sleep
   score, asleep minutes or Raring's sleep plan. Garmin's own `napAdjustment`
   for tonight's sleep need is distinct. An empty array is no recorded naps;
@@ -1466,8 +1469,9 @@ Raring has exited.
   link opens Tonight when Today's phase is evening, wind-down or late night,
   otherwise Last night; the bedtime reminder and Today's tonight line open
   Tonight. Anything showing last night (Today's last-night tile and moon
-  chip, Your day's sleep row, naps, the widget's Sleep row, search's "Last
-  night's sleep") opens Last night. Tonight shows the saved sleep plan
+  chip, Your day's sleep row, the widget's Sleep row, search's "Last
+  night's sleep") opens Last night. A recorded nap on Today opens its own
+  detail instead, never last night's sleep. Tonight shows the saved sleep plan
   (wind-down, Garmin's window or the asleep-by estimate, usual wake, Garmin's
   need, with when Raring read it, its weekday unless today), the week's sleep
   goals, a self-reported "I wound down" for the evening before the night the
